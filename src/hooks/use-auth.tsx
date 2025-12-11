@@ -21,6 +21,10 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const firebaseConfigured = isFirebaseConfigured();
+  const { auth } = useFirebase();
+  // @ts-expect-error
+  const [user, loading] = useAuthState(firebaseConfigured ? (auth as Auth) : undefined);
+
   if (!firebaseConfigured) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background p-4">
@@ -35,10 +39,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       </div>
     );
   }
-
-  // auth object will be defined here because isFirebaseConfigured() is true
-  const { auth } = useFirebase();
-  const [user, loading] = useAuthState(auth as Auth);
 
   const value = { user, loading };
 

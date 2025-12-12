@@ -22,7 +22,7 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const firebaseConfigured = isFirebaseConfigured();
   const { auth } = useFirebase();
-  // @ts-expect-error
+  // @ts-expect-error: Ignoring potential type mismatch for auth instance
   const [user, loading] = useAuthState(firebaseConfigured ? (auth as Auth) : undefined);
 
   if (!firebaseConfigured) {

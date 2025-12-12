@@ -1,6 +1,6 @@
 
 import { initializeFirebase as initialize } from '@/lib/firebase';
-import { FirebaseProvider, useFirebase, useFirebaseApp, useFirestore, useAuth } from './provider';
+import { FirebaseProvider, useFirebase, useFirebaseApp, useFirestore, useAuth, useStorage } from './provider';
 import { FirebaseClientProvider } from './client-provider';
 
 let firebaseApp: ReturnType<typeof initialize>;
@@ -11,4 +11,4 @@ export function initializeFirebase() {
     return firebaseApp;
 }
 
-export { FirebaseProvider, FirebaseClientProvider, useFirebase, useFirebaseApp, useFirestore, useAuth };
+export { FirebaseProvider, FirebaseClientProvider, useFirebase, useFirebaseApp, useFirestore, useAuth, useStorage };

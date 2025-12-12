@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { VideoPlayer } from './VideoPlayer';
 import Link from 'next/link';
 import ReactPlayer from 'react-player/lazy';
+import type { Video } from '@/lib/types';
 
 
 function Player({ playerRef, ...props }: any) {
@@ -261,7 +262,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
                   {/* Tags */}
                   {video.tags && video.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2 pt-2">
-                      {video.tags.map(tag => (
+                      {video.tags.map((tag: string) => (
                         <span key={tag} className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-sm text-zinc-300">
                           #{tag}
                         </span>

@@ -25,7 +25,7 @@ export function VideoRow({ title, videos, href, poster = false, category }: Vide
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = React.useState(false);
   const [canScrollRight, setCanScrollRight] = React.useState(true);
-  
+
   const { user: authUser } = useAuth();
   const { userProfile, mutate } = useUser();
   const { toast } = useToast();
@@ -46,11 +46,20 @@ export function VideoRow({ title, videos, href, poster = false, category }: Vide
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
-      const { scrollLeft, clientWidth } = scrollRef.current;
-      const scrollTo = direction === 'left' 
-        ? scrollLeft - clientWidth * 0.8
-        : scrollLeft + clientWidth * 0.8;
-      
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      // Check boundaries with small tolerance
+      const isAtStart = scrollLeft <= 10;
+      const isAtEnd = scrollLeft + clientWidth >= scrollWidth - 10;
+
+      let scrollTo;
+      if (direction === 'left') {
+        // If at start, loop to end; otherwise scroll left
+        scrollTo = isAtStart ? scrollWidth : scrollLeft - clientWidth * 0.8;
+      } else {
+        // If at end, loop to start; otherwise scroll right
+        scrollTo = isAtEnd ? 0 : scrollLeft + clientWidth * 0.8;
+      }
+
       scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
     }
   };
@@ -72,7 +81,7 @@ export function VideoRow({ title, videos, href, poster = false, category }: Vide
   if (!videos || videos.length === 0) {
     return null;
   }
-  
+
   const handleLikeToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -104,52 +113,49 @@ export function VideoRow({ title, videos, href, poster = false, category }: Vide
       });
     }
   };
-  
+
   const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (href) {
-        const fullUrl = `${window.location.origin}${href}`;
-        navigator.clipboard.writeText(fullUrl);
-        toast({
-            title: "Link Copied!",
-            description: "Category link copied to clipboard.",
-        });
+      const fullUrl = `${window.location.origin}${href}`;
+      navigator.clipboard.writeText(fullUrl);
+      toast({
+        title: "Link Copied!",
+        description: "Category link copied to clipboard.",
+      });
     }
   };
 
-  
+
   return (
     <section className="group/row relative">
-       <div className="flex items-center mb-4">
+      <div className="flex items-center mb-4">
         <h2 className="text-xl md:text-2xl font-bold text-white">{title}</h2>
         <div className="flex items-center gap-1 ml-4 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300">
-            {category && (
-                <>
-                    <Button variant="ghost" size="icon" onClick={handleLikeToggle} className="h-8 w-8 rounded-full text-white hover:bg-white/20 hover:text-white">
-                        <Heart className={cn("h-5 w-5", isLiked && "fill-red-500 text-red-500")} />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={handleShare} className="h-8 w-8 rounded-full text-white hover:bg-white/20 hover:text-white">
-                        <Share2 className="h-5 w-5" />
-                    </Button>
-                </>
-            )}
-            {href && (
-              <Link href={href} className="flex items-center gap-1 text-sm font-semibold text-primary ml-2">
-                View All
-                <MoveRight className="h-4 w-4" />
-              </Link>
-            )}
+          {category && (
+            <>
+              <Button variant="ghost" size="icon" onClick={handleLikeToggle} className="h-8 w-8 rounded-full text-white hover:bg-white/20 hover:text-white">
+                <Heart className={cn("h-5 w-5", isLiked && "fill-red-500 text-red-500")} />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={handleShare} className="h-8 w-8 rounded-full text-white hover:bg-white/20 hover:text-white">
+                <Share2 className="h-5 w-5" />
+              </Button>
+            </>
+          )}
+          {href && (
+            <Link href={href} className="flex items-center gap-1 text-sm font-semibold text-primary ml-2">
+              View All
+              <MoveRight className="h-4 w-4" />
+            </Link>
+          )}
         </div>
       </div>
-      
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className={cn(
-          "absolute left-0 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full bg-black/60 hover:bg-black/80 text-white transition-all opacity-0 group-hover/row:opacity-100",
-          !canScrollLeft && "opacity-0 pointer-events-none"
-        )}
+
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute left-0 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full bg-black/60 hover:bg-black/80 text-white transition-all opacity-0 group-hover/row:opacity-100"
         onClick={() => scroll('left')}
       >
         <ChevronLeft size={24} />
@@ -159,24 +165,21 @@ export function VideoRow({ title, videos, href, poster = false, category }: Vide
         <div className="flex space-x-3 md:space-x-4 pb-4">
           {videos.map(video => (
             <div key={video.id} className={cn(
-                "flex-shrink-0",
-                poster 
-                  ? "w-[28vw] sm:w-[22vw] md:w-[18vw] lg:w-[15vw]"
-                  : "w-[40vw] sm:w-[30vw] md:w-[25vw] lg:w-[20vw]"
-              )}>
+              "flex-shrink-0",
+              poster
+                ? "w-[28vw] sm:w-[22vw] md:w-[18vw] lg:w-[15vw]"
+                : "w-[40vw] sm:w-[30vw] md:w-[25vw] lg:w-[20vw]"
+            )}>
               <VideoCard video={video} />
             </div>
           ))}
         </div>
       </div>
 
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className={cn(
-          "absolute right-0 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full bg-black/60 hover:bg-black/80 text-white transition-all opacity-0 group-hover/row:opacity-100",
-          !canScrollRight && "opacity-0 pointer-events-none"
-        )}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute right-0 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full bg-black/60 hover:bg-black/80 text-white transition-all opacity-0 group-hover/row:opacity-100"
         onClick={() => scroll('right')}
       >
         <ChevronRight size={24} />

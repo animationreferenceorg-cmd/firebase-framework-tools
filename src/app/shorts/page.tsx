@@ -58,7 +58,7 @@ export default function ShortFilmsPage() {
     return (
       <main className="flex-1">
         <Skeleton className="w-full h-[56.25vw] max-h-[850px] min-h-[400px]" />
-        <div className="container mx-auto px-4 md:px-6 space-y-8 pb-16">
+        <div className="w-full px-4 md:px-6 space-y-8 pb-16">
           <div className="space-y-12 mt-8">
             <VideoRowSkeleton poster />
             <VideoRowSkeleton poster />
@@ -73,7 +73,7 @@ export default function ShortFilmsPage() {
   return (
     <main className="flex-1">
       {featuredVideo && <HeroSection video={featuredVideo} isShort />}
-      <div className="container mx-auto px-4 md:px-6 space-y-8 pb-16 pt-12">
+      <div className="w-full px-4 md:px-6 space-y-8 pb-16 pt-12">
         <VideoRow title="Trending Shorts" videos={trendingShorts} poster />
         <VideoRow title="All Short Films" videos={allVideos} poster />
       </div>

@@ -1,8 +1,8 @@
-
 'use client';
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import AuthHeader from '@/components/AuthHeader';
 import { Film } from 'lucide-react';
@@ -21,12 +21,7 @@ export function GlassHeader() {
                         <SidebarTrigger className="text-zinc-400 hover:text-white hover:bg-white/10 rounded-full w-8 h-8" />
                     </div>
 
-                    <Link href="/" className="flex items-center gap-2 group">
-                        <div className="bg-gradient-to-br from-purple-600 to-blue-600 p-1.5 rounded-lg group-hover:scale-110 transition-transform">
-                            <Film className="h-4 w-4 text-white" />
-                        </div>
-                        <span className="font-bold text-lg tracking-tight text-white hidden sm:block">AnimationRef</span>
-                    </Link>
+
                 </div>
 
                 {/* Center: Navigation (Hidden on mobile) */}

@@ -27,7 +27,7 @@ export function GlassHeader() {
                 {/* Center: Navigation (Hidden on mobile) */}
                 <nav className="hidden lg:flex items-center gap-1 bg-white/5 rounded-full p-1.5 border border-white/5 mx-4">
                     {[
-                        { label: 'Home', href: '/' },
+                        { label: 'Home', href: '/beta' },
                         { label: 'Features', href: '/landing#features' },
                         { label: 'Browse', href: '/browse' },
                     ].map((item) => (

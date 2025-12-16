@@ -151,46 +151,69 @@ export default function AuthHeader() {
                 <Button variant="outline" className="relative z-10 bg-background hover:bg-background/80">Donate</Button>
               </div>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Heart className="h-6 w-6 text-primary" />
-                  Support Animation Reference
-                </DialogTitle>
-                <DialogDescription>
-                  Your donation helps the development of this app and keeps it running for all! Donating a monthly amount helps keep the site growing and keeping it free for all. With donations I am able to offer more features and resources to artists.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
+            <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden bg-gradient-to-b from-[#1a1528] to-[#0a0814] border-white/10 shadow-[0_0_50px_-10px_rgba(109,40,217,0.3)] backdrop-blur-2xl text-white">
+              <div className="absolute inset-0 bg-grid-white/5 mask-image-gradient-b pointer-events-none" />
+
+              <div className="relative z-10 p-8 space-y-8">
+                {/* Header */}
+                <div className="text-center space-y-4">
+                  <div className="inline-flex p-3 rounded-full bg-white/5 border border-white/10 shadow-[0_0_30px_-5px_rgba(124,58,237,0.3)] mb-2">
+                    <Heart className="h-8 w-8 text-purple-500 fill-purple-500/20 animate-pulse" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <DialogTitle className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-purple-200 to-white">
+                      Support Animation Reference
+                    </DialogTitle>
+                    <DialogDescription className="text-zinc-400 text-base leading-relaxed max-w-sm mx-auto">
+                      Your donation helps the development of this app and keeps it running for all! Donating a monthly amount helps keep the site growing and offering more features to artists.
+                    </DialogDescription>
+                  </div>
+                </div>
+
+                {/* Donation Options grid */}
                 <div className="grid grid-cols-3 gap-4">
                   {donationOptions.map(option => (
-                    <Button
+                    <button
                       key={option.amount}
-                      variant={selectedAmount === option.amount ? 'default' : 'outline'}
                       onClick={() => setSelectedAmount(option.amount)}
-                      className="h-20 flex-col gap-1"
+                      className={cn(
+                        "group relative flex flex-col items-center justify-center p-4 rounded-xl border transition-all duration-300",
+                        selectedAmount === option.amount
+                          ? "bg-gradient-to-br from-purple-900/50 to-purple-600/20 border-purple-500 ring-1 ring-purple-500 shadow-[0_0_30px_-5px_rgba(124,58,237,0.3)]"
+                          : "bg-white/5 border-white/5 hover:border-purple-500/50 hover:bg-white/10"
+                      )}
                     >
-                      <span className="text-2xl font-bold">${option.amount}</span>
-                      <span className="text-xs text-muted-foreground">per month</span>
-                    </Button>
+                      <span className={cn(
+                        "text-2xl font-bold mb-1 transition-colors",
+                        selectedAmount === option.amount ? "text-white scale-110" : "text-zinc-300 group-hover:text-white"
+                      )}>
+                        ${option.amount}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">per month</span>
+                    </button>
                   ))}
                 </div>
+
+                {/* Footer Action */}
+                <div className="space-y-4 pt-2">
+                  <Button
+                    type="submit"
+                    className="w-full h-14 text-lg font-bold rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#6d28d9] hover:scale-[1.02] hover:shadow-[0_0_40px_-10px_rgba(124,58,237,0.6)] border border-purple-400/20 transition-all duration-300 text-white shadow-xl"
+                    disabled={isCheckingOut}
+                    onClick={() => handleDonate(donationOptions.find(o => o.amount === selectedAmount)?.priceId)}
+                  >
+                    {isCheckingOut ? 'Redirecting...' : (
+                      <span className="flex items-center gap-2">
+                        Donate <span className="underline decoration-white/30 underline-offset-4">${selectedAmount}</span> Now
+                      </span>
+                    )}
+                  </Button>
+                  <p className="text-center text-xs text-purple-200/50 animate-pulse">
+                    Donate ${selectedAmount} per month to support new UI/UX features
+                  </p>
+                </div>
               </div>
-              <DialogFooter>
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isCheckingOut}
-                  onClick={() => handleDonate(donationOptions.find(o => o.amount === selectedAmount)?.priceId)}
-                >
-                  {isCheckingOut ? 'Redirecting...' : (
-                    <>
-                      <DollarSign className="mr-2 h-4 w-4" />
-                      Donate ${selectedAmount} per month
-                    </>
-                  )}
-                </Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
 
@@ -225,53 +248,77 @@ export default function AuthHeader() {
                 <Button variant="outline" className="relative z-10 bg-background hover:bg-background/80">Donate</Button>
               </div>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Heart className="h-6 w-6 text-primary" />
-                  Support Animation Reference
-                </DialogTitle>
-                <DialogDescription>
-                  Your donation helps the development of this app and keeps it running for all! Donating a monthly amount helps keep the site growing and keeping it free for all. With donations I am able to offer more features and resources to artists.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
+            <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden bg-gradient-to-b from-[#1a1528] to-[#0a0814] border-white/10 shadow-[0_0_50px_-10px_rgba(109,40,217,0.3)] backdrop-blur-2xl text-white">
+              <div className="absolute inset-0 bg-grid-white/5 mask-image-gradient-b pointer-events-none" />
+
+              <div className="relative z-10 p-8 space-y-8">
+                {/* Header */}
+                <div className="text-center space-y-4">
+                  <div className="inline-flex p-3 rounded-full bg-white/5 border border-white/10 shadow-[0_0_30px_-5px_rgba(124,58,237,0.3)] mb-2">
+                    <Heart className="h-8 w-8 text-purple-500 fill-purple-500/20 animate-pulse" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <DialogTitle className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-purple-200 to-white">
+                      Support Animation Reference
+                    </DialogTitle>
+                    <DialogDescription className="text-zinc-400 text-base leading-relaxed max-w-sm mx-auto">
+                      Your donation helps the development of this app and keeps it running for all! Donating a monthly amount helps keep the site growing and offering more features to artists.
+                    </DialogDescription>
+                  </div>
+                </div>
+
+                {/* Donation Options grid */}
                 <div className="grid grid-cols-3 gap-4">
                   {donationOptions.map(option => (
-                    <Button
+                    <button
                       key={option.amount}
-                      variant={selectedAmount === option.amount ? 'default' : 'outline'}
                       onClick={() => setSelectedAmount(option.amount)}
-                      className="h-20 flex-col gap-1"
+                      className={cn(
+                        "group relative flex flex-col items-center justify-center p-4 rounded-xl border transition-all duration-300",
+                        selectedAmount === option.amount
+                          ? "bg-gradient-to-br from-purple-900/50 to-purple-600/20 border-purple-500 ring-1 ring-purple-500 shadow-[0_0_30px_-5px_rgba(124,58,237,0.3)]"
+                          : "bg-white/5 border-white/5 hover:border-purple-500/50 hover:bg-white/10"
+                      )}
                     >
-                      <span className="text-2xl font-bold">${option.amount}</span>
-                      <span className="text-xs text-muted-foreground">per month</span>
-                    </Button>
+                      <span className={cn(
+                        "text-2xl font-bold mb-1 transition-colors",
+                        selectedAmount === option.amount ? "text-white scale-110" : "text-zinc-300 group-hover:text-white"
+                      )}>
+                        ${option.amount}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">per month</span>
+                    </button>
                   ))}
                 </div>
+
+                {/* Footer Action */}
+                <div className="space-y-4 pt-2">
+                  <Button
+                    type="submit"
+                    className="w-full h-14 text-lg font-bold rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#6d28d9] hover:scale-[1.02] hover:shadow-[0_0_40px_-10px_rgba(124,58,237,0.6)] border border-purple-400/20 transition-all duration-300 text-white shadow-xl"
+                    disabled={isCheckingOut}
+                    onClick={() => handleDonate(donationOptions.find(o => o.amount === selectedAmount)?.priceId)}
+                  >
+                    {isCheckingOut ? 'Redirecting...' : (
+                      <span className="flex items-center gap-2">
+                        Donate <span className="underline decoration-white/30 underline-offset-4">${selectedAmount}</span> Now
+                      </span>
+                    )}
+                  </Button>
+                  <p className="text-center text-xs text-purple-200/50 animate-pulse">
+                    Donate ${selectedAmount} per month to support new UI/UX features
+                  </p>
+                </div>
               </div>
-              <DialogFooter>
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isCheckingOut}
-                  onClick={() => handleDonate(donationOptions.find(o => o.amount === selectedAmount)?.priceId)}
-                >
-                  {isCheckingOut ? 'Redirecting...' : (
-                    <>
-                      <DollarSign className="mr-2 h-4 w-4" />
-                      Donate ${selectedAmount} per month
-                    </>
-                  )}
-                </Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
           <Button asChild>
             <Link href="/login">Sign In</Link>
           </Button>
-        </div>
-      )}
-    </div>
+        </div >
+      )
+      }
+    </div >
   );
 }

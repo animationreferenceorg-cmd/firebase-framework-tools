@@ -58,8 +58,9 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     const loading = authLoading || userProfileLoading;
 
     const isAdminPage = pathname.startsWith('/admin');
+    const isComingSoon = pathname === '/';
 
-    if (isAdminPage) {
+    if (isAdminPage || isComingSoon) {
         return (
             <UploadProvider>
                 {children}
@@ -122,7 +123,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                             <SidebarGroupLabel>Discover</SidebarGroupLabel>
                             <SidebarMenu>
                                 <SidebarMenuItem>
-                                    <Link href="/">
+                                    <Link href="/beta">
                                         <SidebarMenuButton tooltip="Home">
                                             <Home />
                                             <span>Home</span>

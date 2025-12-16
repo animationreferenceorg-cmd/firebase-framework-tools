@@ -17,6 +17,8 @@ interface VideoPlayerProps {
     showCaptureButton?: boolean;
     startsPaused?: boolean;
     muted?: boolean;
+    hideFullscreenControl?: boolean;
+    hidePlayControl?: boolean;
 }
 
 // Client-side only component to wrap ReactPlayer
@@ -43,7 +45,7 @@ function Player({ playerRef, ...props }: any) {
     )
 }
 
-export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onCapture, showCaptureButton = false, startsPaused = false, muted = true }, ref) => {
+export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onCapture, showCaptureButton = false, startsPaused = false, muted = true, hideFullscreenControl = false, hidePlayControl = false }, ref) => {
     const playerRef = React.useRef<ReactPlayer>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
     const { toast } = useToast();
@@ -283,15 +285,19 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
 
                 <div className="flex justify-between items-center mt-2">
                     <div className="flex items-center gap-2 w-[220px]">
-                        <Button type="button" onClick={() => stepFrame('backward')} variant="ghost" size="icon">
-                            <Rewind />
-                        </Button>
-                        <Button type="button" onClick={handlePlayPause} variant="ghost" size="icon">
-                            {isPlaying ? <Pause /> : <Play />}
-                        </Button>
-                        <Button type="button" onClick={() => stepFrame('forward')} variant="ghost" size="icon">
-                            <FastForward />
-                        </Button>
+                        {!hidePlayControl && (
+                            <>
+                                <Button type="button" onClick={() => stepFrame('backward')} variant="ghost" size="icon">
+                                    <Rewind />
+                                </Button>
+                                <Button type="button" onClick={handlePlayPause} variant="ghost" size="icon">
+                                    {isPlaying ? <Pause /> : <Play />}
+                                </Button>
+                                <Button type="button" onClick={() => stepFrame('forward')} variant="ghost" size="icon">
+                                    <FastForward />
+                                </Button>
+                            </>
+                        )}
                         <div className="flex items-center gap-2 w-32 group/volume">
                             <Button type="button" onClick={handleMuteToggle} variant="ghost" size="icon">
                                 {isMuted || volume === 0 ? <VolumeX /> : <Volume2 />}
@@ -332,9 +338,11 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
 
 
                     <div className="flex items-center justify-end w-[220px]">
-                        <Button type="button" onClick={handleFullscreenToggle} variant="ghost" size="icon">
-                            {isFullScreen ? <Minimize /> : <Maximize />}
-                        </Button>
+                        {!hideFullscreenControl && (
+                            <Button type="button" onClick={handleFullscreenToggle} variant="ghost" size="icon">
+                                {isFullScreen ? <Minimize /> : <Maximize />}
+                            </Button>
+                        )}
                     </div>
                 </div>
             </div>

@@ -175,7 +175,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           data-ai-hint={video.dataAiHint}
           onLoad={() => setIsImageLoaded(true)}
         />
-        {!video.isShort && !poster && video.videoUrl && (
+        {!video.isShort && !poster && video.videoUrl && isHovered && (
           <div className={cn(
             "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none",
             isHovered ? "opacity-100" : "opacity-0"

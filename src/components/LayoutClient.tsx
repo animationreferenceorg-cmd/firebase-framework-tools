@@ -20,6 +20,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { updateProfile } from 'firebase/auth';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { SidebarLink } from '@/components/SidebarLink';
 
 export function LayoutClient({ children }: { children: React.ReactNode }) {
     const { userProfile, loading: userProfileLoading } = useUser();
@@ -123,36 +124,24 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                             <SidebarGroupLabel>Discover</SidebarGroupLabel>
                             <SidebarMenu>
                                 <SidebarMenuItem>
-                                    <Link href="/beta">
-                                        <SidebarMenuButton tooltip="Home">
-                                            <Home />
-                                            <span>Home</span>
-                                        </SidebarMenuButton>
-                                    </Link>
+                                    <SidebarLink href="/beta" icon={Home} tooltip="Home">
+                                        Home
+                                    </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <Link href="/browse">
-                                        <SidebarMenuButton tooltip="Categories">
-                                            <LayoutGrid />
-                                            <span>Categories</span>
-                                        </SidebarMenuButton>
-                                    </Link>
+                                    <SidebarLink href="/browse" icon={LayoutGrid} tooltip="Categories">
+                                        Categories
+                                    </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <Link href="/shorts">
-                                        <SidebarMenuButton tooltip="Short Films">
-                                            <Film />
-                                            <span>Short Films</span>
-                                        </SidebarMenuButton>
-                                    </Link>
+                                    <SidebarLink href="/shorts" icon={Film} tooltip="Short Films">
+                                        Short Films
+                                    </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <Link href="/feed">
-                                        <SidebarMenuButton tooltip="Feed">
-                                            <Rss />
-                                            <span>Feed</span>
-                                        </SidebarMenuButton>
-                                    </Link>
+                                    <SidebarLink href="/feed" icon={Rss} tooltip="Feed">
+                                        Feed
+                                    </SidebarLink>
                                 </SidebarMenuItem>
                             </SidebarMenu>
                         </SidebarGroup>
@@ -160,12 +149,9 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                             <SidebarGroupLabel>My Library</SidebarGroupLabel>
                             <SidebarMenu>
                                 <SidebarMenuItem>
-                                    <Link href="/list">
-                                        <SidebarMenuButton tooltip="My List">
-                                            <List />
-                                            <span>My List</span>
-                                        </SidebarMenuButton>
-                                    </Link>
+                                    <SidebarLink href="/list" icon={List} tooltip="My List">
+                                        My List
+                                    </SidebarLink>
                                 </SidebarMenuItem>
                             </SidebarMenu>
                         </SidebarGroup>
@@ -176,12 +162,9 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     <SidebarGroupLabel>Admin</SidebarGroupLabel>
                                     <SidebarMenu>
                                         <SidebarMenuItem>
-                                            <Link href="/admin">
-                                                <SidebarMenuButton tooltip="Admin Dashboard">
-                                                    <Shield />
-                                                    <span>Admin Panel</span>
-                                                </SidebarMenuButton>
-                                            </Link>
+                                            <SidebarLink href="/admin" icon={Shield} tooltip="Admin Dashboard">
+                                                Admin Panel
+                                            </SidebarLink>
                                         </SidebarMenuItem>
                                     </SidebarMenu>
                                 </SidebarGroup>

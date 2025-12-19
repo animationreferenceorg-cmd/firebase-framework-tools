@@ -46,6 +46,7 @@ export function BrowseHero({ video, children }: BrowseHeroProps) {
                             playing={isPlaying}
                             loop={true}
                             muted={isMuted}
+                            playsinline={true}
                             width="100%"
                             height="100%"
                             style={{ position: 'absolute', top: 0, left: 0, objectFit: 'cover' }}

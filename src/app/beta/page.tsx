@@ -11,6 +11,7 @@ import { VideoRow } from '@/components/VideoRow';
 import { VideoGrid } from '@/components/VideoGrid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BrowseHero } from '@/components/BrowseHero';
+import { BrandRow } from '@/components/BrandRow';
 
 // Helper to shuffle array
 const shuffleArray = (array: any[]) => {
@@ -116,6 +117,10 @@ export default function BetaPage() {
 
             {/* Main Content Area - Video Rows (Home Page Body) */}
             <div className="w-full px-4 md:px-6 space-y-12 pb-16 relative z-10 -mt-20">
+
+                {/* Brand / Category Row */}
+                <BrandRow />
+
                 {/* Popular Row */}
                 <div className="bg-transparent">
                     <VideoRow title="Popular Now" videos={popularVideos.slice(1)} />

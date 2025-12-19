@@ -167,8 +167,8 @@ export function VideoRow({ title, videos, href, poster = false, category }: Vide
             <div key={video.id} className={cn(
               "flex-shrink-0",
               poster
-                ? "w-[28vw] sm:w-[22vw] md:w-[18vw] lg:w-[15vw]"
-                : "w-[40vw] sm:w-[30vw] md:w-[25vw] lg:w-[20vw]"
+                ? "w-[40vw] sm:w-[30vw] md:w-[20vw] lg:w-[15vw]"
+                : "w-[45vw] sm:w-[45vw] md:w-[30vw] lg:w-[20vw]"
             )}>
               <VideoCard video={video} />
             </div>

@@ -30,6 +30,7 @@ export function GlassHeader() {
                         { label: 'Home', href: '/beta' },
                         { label: 'Features', href: '/landing#features' },
                         { label: 'Browse', href: '/browse' },
+                        { label: 'Marketplace', href: '/marketplace' },
                     ].map((item) => (
                         <Link
                             key={item.label}

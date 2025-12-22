@@ -28,9 +28,8 @@ import { cn } from '@/lib/utils';
 import { DollarSign, Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { collection, addDoc, onSnapshot, doc, getDoc } from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { useEffect } from 'react';
+import { onSnapshot, doc } from 'firebase/firestore';
 
 export default function AuthHeader() {
   const { user, loading } = useAuth();
@@ -43,9 +42,37 @@ export default function AuthHeader() {
     { amount: '5', label: '$5 / month', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_5_DOLLARS },
   ];
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
 
-  const handleDonate = async (priceId: string | undefined) => {
-    if (isCheckingOut || !db) return;
+  // Listen for user premium status
+  useEffect(() => {
+    if (!user || !db) return;
+    const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+      setIsPremium(!!doc.data()?.isPremium);
+    });
+    return () => unsub();
+  }, [user, db]);
+
+  const handlePortal = async () => {
+    if (isCheckingOut) return;
+    setIsCheckingOut(true);
+    try {
+      const response = await fetch('/api/portal', {
+        method: 'POST',
+        body: JSON.stringify({ userId: user?.uid, returnUrl: window.location.href }),
+      });
+      const data = await response.json();
+      if (data.url) window.location.assign(data.url);
+      else throw new Error(data.error);
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setIsCheckingOut(false);
+    }
+  }
+
+  const handleDonate = async (amount: string | undefined) => {
+    if (isCheckingOut) return;
 
     if (!user) {
       toast({
@@ -56,11 +83,11 @@ export default function AuthHeader() {
       return;
     }
 
-    if (!priceId) {
+    if (!amount) {
       toast({
         variant: 'destructive',
-        title: 'Price not configured',
-        description: 'This donation amount has not been configured. Please add the Price ID to your .env file.',
+        title: 'No amount selected',
+        description: 'Please select a donation amount.',
       });
       return;
     }
@@ -69,65 +96,38 @@ export default function AuthHeader() {
     toast({ title: 'Creating checkout session...', description: 'Please wait while we redirect you to Stripe.' });
 
     try {
-      const customerRef = doc(db, 'customers', user.uid);
-      const customerSnap = await getDoc(customerRef);
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount,
+          returnUrl: window.location.href,
+          userId: user.uid,
+        }),
+      });
 
-      if (!customerSnap.exists()) {
-        toast({
-          variant: 'destructive',
-          title: 'Account Not Ready',
-          description: 'Your Stripe account is still being set up. Please try again in a moment.',
-        });
-        setIsCheckingOut(false);
-        return;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create checkout session');
       }
 
-      const checkoutSessionData = {
-        price: priceId,
-        success_url: window.location.origin,
-        cancel_url: window.location.origin,
-      };
-
-      const checkoutSessionRef = collection(db, 'customers', user.uid, 'checkout_sessions');
-      addDoc(checkoutSessionRef, checkoutSessionData)
-        .then(sessionDocRef => {
-          const unsubscribe = onSnapshot(sessionDocRef, (snap) => {
-            const { error, url } = snap.data() || {};
-            if (error) {
-              console.error(`An error occurred: ${error.message}`);
-              toast({
-                variant: 'destructive',
-                title: 'Checkout Error',
-                description: error.message || 'Could not create a checkout session. Please check your configuration and try again.',
-              });
-              setIsCheckingOut(false);
-              unsubscribe();
-            }
-            if (url) {
-              window.location.assign(url);
-              unsubscribe();
-            }
-          });
-        })
-        .catch(async (serverError) => {
-          const permissionError = new FirestorePermissionError({
-            path: `customers/${user.uid}/checkout_sessions`,
-            operation: 'create',
-            requestResourceData: checkoutSessionData,
-          } satisfies SecurityRuleContext);
-
-          errorEmitter.emit('permission-error', permissionError);
-          setIsCheckingOut(false);
-        });
+      if (data.url) {
+        window.location.assign(data.url);
+      } else {
+        throw new Error('No checkout URL returned');
+      }
 
     } catch (error: any) {
-      // This outer catch is for issues like getDoc failing, not for the addDoc itself.
-      console.error("Error preparing for checkout session:", error);
+      console.error("Error creating checkout session:", error);
       toast({
         variant: 'destructive',
         title: 'Checkout Error',
         description: error.message || 'Could not create a checkout session. Please check your configuration and try again.',
       });
+    } finally {
       setIsCheckingOut(false);
     }
   };
@@ -201,7 +201,7 @@ export default function AuthHeader() {
                     type="submit"
                     className="w-full h-14 text-lg font-bold rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#6d28d9] hover:scale-[1.02] hover:shadow-[0_0_40px_-10px_rgba(124,58,237,0.6)] border border-purple-400/20 transition-all duration-300 text-white shadow-xl"
                     disabled={isCheckingOut}
-                    onClick={() => handleDonate(donationOptions.find(o => o.amount === selectedAmount)?.priceId)}
+                    onClick={() => handleDonate(selectedAmount)}
                   >
                     {isCheckingOut ? 'Redirecting...' : (
                       <span className="flex items-center gap-2">

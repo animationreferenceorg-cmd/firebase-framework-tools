@@ -39,6 +39,25 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPortalLoading, setIsPortalLoading] = useState(false);
+
+  const handlePortal = async () => {
+    if (isPortalLoading) return;
+    setIsPortalLoading(true);
+    try {
+      const response = await fetch('/api/portal', {
+        method: 'POST',
+        body: JSON.stringify({ userId: authUser?.uid, returnUrl: window.location.href }),
+      });
+      const data = await response.json();
+      if (data.url) window.location.assign(data.url);
+      else throw new Error(data.error);
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setIsPortalLoading(false);
+    }
+  };
 
   const likedVideos = useMemo(() => {
     if (!userProfile) return [];
@@ -57,8 +76,8 @@ export default function ProfilePage() {
 
 
   useEffect(() => {
-    if(authUser?.displayName) {
-        setDisplayName(authUser.displayName);
+    if (authUser?.displayName) {
+      setDisplayName(authUser.displayName);
     }
   }, [authUser]);
 
@@ -86,25 +105,25 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-        <main className="container mx-auto px-4 md:px-6 pt-6 pb-16">
-            <div className="flex flex-col md:flex-row items-center gap-6 mb-12">
-                <Skeleton className="h-32 w-32 rounded-full border-4 border-primary" />
-                <div className="flex-1 text-center md:text-left space-y-2">
-                    <Skeleton className="h-10 w-64" />
-                    <Skeleton className="h-6 w-80" />
-                </div>
-            </div>
-            <Card className="mb-12">
-                <CardHeader>
-                    <CardTitle>Subscription</CardTitle>
-                    <CardDescription>Manage your billing and subscription details.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Skeleton className="h-20 w-full" />
-                </CardContent>
-            </Card>
-            <Skeleton className="h-10 w-full" />
-        </main>
+      <main className="container mx-auto px-4 md:px-6 pt-6 pb-16">
+        <div className="flex flex-col md:flex-row items-center gap-6 mb-12">
+          <Skeleton className="h-32 w-32 rounded-full border-4 border-primary" />
+          <div className="flex-1 text-center md:text-left space-y-2">
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-6 w-80" />
+          </div>
+        </div>
+        <Card className="mb-12">
+          <CardHeader>
+            <CardTitle>Subscription</CardTitle>
+            <CardDescription>Manage your billing and subscription details.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-20 w-full" />
+          </CardContent>
+        </Card>
+        <Skeleton className="h-10 w-full" />
+      </main>
     );
   }
 
@@ -112,140 +131,158 @@ export default function ProfilePage() {
     router.push('/login');
     return null;
   }
-  
+
   const guestUser = {
     displayName: 'Guest User',
     email: 'guest@example.com',
     photoURL: `https://placehold.co/100x100.png`
   };
-  
+
   const currentUser = authUser || guestUser;
 
 
   return (
-      <main className="container mx-auto px-4 md:px-6 pt-6 pb-16">
-        <div className="flex flex-col md:flex-row items-center gap-6 mb-12">
-          <Avatar className="h-32 w-32 border-4 border-primary">
-            <AvatarImage src={currentUser.photoURL || undefined} alt={currentUser.displayName || ''} data-ai-hint="user avatar" />
-            <AvatarFallback>{currentUser.email?.charAt(0).toUpperCase()}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 text-center md:text-left">
-            <div className="flex items-center gap-4 justify-center md:justify-start">
-                <h1 className="text-3xl md:text-4xl font-bold text-white">{currentUser.displayName}</h1>
-                {userProfile?.role === 'admin' && (
-                  <Badge variant="default" className="text-base bg-primary/80">
-                    <ShieldCheck className="h-5 w-5 mr-2"/>
-                    Admin
-                  </Badge>
-                )}
-            </div>
-            <p className="text-muted-foreground">{currentUser.email}</p>
+    <main className="container mx-auto px-4 md:px-6 pt-6 pb-16">
+      <div className="flex flex-col md:flex-row items-center gap-6 mb-12">
+        {/* ... Avatar and User Info sections remain same, just ensuring context ... */}
+        <Avatar className="h-32 w-32 border-4 border-primary">
+          <AvatarImage src={currentUser.photoURL || undefined} alt={currentUser.displayName || ''} data-ai-hint="user avatar" />
+          <AvatarFallback>{currentUser.email?.charAt(0).toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1 text-center md:text-left">
+          <div className="flex items-center gap-4 justify-center md:justify-start">
+            <h1 className="text-3xl md:text-4xl font-bold text-white">{currentUser.displayName}</h1>
+            {userProfile?.role === 'admin' && (
+              <Badge variant="default" className="text-base bg-primary/80">
+                <ShieldCheck className="h-5 w-5 mr-2" />
+                Admin
+              </Badge>
+            )}
           </div>
-          {authUser && (
-            <div className="flex gap-2">
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline"><Edit className="mr-2 h-4 w-4" /> Edit Profile</Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                      <DialogTitle>Edit profile</DialogTitle>
-                      <DialogDescription>
-                        Make changes to your profile here. Click save when you're done.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="name" className="text-right">
-                          Name
-                        </Label>
-                        <Input id="name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="col-span-3" />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button onClick={handleProfileUpdate} disabled={isSaving}>
-                        {isSaving ? 'Saving...' : 'Save changes'}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-                <Button variant="outline" onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
-                </Button>
-            </div>
-          )}
+          <p className="text-muted-foreground">{currentUser.email}</p>
         </div>
-
-        <Card className="mb-12">
-            <CardHeader>
-                <CardTitle>Subscription</CardTitle>
-                <CardDescription>Manage your billing and subscription details.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 rounded-lg bg-muted/50">
-                    <div>
-                        <p className="font-semibold text-white">Current Plan: <span className="text-primary">Premium</span></p>
-                        <p className="text-muted-foreground text-sm">Renews on: December 31, 2024</p>
-                    </div>
-                    <Button variant="secondary">
-                        <CreditCard className="mr-2 h-4 w-4" />
-                        Manage Subscription
-                    </Button>
+        {authUser && (
+          <div className="flex gap-2">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline"><Edit className="mr-2 h-4 w-4" /> Edit Profile</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Edit profile</DialogTitle>
+                  <DialogDescription>
+                    Make changes to your profile here. Click save when you're done.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="name" className="text-right">
+                      Name
+                    </Label>
+                    <Input id="name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="col-span-3" />
+                  </div>
                 </div>
-            </CardContent>
-        </Card>
+                <DialogFooter>
+                  <Button onClick={handleProfileUpdate} disabled={isSaving}>
+                    {isSaving ? 'Saving...' : 'Save changes'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Button variant="outline" onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
+        )}
+      </div>
 
-        <Tabs defaultValue="liked-videos" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-3">
-            <TabsTrigger value="liked-videos"><Heart className="mr-2 h-4 w-4" />Liked Videos</TabsTrigger>
-            <TabsTrigger value="liked-categories"><Star className="mr-2 h-4 w-4" />Liked Categories</TabsTrigger>
-            <TabsTrigger value="saved-shorts"><Clapperboard className="mr-2 h-4 w-4" />Saved Shorts</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="liked-videos">
-            <div className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-                {likedVideos.map(video => (
-                    <div key={`liked-${video.id}`}>
-                        <VideoCard video={video} />
-                    </div>
-                ))}
+      <Card className="mb-12">
+        <CardHeader>
+          <CardTitle>Subscription</CardTitle>
+          <CardDescription>Manage your billing and subscription details.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 rounded-lg bg-muted/50">
+            <div>
+              <p className="font-semibold text-white">
+                Current Plan: <span className={userProfile?.isPremium ? "text-primary" : "text-zinc-400"}>
+                  {userProfile?.isPremium ? 'Premium' : 'Free Plan'}
+                </span>
+              </p>
+              <p className="text-muted-foreground text-sm">
+                {userProfile?.isPremium
+                  ? 'Your subscription is active. Thank you for your support!'
+                  : 'Upgrade to Premium to support the creator!'}
+              </p>
             </div>
-             {likedVideos.length === 0 && (
-                <div className="text-center py-16 text-muted-foreground">
-                    <p>You haven't liked any videos yet.</p>
-                </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="liked-categories">
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {likedCategories.map(category => (
-                    <CategoryCard key={`liked-cat-${category.title}`} {...category} />
-                ))}
-            </div>
-            {likedCategories.length === 0 && (
-                <div className="text-center py-16 text-muted-foreground">
-                    <p>You haven't liked any categories yet.</p>
-                </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="saved-shorts">
-             <div className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
-                {savedShorts.map(video => (
-                    <div key={`shared-${video.id}`}>
-                        <VideoCard video={video} poster />
-                    </div>
-                ))}
-            </div>
-             {savedShorts.length === 0 && (
-              <div className="text-center py-16 text-muted-foreground">
-                <p>You haven&apos;t saved any shorts yet.</p>
+            {userProfile?.isPremium ? (
+              <Button variant="secondary" onClick={handlePortal} disabled={isPortalLoading}>
+                <CreditCard className="mr-2 h-4 w-4" />
+                {isPortalLoading ? 'Loading...' : 'Manage Subscription'}
+              </Button>
+            ) : (
+              <div className="hidden sm:block">
+                {/* Placeholder or instructions for free users. 
+                                 Ideally we'd trigger the Donate dialog here, but for now relying on the global header button 
+                                 keeps it simple. */}
+                <p className="text-xs text-muted-foreground">Use the Donate button in the header to upgrade.</p>
               </div>
             )}
-          </TabsContent>
-        </Tabs>
-      </main>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="liked-videos" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3">
+          <TabsTrigger value="liked-videos"><Heart className="mr-2 h-4 w-4" />Liked Videos</TabsTrigger>
+          <TabsTrigger value="liked-categories"><Star className="mr-2 h-4 w-4" />Liked Categories</TabsTrigger>
+          <TabsTrigger value="saved-shorts"><Clapperboard className="mr-2 h-4 w-4" />Saved Shorts</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="liked-videos">
+          <div className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+            {likedVideos.map(video => (
+              <div key={`liked-${video.id}`}>
+                <VideoCard video={video} />
+              </div>
+            ))}
+          </div>
+          {likedVideos.length === 0 && (
+            <div className="text-center py-16 text-muted-foreground">
+              <p>You haven't liked any videos yet.</p>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="liked-categories">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {likedCategories.map(category => (
+              <CategoryCard key={`liked-cat-${category.title}`} {...category} />
+            ))}
+          </div>
+          {likedCategories.length === 0 && (
+            <div className="text-center py-16 text-muted-foreground">
+              <p>You haven't liked any categories yet.</p>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="saved-shorts">
+          <div className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
+            {savedShorts.map(video => (
+              <div key={`shared-${video.id}`}>
+                <VideoCard video={video} poster />
+              </div>
+            ))}
+          </div>
+          {savedShorts.length === 0 && (
+            <div className="text-center py-16 text-muted-foreground">
+              <p>You haven&apos;t saved any shorts yet.</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+    </main>
   );
 }

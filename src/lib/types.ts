@@ -29,15 +29,17 @@ export interface Category {
 }
 
 export interface UserProfile {
-    uid: string;
-    email: string | null;
-    displayName: string | null;
-    photoURL: string | null;
-    role: 'admin' | 'user';
-    likedVideoIds?: string[];
-    likedCategoryTitles?: string[];
-    savedShortIds?: string[];
-    recentlyViewedShortIds?: string[];
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  role: 'admin' | 'user';
+  likedVideoIds?: string[];
+  likedCategoryTitles?: string[];
+  savedShortIds?: string[];
+  recentlyViewedShortIds?: string[];
+  isPremium?: boolean;
+  stripeCustomerId?: string;
 }
 
 export interface Tag {

@@ -5,7 +5,7 @@ import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarTrigger, 
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Clapperboard, Film, Home, LayoutGrid, List, Rss, Shield, BookCopy, Star, Camera, User } from 'lucide-react';
+import { Clapperboard, Film, Home, LayoutGrid, List, Rss, Shield, BookCopy, Star, Camera, User, Box } from 'lucide-react';
 import AuthHeader from '@/components/AuthHeader';
 import { useUser } from '@/hooks/use-user';
 import { useAuth } from '@/hooks/use-auth';
@@ -141,6 +141,11 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                 <SidebarMenuItem>
                                     <SidebarLink href="/feed" icon={Rss} tooltip="Feed">
                                         Feed
+                                    </SidebarLink>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarLink href="/marketplace" icon={Box} tooltip="Marketplace">
+                                        Marketplace
                                     </SidebarLink>
                                 </SidebarMenuItem>
                             </SidebarMenu>

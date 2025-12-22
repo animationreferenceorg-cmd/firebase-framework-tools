@@ -1,21 +1,11 @@
 import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
+import { getStripe } from '@/lib/stripe';
 
-const stripe = process.env.STRIPE_SECRET_KEY
-    ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2025-01-27.acacia' as any,
-    })
-    : null;
 
 export async function POST(req: Request) {
-    if (!stripe) {
-        return NextResponse.json(
-            { error: 'Stripe is not configured (STRIPE_SECRET_KEY missing)' },
-            { status: 500 }
-        );
-    }
-
     try {
+        const stripe = getStripe();
+
         const { amount, returnUrl, userId } = await req.json();
 
         if (!amount) {

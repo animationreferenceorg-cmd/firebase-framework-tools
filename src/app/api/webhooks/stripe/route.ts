@@ -1,16 +1,10 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
+import { getStripe } from '@/lib/stripe';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAdminApp } from '@/lib/firebase-admin';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error('STRIPE_SECRET_KEY is missing');
-}
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2025-01-27.acacia' as any,
-});
 
 // Helper to get raw body for signature verification
 async function getRawBody(request: Request): Promise<Buffer> {
@@ -43,9 +37,11 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'No signature' }, { status: 400 });
     }
 
+
     let event: Stripe.Event;
 
     try {
+        const stripe = getStripe();
         event = stripe.webhooks.constructEvent(
             body,
             signature,

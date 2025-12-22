@@ -1,15 +1,8 @@
 import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
+import { getStripe } from '@/lib/stripe';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAdminApp } from '@/lib/firebase-admin';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error('STRIPE_SECRET_KEY is missing');
-}
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2025-01-27.acacia' as any,
-});
 
 export async function POST(req: Request) {
     try {
@@ -36,6 +29,7 @@ export async function POST(req: Request) {
         }
 
         // Create a Billing Portal session
+        const stripe = getStripe();
         const session = await stripe.billingPortal.sessions.create({
             customer: stripeCustomerId,
             return_url: returnUrl || req.headers.get('origin') || 'http://localhost:3000',

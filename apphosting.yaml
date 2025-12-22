@@ -19,3 +19,8 @@ runConfig:
       secret: FIREBASE_CLIENT_EMAIL
     - variable: FIREBASE_STORAGE_BUCKET
       secret: FIREBASE_STORAGE_BUCKET
+    - variable: STRIPE_SECRET_KEY
+      secret: STRIPE_SECRET_KEY
+    - variable: STRIPE_WEBHOOK_SECRET
+      secret: STRIPE_WEBHOOK_SECRET
+

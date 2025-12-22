@@ -143,11 +143,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                         Feed
                                     </SidebarLink>
                                 </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarLink href="/marketplace" icon={Box} tooltip="Marketplace">
-                                        Marketplace
-                                    </SidebarLink>
-                                </SidebarMenuItem>
+
                             </SidebarMenu>
                         </SidebarGroup>
                         <SidebarGroup>

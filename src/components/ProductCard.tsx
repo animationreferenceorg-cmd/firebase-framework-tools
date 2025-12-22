@@ -1,7 +1,7 @@
 "use client";
 
 import Image from 'next/image';
-import { ShoppingCart, Star } from 'lucide-react';
+import { ShoppingCart, Star, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Product } from '@/lib/marketplace-types';
@@ -73,11 +73,30 @@ export function ProductCard({ product }: ProductCardProps) {
                 <p className="text-sm text-zinc-400 line-clamp-2">{product.description}</p>
 
                 <Button
-                    onClick={handleBuy}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        if (product.type === 'affiliate' && product.linkUrl) {
+                            window.open(product.linkUrl, '_blank');
+                        } else {
+                            toast({
+                                title: "Coming Soon!",
+                                description: "Marketplace checkout is under development.",
+                            });
+                        }
+                    }}
                     className="w-full mt-2 bg-white/5 hover:bg-purple-600 hover:text-white border border-white/10 transition-all duration-300 group-hover:border-purple-500/50"
                 >
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    Add to Cart
+                    {product.type === 'affiliate' ? (
+                        <>
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            Details
+                        </>
+                    ) : (
+                        <>
+                            <ShoppingCart className="mr-2 h-4 w-4" />
+                            Add to Cart
+                        </>
+                    )}
                 </Button>
             </div>
         </div>

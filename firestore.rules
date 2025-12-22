@@ -15,7 +15,7 @@ service cloud.firestore {
 
     // Videos: Readable by any logged-in user, writable only by admins
     match /videos/{videoId} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow write: if isAdmin();
     }
 

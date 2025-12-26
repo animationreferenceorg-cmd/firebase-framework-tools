@@ -298,7 +298,7 @@ export default function AuthHeader() {
                     type="submit"
                     className="w-full h-14 text-lg font-bold rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#6d28d9] hover:scale-[1.02] hover:shadow-[0_0_40px_-10px_rgba(124,58,237,0.6)] border border-purple-400/20 transition-all duration-300 text-white shadow-xl"
                     disabled={isCheckingOut}
-                    onClick={() => handleDonate(donationOptions.find(o => o.amount === selectedAmount)?.priceId)}
+                    onClick={() => handleDonate(selectedAmount)}
                   >
                     {isCheckingOut ? 'Redirecting...' : (
                       <span className="flex items-center gap-2">

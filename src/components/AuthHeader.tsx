@@ -29,7 +29,7 @@ import { DollarSign, Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { useEffect } from 'react';
-import { onSnapshot, doc } from 'firebase/firestore';
+import { onSnapshot, doc, collection, addDoc } from 'firebase/firestore';
 
 export default function AuthHeader() {
   const { user, loading } = useAuth();
@@ -71,10 +71,10 @@ export default function AuthHeader() {
     }
   }
 
-  const handleDonate = async (amount: string | undefined) => {
+  const handleDonate = async (priceId: string | undefined) => {
     if (isCheckingOut) return;
 
-    if (!user) {
+    if (!user || !db) {
       toast({
         variant: 'destructive',
         title: 'Not signed in',
@@ -83,51 +83,51 @@ export default function AuthHeader() {
       return;
     }
 
-    if (!amount) {
+    if (!priceId) {
       toast({
         variant: 'destructive',
-        title: 'No amount selected',
-        description: 'Please select a donation amount.',
+        title: 'Configuration Error',
+        description: 'Price ID is missing for this selection.',
       });
       return;
     }
 
     setIsCheckingOut(true);
-    toast({ title: 'Creating checkout session...', description: 'Please wait while we redirect you to Stripe.' });
+    toast({ title: 'Starting checkout...', description: 'Redirecting to Stripe...' });
 
     try {
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount,
-          returnUrl: window.location.href,
-          userId: user.uid,
-        }),
+      // Create a checkout session in Firestore (Stripe Extension listens to this)
+      const collectionRef = collection(db, 'users', user.uid, 'checkout_sessions');
+      const docRef = await addDoc(collectionRef, {
+        price: priceId, // The extension expects 'price' (Price ID) or 'line_items'
+        success_url: window.location.origin + '/?success=true',
+        cancel_url: window.location.origin + '/?canceled=true',
+        mode: 'subscription', // or 'payment' for one-time
+        allow_promotion_codes: true,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create checkout session');
-      }
-
-      if (data.url) {
-        window.location.assign(data.url);
-      } else {
-        throw new Error('No checkout URL returned');
-      }
+      // Wait for the extension to attach the URL
+      const unsubscribe = onSnapshot(docRef, (snap) => {
+        const { error, url } = snap.data() || {};
+        if (error) {
+          console.error('Stripe Extension Error:', error);
+          toast({ variant: 'destructive', title: 'Checkout Error', description: error.message });
+          setIsCheckingOut(false);
+          unsubscribe();
+        }
+        if (url) {
+          window.location.assign(url);
+          unsubscribe();
+        }
+      });
 
     } catch (error: any) {
       console.error("Error creating checkout session:", error);
       toast({
         variant: 'destructive',
-        title: 'Checkout Error',
-        description: error.message || 'Could not create a checkout session. Please check your configuration and try again.',
+        title: 'Error',
+        description: error.message || 'Could not start checkout.',
       });
-    } finally {
       setIsCheckingOut(false);
     }
   };
@@ -298,7 +298,7 @@ export default function AuthHeader() {
                     type="submit"
                     className="w-full h-14 text-lg font-bold rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#6d28d9] hover:scale-[1.02] hover:shadow-[0_0_40px_-10px_rgba(124,58,237,0.6)] border border-purple-400/20 transition-all duration-300 text-white shadow-xl"
                     disabled={isCheckingOut}
-                    onClick={() => handleDonate(selectedAmount)}
+                    onClick={() => handleDonate(donationOptions.find(o => o.amount === selectedAmount)?.priceId)}
                   >
                     {isCheckingOut ? 'Redirecting...' : (
                       <span className="flex items-center gap-2">

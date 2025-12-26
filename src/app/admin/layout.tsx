@@ -26,6 +26,7 @@ function AdminNav() {
     { href: '/admin/categories', label: 'Categories', icon: LayoutGrid },
     { href: '/admin/marketplace', label: 'Marketplace', icon: BookCopy },
     { href: '/admin/shorts', label: 'Short Films', icon: Film },
+    { href: '/admin/bunny', label: 'Bunny Sync', icon: Video },
   ];
 
   return (

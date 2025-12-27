@@ -35,11 +35,11 @@ export default function AuthHeader() {
   const { user, loading } = useAuth();
   const { db, auth } = useFirebase();
   const { toast } = useToast();
-  const [selectedAmount, setSelectedAmount] = useState('5');
+  const [selectedAmount, setSelectedAmount] = useState('1');
   const donationOptions = [
-    { amount: '1', label: '$1 / month', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_1_DOLLAR },
-    { amount: '2', label: '$2 / month', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_2_DOLLARS },
-    { amount: '5', label: '$5 / month', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_5_DOLLARS },
+    { amount: '1', label: '$1 / month', priceId: 'price_1SFgUc59QHehw05fROtqwkLN' },
+    { amount: '2', label: '$2 / month', priceId: 'price_1SFgiV59QHehw05fc0lPRRf7' },
+    { amount: '5', label: '$5 / month', priceId: 'price_1SFgiq59QHehw05fy017h1gR' },
   ];
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
@@ -97,7 +97,8 @@ export default function AuthHeader() {
 
     try {
       // Create a checkout session in Firestore (Stripe Extension listens to this)
-      const collectionRef = collection(db, 'users', user.uid, 'checkout_sessions');
+      const collectionRef = collection(db, 'customers', user.uid, 'checkout_sessions');
+
       const docRef = await addDoc(collectionRef, {
         price: priceId, // The extension expects 'price' (Price ID) or 'line_items'
         success_url: window.location.origin + '/?success=true',
@@ -110,8 +111,9 @@ export default function AuthHeader() {
       const unsubscribe = onSnapshot(docRef, (snap) => {
         const { error, url } = snap.data() || {};
         if (error) {
-          console.error('Stripe Extension Error:', error);
-          toast({ variant: 'destructive', title: 'Checkout Error', description: error.message });
+          const errorMessage = error.message || JSON.stringify(error);
+          console.error('Stripe Extension Error:', errorMessage);
+          toast({ variant: 'destructive', title: 'Checkout Error', description: errorMessage });
           setIsCheckingOut(false);
           unsubscribe();
         }
@@ -201,7 +203,7 @@ export default function AuthHeader() {
                     type="submit"
                     className="w-full h-14 text-lg font-bold rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#6d28d9] hover:scale-[1.02] hover:shadow-[0_0_40px_-10px_rgba(124,58,237,0.6)] border border-purple-400/20 transition-all duration-300 text-white shadow-xl"
                     disabled={isCheckingOut}
-                    onClick={() => handleDonate(selectedAmount)}
+                    onClick={() => handleDonate(donationOptions.find(o => o.amount === selectedAmount)?.priceId)}
                   >
                     {isCheckingOut ? 'Redirecting...' : (
                       <span className="flex items-center gap-2">

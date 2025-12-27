@@ -76,61 +76,61 @@ export function CategoryCard({ title, description, tags, href, imageUrl, videoUr
 
   return (
     <div className="relative group/card">
-      <Link 
-        href={href} 
+      <Link
+        href={href}
         className="relative block aspect-[4/3] w-full overflow-hidden rounded-[15px] shadow-lg"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-          {!isImageLoaded && <Skeleton className="absolute inset-0" />}
-          
-          <Image
-              src={imageUrl}
-              alt={title}
-              width={400}
-              height={300}
-              className={cn(
-                  "absolute inset-0 w-full h-full object-cover transition-opacity duration-300",
-                  !isImageLoaded && "opacity-0",
-                  (isHovered && videoUrl) && "opacity-0"
-              )}
-              onLoad={() => setIsImageLoaded(true)}
-              data-ai-hint={hint}
-          />
+        {!isImageLoaded && <Skeleton className="absolute inset-0" />}
 
-          {videoUrl && (
-             <div className={cn(
-                "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none",
-                isHovered ? "opacity-100" : "opacity-0"
-              )}>
-                <ReactPlayer 
-                    url={videoUrl}
-                    playing={isHovered}
-                    loop={true}
-                    muted={true}
-                    playsinline={true}
-                    controls={false}
-                    width="100%"
-                    height="100%"
-                    style={{ position: 'absolute', top: 0, left: 0, borderRadius: 'var(--radius)', overflow: 'hidden' }}
-                    config={{
-                        file: {
-                            attributes: {
-                                style: {
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'cover',
-                                    borderRadius: 'inherit',
-                                },
-                            },
-                        },
-                    }}
-                />
-              </div>
+        <Image
+          src={imageUrl}
+          alt={title}
+          width={400}
+          height={300}
+          className={cn(
+            "absolute inset-0 w-full h-full object-cover transition-opacity duration-300",
+            !isImageLoaded && "opacity-0",
+            (isHovered && videoUrl) && "opacity-0"
           )}
-        
+          onLoad={() => setIsImageLoaded(true)}
+          data-ai-hint={hint}
+        />
+
+        {videoUrl && (
+          <div className={cn(
+            "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none",
+            isHovered ? "opacity-100" : "opacity-0"
+          )}>
+            <ReactPlayer
+              url={videoUrl}
+              playing={isHovered}
+              loop={true}
+              muted={true}
+              playsinline={true}
+              controls={false}
+              width="100%"
+              height="100%"
+              style={{ position: 'absolute', top: 0, left: 0, borderRadius: 'var(--radius)', overflow: 'hidden' }}
+              config={{
+                file: {
+                  attributes: {
+                    style: {
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      borderRadius: 'inherit',
+                    },
+                  },
+                },
+              }}
+            />
+          </div>
+        )}
+
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-        
+
         <div className="absolute inset-0 flex flex-col justify-end p-4 md:p-6 text-white">
           <h3 className="text-xl lg:text-2xl font-bold drop-shadow-lg">{title}</h3>
           <p className="mt-1 text-sm text-gray-200 drop-shadow-md line-clamp-2">{description}</p>
@@ -144,13 +144,13 @@ export function CategoryCard({ title, description, tags, href, imageUrl, videoUr
         </div>
       </Link>
       {authUser && !hideLikeButton && (
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={handleLikeToggle}
           className="absolute top-2 right-2 z-20 h-9 w-9 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-white opacity-0 group-hover/card:opacity-100 transition-opacity duration-300"
         >
-            <Heart className={cn("h-5 w-5", isLiked && "fill-red-500 text-red-500")} />
+          <Heart className={cn("h-5 w-5", isLiked && "fill-red-500 text-red-500")} />
         </Button>
       )}
     </div>

@@ -1,189 +1,112 @@
+'use client';
 
-"use client";
-
-import type { Video, Category } from '@/lib/types';
-import { VideoCard } from './VideoCard';
-import { ChevronLeft, ChevronRight, MoveRight, Heart, Share2 } from 'lucide-react';
-import { Button } from './ui/button';
-import React, { useMemo } from 'react';
-import Link from 'next/link';
+import React, { useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
+import { VideoCard } from '@/components/VideoCard';
+import { Button } from '@/components/ui/button';
+import type { Video } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/use-auth';
-import { useUser } from '@/hooks/use-user';
-import { useToast } from '@/hooks/use-toast';
-import { likeCategory, unlikeCategory } from '@/lib/firestore';
+import Link from 'next/link';
 
 interface VideoRowProps {
   title: string;
   videos: Video[];
-  href?: string;
-  poster?: boolean;
-  category?: Category;
+  viewAllLink?: string;
+  isPoster?: boolean; // For 2:3 aspect ratio (Shorts) vs 16:9
 }
 
-export function VideoRow({ title, videos, href, poster = false, category }: VideoRowProps) {
-  const scrollRef = React.useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = React.useState(false);
-  const [canScrollRight, setCanScrollRight] = React.useState(true);
+export function VideoRow({ title, videos, viewAllLink, isPoster = false }: VideoRowProps) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
 
-  const { user: authUser } = useAuth();
-  const { userProfile, mutate } = useUser();
-  const { toast } = useToast();
-
-  const isLiked = useMemo(() => {
-    if (!category) return false;
-    return userProfile?.likedCategoryTitles?.includes(category.title) ?? false;
-  }, [userProfile, category]);
-
-
-  const checkForScrollPosition = () => {
-    if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+  const handleScroll = () => {
+    if (rowRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = rowRef.current;
+      setShowLeftArrow(scrollLeft > 0);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
     }
   };
 
   const scroll = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      // Check boundaries with small tolerance
-      const isAtStart = scrollLeft <= 10;
-      const isAtEnd = scrollLeft + clientWidth >= scrollWidth - 10;
-
-      let scrollTo;
-      if (direction === 'left') {
-        // If at start, loop to end; otherwise scroll left
-        scrollTo = isAtStart ? scrollWidth : scrollLeft - clientWidth * 0.8;
-      } else {
-        // If at end, loop to start; otherwise scroll right
-        scrollTo = isAtEnd ? 0 : scrollLeft + clientWidth * 0.8;
-      }
-
-      scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
-    }
-  };
-
-  React.useEffect(() => {
-    const currentRef = scrollRef.current;
-    if (currentRef) {
-      checkForScrollPosition();
-      currentRef.addEventListener('scroll', checkForScrollPosition);
-    }
-    return () => {
-      if (currentRef) {
-        currentRef.removeEventListener('scroll', checkForScrollPosition);
-      }
-    };
-  }, [videos]);
-
-
-  if (!videos || videos.length === 0) {
-    return null;
-  }
-
-  const handleLikeToggle = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!authUser || !category) {
-      toast({
-        variant: "destructive",
-        title: "Please sign in",
-        description: "You need to be signed in to like categories.",
-      });
-      return;
-    }
-
-    try {
-      if (isLiked) {
-        await unlikeCategory(authUser.uid, category.title);
-        toast({ title: "Removed from Liked Categories", description: category.title });
-      } else {
-        await likeCategory(authUser.uid, category.title);
-        toast({ title: "Added to Liked Categories!", description: category.title });
-      }
-      mutate();
-    } catch (error) {
-      console.error("Failed to update like status:", error);
-      toast({
-        variant: "destructive",
-        title: "Something went wrong",
-        description: "Could not update your liked categories.",
+    if (rowRef.current) {
+      const { clientWidth } = rowRef.current;
+      const scrollAmount = clientWidth * 0.8;
+      rowRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
       });
     }
   };
 
-  const handleShare = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (href) {
-      const fullUrl = `${window.location.origin}${href}`;
-      navigator.clipboard.writeText(fullUrl);
-      toast({
-        title: "Link Copied!",
-        description: "Category link copied to clipboard.",
-      });
-    }
-  };
-
+  if (!videos || videos.length === 0) return null;
 
   return (
-    <section className="group/row relative">
-      <div className="flex items-center mb-4">
-        <h2 className="text-xl md:text-2xl font-bold text-white">{title}</h2>
-        <div className="flex items-center gap-1 ml-4 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300">
-          {category && (
-            <>
-              <Button variant="ghost" size="icon" onClick={handleLikeToggle} className="h-8 w-8 rounded-full text-white hover:bg-white/20 hover:text-white">
-                <Heart className={cn("h-5 w-5", isLiked && "fill-red-500 text-red-500")} />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={handleShare} className="h-8 w-8 rounded-full text-white hover:bg-white/20 hover:text-white">
-                <Share2 className="h-5 w-5" />
-              </Button>
-            </>
-          )}
-          {href && (
-            <Link href={href} className="flex items-center gap-1 text-sm font-semibold text-primary ml-2">
-              View All
-              <MoveRight className="h-4 w-4" />
-            </Link>
-          )}
-        </div>
+    <div className="space-y-4 py-8 group/row">
+      <div className="px-4 md:px-12 flex items-end justify-between">
+        <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">{title}</h2>
+        {viewAllLink && (
+          <Link href={viewAllLink} className="text-sm font-semibold text-zinc-400 hover:text-white flex items-center gap-1 transition-colors">
+            View All <ArrowRight className="h-4 w-4" />
+          </Link>
+        )}
       </div>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute left-0 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full bg-black/60 hover:bg-black/80 text-white transition-all opacity-0 group-hover/row:opacity-100"
-        onClick={() => scroll('left')}
-      >
-        <ChevronLeft size={24} />
-      </Button>
+      <div className="group relative">
+        {/* Left Arrow */}
+        <div className={cn(
+          "absolute left-0 top-0 bottom-0 z-40 w-12 md:w-16 bg-gradient-to-r from-black/80 to-transparent flex items-center justify-start pl-2 md:pl-4 transition-opacity duration-300 pointer-events-none",
+          showLeftArrow ? "opacity-100" : "opacity-0"
+        )}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => scroll('left')}
+            className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-black/60 border border-white/10 text-white hover:bg-white hover:text-black hover:scale-110 shadow-xl backdrop-blur-sm pointer-events-auto transition-all"
+          >
+            <ChevronLeft className="h-6 w-6 md:h-8 md:w-8" />
+          </Button>
+        </div>
 
-      <div ref={scrollRef} className="overflow-x-auto overflow-y-hidden scrollbar-hide">
-        <div className="flex space-x-3 md:space-x-4 pb-4">
-          {videos.map(video => (
-            <div key={video.id} className={cn(
-              "flex-shrink-0",
-              poster
-                ? "w-[40vw] sm:w-[30vw] md:w-[20vw] lg:w-[15vw]"
-                : "w-[45vw] sm:w-[45vw] md:w-[30vw] lg:w-[20vw]"
-            )}>
-              <VideoCard video={video} />
+        {/* Scroll Container */}
+        <div
+          ref={rowRef}
+          onScroll={handleScroll}
+          className="flex gap-4 overflow-x-auto pb-4 px-4 md:px-12 snap-x snap-mandatory scrollbar-hide"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {videos.map((video) => (
+            <div
+              key={video.id}
+              className={cn(
+                "flex-none snap-start",
+                isPoster
+                  ? "w-[160px] md:w-[220px]" // Vertical Shorts dimensions
+                  : "w-[280px] md:w-[380px]" // 16:9 Landscape dimensions
+              )}
+            >
+              <VideoCard video={video} poster={isPoster} />
             </div>
           ))}
+          {/* Spacer for right padding */}
+          <div className="w-8 md:w-12 flex-none" />
+        </div>
+
+        {/* Right Arrow */}
+        <div className={cn(
+          "absolute right-0 top-0 bottom-0 z-40 w-12 md:w-16 bg-gradient-to-l from-black/80 to-transparent flex items-center justify-end pr-2 md:pr-4 transition-opacity duration-300 pointer-events-none",
+          showRightArrow ? "opacity-100" : "opacity-0"
+        )}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => scroll('right')}
+            className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-black/60 border border-white/10 text-white hover:bg-white hover:text-black hover:scale-110 shadow-xl backdrop-blur-sm pointer-events-auto transition-all"
+          >
+            <ChevronRight className="h-6 w-6 md:h-8 md:w-8" />
+          </Button>
         </div>
       </div>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute right-0 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full bg-black/60 hover:bg-black/80 text-white transition-all opacity-0 group-hover/row:opacity-100"
-        onClick={() => scroll('right')}
-      >
-        <ChevronRight size={24} />
-      </Button>
-    </section>
+    </div>
   );
 }

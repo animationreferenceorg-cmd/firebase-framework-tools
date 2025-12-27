@@ -59,6 +59,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     const loading = authLoading || userProfileLoading;
 
     const isAdminPage = pathname.startsWith('/admin');
+    // Home Page uses 'Coming Soon' / Landing style (no sidebar)
     const isComingSoon = pathname === '/';
 
     if (isAdminPage || isComingSoon) {

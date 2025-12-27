@@ -33,7 +33,7 @@ export default function LandingPage() {
 
                 const categories = categorySnapshot.docs.map(doc => ({
                     id: doc.id,
-                    href: `/browse/${doc.id}`,
+                    href: `/browse?category=${doc.id}`,
                     ...doc.data()
                 } as Category));
                 setAllCategories(categories);
@@ -206,7 +206,7 @@ export default function LandingPage() {
                                             Explore our hand-picked collection of {category.title.toLowerCase()} references. Perfect for analyzing timing, spacing, and {idx % 2 === 0 ? 'mechanics' : 'acting'}.
                                         </p>
                                         <div className="pt-6">
-                                            <Link href={`/browse/${category.id}`}>
+                                            <Link href={`/browse?category=${category.id}`}>
                                                 <Button variant="outline" className="rounded-full px-8 py-6 border-white/10 hover:bg-white/10 hover:text-white transition-all group text-base">
                                                     View Collection
                                                     <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />

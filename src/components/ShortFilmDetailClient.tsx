@@ -34,8 +34,8 @@ function RatingSelector({ onRate, hasRated, onRated }: { onRate: (rating: number
     onRate(rate);
     onRated();
     toast({
-        title: "Rating Submitted!",
-        description: `You gave this video ${rate} star${rate > 1 ? 's' : ''}.`,
+      title: "Rating Submitted!",
+      description: `You gave this video ${rate} star${rate > 1 ? 's' : ''}.`,
     })
   }
 
@@ -63,35 +63,35 @@ function RatingSelector({ onRate, hasRated, onRated }: { onRate: (rating: number
 }
 
 function ShortDetailSkeleton() {
-    return (
-        <main>
-            <div className="relative w-full h-[56.25vw] max-h-[850px] min-h-[400px] bg-muted">
-                 <Skeleton className="w-full h-full" />
+  return (
+    <main>
+      <div className="relative w-full h-[56.25vw] max-h-[850px] min-h-[400px] bg-muted">
+        <Skeleton className="w-full h-full" />
+      </div>
+      <div className="container mx-auto px-4 md:px-6 py-8">
+        <div className="mt-16">
+          <Skeleton className="h-8 w-1/4 mb-4" />
+          <div className="flex space-x-4">
+            <div className="w-1/5 flex-shrink-0">
+              <Skeleton className="w-full aspect-video rounded-lg" />
             </div>
-            <div className="container mx-auto px-4 md:px-6 py-8">
-                <div className="mt-16">
-                    <Skeleton className="h-8 w-1/4 mb-4" />
-                    <div className="flex space-x-4">
-                        <div className="w-1/5 flex-shrink-0">
-                            <Skeleton className="w-full aspect-video rounded-lg" />
-                        </div>
-                        <div className="w-1/5 flex-shrink-0">
-                            <Skeleton className="w-full aspect-video rounded-lg" />
-                        </div>
-                         <div className="w-1/5 flex-shrink-0">
-                            <Skeleton className="w-full aspect-video rounded-lg" />
-                        </div>
-                         <div className="w-1/5 flex-shrink-0">
-                            <Skeleton className="w-full aspect-video rounded-lg" />
-                        </div>
-                         <div className="w-1/5 flex-shrink-0">
-                            <Skeleton className="w-full aspect-video rounded-lg" />
-                        </div>
-                    </div>
-                </div>
+            <div className="w-1/5 flex-shrink-0">
+              <Skeleton className="w-full aspect-video rounded-lg" />
             </div>
-        </main>
-    );
+            <div className="w-1/5 flex-shrink-0">
+              <Skeleton className="w-full aspect-video rounded-lg" />
+            </div>
+            <div className="w-1/5 flex-shrink-0">
+              <Skeleton className="w-full aspect-video rounded-lg" />
+            </div>
+            <div className="w-1/5 flex-shrink-0">
+              <Skeleton className="w-full aspect-video rounded-lg" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
 }
 
 /**
@@ -103,7 +103,7 @@ export function ShortFilmDetailClient({ id }: { id: string }) {
   const [relatedVideos, setRelatedVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasRated, setHasRated] = useState(false);
-  
+
   const { user: authUser } = useAuth();
   const { userProfile, mutate } = useUser();
   const { toast } = useToast();
@@ -126,17 +126,17 @@ export function ShortFilmDetailClient({ id }: { id: string }) {
           setVideo(videoData);
 
           if (videoData.categories && videoData.categories.length > 0) {
-              const firstCategory = videoData.categories[0];
-              const relatedQuery = query(
-                  collection(db, 'videos'), 
-                  where('isShort', '==', true),
-                  where('categories', 'array-contains', firstCategory),
-                  where('__name__', '!=', id),
-                  limit(10)
-              );
-              const relatedSnapshot = await getDocs(relatedQuery);
-              const relatedList = relatedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
-              setRelatedVideos(relatedList);
+            const firstCategory = videoData.categories[0];
+            const relatedQuery = query(
+              collection(db, 'videos'),
+              where('isShort', '==', true),
+              where('categories', 'array-contains', firstCategory),
+              where('__name__', '!=', id),
+              limit(10)
+            );
+            const relatedSnapshot = await getDocs(relatedQuery);
+            const relatedList = relatedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
+            setRelatedVideos(relatedList);
           }
         } else {
           console.log('No such document!');
@@ -150,7 +150,7 @@ export function ShortFilmDetailClient({ id }: { id: string }) {
 
     fetchVideo();
   }, [id]);
-  
+
   const handleRate = (rating: number) => {
     // In a real app, you would save this to a database
     console.log(`Rated video ${video?.id} with ${rating} stars`);
@@ -193,52 +193,52 @@ export function ShortFilmDetailClient({ id }: { id: string }) {
 
   if (!video) {
     return (
-        <div className="flex items-center justify-center h-full">
-            <div className="text-center text-white">Short Film not found.</div>
-        </div>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center text-white">Short Film not found.</div>
+      </div>
     );
   }
-  
+
   return (
     <main className="flex-1 overflow-y-auto bg-black">
       <div className="w-full">
         <div className="relative w-full aspect-video">
-            <VideoPlayer video={video} />
+          <VideoPlayer video={video} />
         </div>
       </div>
-      
+
       <div className="container mx-auto px-4 md:px-6 py-8">
         <div className="flex flex-col md:flex-row gap-8">
-            <div className="flex-1">
-                <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{video.title}</h1>
-                <p className="text-muted-foreground">{video.description}</p>
+          <div className="flex-1">
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{video.title}</h1>
+            <p className="text-muted-foreground">{video.description}</p>
+          </div>
+          <div className="flex md:flex-col items-start md:items-end gap-4">
+            <div className="flex items-center gap-2">
+              <Button onClick={handleSaveToggle} variant="outline" className={cn(isSaved && "bg-primary/80 border-primary/70 text-primary-foreground hover:bg-primary/90")}>
+                {isSaved ? <Check className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+                {isSaved ? 'Saved' : 'Save to List'}
+              </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="icon" className={cn(hasRated && "bg-yellow-400/20 border-yellow-400/50 text-yellow-400 hover:bg-yellow-400/30")}>
+                    <Star className={cn("h-4 w-4", hasRated && "fill-yellow-400")} />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto bg-background/80 backdrop-blur-sm border-white/30">
+                  <RatingSelector onRate={handleRate} hasRated={hasRated} onRated={() => setHasRated(true)} />
+                </PopoverContent>
+              </Popover>
+              <Button variant="outline" size="icon">
+                <Share2 className="h-4 w-4" />
+              </Button>
             </div>
-            <div className="flex md:flex-col items-start md:items-end gap-4">
-                 <div className="flex items-center gap-2">
-                    <Button onClick={handleSaveToggle} variant="outline" className={cn(isSaved && "bg-primary/80 border-primary/70 text-primary-foreground hover:bg-primary/90")}>
-                        {isSaved ? <Check className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-                        {isSaved ? 'Saved' : 'Save to List'}
-                    </Button>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" size="icon" className={cn(hasRated && "bg-yellow-400/20 border-yellow-400/50 text-yellow-400 hover:bg-yellow-400/30")}>
-                                <Star className={cn("h-4 w-4", hasRated && "fill-yellow-400")} />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto bg-background/80 backdrop-blur-sm border-white/30">
-                            <RatingSelector onRate={handleRate} hasRated={hasRated} onRated={() => setHasRated(true)} />
-                        </PopoverContent>
-                    </Popover>
-                    <Button variant="outline" size="icon">
-                        <Share2 className="h-4 w-4" />
-                    </Button>
-                </div>
-            </div>
+          </div>
         </div>
         <div className="mt-16">
-            {relatedVideos.length > 0 && (
-                <VideoRow title="You Might Also Like" videos={relatedVideos} poster />
-            )}
+          {relatedVideos.length > 0 && (
+            <VideoRow title="You Might Also Like" videos={relatedVideos} isPoster />
+          )}
         </div>
       </div>
     </main>

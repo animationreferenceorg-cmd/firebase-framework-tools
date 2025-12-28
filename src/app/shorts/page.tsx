@@ -74,8 +74,8 @@ export default function ShortFilmsPage() {
     <main className="flex-1">
       {featuredVideo && <HeroSection video={featuredVideo} isShort />}
       <div className="w-full px-4 md:px-6 space-y-8 pb-16 pt-12">
-        <VideoRow title="Trending Shorts" videos={trendingShorts} poster />
-        <VideoRow title="All Short Films" videos={allVideos} poster />
+        <VideoRow title="Trending Shorts" videos={trendingShorts} isPoster />
+        <VideoRow title="All Short Films" videos={allVideos} isPoster />
       </div>
     </main>
   );

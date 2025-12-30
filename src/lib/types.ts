@@ -12,6 +12,7 @@ export interface Video {
   categoryIds?: string[]; // For main videos
   categories?: string[]; // For short films
   isShort?: boolean;
+  status?: 'draft' | 'published';
 }
 
 export interface Category {

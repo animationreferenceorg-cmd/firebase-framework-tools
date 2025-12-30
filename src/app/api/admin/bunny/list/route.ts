@@ -14,7 +14,7 @@ export async function GET(req: Request) {
         const page = searchParams.get('page') || '1';
         const search = searchParams.get('search') || '';
 
-        let url = `https://video.bunnycdn.com/library/${libraryId}/videos?page=${page}&itemsPerPage=24&orderBy=date`;
+        let url = `https://video.bunnycdn.com/library/${libraryId}/videos?page=${page}&itemsPerPage=1000&orderBy=date`;
 
         if (search) {
             url += `&search=${encodeURIComponent(search)}`;

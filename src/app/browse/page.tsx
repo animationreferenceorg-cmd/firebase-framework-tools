@@ -91,8 +91,8 @@ export default function BrowsePage() {
     const filteredVideos = useMemo(() => {
         let result = [...allVideos];
 
-        // 0. Global Filter: Remove Shorts
-        result = result.filter(v => !v.isShort);
+        // 0. Global Filter: Remove Shorts and Drafts
+        result = result.filter(v => !v.isShort && v.status !== 'draft');
 
         // 1. Text Search
         if (searchQuery.trim()) {

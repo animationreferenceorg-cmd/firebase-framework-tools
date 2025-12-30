@@ -23,12 +23,13 @@ export default function ComingSoonPage() {
       try {
         // Fetch just a few videos to find a hero
         const videosQuery = query(collection(db, "videos"), where("isShort", "!=", true));
+        // Note: we filter drafts client-side below because multiple inequality filters require composite indexes
         const videoSnapshot = await getDocs(videosQuery);
 
         const videos = videoSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        } as Video));
+        } as Video)).filter(v => v.status !== 'draft'); // Filter out drafts
         setAllVideos(videos);
 
       } catch (error) {

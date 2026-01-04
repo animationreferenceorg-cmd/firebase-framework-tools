@@ -78,6 +78,8 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
 
     const isAdmin = userProfile?.role === 'admin';
 
+    const isFeedPage = pathname === '/feed';
+
     return (
         <UploadProvider>
             <SidebarProvider>
@@ -203,8 +205,8 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                 </Sidebar>
                 <SidebarInset>
                     <div className="flex flex-col flex-1 min-h-screen relative">
-                        <GlassHeader />
-                        <main className="flex-1 pt-32 px-4 md:px-8 pb-8 transition-all duration-300 ease-in-out">
+                        {!isFeedPage && <GlassHeader />}
+                        <main className="flex-1 px-4 md:px-8 pb-8 transition-all duration-300 ease-in-out">
                             {children}
                         </main>
                     </div>

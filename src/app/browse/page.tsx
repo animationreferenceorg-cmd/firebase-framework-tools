@@ -54,7 +54,7 @@ export default function BrowsePage() {
             setLoading(true);
             try {
                 // Fetch Videos (fetch enough for client filtering)
-                const videosQuery = query(collection(db, "videos"), limit(200));
+                const videosQuery = query(collection(db, "videos"), limit(1200));
 
                 // Fetch Categories (fetch all for the dialog/slider)
                 const categoriesQuery = query(collection(db, "categories"), where("status", "==", "published"), limit(100));
@@ -74,6 +74,34 @@ export default function BrowsePage() {
                     href: `/browse?category=${doc.id}`, // Update internal hrefs too
                     ...doc.data()
                 } as Category));
+
+                // Fallback: If category has no thumbnail, use a video thumbnail from that category
+                fetchedCategories.forEach(cat => {
+                    // DEBUG: Check 2D Animation ID
+                    if (cat.title.toLowerCase().includes('2d')) {
+                        console.log("DEBUG 2D:", cat.title, cat.id, "Missing img:", !cat.imageUrl);
+                    }
+
+                    if (!cat.imageUrl) {
+                        const match = videos.find(v => {
+                            const inCategoryIds = (v.categoryIds || []).includes(cat.id);
+                            const inCategories = (v.categories || []).includes(cat.id);
+
+                            const catTitleLower = cat.title.toLowerCase();
+                            const inCategoriesByTitle = (v.categories || []).some(c => c.toLowerCase() === catTitleLower);
+
+                            // Check tags for looser matching
+                            const inTagsByTitle = (v.tags || []).some(t => t.toLowerCase() === catTitleLower);
+                            const inTagsById = (v.tags || []).some(t => t.toLowerCase() === cat.id.toLowerCase());
+
+                            return inCategoryIds || inCategories || inCategoriesByTitle || inTagsByTitle || inTagsById;
+                        });
+
+                        if (match) {
+                            cat.imageUrl = match.thumbnailUrl || match.posterUrl;
+                        }
+                    }
+                });
 
                 setAllVideos(videos);
                 setCategories(fetchedCategories);

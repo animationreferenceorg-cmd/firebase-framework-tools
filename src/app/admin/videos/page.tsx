@@ -55,6 +55,8 @@ import { cn } from '@/lib/utils';
 import { VideoCard } from '@/components/VideoCard';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BulkVideoEditor } from '@/components/admin/BulkVideoEditor';
+import { QuickEditVideoDialog } from '@/components/admin/QuickEditVideoDialog';
 
 import { useSearchParams } from 'next/navigation';
 
@@ -151,6 +153,8 @@ function VideosPageContent() {
     })
   }, [videos, searchTerm, tagFilter, categoryFilter, statusFilter]);
 
+  const [quickEditVideo, setQuickEditVideo] = useState<Video | null>(null);
+
   // Bulk Actions
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -208,6 +212,59 @@ function VideosPageContent() {
     }
   };
 
+  const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
+
+  const handleBulkEdit = async (addCategories: string[], addTags: string[]) => {
+    if (!db) return;
+    try {
+      const batch = writeBatch(db);
+      let count = 0;
+
+      for (const videoId of selectedVideoIds) {
+        const video = videos.find(v => v.id === videoId);
+        if (!video) continue;
+
+        const updateData: any = {};
+
+        // Categories
+        if (addCategories.length > 0) {
+          const currentCats = video.categoryIds || [];
+          // Merge unique
+          const newCats = Array.from(new Set([...currentCats, ...addCategories]));
+          if (newCats.length !== currentCats.length) {
+            updateData.categoryIds = newCats;
+          }
+        }
+
+        // Tags
+        if (addTags.length > 0) {
+          const currentTags = video.tags || [];
+          const newTags = Array.from(new Set([...currentTags, ...addTags]));
+          if (newTags.length !== currentTags.length) {
+            updateData.tags = newTags;
+          }
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          batch.update(doc(db, "videos", videoId), updateData);
+          count++;
+        }
+      }
+
+      if (count > 0) {
+        await batch.commit();
+        toast({ title: "Bulk Edit Successful", description: `Updated ${count} videos.` });
+        fetchVideos();
+      } else {
+        toast({ title: "No Changes", description: "No updates were needed." });
+      }
+
+    } catch (error) {
+      console.error("Bulk edit failed:", error);
+      toast({ variant: "destructive", title: "Error", description: "Bulk edit failed." });
+    }
+  };
+
 
 
   // Helper to render the video list/grid, so we don't duplicate code
@@ -260,12 +317,33 @@ function VideosPageContent() {
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-foreground text-background px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 animate-in slide-in-from-bottom-5">
           <span className="font-semibold">{selectedVideoIds.size} selected</span>
           <div className="h-4 w-px bg-background/20" />
+          <Button size="sm" variant="secondary" onClick={() => setIsBulkEditOpen(true)} className="bg-blue-600 text-white hover:bg-blue-700 border-none">
+            Edit Selected
+          </Button>
           <Button size="sm" variant="secondary" onClick={handleBulkPublish} className="bg-green-600 text-white hover:bg-green-700 border-none">Publish Selected</Button>
 
           <Button size="sm" variant="destructive" onClick={handleBulkDelete}>Delete Selected</Button>
           <Button size="sm" variant="ghost" className="text-background hover:bg-background/20" onClick={() => setSelectedVideoIds(new Set())}>Cancel</Button>
         </div>
       )}
+
+      <BulkVideoEditor
+        open={isBulkEditOpen}
+        onOpenChange={setIsBulkEditOpen}
+        selectedCount={selectedVideoIds.size}
+        onSave={handleBulkEdit}
+        allCategories={allCategories}
+        allTags={allTags}
+      />
+
+      <QuickEditVideoDialog
+        open={!!quickEditVideo}
+        onOpenChange={(open) => !open && setQuickEditVideo(null)}
+        video={quickEditVideo}
+        onSave={fetchVideos}
+        allCategories={allCategories}
+        allTags={allTags}
+      />
 
       {view === 'list' ? (
         <Table>
@@ -359,7 +437,12 @@ function VideosPageContent() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem asChild><Link href={`/admin/videos/edit/${video.id}`}>Edit</Link></DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setQuickEditVideo(video)}>
+                          Quick Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/videos/edit/${video.id}`}>Edit Full</Link>
+                        </DropdownMenuItem>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -461,6 +544,9 @@ function VideosPageContent() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => setQuickEditVideo(video)}>
+                        Quick Edit
+                      </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link href={`/admin/videos/edit/${video.id}`}>Edit</Link>
                       </DropdownMenuItem>

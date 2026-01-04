@@ -34,7 +34,7 @@ export default function BetaPage() {
             setLoading(true);
             try {
                 // Fetch Videos
-                const videosQuery = query(collection(db, "videos"), limit(200));
+                const videosQuery = query(collection(db, "videos"), limit(1200));
 
                 // Fetch Categories
                 const categoriesQuery = query(collection(db, "categories"), where("status", "==", "published"), limit(100));
@@ -54,6 +54,29 @@ export default function BetaPage() {
                     href: `/browse?category=${doc.id}`,
                     ...doc.data()
                 } as Category));
+
+                // Fallback: If category has no thumbnail, use a video thumbnail from that category
+                fetchedCategories.forEach(cat => {
+                    if (!cat.imageUrl) {
+                        const match = videos.find(v => {
+                            const inCategoryIds = (v.categoryIds || []).includes(cat.id);
+                            const inCategories = (v.categories || []).includes(cat.id);
+
+                            const catTitleLower = cat.title.toLowerCase();
+                            const inCategoriesByTitle = (v.categories || []).some(c => c.toLowerCase() === catTitleLower);
+
+                            // Check tags for looser matching
+                            const inTagsByTitle = (v.tags || []).some(t => t.toLowerCase() === catTitleLower);
+                            const inTagsById = (v.tags || []).some(t => t.toLowerCase() === cat.id.toLowerCase());
+
+                            return inCategoryIds || inCategories || inCategoriesByTitle || inTagsByTitle || inTagsById;
+                        });
+
+                        if (match) {
+                            cat.imageUrl = match.thumbnailUrl || match.posterUrl;
+                        }
+                    }
+                });
 
                 setAllVideos(videos);
                 setCategories(fetchedCategories);
@@ -149,7 +172,7 @@ export default function BetaPage() {
                         </div>
 
                         {/* Headline */}
-                        <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-8 leading-[1.1] md:leading-[1.1] max-w-5xl mx-auto drop-shadow-2xl">
+                        <h1 className="text-4xl md:text-7xl lg:text-8xl font-black tracking-tight mb-8 leading-[1.1] md:leading-[1.1] max-w-5xl mx-auto drop-shadow-2xl">
                             <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/70">
                                 The Ultimate
                             </span>

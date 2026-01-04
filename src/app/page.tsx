@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Sparkles, Film, Construction, Heart } from 'lucide-react';
+import { ArrowRight, Sparkles, Film, Construction, Heart, Search, Users, Clapperboard } from 'lucide-react';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -132,10 +132,10 @@ export default function ComingSoonPage() {
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-white/5">
             {[
-              { label: "Reference Clips", value: "10,000+" },
-              { label: "Daily Updates", value: "25+" },
-              { label: "Active Animators", value: "5k+" },
-              { label: "Studios Represented", value: "120+" }
+              { label: "Curated Library", value: "Hand-Picked" },
+              { label: "Fresh Content", value: "Daily" },
+              { label: "Industry Standard", value: "Pro" },
+              { label: "Beta Access", value: "Free" }
             ].map((stat, i) => (
               <div key={i} className="py-8 md:py-12 flex flex-col items-center justify-center text-center group hover:bg-white/[0.02] transition-colors cursor-default">
                 <span className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tight group-hover:scale-110 transition-transform duration-300">{stat.value}</span>
@@ -179,13 +179,34 @@ export default function ComingSoonPage() {
             {/* Right: Benefits Cards */}
             <div className="grid gap-6">
               {[
-                { title: "Smart Discovery", desc: "Find references by action, emotion, or camera angle instantly.", color: "bg-blue-500/5 hover:bg-blue-500/10" },
-                { title: "Frame Analysis", desc: "Deconstruct movement with ghosting, stepping, and loop controls.", color: "bg-purple-500/5 hover:bg-purple-500/10" },
-                { title: "Curated Library", desc: "Hand-picked clips from industry veterans and top studios.", color: "bg-pink-500/5 hover:bg-pink-500/10" },
+                {
+                  title: "Find the Perfect Reference",
+                  desc: "Search by action, emotion, or style to find exactly what you need.",
+                  color: "bg-blue-500/5 hover:bg-blue-500/10",
+                  icon: <Search className="h-6 w-6 text-white" />
+                },
+                {
+                  title: "Discover Professional Animations",
+                  desc: "Access a library of curated clips from top industry studios.",
+                  color: "bg-purple-500/5 hover:bg-purple-500/10",
+                  icon: <Film className="h-6 w-6 text-white" />
+                },
+                {
+                  title: "Discover New Artists",
+                  desc: "Explore portfolios from veterans and rising stars alike.",
+                  color: "bg-pink-500/5 hover:bg-pink-500/10",
+                  icon: <Users className="h-6 w-6 text-white" />
+                },
+                {
+                  title: "Watch Short Films",
+                  desc: "Enjoy award-winning shorts and detailed animation breakdowns.",
+                  color: "bg-amber-500/5 hover:bg-amber-500/10",
+                  icon: <Clapperboard className="h-6 w-6 text-white" />
+                },
               ].map((feature, i) => (
                 <div key={i} className={`p-8 rounded-3xl border border-white/5 hover:border-white/20 transition-all duration-300 flex items-start gap-6 ${feature.color} backdrop-blur-sm group`}>
                   <div className="mt-1 h-12 w-12 rounded-2xl bg-white/5 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                    <Sparkles className="h-6 w-6 text-white" />
+                    {feature.icon}
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-white mb-2">{feature.title}</h3>

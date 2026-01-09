@@ -5,6 +5,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { MoreHorizontal, PlusCircle, LayoutGrid, List, UploadCloud, Edit } from 'lucide-react';
 import type { Category, Video } from '@/lib/types';
+import { findCategoryThumbnailMatch } from '@/lib/category-utils';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -116,32 +117,12 @@ export default function CategoriesPage() {
 
       // 2. Fallback Search if no Image or Featured Video
       if (!hasValidImage && !featuredVideo) {
-        // Find ALL matching videos
-        const matches = videos.filter(v => {
-          const inCategoryIds = (v.categoryIds || []).includes(category.id);
-          const inCategories = (v.categories || []).includes(category.id);
-
-          const catTitleLower = category.title.toLowerCase();
-          const inCategoriesByTitle = (v.categories || []).some(c => c.toLowerCase() === catTitleLower);
-
-          // Looser tag matching
-          const inTagsByTitle = (v.tags || []).some(t => {
-            const tLower = t.toLowerCase();
-            // Exact match OR One starts with the other
-            if (tLower.length < 2 || catTitleLower.length < 2) return tLower === catTitleLower;
-            return tLower === catTitleLower || catTitleLower.startsWith(tLower) || tLower.startsWith(catTitleLower);
-          });
-          const inTagsById = (v.tags || []).some(t => t.toLowerCase() === category.id.toLowerCase());
-
-          return inCategoryIds || inCategories || inCategoriesByTitle || inTagsByTitle || inTagsById;
-        });
-
-        if (matches.length > 0) {
-          // Use the first match for consistent display
-          featuredVideo = matches[0];
-
+        // Use shared utility for robust matching
+        const match = findCategoryThumbnailMatch(category, videos);
+        if (match) {
+          featuredVideo = match;
           if (category.title.toLowerCase().includes('2d')) {
-            console.log(`DEBUG Check: Found ${matches.length} matches for 2D Animation.`);
+            console.log(`DEBUG Check: Found match for 2D Animation via utility:`, match.title);
           }
         }
       }
@@ -167,30 +148,16 @@ export default function CategoriesPage() {
 
         if (!hasValidImage && !category.featuredVideoId) {
           console.log(`DEBUG: Checking category '${category.title}' (ID: ${category.id})...`);
-          // Find ALL matches
-          const matches = videos.filter(v => {
-            const inCategoryIds = (v.categoryIds || []).includes(category.id);
-            const inCategories = (v.categories || []).includes(category.id);
-            const catTitleLower = category.title.toLowerCase();
-            const inCategoriesByTitle = (v.categories || []).some(c => c.toLowerCase() === catTitleLower);
 
-            const inTagsByTitle = (v.tags || []).some(t => {
-              const tLower = t.toLowerCase();
-              if (tLower.length < 2 || catTitleLower.length < 2) return tLower === catTitleLower;
-              return tLower === catTitleLower || catTitleLower.startsWith(tLower) || tLower.startsWith(catTitleLower);
-            });
-            const inTagsById = (v.tags || []).some(t => t.toLowerCase() === category.id.toLowerCase());
-            return inCategoryIds || inCategories || inCategoriesByTitle || inTagsByTitle || inTagsById;
-          });
+          // Use shared utility
+          const match = findCategoryThumbnailMatch(category, videos);
 
-          if (matches.length > 0) {
-            // Pick RANDOM match
-            const randomMatch = matches[Math.floor(Math.random() * matches.length)];
-            console.log(`DEBUG: Found ${matches.length} matches for '${category.title}'. Selected: ${randomMatch.title}`);
+          if (match) {
+            console.log(`DEBUG: Found match for '${category.title}'. Selected: ${match.title}`);
 
-            if (randomMatch.thumbnailUrl || randomMatch.posterUrl) {
+            if (match.thumbnailUrl || match.posterUrl) {
               const categoryRef = doc(db, 'categories', category.id);
-              batch.update(categoryRef, { imageUrl: randomMatch.thumbnailUrl || randomMatch.posterUrl });
+              batch.update(categoryRef, { imageUrl: match.thumbnailUrl || match.posterUrl });
               updateCount++;
             }
           } else {

@@ -25,6 +25,12 @@ service cloud.firestore {
         allow write: if isAdmin();
     }
 
+    // Folders: Readable by anyone, writable only by admins
+    match /folders/{folderId} {
+        allow read: if true;
+        allow write: if isAdmin();
+    }
+
     // Marketplace: Readable by anyone, writable only by admins
     match /marketplace_products/{id} {
         allow read: if true;

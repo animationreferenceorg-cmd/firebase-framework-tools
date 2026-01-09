@@ -157,6 +157,11 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                         My List
                                     </SidebarLink>
                                 </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarLink href="/moodboard" icon={Box} tooltip="Moodboards">
+                                        Moodboards
+                                    </SidebarLink>
+                                </SidebarMenuItem>
                             </SidebarMenu>
                         </SidebarGroup>
                         {isAdmin && (
@@ -175,33 +180,6 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                             </>
                         )}
                     </SidebarContent>
-                    <SidebarSeparator />
-                    <SidebarFooter>
-                        {loading ? (
-                            <div className="flex flex-col gap-2 p-2">
-                                <div className="flex items-center gap-2 p-2 rounded-md">
-                                    <Skeleton className="h-8 w-8 rounded-full" />
-                                    <div className="flex flex-col text-sm overflow-hidden gap-1 w-full">
-                                        <Skeleton className="h-4 w-3/4" />
-                                        <Skeleton className="h-3 w-full" />
-                                    </div>
-                                </div>
-                            </div>
-                        ) : user && (
-                            <div className="flex flex-col gap-2 p-2">
-                                <div className="flex items-center gap-2 p-2 rounded-md bg-sidebar-accent">
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarImage src={user.photoURL || undefined} alt={user.displayName || 'User'} data-ai-hint="user avatar" />
-                                        <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex flex-col text-sm overflow-hidden">
-                                        <p className="font-semibold text-sidebar-accent-foreground truncate">{user.displayName || 'Guest User'}</p>
-                                        <p className="text-xs text-sidebar-foreground/70 truncate">{user.email}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </SidebarFooter>
                 </Sidebar>
                 <SidebarInset>
                     <div className="flex flex-col flex-1 min-h-screen relative">

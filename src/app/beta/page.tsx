@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs, query, limit, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Video, Category } from '@/lib/types';
+import { findCategoryThumbnailMatch } from '@/lib/category-utils';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Construction } from 'lucide-react';
 import { BrowseHero } from '@/components/BrowseHero';
@@ -12,6 +13,7 @@ import { FilterBar, TabOption, TypeOption } from '@/components/FilterBar';
 import { VideoGrid } from '@/components/VideoGrid';
 import { LikedVideoRow, LikedCategoryRow } from '@/components/RecentlyViewed';
 import Link from 'next/link';
+import { DonateDialog } from '@/components/DonateDialog';
 
 export default function BetaPage() {
     const [allVideos, setAllVideos] = useState<Video[]>([]);
@@ -57,21 +59,8 @@ export default function BetaPage() {
 
                 // Fallback: If category has no thumbnail, use a video thumbnail from that category
                 fetchedCategories.forEach(cat => {
-                    if (!cat.imageUrl) {
-                        const match = videos.find(v => {
-                            const inCategoryIds = (v.categoryIds || []).includes(cat.id);
-                            const inCategories = (v.categories || []).includes(cat.id);
-
-                            const catTitleLower = cat.title.toLowerCase();
-                            const inCategoriesByTitle = (v.categories || []).some(c => c.toLowerCase() === catTitleLower);
-
-                            // Check tags for looser matching
-                            const inTagsByTitle = (v.tags || []).some(t => t.toLowerCase() === catTitleLower);
-                            const inTagsById = (v.tags || []).some(t => t.toLowerCase() === cat.id.toLowerCase());
-
-                            return inCategoryIds || inCategories || inCategoriesByTitle || inTagsByTitle || inTagsById;
-                        });
-
+                    if (!cat.imageUrl || cat.imageUrl.includes('placehold.co')) {
+                        const match = findCategoryThumbnailMatch(cat, videos);
                         if (match) {
                             cat.imageUrl = match.thumbnailUrl || match.posterUrl;
                         }
@@ -83,7 +72,11 @@ export default function BetaPage() {
 
                 // Simulate Liked Items (Take first few)
                 setLikedVideos(videos.filter(v => !v.isShort).slice(0, 5));
-                setLikedCategories(fetchedCategories.slice(0, 6));
+
+                // Force "The Rookies" to appear in Liked Collections for demo
+                const rookies = fetchedCategories.find(c => c.title === "The Rookies");
+                const others = fetchedCategories.filter(c => c.title !== "The Rookies").slice(0, 10);
+                setLikedCategories(rookies ? [rookies, ...others] : others);
 
             } catch (error) {
                 console.error("Error fetching data:", error);
@@ -174,37 +167,36 @@ export default function BetaPage() {
                         {/* Headline */}
                         <h1 className="text-4xl md:text-7xl lg:text-8xl font-black tracking-tight mb-8 leading-[1.1] md:leading-[1.1] max-w-5xl mx-auto drop-shadow-2xl">
                             <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/70">
-                                The Ultimate
+                                Donate to
                             </span>
                             <br />
                             <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 animate-gradient-x">
-                                Reference Library
+                                Support the Site
                             </span>
                         </h1>
 
                         {/* Subheadline */}
                         <p className="text-lg md:text-xl text-zinc-100 mb-12 max-w-2xl mx-auto leading-relaxed drop-shadow-lg font-medium">
-                            Browse thousands of curated animation clips.
-                            <br className="hidden md:block" />
-                            Filter by 2D, 3D, source, and more.
+                            Please consider donating to keep the site live and developing ongoing features! We cannot do this without your support.
                         </p>
 
                         {/* CTA Button */}
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-                            <Button
-                                onClick={() => document.getElementById('content')?.scrollIntoView({ behavior: 'smooth' })}
-                                className="h-16 px-10 rounded-2xl text-lg font-semibold bg-white text-black hover:bg-white/90 shadow-[0_10px_40px_-10px_rgba(255,255,255,0.4)] border border-white/20 transition-all duration-300 group hover:scale-105"
-                            >
-                                Start Browsing
-                                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                            </Button>
+                            <DonateDialog>
+                                <Button
+                                    className="h-16 px-10 rounded-2xl text-lg font-semibold bg-white text-black hover:bg-white/90 shadow-[0_10px_40px_-10px_rgba(255,255,255,0.4)] border border-white/20 transition-all duration-300 group hover:scale-105"
+                                >
+                                    Donate here
+                                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                                </Button>
+                            </DonateDialog>
                         </div>
                     </div>
                 </BrowseHero>
             ) : null}
 
 
-            <div className="px-4 md:px-8 max-w-[1800px] mx-auto mt-8" id="content">
+            <div className="px-4 md:px-20 max-w-[1800px] mx-auto mt-8" id="content">
 
                 {/* 2. Recently Viewed Section (Rebranded to Liked) */}
                 <div className="mb-8">

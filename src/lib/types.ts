@@ -13,6 +13,13 @@ export interface Video {
   categories?: string[]; // For short films
   isShort?: boolean;
   status?: 'draft' | 'published';
+  folderId?: string;
+}
+
+export interface Folder {
+  id: string;
+  name: string;
+  createdAt?: any;
 }
 
 export interface Category {

@@ -1,0 +1,9 @@
+@echo off
+echo Adding changes...
+git add .
+echo Committing changes...
+git commit -m "Fix moodboard library window, improve DND responsiveness, and standardize full-screen player"
+echo Pushing to remote...
+git push
+echo Done!
+pause

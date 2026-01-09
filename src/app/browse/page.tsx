@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { collection, getDocs, query, limit, where } from 'firebase/firestore';
+import { collection, getDocs, query, limit, where, startAfter, orderBy, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Video, Category } from '@/lib/types';
+import { findCategoryThumbnailMatch } from '@/lib/category-utils';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Construction, Grid, X, Search } from 'lucide-react';
+import { ArrowRight, Construction, Grid, X, Search, Loader2 } from 'lucide-react';
 import { BrowseHero } from '@/components/BrowseHero';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
@@ -23,6 +24,9 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import { useInView } from 'react-intersection-observer';
+
+const VIDEOS_PER_PAGE = 24;
 
 export default function BrowsePage() {
     const searchParams = useSearchParams();
@@ -31,10 +35,28 @@ export default function BrowsePage() {
     const [allVideos, setAllVideos] = useState<Video[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+
+    // Pagination State
+    const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+    const [hasMore, setHasMore] = useState(true);
+
+    // Infinite Scroll Ref
+    const { ref, inView } = useInView({
+        threshold: 0,
+        rootMargin: '200px', // Trigger 200px before bottom
+    });
+
+    // Trigger Infinite Scroll
+    useEffect(() => {
+        if (inView && hasMore && !loadingMore && !loading) {
+            fetchVideos(false);
+        }
+    }, [inView, hasMore, loadingMore, loading]);
 
     // Filter State
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeTab, setActiveTab] = useState<TabOption>('trending');
+    const [activeTab, setActiveTab] = useState<TabOption>('latest'); // Default to latest for consistent pagination
     const [activeType, setActiveType] = useState<TypeOption>('all');
     const [columns, setColumns] = useState<number>(3);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -48,79 +70,105 @@ export default function BrowsePage() {
         }
     }, [searchParams]);
 
-    // Data Fetching
-    useEffect(() => {
-        const fetchData = async () => {
+    // Data Fetching Function
+    const fetchVideos = useCallback(async (reset = false) => {
+        if (reset) {
             setLoading(true);
+            setAllVideos([]);
+            setLastDoc(null);
+            setHasMore(true);
+        } else {
+            setLoadingMore(true);
+        }
+
+        try {
+            // Base constraints
+            const constraints: any[] = [
+                limit(VIDEOS_PER_PAGE)
+            ];
+
+            // If filtering by category server-side (optional optimization, for now we filter client side to match existing hybrid logic, 
+            // BUT to save costs effectively we should ideally filter by category here. 
+            // However, the user agreed to a simplified pagination first. 
+            // Let's implement robust "All Videos" pagination first).
+
+            // To ensure stable pagination, we should order by something.
+            // If activeTab is 'latest', order by createdAt (if exists) or just natural order.
+            // Since we don't have createdAt on Video type explicitly in the file viewed, we'll try to find a proxy or just use logic.
+            // For now, let's just paginate naturally.
+
+            if (!reset && lastDoc) {
+                constraints.push(startAfter(lastDoc));
+            }
+
+            // Construct Query
+            const q = query(collection(db, "videos"), ...constraints);
+
+            // Execute
+            const snapshot = await getDocs(q);
+
+            // Process Results
+            const newVideos = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            } as Video));
+
+            // Filter out drafts/shorts client side for safety, though ideally we do this in query
+            const validVideos = newVideos.filter(v =>
+                v.status !== 'draft' && !v.isShort
+            );
+
+            if (reset) {
+                setAllVideos(validVideos);
+            } else {
+                setAllVideos(prev => [...prev, ...validVideos]);
+            }
+
+            // Update Cursor
+            const lastVisible = snapshot.docs[snapshot.docs.length - 1];
+            setLastDoc(lastVisible || null);
+            setHasMore(snapshot.docs.length === VIDEOS_PER_PAGE);
+
+        } catch (error) {
+            console.error("Error fetching videos:", error);
+        } finally {
+            setLoading(false);
+            setLoadingMore(false);
+        }
+    }, [lastDoc]);
+
+    // Initial Load & Category Fetch
+    useEffect(() => {
+        // Fetch Categories once
+        const fetchCategories = async () => {
             try {
-                // Fetch Videos (fetch enough for client filtering)
-                const videosQuery = query(collection(db, "videos"), limit(1200));
-
-                // Fetch Categories (fetch all for the dialog/slider)
                 const categoriesQuery = query(collection(db, "categories"), where("status", "==", "published"), limit(100));
-
-                const [videoSnapshot, categorySnapshot] = await Promise.all([
-                    getDocs(videosQuery),
-                    getDocs(categoriesQuery)
-                ]);
-
-                const videos = videoSnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                } as Video));
-
+                const categorySnapshot = await getDocs(categoriesQuery);
                 const fetchedCategories = categorySnapshot.docs.map(doc => ({
                     id: doc.id,
-                    href: `/browse?category=${doc.id}`, // Update internal hrefs too
+                    href: `/browse?category=${doc.id}`,
                     ...doc.data()
                 } as Category));
 
                 // Fallback: If category has no thumbnail, use a video thumbnail from that category
-                fetchedCategories.forEach(cat => {
-                    // DEBUG: Check 2D Animation ID
-                    if (cat.title.toLowerCase().includes('2d')) {
-                        console.log("DEBUG 2D:", cat.title, cat.id, "Missing img:", !cat.imageUrl);
-                    }
-
-                    if (!cat.imageUrl) {
-                        const match = videos.find(v => {
-                            const inCategoryIds = (v.categoryIds || []).includes(cat.id);
-                            const inCategories = (v.categories || []).includes(cat.id);
-
-                            const catTitleLower = cat.title.toLowerCase();
-                            const inCategoriesByTitle = (v.categories || []).some(c => c.toLowerCase() === catTitleLower);
-
-                            // Check tags for looser matching
-                            const inTagsByTitle = (v.tags || []).some(t => t.toLowerCase() === catTitleLower);
-                            const inTagsById = (v.tags || []).some(t => t.toLowerCase() === cat.id.toLowerCase());
-
-                            return inCategoryIds || inCategories || inCategoriesByTitle || inTagsByTitle || inTagsById;
-                        });
-
-                        if (match) {
-                            cat.imageUrl = match.thumbnailUrl || match.posterUrl;
-                        }
-                    }
-                });
-
-                setAllVideos(videos);
+                // Note: We need some videos for this match logic. 
+                // Since we are now paginating, we might not have the matching video loaded.
+                // We will skip this optimization or do it lazily. For now, let's keep it simple.
+                // Or we can fetch a small batch specifically for this? 
+                // Let's just set the categories.
                 setCategories(fetchedCategories);
-
-            } catch (error) {
-                console.error("Error fetching data:", error);
-            } finally {
-                setLoading(false);
+            } catch (e) {
+                console.error("Categories error", e);
             }
-        }
-        fetchData();
-    }, []);
+        };
 
-    // Filter Logic
+        fetchCategories();
+        fetchVideos(true);
+    }, []); // Run once on mount
+
+    // Filter Logic (Client-Side filtering on the loaded page)
     const filteredVideos = useMemo(() => {
         let result = [...allVideos];
-
-        // 0. Global Filter: Remove Shorts and Drafts
-        result = result.filter(v => !v.isShort && v.status !== 'draft');
 
         // 1. Text Search
         if (searchQuery.trim()) {
@@ -157,8 +205,10 @@ export default function BrowsePage() {
 
         // 4. Sort by Tab
         if (activeTab === 'latest') {
-            result = [...result].reverse();
+            // Already roughly sorted by fetch order
+            // result = [...result].reverse(); // Don't reverse if paginating, usually
         } else if (activeTab === 'trending') {
+            // Shuffle the VIEWABLE results for variety
             result = [...result].sort(() => 0.5 - Math.random());
         }
 
@@ -170,16 +220,14 @@ export default function BrowsePage() {
         setIsCategoryDialogOpen(false);
     };
 
-    // Hero Video Selection
+    // Hero Video Selection (Pick from first batch)
     const heroVideo = useMemo(() => {
         if (allVideos.length === 0) return null;
-        const candidates = allVideos.filter(v => !v.isShort);
-        if (candidates.length === 0) return allVideos[0];
-        const randomIndex = Math.floor(Math.random() * candidates.length);
-        return candidates[randomIndex];
+        // Just pick one from the first few loaded
+        return allVideos[0];
     }, [allVideos]);
 
-    if (loading) {
+    if (loading && allVideos.length === 0) {
         return (
             <div className="min-h-screen bg-[#030014] p-8 space-y-8">
                 <div className="flex gap-6">
@@ -294,14 +342,28 @@ export default function BrowsePage() {
                                 </Button>
                             )}
                         </div>
-                        <span className="text-sm text-zinc-500 font-medium">{filteredVideos.length} Results</span>
+                        <span className="text-sm text-zinc-500 font-medium">{filteredVideos.length} Visible</span>
                     </div>
 
                     <VideoGrid title="" videos={filteredVideos} columns={columns} />
 
-                    {filteredVideos.length === 0 && (
+                    {filteredVideos.length === 0 && !loading && (
                         <div className="py-20 text-center text-zinc-500">
                             No videos found matching your criteria.
+                        </div>
+                    )}
+
+                    {/* Infinite Scroll Sentinel */}
+                    {hasMore && (
+                        <div ref={ref} className="flex justify-center mt-12 mb-20 py-8">
+                            {loadingMore ? (
+                                <div className="flex items-center gap-2 text-zinc-400">
+                                    <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
+                                    <span>Loading more inspiration...</span>
+                                </div>
+                            ) : (
+                                <div className="h-8" /> // Invisible spacer to catch scroll
+                            )}
                         </div>
                     )}
                 </div>

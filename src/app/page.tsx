@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Sparkles, Film, Construction, Heart, Search, Users, Clapperboard } from 'lucide-react';
 import { VideoPlayer } from '@/components/VideoPlayer';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Video } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,8 +21,8 @@ export default function ComingSoonPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch just a few videos to find a hero
-        const videosQuery = query(collection(db, "videos"), where("isShort", "!=", true));
+        // Fetch just a few videos to find a hero (Limit 20 for cost optimization)
+        const videosQuery = query(collection(db, "videos"), where("isShort", "!=", true), limit(20));
         // Note: we filter drafts client-side below because multiple inequality filters require composite indexes
         const videoSnapshot = await getDocs(videosQuery);
 

@@ -22,7 +22,7 @@ export async function extractInstagramVideoUrl(url: string) {
 
         // 1. Try Open Graph tags
         let videoMatch = html.match(/<meta\s+property="og:video"\s+content="([^"]+)"/i);
-        let imageMatch = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i);
+        const imageMatch = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i);
 
         // 2. Try simple regex for "video_url" in JSON blobs
         if (!videoMatch) {
@@ -36,7 +36,7 @@ export async function extractInstagramVideoUrl(url: string) {
 
         if (videoMatch && videoMatch[1]) {
             // Decode HTML entities (simple) and JSON unicodes
-            let videoUrl = videoMatch[1]
+            const videoUrl = videoMatch[1]
                 .replace(/&amp;/g, '&')
                 .replace(/\\u0026/g, '&')
                 .replace(/\\u0025/g, '%')

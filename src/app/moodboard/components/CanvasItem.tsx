@@ -116,3 +116,5 @@ export const CanvasItem = React.memo(({
         </div>
     );
 });
+
+CanvasItem.displayName = 'CanvasItem';

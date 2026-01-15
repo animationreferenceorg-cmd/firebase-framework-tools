@@ -120,7 +120,7 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
         };
 
         if (info.thumbnail) {
-            // @ts-ignore
+
             videoData.thumbnailUrl = info.thumbnail;
         }
 

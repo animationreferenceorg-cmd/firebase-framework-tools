@@ -72,17 +72,78 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      // Example: Redirect old site path to new category path
-      // {
-      //   source: '/old-running-animation-page',
-      //   destination: '/category/running-animation',
-      //   permanent: true,
-      // },
-      // {
-      //   source: '/browse/some-old-id',
-      //   destination: '/category/some-new-slug',
-      //   permanent: true,
-      // },
+      // Main Hub Redirect
+      {
+        source: '/browse',
+        destination: '/categories',
+        permanent: true,
+      },
+      {
+        source: '/categories/',
+        destination: '/categories',
+        permanent: true,
+      },
+      // SEO Category Redirects
+      {
+        source: '/run-cycle',
+        destination: '/category/running-animation-reference',
+        permanent: true,
+      },
+      {
+        source: '/run-cycle/',
+        destination: '/category/running-animation-reference',
+        permanent: true,
+      },
+      {
+        source: '/live-action',
+        destination: '/category/live-action-reference',
+        permanent: true,
+      },
+      {
+        source: '/live-action/',
+        destination: '/category/live-action-reference',
+        permanent: true,
+      },
+      {
+        source: '/eye-animations',
+        destination: '/category/eye-animation-references',
+        permanent: true,
+      },
+      {
+        source: '/eye-animations/',
+        destination: '/category/eye-animation-references',
+        permanent: true,
+      },
+      {
+        source: '/dreamworks',
+        destination: '/category/dreamworks-animation-references',
+        permanent: true,
+      },
+      {
+        source: '/dreamworks/',
+        destination: '/category/dreamworks-animation-references',
+        permanent: true,
+      },
+      {
+        source: '/jumping',
+        destination: '/category/jumping-animation-reference',
+        permanent: true,
+      },
+      {
+        source: '/jumping/',
+        destination: '/category/jumping-animation-reference',
+        permanent: true,
+      },
+      {
+        source: '/disney',
+        destination: '/category/disney-animation-references',
+        permanent: true,
+      },
+      {
+        source: '/disney/',
+        destination: '/category/disney-animation-references',
+        permanent: true,
+      },
     ];
   },
 };

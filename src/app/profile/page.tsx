@@ -3,14 +3,10 @@
 
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
-import { VideoCard } from '@/components/VideoCard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MOCK_VIDEOS, MOCK_CATEGORIES } from '@/lib/data';
-import { CreditCard, LogOut, Heart, Clapperboard, Star, Edit, ShieldCheck } from 'lucide-react';
+import { CreditCard, LogOut, Edit, ShieldCheck } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { CategoryCard } from '@/components/CategoryCard';
 import { auth, isFirebaseConfigured } from '@/lib/firebase';
 import {
   Dialog,
@@ -23,12 +19,13 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { updateProfile } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/hooks/use-user';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { DonateDialog } from '@/components/DonateDialog';
 
 export default function ProfilePage() {
   const { user: authUser, loading: authLoading } = useAuth();
@@ -40,6 +37,7 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
+  const [showDonateDialog, setShowDonateDialog] = useState(false);
 
   const handlePortal = async () => {
     if (isPortalLoading) return;
@@ -58,22 +56,6 @@ export default function ProfilePage() {
       setIsPortalLoading(false);
     }
   };
-
-  const likedVideos = useMemo(() => {
-    if (!userProfile) return [];
-    return MOCK_VIDEOS.filter(video => userProfile.likedVideoIds?.includes(video.id));
-  }, [userProfile]);
-
-  const likedCategories = useMemo(() => {
-    if (!userProfile) return [];
-    return MOCK_CATEGORIES.filter(category => userProfile.likedCategoryTitles?.includes(category.title));
-  }, [userProfile]);
-
-  const savedShorts = useMemo(() => {
-    if (!userProfile) return [];
-    return MOCK_VIDEOS.filter(video => video.isShort && userProfile.savedShortIds?.includes(video.id));
-  }, [userProfile]);
-
 
   useEffect(() => {
     if (authUser?.displayName) {
@@ -122,7 +104,6 @@ export default function ProfilePage() {
             <Skeleton className="h-20 w-full" />
           </CardContent>
         </Card>
-        <Skeleton className="h-10 w-full" />
       </main>
     );
   }
@@ -144,7 +125,6 @@ export default function ProfilePage() {
   return (
     <main className="container mx-auto px-4 md:px-6 pt-6 pb-16">
       <div className="flex flex-col md:flex-row items-center gap-6 mb-12">
-        {/* ... Avatar and User Info sections remain same, just ensuring context ... */}
         <Avatar className="h-32 w-32 border-4 border-primary">
           <AvatarImage src={currentUser.photoURL || undefined} alt={currentUser.displayName || ''} data-ai-hint="user avatar" />
           <AvatarFallback>{currentUser.email?.charAt(0).toUpperCase()}</AvatarFallback>
@@ -222,67 +202,16 @@ export default function ProfilePage() {
                 {isPortalLoading ? 'Loading...' : 'Manage Subscription'}
               </Button>
             ) : (
-              <div className="hidden sm:block">
-                {/* Placeholder or instructions for free users. 
-                                 Ideally we'd trigger the Donate dialog here, but for now relying on the global header button 
-                                 keeps it simple. */}
-                <p className="text-xs text-muted-foreground">Use the Donate button in the header to upgrade.</p>
-              </div>
+              <Button variant="default" onClick={() => setShowDonateDialog(true)} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white">
+                <CreditCard className="mr-2 h-4 w-4" />
+                Upgrade Plan
+              </Button>
             )}
           </div>
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="liked-videos" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3">
-          <TabsTrigger value="liked-videos"><Heart className="mr-2 h-4 w-4" />Liked Videos</TabsTrigger>
-          <TabsTrigger value="liked-categories"><Star className="mr-2 h-4 w-4" />Liked Categories</TabsTrigger>
-          <TabsTrigger value="saved-shorts"><Clapperboard className="mr-2 h-4 w-4" />Saved Shorts</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="liked-videos">
-          <div className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-            {likedVideos.map(video => (
-              <div key={`liked-${video.id}`}>
-                <VideoCard video={video} />
-              </div>
-            ))}
-          </div>
-          {likedVideos.length === 0 && (
-            <div className="text-center py-16 text-muted-foreground">
-              <p>You haven't liked any videos yet.</p>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="liked-categories">
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {likedCategories.map(category => (
-              <CategoryCard key={`liked-cat-${category.title}`} {...category} />
-            ))}
-          </div>
-          {likedCategories.length === 0 && (
-            <div className="text-center py-16 text-muted-foreground">
-              <p>You haven't liked any categories yet.</p>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="saved-shorts">
-          <div className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
-            {savedShorts.map(video => (
-              <div key={`shared-${video.id}`}>
-                <VideoCard video={video} poster />
-              </div>
-            ))}
-          </div>
-          {savedShorts.length === 0 && (
-            <div className="text-center py-16 text-muted-foreground">
-              <p>You haven&apos;t saved any shorts yet.</p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      <DonateDialog open={showDonateDialog} onOpenChange={setShowDonateDialog} />
     </main>
   );
 }

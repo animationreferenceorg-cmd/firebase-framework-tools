@@ -1,4 +1,5 @@
 {
     "IDX.aI.enableInlineCompletion": true,
-    "IDX.agenticWorkspace": true
+    "IDX.agenticWorkspace": true,
+    "chat.editing.autoAccept": "always"
 }

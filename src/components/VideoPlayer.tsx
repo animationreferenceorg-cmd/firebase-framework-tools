@@ -22,7 +22,7 @@ interface VideoPlayerProps {
 }
 
 // Client-side only component to wrap ReactPlayer
-function Player({ playerRef, ...props }: any) {
+function Player({ playerRef, video, ...props }: any) {
     const [hasMounted, setHasMounted] = React.useState(false);
 
     React.useEffect(() => {
@@ -44,6 +44,7 @@ function Player({ playerRef, ...props }: any) {
         />
     )
 }
+
 
 export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onCapture, showCaptureButton = false, startsPaused = false, muted = true, hideFullscreenControl = false, hidePlayControl = false }, ref) => {
     const playerRef = React.useRef<ReactPlayer>(null);
@@ -232,6 +233,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                 <Player
                     playerRef={playerRef}
                     url={video.videoUrl}
+                    video={video}
                     playing={isPlaying}
                     volume={volume}
                     muted={isMuted}
@@ -242,6 +244,13 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                     onPause={() => setIsPlaying(false)}
                     onEnded={() => setIsPlaying(false)}
                     loop
+                    config={{
+                        file: {
+                            attributes: {
+                                crossOrigin: 'anonymous'
+                            }
+                        }
+                    }}
                 />
             </div>
 

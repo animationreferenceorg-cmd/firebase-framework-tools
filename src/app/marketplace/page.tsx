@@ -31,14 +31,14 @@ export default function MarketplacePage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#0a0814] flex items-center justify-center">
+            <div className="min-h-screen bg-transparent flex items-center justify-center">
                 <p className="text-white animate-pulse">Loading Marketplace...</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-[#0a0814] text-white selection:bg-purple-500/30">
+        <div className="min-h-screen bg-transparent text-white selection:bg-purple-500/30">
 
             <main className="container mx-auto px-4 pt-32 pb-20">
 
@@ -90,19 +90,43 @@ export default function MarketplacePage() {
                         </TabsContent>
 
                         <TabsContent value="sets" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                {sets.map(product => (
-                                    <ProductCard key={product.id} product={product} />
-                                ))}
-                            </div>
+                            {sets.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-20 animate-fade-in">
+                                    <div className="bg-white/5 p-6 rounded-full mb-6">
+                                        <Layers className="h-12 w-12 text-purple-400/80" />
+                                    </div>
+                                    <h2 className="text-2xl font-semibold text-white mb-2">Sets Coming Soon</h2>
+                                    <p className="text-zinc-400 max-w-md text-center">
+                                        We are currently curating the best environment sets for you. Check back later!
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    {sets.map(product => (
+                                        <ProductCard key={product.id} product={product} />
+                                    ))}
+                                </div>
+                            )}
                         </TabsContent>
 
                         <TabsContent value="plugins" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                {plugins.map(product => (
-                                    <ProductCard key={product.id} product={product} />
-                                ))}
-                            </div>
+                            {plugins.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-20 animate-fade-in">
+                                    <div className="bg-white/5 p-6 rounded-full mb-6">
+                                        <Wrench className="h-12 w-12 text-purple-400/80" />
+                                    </div>
+                                    <h2 className="text-2xl font-semibold text-white mb-2">Plugins Coming Soon</h2>
+                                    <p className="text-zinc-400 max-w-md text-center">
+                                        We are currently curating the best plugins and tools for you. Check back later!
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    {plugins.map(product => (
+                                        <ProductCard key={product.id} product={product} />
+                                    ))}
+                                </div>
+                            )}
                         </TabsContent>
                     </Tabs>
                 )}

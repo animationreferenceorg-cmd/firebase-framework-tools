@@ -152,6 +152,49 @@ export function VideoCard({ video, poster }: VideoCardProps) {
     )
   }
 
+  if (video.type === 'social' || (video.type as string) === 'instagram') {
+    return (
+      <Dialog open={isPlayerOpen} onOpenChange={setIsPlayerOpen}>
+        <div
+          className={cn(
+            "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lg transform-gpu transition-all duration-300 ease-in-out group/card cursor-pointer",
+            aspectRatio
+          )}
+        >
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-purple-600/20 to-pink-600/20">
+            <Share2 className="h-12 w-12 text-white/80 mb-2" />
+            <span className="text-white font-medium px-4 text-center truncate w-full">{video.title}</span>
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 p-3 opacity-0 group-hover/card:opacity-100 transition-all duration-300 bg-black/60 backdrop-blur-sm">
+            <div className="flex items-center justify-end">
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white/90 text-black hover:bg-white backdrop-blur-sm">
+                  <Maximize className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+            </div>
+          </div>
+
+          <DialogContent className="w-screen h-screen max-w-none m-0 p-0 rounded-none border-0 bg-[#0f0c1d]/95 backdrop-blur-xl overflow-y-auto">
+            <div className="flex flex-col h-full items-center justify-center p-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsPlayerOpen(false)}
+                className="absolute top-4 left-4 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md h-10 w-10"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div className="w-full max-w-md bg-white rounded-xl overflow-hidden shadow-2xl">
+                <VideoPlayer video={video} />
+              </div>
+            </div>
+          </DialogContent>
+        </div>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={isPlayerOpen} onOpenChange={setIsPlayerOpen}>
       <div

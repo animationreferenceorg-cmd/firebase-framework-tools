@@ -13,6 +13,7 @@ function NewVideoFormWrapper() {
         const title = searchParams.get('title');
         const videoUrl = searchParams.get('videoUrl');
         const thumbnailUrl = searchParams.get('thumbnailUrl');
+        const folderId = searchParams.get('folderId');
 
         if (!title && !videoUrl) return undefined;
 
@@ -27,6 +28,7 @@ function NewVideoFormWrapper() {
             posterUrl: '',
             tags: [],
             categoryIds: [],
+            folderId: folderId || null,
         } as unknown as Video; // Type assertion since it's partial but form handles it
     }, [searchParams]);
 
@@ -44,7 +46,7 @@ function NewVideoFormWrapper() {
     // We should probably check if `video.id` is truthy in VideoForm before deciding to Update vs Create.
     // Based on standard practices, I'll pass it. safely. 
 
-    return <VideoForm isShort={false} video={initialData as Video} />;
+    return <VideoForm isShort={false} video={initialData as Video} defaultFolderId={initialData?.folderId} />;
 }
 
 export default function NewVideoPage() {

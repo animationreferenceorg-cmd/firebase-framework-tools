@@ -53,7 +53,7 @@ export default function BetaPage() {
 
                 const fetchedCategories = categorySnapshot.docs.map(doc => ({
                     id: doc.id,
-                    href: `/browse?category=${doc.id}`,
+                    href: `/categories?category=${doc.id}`,
                     ...doc.data()
                 } as Category));
 

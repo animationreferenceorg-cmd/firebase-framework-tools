@@ -26,12 +26,17 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased" suppressHydrationWarning={true}>
-        {/* Global Background Gradients */}
-        <div className="fixed inset-0 pointer-events-none z-[-1] bg-[#030014]">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_#4c1d95_0%,_#030014_50%)] opacity-50" />
-          <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-purple-600/20 blur-[120px] rounded-full mix-blend-screen" />
-          <div className="absolute top-[10%] left-[10%] w-[400px] h-[400px] bg-blue-600/10 blur-[100px] rounded-full mix-blend-screen" />
-          <div className="absolute bottom-[-10%] right-[10%] w-[500px] h-[500px] bg-indigo-600/10 blur-[120px] rounded-full mix-blend-screen" />
+        {/* Global Background Gradients - Lumina Style */}
+        <div className="fixed inset-0 pointer-events-none z-[-1] bg-[#020005]">
+          {/* Main Top Glow */}
+          <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[120vw] h-[80vh] bg-[radial-gradient(circle_at_50%_50%,_rgba(76,29,149,0.3)_0%,_rgba(0,0,0,0)_70%)] blur-[100px]" />
+
+          {/* Vibrant Purple/Pink Accents */}
+          <div className="absolute top-[10%] right-[10%] w-[600px] h-[600px] bg-purple-600/10 blur-[130px] rounded-full mix-blend-screen animate-pulse" style={{ animationDuration: '8s' }} />
+          <div className="absolute bottom-[-10%] left-[5%] w-[700px] h-[700px] bg-indigo-600/10 blur-[130px] rounded-full mix-blend-screen" />
+
+          {/* Subtle center grain/noise if needed, or just deep void */}
+          <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02]" />
         </div>
         <FirebaseClientProvider>
           <AuthProvider>

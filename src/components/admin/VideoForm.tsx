@@ -44,6 +44,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useUpload } from "@/hooks/use-upload";
+import { downloadSocialVideo } from "@/app/actions/downloader";
+import { Loader2 } from "lucide-react";
+
 import { DndContext, closestCenter, type DragEndEvent, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, useDraggable } from '@dnd-kit/core';
 
 
@@ -67,7 +70,7 @@ const formSchema = (isShort: boolean, isReference: boolean) => z.object({
   title: z.string().min(2, "Title must be at least 2 characters."),
   description: z.string().min(10, "Description must be at least 10 characters."),
 
-  videoSourceType: z.enum(['url', 'upload']).default('url'),
+  videoSourceType: z.enum(['url', 'upload', 'import']).default('url'),
   videoUrl: z.string().optional(),
   videoFile: z.any().optional(),
 
@@ -80,6 +83,9 @@ const formSchema = (isShort: boolean, isReference: boolean) => z.object({
 }).superRefine((data, ctx) => {
   if (data.videoSourceType === 'url' && (!data.videoUrl || data.videoUrl.trim() === '')) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Video URL is required.", path: ['videoUrl'] });
+  }
+  if (data.videoSourceType === 'social' && (!data.videoUrl || data.videoUrl.trim() === '')) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Social URL is required.", path: ['videoUrl'] });
   }
   if (data.thumbnailSourceType === 'url' && (!data.thumbnailUrl || data.thumbnailUrl.trim() === '')) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Thumbnail URL is required.", path: ['thumbnailUrl'] });
@@ -576,9 +582,10 @@ interface VideoFormProps {
   video?: Video;
   isShort: boolean;
   isReference?: boolean;
+  defaultFolderId?: string | null;
 }
 
-export default function VideoForm({ video, isShort, isReference = false }: VideoFormProps) {
+export default function VideoForm({ video, isShort, isReference = false, defaultFolderId }: VideoFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const { startUpload, finishUpload } = useUpload();
@@ -587,7 +594,9 @@ export default function VideoForm({ video, isShort, isReference = false }: Video
 
   const [allTags, setAllTags] = useState<string[]>([]);
   const [allCategories, setAllCategories] = useState<Category[]>([]);
+
   const [loadingTaxonomy, setLoadingTaxonomy] = useState(true);
+  const [isImporting, setIsImporting] = useState(false);
 
   const fetchTags = useCallback(async () => {
     const collectionName = isShort ? 'shortFilmTags' : 'tags';
@@ -641,6 +650,7 @@ export default function VideoForm({ video, isShort, isReference = false }: Video
       thumbnailUrl: video?.thumbnailUrl || "",
       thumbnailFile: undefined,
       tags: video?.tags || [],
+
       categoryIds: video?.categoryIds || (isShort && video?.categories ? allCategories.filter(c => video.categories!.includes(c.title)).map(c => c.id) : []) || [],
       videoSourceType: video?.videoUrl ? 'url' : 'upload',
       thumbnailSourceType: video?.thumbnailUrl ? 'url' : 'upload',
@@ -1053,7 +1063,16 @@ export default function VideoForm({ video, isShort, isReference = false }: Video
               <CardContent>
                 <div className="relative w-full aspect-video rounded-lg overflow-hidden border-2 border-dashed border-border mb-4 bg-muted">
                   {videoPreview ? (
-                    <VideoPlayer video={{ id: 'preview', videoUrl: videoPreview, title: 'Preview', thumbnailUrl: '' } as any} startsPaused />
+                    <VideoPlayer
+                      video={{
+                        id: 'preview',
+                        videoUrl: videoPreview,
+                        title: 'Preview',
+                        thumbnailUrl: '',
+                        type: watchedValues.videoSourceType === 'upload' ? 'file' : watchedValues.videoSourceType
+                      } as any}
+                      startsPaused
+                    />
                   ) : (
                     <UploadPlaceholder text="Video Preview (16:9)" icon={Film} />
                   )}
@@ -1068,8 +1087,9 @@ export default function VideoForm({ video, isShort, isReference = false }: Video
                         <Select onValueChange={field.onChange} value={field.value ?? 'url'}>
                           <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                           <SelectContent>
-                            <SelectItem value="url">URL</SelectItem>
-                            <SelectItem value="upload">Upload</SelectItem>
+                            <SelectItem value="url">Embed URL (YouTube/Vimeo)</SelectItem>
+                            <SelectItem value="upload">Upload File</SelectItem>
+                            <SelectItem value="import">Import Social URL (Insta/TikTok)</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -1084,11 +1104,70 @@ export default function VideoForm({ video, isShort, isReference = false }: Video
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Video URL</FormLabel>
-                            <FormControl><Input placeholder="https://..." {...field} value={field.value || ''} /></FormControl>
+                            <FormControl>
+                              <Input
+                                placeholder="https://..."
+                                {...field}
+                                value={field.value || ''}
+                                onChange={(e) => {
+                                  field.onChange(e.target.value);
+                                }}
+                              />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
+                    ) : watchedValues.videoSourceType === 'import' ? (
+                      <div className="flex gap-2 items-end">
+                        <FormField
+                          control={control}
+                          name="videoUrl"
+                          render={({ field }) => (
+                            <FormItem className="flex-1">
+                              <FormLabel>Social URL</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="https://instagram.com/reel/..."
+                                  {...field}
+                                  value={field.value || ''}
+                                  disabled={isImporting}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button
+                          type="button"
+                          onClick={async () => {
+                            const url = getValues('videoUrl');
+                            if (!url) {
+                              toast({ variant: 'destructive', title: "Error", description: "Please enter a URL first." });
+                              return;
+                            }
+                            setIsImporting(true);
+                            try {
+                              const result = await downloadSocialVideo(url);
+                              if (result.success && result.videoId) {
+                                toast({ title: "Success", description: "Video downloaded! Redirecting...", });
+                                // Since downlodaer creates a new video, we redirect to edit valid
+                                router.push(`/admin/videos/${result.videoId}`);
+                              } else {
+                                toast({ variant: 'destructive', title: "Import Failed", description: result.error || "Could not download video." });
+                              }
+                            } catch (e) {
+                              console.error(e);
+                              toast({ variant: 'destructive', title: "Error", description: "An unexpected error occurred." });
+                            } finally {
+                              setIsImporting(false);
+                            }
+                          }}
+                          disabled={isImporting}
+                        >
+                          {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Import'}
+                        </Button>
+                      </div>
                     ) : (
                       <FormField
                         control={control}
@@ -1096,7 +1175,7 @@ export default function VideoForm({ video, isShort, isReference = false }: Video
                         render={({ field: { value, onChange, ...fieldProps } }) => (
                           <FormItem>
                             <FormLabel>Video File</FormLabel>
-                            <FormControl><Input type="file" accept="video/*" onChange={e => onChange(e.target.files)} {...fieldProps} /></FormControl>
+                            <FormControl><Input type="file" accept="video/*" onChange={e => onChange(e.target.files)} {...fieldProps} value="" /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -1145,7 +1224,7 @@ export default function VideoForm({ video, isShort, isReference = false }: Video
                 {watchedValues.thumbnailSourceType === 'url' ? (
                   <FormField control={control} name="thumbnailUrl" render={({ field }) => (<FormItem><FormLabel>URL</FormLabel><FormControl><Input placeholder="https://..." {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
                 ) : watchedValues.thumbnailSourceType === 'upload' ? (
-                  <FormField control={control} name="thumbnailFile" render={({ field: { value, onChange, ...fieldProps } }) => (<FormItem><FormLabel>File</FormLabel><FormControl><Input type="file" accept="image/*" onChange={e => onChange(e.target.files)} {...fieldProps} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={control} name="thumbnailFile" render={({ field: { value, onChange, ...fieldProps } }) => (<FormItem><FormLabel>File</FormLabel><FormControl><Input type="file" accept="image/*" onChange={e => onChange(e.target.files)} {...fieldProps} value="" /></FormControl><FormMessage /></FormItem>)} />
                 ) : null}
               </CardContent>
             </Card>

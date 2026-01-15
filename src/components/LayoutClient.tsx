@@ -73,18 +73,20 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
 
     // This prevents hydration errors by ensuring the server and client render the same initial skeleton.
     if (!isClient) {
-        return <div className="flex h-screen w-full bg-background"><div className="w-[16rem] hidden md:block bg-sidebar h-full" /><main className="flex-1" /></div>;
     }
 
     const isAdmin = userProfile?.role === 'admin';
 
     const isFeedPage = pathname === '/feed';
+    const isMoodboardPage = pathname.startsWith('/moodboard');
 
     return (
         <UploadProvider>
             <SidebarProvider>
                 <Sidebar>
+                    {/* ... sidebar content ... */}
                     <SidebarHeader>
+                        {/* ... header content ... */}
                         <div className="flex items-center justify-center w-full py-6">
                             <div className={cn(
                                 "relative h-24 w-24 overflow-hidden group cursor-pointer rounded-full border-2 border-white/10 hover:border-primary transition-colors bg-black/20",
@@ -127,12 +129,12 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                             <SidebarGroupLabel>Discover</SidebarGroupLabel>
                             <SidebarMenu>
                                 <SidebarMenuItem>
-                                    <SidebarLink href="/beta" icon={Home} tooltip="Home">
+                                    <SidebarLink href="/home" icon={Home} tooltip="Home">
                                         Home
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <SidebarLink href="/browse" icon={LayoutGrid} tooltip="Categories">
+                                    <SidebarLink href="/categories" icon={LayoutGrid} tooltip="Categories">
                                         Categories
                                     </SidebarLink>
                                 </SidebarMenuItem>
@@ -184,7 +186,10 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                 <SidebarInset>
                     <div className="flex flex-col flex-1 min-h-screen relative">
                         {!isFeedPage && <GlassHeader />}
-                        <main className="flex-1 px-4 md:px-8 pb-8 transition-all duration-300 ease-in-out">
+                        <main className={cn(
+                            "flex-1 transition-all duration-300 ease-in-out",
+                            !isMoodboardPage && "px-4 md:px-8 pb-8"
+                        )}>
                             {children}
                         </main>
                     </div>

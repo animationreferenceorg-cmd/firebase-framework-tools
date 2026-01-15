@@ -70,6 +70,21 @@ const nextConfig = {
       }
     ],
   },
+  async redirects() {
+    return [
+      // Example: Redirect old site path to new category path
+      // {
+      //   source: '/old-running-animation-page',
+      //   destination: '/category/running-animation',
+      //   permanent: true,
+      // },
+      // {
+      //   source: '/browse/some-old-id',
+      //   destination: '/category/some-new-slug',
+      //   permanent: true,
+      // },
+    ];
+  },
 };
 
 module.exports = nextConfig;

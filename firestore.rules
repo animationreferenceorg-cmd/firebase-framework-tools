@@ -3,7 +3,6 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Helper function to check for an admin user
-    // Helper function to check for an admin user
     function isAdmin() {
       return request.auth != null && (
         request.auth.token.admin == true || 
@@ -13,55 +12,18 @@ service cloud.firestore {
 
     // --- App Specific Rules ---
 
-    // Videos: Readable by any logged-in user, writable only by admins
-    match /videos/{videoId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
+    // Videos, Categories, Folders, etc: Public read, Admin write
+    match /videos/{videoId} { allow read: if true; allow write: if isAdmin(); }
+    match /categories/{categoryId} { allow read: if true; allow write: if isAdmin(); }
+    match /folders/{folderId} { allow read: if true; allow write: if isAdmin(); }
+    match /marketplace_products/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /tags/{tagId} { allow read: if true; allow write: if isAdmin(); }
+    match /shortFilmCategories/{categoryId} { allow read: if true; allow write: if isAdmin(); }
+    match /shortFilmTags/{tagId} { allow read: if true; allow write: if isAdmin(); }
 
-    // Categories: Readable by anyone, writable only by admins
-    match /categories/{categoryId} {
-        allow read: if true;
-        allow write: if isAdmin();
-    }
-
-    // Folders: Readable by anyone, writable only by admins
-    match /folders/{folderId} {
-        allow read: if true;
-        allow write: if isAdmin();
-    }
-
-    // Marketplace: Readable by anyone, writable only by admins
-    match /marketplace_products/{id} {
-        allow read: if true;
-        allow write: if isAdmin();
-    }
-
-    // Tags: Readable by anyone, writable only by admins
-    match /tags/{tagId} {
-        allow read: if true;
-        allow write: if isAdmin();
-    }
-
-    // Short Film Categories: Readable by anyone, writable only by admins
-    match /shortFilmCategories/{categoryId} {
-        allow read: if true;
-        allow write: if isAdmin();
-    }
-
-    // Short Film Tags: Readable by anyone, writable only by admins
-    match /shortFilmTags/{tagId} {
-        allow read: if true;
-        allow write: if isAdmin();
-    }
-
-    // Users: A user can only read and write their own data.
-    match /users/{userId} {
+    // Users: A user can only read and write their own data, including ANY subcollections.
+    match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-
-      match /checkout_sessions/{sessionId} {
-         allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
     }
 
     // --- Stripe Extension Rules ---
@@ -82,14 +44,8 @@ service cloud.firestore {
 
     match /products/{id} {
       allow read: if true;
-
-      match /prices/{id} {
-        allow read: if true;
-      }
-
-      match /tax_rates/{id} {
-        allow read: if true;
-      }
+      match /prices/{id} { allow read: if true; }
+      match /tax_rates/{id} { allow read: if true; }
     }
   }
 }

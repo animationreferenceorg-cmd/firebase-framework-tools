@@ -27,8 +27,8 @@ export function GlassHeader() {
                 {/* Center: Navigation (Visible on all screens) */}
                 <nav className="flex items-center gap-1 bg-white/5 rounded-full p-1 md:p-1.5 border border-white/5 mx-2 md:mx-4">
                     {[
-                        { label: 'Home', href: '/beta' },
-                        { label: 'Browse', href: '/browse' },
+                        { label: 'Home', href: '/home' },
+                        { label: 'Categories', href: '/categories' },
                         { label: 'Marketplace', href: '/marketplace' },
                     ].map((item) => (
                         <Link

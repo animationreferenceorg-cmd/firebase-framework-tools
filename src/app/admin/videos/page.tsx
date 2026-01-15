@@ -4,7 +4,7 @@
 import { useEffect, useState, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { MoreHorizontal, PlusCircle, LayoutGrid, List, Sparkles, Loader2, Folder as FolderIcon, ChevronLeft, CornerUpLeft } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, LayoutGrid, List, Sparkles, Loader2, Folder as FolderIcon, ChevronLeft, CornerUpLeft, Instagram } from 'lucide-react';
 import type { Video, Category, Folder } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +25,8 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,6 +58,7 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { VideoCard } from '@/components/VideoCard';
+import { UrlImporter } from '@/components/admin/UrlImporter';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BulkVideoEditor } from '@/components/admin/BulkVideoEditor';
@@ -141,6 +144,8 @@ function VideosPageContent() {
     }
   };
 
+
+
   const handleCreateFolder = async () => {
     if (!newFolderName.trim() || !db) return;
     try {
@@ -159,7 +164,7 @@ function VideosPageContent() {
   };
 
   const handleDeleteFolder = async (folderId: string) => {
-    if (!db || !confirm("Are you sure? Videos inside will be moved to Root.")) return;
+    if (!db) return;
     try {
       // Move videos to root first
       const videosInFolder = videos.filter(v => v.folderId === folderId);
@@ -436,7 +441,11 @@ function VideosPageContent() {
             <div
               key={folder.id}
               className="group relative flex flex-col items-center justify-center p-4 rounded-lg border bg-card hover:bg-accent/50 cursor-pointer transition-all"
-              onDoubleClick={() => setCurrentFolderId(folder.id)}
+              onClick={(e) => {
+                // Prevent navigation if clicking the action menu button
+                if ((e.target as HTMLElement).closest('button')) return;
+                setCurrentFolderId(folder.id);
+              }}
             >
               <FolderIcon className="h-12 w-12 text-blue-500 fill-blue-500/10 mb-2 group-hover:scale-110 transition-transform" />
               <span className="text-sm font-medium text-center truncate w-full px-2">{folder.name}</span>
@@ -447,7 +456,25 @@ function VideosPageContent() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteFolder(folder.id)}>Delete</DropdownMenuItem>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>Delete</DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Folder "{folder.name}"?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. Videos inside will be moved to Root (Unsorted).
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDeleteFolder(folder.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </DropdownMenuContent>
               </DropdownMenu>
               <span className="text-[10px] text-muted-foreground">{videos.filter(v => v.folderId === folder.id).length} items</span>
@@ -554,13 +581,25 @@ function VideosPageContent() {
                         />
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">
-                        <Image
-                          alt={video.title}
-                          className="aspect-square rounded-md object-cover"
-                          height="64"
-                          src={video.thumbnailUrl}
-                          width="64"
-                        />
+                        {video.type === 'social' || (video.type as string) === 'instagram' ? (
+                          <div className="flex h-16 w-16 items-center justify-center rounded-md bg-gradient-to-br from-purple-600/20 to-pink-600/20 text-pink-600">
+                            <Instagram className="h-8 w-8" />
+                          </div>
+                        ) : (
+                          video.thumbnailUrl ? (
+                            <Image
+                              alt={video.title}
+                              className="aspect-square rounded-md object-cover"
+                              height="64"
+                              src={video.thumbnailUrl}
+                              width="64"
+                            />
+                          ) : (
+                            <div className="flex h-16 w-16 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                              <MoreHorizontal className="h-6 w-6" />
+                            </div>
+                          )
+                        )}
                       </TableCell>
                       <TableCell className="font-medium">{video.title}</TableCell>
                       <TableCell>
@@ -642,7 +681,7 @@ function VideosPageContent() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center">
-                      No videos found. <Link href="/admin/videos/new" className="text-primary underline">Add one now!</Link>
+                      No videos found. <Link href={`/admin/videos/new${currentFolderId && currentFolderId !== 'all' && currentFolderId !== 'unsorted' ? `?folderId=${currentFolderId}` : ''}`} className="text-primary underline">Add one now!</Link>
                     </TableCell>
                   </TableRow>
                 )}
@@ -772,9 +811,12 @@ function VideosPageContent() {
   return (
     <div className="flex min-h-screen w-full flex-col">
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <div className="flex items-center">
-          <h1 className="text-lg font-semibold md:text-2xl">Videos</h1>
-          <div className="ml-auto flex items-center gap-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-lg font-semibold md:text-2xl">Videos</h1>
+            <UrlImporter onImported={fetchVideos} />
+          </div>
+          <div className="flex items-center gap-2">
             <DropdownMenu open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 gap-1">
@@ -798,8 +840,10 @@ function VideosPageContent() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+
+
             <Button size="sm" className="h-8 gap-1" asChild>
-              <Link href="/admin/videos/new">
+              <Link href={`/admin/videos/new${currentFolderId && currentFolderId !== 'all' && currentFolderId !== 'unsorted' ? `?folderId=${currentFolderId}` : ''}`}>
                 <PlusCircle className="h-3.5 w-3.5" />
                 <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                   Add Video

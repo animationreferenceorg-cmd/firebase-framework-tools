@@ -111,7 +111,7 @@ export default function ComingSoonPage() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
               <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
                 <Button asChild className="h-16 px-10 rounded-2xl text-lg font-semibold bg-white text-black hover:bg-white/90 shadow-[0_10px_40px_-10px_rgba(255,255,255,0.4)] border border-white/20 transition-all duration-300 group hover:scale-105">
-                  <Link href="/beta">
+                  <Link href="/home">
                     Try Beta Now
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
@@ -296,7 +296,7 @@ export default function ComingSoonPage() {
               </p>
               <div className="pt-6">
                 <Button asChild variant="outline" className="rounded-full border-white/10 hover:bg-white/10">
-                  <Link href="/beta">
+                  <Link href="/home">
                     Start Building Collection
                   </Link>
                 </Button>

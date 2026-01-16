@@ -110,7 +110,7 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                     {children}
                 </DialogTrigger>
             )}
-            <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] p-0 bg-[#050505] border-white/10 text-white flex flex-col">
+            <DialogContent className="max-w-5xl w-[95vw] max-h-[85vh] p-0 bg-[#050505] border-white/10 text-white flex flex-col">
                 <div className="absolute inset-0 bg-grid-white/5 mask-image-gradient-b pointer-events-none" />
 
                 {/* Why Donate Info Button - Fixed Position */}
@@ -154,7 +154,7 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                     </div>
 
                     {/* Pricing Table Grid/Scroll */}
-                    <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 pb-8 overflow-x-auto snap-x snap-mandatory md:overflow-visible px-1 -mx-6 md:mx-0 px-6 md:px-0 no-scrollbar">
+                    <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 py-4 pb-8 overflow-x-auto snap-x snap-mandatory md:overflow-visible px-1 -mx-6 md:mx-0 px-6 md:px-0 no-scrollbar">
 
                         {/* FREE TIER */}
                         <div className="min-w-[85vw] md:min-w-0 snap-center relative p-6 rounded-2xl bg-white/5 border border-white/5 flex flex-col hover:border-pink-500/50 hover:bg-gradient-to-br hover:from-pink-900/20 hover:to-transparent transition-all duration-300 group">

@@ -87,11 +87,11 @@ export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, 
 
             {/* Right Filters */}
             <div className="flex items-center gap-3">
-                {/* Grid Size Control */}
+                {/* Grid Size Control (Desktop Only) */}
                 {setColumns && (
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="outline" size="icon" className="h-9 w-9 bg-zinc-900 border-white/5 text-zinc-400 hover:text-white hover:bg-zinc-800">
+                            <Button variant="outline" size="icon" className="hidden md:flex h-9 w-9 bg-zinc-900 border-white/5 text-zinc-400 hover:text-white hover:bg-zinc-800">
                                 <Settings2 className="h-4 w-4" />
                             </Button>
                         </PopoverTrigger>

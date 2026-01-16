@@ -59,6 +59,7 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
     const [isMuted, setIsMuted] = React.useState(muted);
     const [played, setPlayed] = React.useState(0);
     const [duration, setDuration] = React.useState(0);
+    const [showUI, setShowUI] = React.useState(false);
     const [showLimitDialog, setShowLimitDialog] = React.useState(false);
     const [showDonateDialog, setShowDonateDialog] = React.useState(false);
     const [isSeeking, setIsSeeking] = React.useState(false);
@@ -68,6 +69,9 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
         const observer = new IntersectionObserver(
             ([entry]) => {
                 setIsPlaying(entry.isIntersecting);
+                if (!entry.isIntersecting) {
+                    setShowUI(false);
+                }
             },
             { threshold: 0.2 }
         );
@@ -86,6 +90,14 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
         return userProfile.savedShortIds?.includes(video.id);
     }, [userProfile, video]);
 
+
+    const handleVideoClick = () => {
+        if (!showUI) {
+            setShowUI(true);
+        } else {
+            setIsPlaying(prev => !prev);
+        }
+    };
 
     const handlePlayPause = () => {
         setIsPlaying(prev => !prev);
@@ -163,7 +175,7 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
             {/* 1. Main Video Area */}
             <div
                 className="relative flex-1 bg-black overflow-hidden group"
-                onClick={handlePlayPause}
+                onClick={handleVideoClick}
             >
                 {/* Blurred Background Video */}
 
@@ -216,7 +228,10 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
                 )}
 
                 {/* Info Overlay (Top) */}
-                <div className="absolute top-0 left-0 right-0 p-6 z-20 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+                <div className={cn(
+                    "absolute top-0 left-0 right-0 p-6 z-20 bg-gradient-to-b from-black/80 to-transparent pointer-events-none transition-all duration-300",
+                    showUI ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
+                )}>
                     <h3 className="font-bold text-lg text-white drop-shadow-md mb-1">
                         {video.status === 'draft' ? 'Reference' : video.title}
                     </h3>
@@ -226,34 +241,37 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
                 </div>
 
                 {/* Side Actions (Like & Share) */}
-                <div className="absolute bottom-20 right-4 z-30 flex flex-col gap-6 items-center">
+                <div className="absolute bottom-20 right-4 z-30 flex flex-col gap-4 sm:gap-6 items-center">
                     <div className="flex flex-col items-center gap-1">
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={handleLikeToggle}
-                            className="bg-black/20 backdrop-blur-md hover:bg-black/40 text-white rounded-full h-20 w-20 transition-all active:scale-95"
+                            className="bg-black/20 backdrop-blur-md hover:bg-black/40 text-white rounded-full h-14 w-14 sm:h-20 sm:w-20 transition-all active:scale-95"
                         >
-                            <Heart className={cn("w-10 h-10", isLiked ? "fill-red-500 text-red-500" : "")} />
+                            <Heart className={cn("w-7 h-7 sm:w-10 sm:h-10", isLiked ? "fill-red-500 text-red-500" : "")} />
                         </Button>
-                        <span className="text-sm font-bold text-white drop-shadow-md">Like</span>
+                        <span className="text-[10px] sm:text-sm font-bold text-white drop-shadow-md">Like</span>
                     </div>
 
                     <div className="flex flex-col items-center gap-1">
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="bg-black/20 backdrop-blur-md hover:bg-black/40 text-white rounded-full h-20 w-20 transition-all active:scale-95"
+                            className="bg-black/20 backdrop-blur-md hover:bg-black/40 text-white rounded-full h-14 w-14 sm:h-20 sm:w-20 transition-all active:scale-95"
                         >
-                            <Share2 className="w-10 h-10" />
+                            <Share2 className="w-7 h-7 sm:w-10 sm:h-10" />
                         </Button>
-                        <span className="text-sm font-bold text-white drop-shadow-md">Share</span>
+                        <span className="text-[10px] sm:text-sm font-bold text-white drop-shadow-md">Share</span>
                     </div>
                 </div>
             </div>
 
             {/* 2. Controls Area (Totally Separate) */}
-            <div className="shrink-0 bg-black border-t border-white/10 px-4 py-4 z-30 pb-safe w-full">
+            <div className={cn(
+                "shrink-0 bg-black border-t border-white/10 px-4 py-4 z-30 pb-safe w-full transition-all duration-300",
+                showUI ? "opacity-100 translate-y-0 h-auto" : "opacity-0 translate-y-full h-0 py-0 border-0 overflow-hidden"
+            )}>
                 <div className="flex flex-col gap-2 w-full">
 
                     {/* Speed Control (Above Timeline) - Centered & Large */}

@@ -110,10 +110,10 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                     {children}
                 </DialogTrigger>
             )}
-            <DialogContent className="max-w-5xl w-[95vw] max-h-[85vh] overflow-y-auto p-0 bg-[#050505] border-white/10 text-white">
+            <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] p-0 bg-[#050505] border-white/10 text-white flex flex-col">
                 <div className="absolute inset-0 bg-grid-white/5 mask-image-gradient-b pointer-events-none" />
 
-                {/* Why Donate Info Button */}
+                {/* Why Donate Info Button - Fixed Position */}
                 <div className="absolute top-4 left-4 z-50">
                     <Popover>
                         <PopoverTrigger asChild>
@@ -141,9 +141,10 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                     </Popover>
                 </div>
 
-                <div className="relative z-10 p-6 md:p-8 space-y-8">
+                {/* Scrollable Content Wrapper */}
+                <div className="relative z-10 flex-1 overflow-y-auto p-6 md:p-8 space-y-8">
                     {/* Header */}
-                    <div className="text-center space-y-2 mb-8">
+                    <div className="text-center space-y-2 mb-8 mt-8">
                         <DialogTitle className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-purple-200 to-white">
                             Choose Your Plan
                         </DialogTitle>
@@ -152,11 +153,11 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                         </DialogDescription>
                     </div>
 
-                    {/* Pricing Table Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Pricing Table Grid/Scroll */}
+                    <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 pb-8 overflow-x-auto snap-x snap-mandatory md:overflow-visible px-1 -mx-6 md:mx-0 px-6 md:px-0 no-scrollbar">
 
                         {/* FREE TIER */}
-                        <div className="relative p-6 rounded-2xl bg-white/5 border border-white/5 flex flex-col hover:border-pink-500/50 hover:bg-gradient-to-br hover:from-pink-900/20 hover:to-transparent transition-all duration-300 group">
+                        <div className="min-w-[85vw] md:min-w-0 snap-center relative p-6 rounded-2xl bg-white/5 border border-white/5 flex flex-col hover:border-pink-500/50 hover:bg-gradient-to-br hover:from-pink-900/20 hover:to-transparent transition-all duration-300 group">
                             <div className="mb-4">
                                 <h3 className="text-lg font-semibold text-zinc-400 group-hover:text-pink-300 transition-colors">Basic</h3>
                                 <div className="mt-2 flex items-baseline">
@@ -182,7 +183,7 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                         </div>
 
                         {/* $1 TIER */}
-                        <div className="relative p-6 rounded-2xl bg-white/5 border border-white/5 hover:border-blue-500/50 hover:bg-gradient-to-br hover:from-blue-900/20 hover:to-transparent transition-all duration-300 group flex flex-col">
+                        <div className="min-w-[85vw] md:min-w-0 snap-center relative p-6 rounded-2xl bg-white/5 border border-white/5 hover:border-blue-500/50 hover:bg-gradient-to-br hover:from-blue-900/20 hover:to-transparent transition-all duration-300 group flex flex-col">
                             <div className="mb-4">
                                 <h3 className="text-lg font-semibold text-zinc-300 group-hover:text-blue-300 transition-colors">Supporter</h3>
                                 <div className="mt-2 flex items-baseline gap-1">
@@ -213,7 +214,7 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                         </div>
 
                         {/* $2 TIER */}
-                        <div className="relative p-6 rounded-2xl bg-white/5 border border-white/5 hover:border-purple-500/50 hover:bg-gradient-to-br hover:from-purple-900/20 hover:to-transparent transition-all duration-300 group flex flex-col">
+                        <div className="min-w-[85vw] md:min-w-0 snap-center relative p-6 rounded-2xl bg-white/5 border border-white/5 hover:border-purple-500/50 hover:bg-gradient-to-br hover:from-purple-900/20 hover:to-transparent transition-all duration-300 group flex flex-col">
                             <div className="mb-4">
                                 <h3 className="text-lg font-semibold text-zinc-300 group-hover:text-purple-300 transition-colors">Super Fan</h3>
                                 <div className="mt-2 flex items-baseline gap-1">
@@ -244,7 +245,7 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                         </div>
 
                         {/* $5 TIER (Highlighted) */}
-                        <div className="relative p-6 rounded-2xl bg-gradient-to-b from-purple-900/40 to-black/40 border border-purple-500/50 shadow-[0_0_30px_-10px_rgba(168,85,247,0.2)] transform scale-105 z-10 flex flex-col">
+                        <div className="min-w-[85vw] md:min-w-0 snap-center relative p-6 rounded-2xl bg-gradient-to-b from-purple-900/40 to-black/40 border border-purple-500/50 shadow-[0_0_30px_-10px_rgba(168,85,247,0.2)] transform scale-105 z-10 flex flex-col">
                             <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-lg">
                                 Most Popular
                             </div>

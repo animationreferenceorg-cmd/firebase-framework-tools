@@ -39,17 +39,14 @@ export default function FeedPage() {
 
     try {
       const videosRef = collection(db, "videos");
-      // Fetch a larger sample to randomize from
-      const q = query(videosRef, limit(200));
+      // Fetch a larger sample to randomize from, using the proven isShort filter
+      const q = query(videosRef, where("isShort", "!=", true), limit(300));
       const snapshot = await getDocs(q);
 
-      const allFetched = snapshot.docs.map(doc => ({
+      const nonShorts = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as Video));
-
-      // Filter: Only include videos that ARE NOT marked as shorts
-      const nonShorts = allFetched.filter(v => v.isShort !== true);
 
       // Randomize the order
       const randomized = [...nonShorts].sort(() => Math.random() - 0.5);

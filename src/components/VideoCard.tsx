@@ -206,18 +206,20 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           aspectRatio
         )}>
         {!isImageLoaded && <Skeleton className="absolute inset-0" />}
-        <Image
-          src={imageUrl}
-          alt={video.title}
-          fill
-          className={cn(
-            "w-full h-full object-cover transition-opacity duration-300",
-            (isHovered && !video.isShort && !poster || !isImageLoaded) && "opacity-0",
-            (video.isShort || poster) && isImageLoaded && "opacity-100"
-          )}
-          data-ai-hint={video.dataAiHint}
-          onLoad={() => setIsImageLoaded(true)}
-        />
+        {imageUrl && (
+          <Image
+            src={imageUrl}
+            alt={video.title}
+            fill
+            className={cn(
+              "w-full h-full object-cover transition-opacity duration-300",
+              (isHovered && !video.isShort && !poster || !isImageLoaded) && "opacity-0",
+              (video.isShort || poster) && isImageLoaded && "opacity-100"
+            )}
+            data-ai-hint={video.dataAiHint}
+            onLoad={() => setIsImageLoaded(true)}
+          />
+        )}
         {!video.isShort && !poster && video.videoUrl && isHovered && (
           <div className={cn(
             "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none",

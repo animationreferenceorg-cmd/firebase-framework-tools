@@ -70,8 +70,7 @@ async function getCategoryVideos(categoryId: string): Promise<Video[]> {
             .map(doc => {
                 const data = doc.data();
                 return serializeVideo({ id: doc.id, ...data });
-            })
-            .filter(v => v.status !== 'draft');
+            });
     } catch (error) {
         console.error("Error fetching category videos:", error);
         return [];

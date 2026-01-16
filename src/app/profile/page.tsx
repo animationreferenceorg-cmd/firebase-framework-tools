@@ -1,6 +1,7 @@
 
 "use client";
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -212,6 +213,16 @@ export default function ProfilePage() {
       </Card>
 
       <DonateDialog open={showDonateDialog} onOpenChange={setShowDonateDialog} />
+
+
+      <footer className="mt-auto border-t border-white/5 py-6">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-zinc-500">
+          <span>© 2025 AnimationReference.org</span>
+          <Link href="/terms" className="hover:text-zinc-400 transition-colors">
+            Terms of Service
+          </Link>
+        </div>
+      </footer>
     </main>
   );
 }

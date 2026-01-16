@@ -73,12 +73,14 @@ export function BrowseHero({ video, children }: BrowseHeroProps) {
                 ) : (
                     <div className="max-w-2xl space-y-6 animate-fade-in">
                         <h1 className="text-4xl md:text-6xl font-black text-white drop-shadow-2xl tracking-tight leading-tight">
-                            {video.title}
+                            {video.status === 'draft' ? 'Reference' : video.title}
                         </h1>
 
-                        <p className="text-lg md:text-xl text-white/90 drop-shadow-md line-clamp-3 leading-relaxed">
-                            {video.description}
-                        </p>
+                        {video.status !== 'draft' && video.description && (
+                            <p className="text-lg md:text-xl text-white/90 drop-shadow-md line-clamp-3 leading-relaxed">
+                                {video.description}
+                            </p>
+                        )}
 
                         <div className="flex items-center gap-4 pt-4">
                             <Link href={`/video/${video.id}`}>

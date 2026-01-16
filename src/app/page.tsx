@@ -29,7 +29,7 @@ export default function ComingSoonPage() {
         const videos = videoSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        } as Video)).filter(v => v.status !== 'draft'); // Filter out drafts
+        } as Video)); // Drafts are now included
         setAllVideos(videos);
 
       } catch (error) {
@@ -473,11 +473,14 @@ export default function ComingSoonPage() {
             </div>
             <span className="text-md font-semibold text-zinc-400">AnimationReference</span>
           </div>
-          <div className="text-sm text-zinc-600">
-            © 2025 AnimationReference.org
+          <div className="flex items-center gap-6 text-sm text-zinc-600">
+            <Link href="/terms" className="hover:text-zinc-400 transition-colors">
+              Terms of Service
+            </Link>
+            <span>© 2025 AnimationReference.org</span>
           </div>
         </div>
-      </footer>
+      </footer >
 
     </div >
   );

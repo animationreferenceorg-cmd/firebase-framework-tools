@@ -113,10 +113,8 @@ export default function BrowsePageClient() {
                 ...doc.data()
             } as Video));
 
-            // Filter out drafts/shorts client side for safety, though ideally we do this in query
-            const validVideos = newVideos.filter(v =>
-                v.status !== 'draft' && !v.isShort
-            );
+            // Include drafts but exclude shorts (shorts are on /shorts page)
+            const validVideos = newVideos.filter(v => !v.isShort);
 
             if (reset) {
                 setAllVideos(validVideos);

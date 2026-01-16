@@ -14,6 +14,9 @@ import { useUser } from '@/hooks/use-user';
 import { likeVideo, unlikeVideo } from '@/lib/firestore';
 import { useAuth } from '@/hooks/use-auth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { checkLimit } from '@/lib/limits';
+import { LimitReachedDialog } from '@/components/LimitReachedDialog';
+import { DonateDialog } from '@/components/DonateDialog';
 import { VideoPlayer } from './VideoPlayer';
 import Link from 'next/link';
 import ReactPlayer from 'react-player/lazy';
@@ -55,7 +58,12 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+  const [showLimitDialog, setShowLimitDialog] = useState(false);
+  const [showDonateDialog, setShowDonateDialog] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const displayTitle = video.status === 'draft' ? 'Reference' : video.title;
+  const displayDescription = video.status === 'draft' ? '' : video.description;
 
   const isLiked = useMemo(() => {
     return userProfile?.likedVideoIds?.includes(video.id) ?? false;
@@ -92,10 +100,19 @@ export function VideoCard({ video, poster }: VideoCardProps) {
     try {
       if (isLiked) {
         await unlikeVideo(authUser.uid, video.id);
-        toast({ title: "Removed from Likes", description: video.title });
+        toast({ title: "Removed from Likes", description: displayTitle });
       } else {
+        // ENFORCE LIMIT
+        const currentLikes = userProfile?.likedVideoIds?.length || 0;
+        const limitCheck = checkLimit(userProfile, 'likes', currentLikes);
+
+        if (!limitCheck.allowed) {
+          setShowLimitDialog(true);
+          return;
+        }
+
         await likeVideo(authUser.uid, video.id);
-        toast({ title: "Added to Likes!", description: video.title });
+        toast({ title: "Added to Likes!", description: video.status === 'draft' ? "Reference" : video.title });
       }
       mutate();
     } catch (error) {
@@ -163,7 +180,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
         >
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-purple-600/20 to-pink-600/20">
             <Share2 className="h-12 w-12 text-white/80 mb-2" />
-            <span className="text-white font-medium px-4 text-center truncate w-full">{video.title}</span>
+            <span className="text-white font-medium px-4 text-center truncate w-full">{displayTitle}</span>
           </div>
           <div className="absolute bottom-0 left-0 right-0 p-3 opacity-0 group-hover/card:opacity-100 transition-all duration-300 bg-black/60 backdrop-blur-sm">
             <div className="flex items-center justify-end">
@@ -246,7 +263,9 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           "absolute bottom-0 left-0 right-0 p-3 opacity-0 transition-all duration-300",
           !video.isShort && !poster && "group-hover/card:opacity-100"
         )}>
-          <h3 className="text-white font-bold text-base truncate mb-2 drop-shadow-md">{video.title}</h3>
+          <h3 className="text-white font-bold text-base truncate mb-2 drop-shadow-md">
+            {displayTitle}
+          </h3>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <DialogTrigger asChild>
@@ -273,7 +292,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
       </div>
       <DialogContent className="w-screen h-screen max-w-none m-0 p-0 rounded-none border-0 bg-[#0f0c1d]/40 backdrop-blur-xl overflow-y-auto">
         <DialogHeader className="hidden">
-          <DialogTitle className="sr-only">{video.title}</DialogTitle>
+          <DialogTitle className="sr-only">{displayTitle}</DialogTitle>
         </DialogHeader>
 
         {isPlayerOpen ? (
@@ -301,8 +320,12 @@ export function VideoCard({ video, poster }: VideoCardProps) {
 
                 {/* Meta Info */}
                 <div className="space-y-4 text-white">
-                  <h1 className="text-3xl md:text-5xl font-bold tracking-tight">{video.title}</h1>
-                  <p className="text-zinc-400 text-lg leading-relaxed max-w-3xl">{video.description}</p>
+                  <h1 className="text-3xl md:text-5xl font-bold tracking-tight">
+                    {displayTitle}
+                  </h1>
+                  {displayDescription && (
+                    <p className="text-zinc-400 text-lg leading-relaxed max-w-3xl">{displayDescription}</p>
+                  )}
 
                   {/* Tags */}
                   {video.tags && video.tags.length > 0 && (
@@ -322,6 +345,19 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           <div className="h-screen w-full flex items-center justify-center bg-black text-white">Loading player...</div>
         )}
       </DialogContent>
-    </Dialog>
+
+
+      <LimitReachedDialog
+        open={showLimitDialog}
+        onOpenChange={setShowLimitDialog}
+        feature="likes"
+        onDonateClick={() => setShowDonateDialog(true)}
+      />
+
+      <DonateDialog
+        open={showDonateDialog}
+        onOpenChange={setShowDonateDialog}
+      />
+    </Dialog >
   );
 }

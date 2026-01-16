@@ -283,7 +283,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                     showControls ? "opacity-100" : "opacity-0"
                 )}
             >
-                <h2 className="text-lg font-bold truncate drop-shadow-lg">{video.title}</h2>
+                <h2 className="text-lg font-bold truncate drop-shadow-lg">{video.status === 'draft' ? 'Reference' : video.title}</h2>
             </div>
 
             {/* Center Play/Pause Button (YouTube Style) */}

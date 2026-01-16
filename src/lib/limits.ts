@@ -32,6 +32,12 @@ export const TIER_LIMITS: Record<UserTier, TierLimits> = {
 
 export function getUserTier(user: UserProfile | null): UserTier {
     if (!user) return 'free';
+
+    // Explicit tier (e.g. for Admin testing) takes precedence if it's a valid tier
+    if (user.tier && ['free', 'tier1', 'tier2', 'tier5'].includes(user.tier)) {
+        return user.tier as UserTier;
+    }
+
     if (user.role === 'admin') return 'admin';
     return user.tier || ('free' as UserTier); // Default to free if undefined
 }

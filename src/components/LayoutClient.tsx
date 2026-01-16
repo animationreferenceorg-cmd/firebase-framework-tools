@@ -5,7 +5,7 @@ import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarTrigger, 
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Clapperboard, Film, Home, LayoutGrid, List, Rss, Shield, BookCopy, Star, Camera, User, Box, ShoppingBag } from 'lucide-react';
+import { Clapperboard, Film, Home, LayoutGrid, List, Rss, Shield, BookCopy, Star, Camera, User, Box, ShoppingBag, CreditCard } from 'lucide-react';
 import AuthHeader from '@/components/AuthHeader';
 import { useUser } from '@/hooks/use-user';
 import { useAuth } from '@/hooks/use-auth';
@@ -21,6 +21,8 @@ import { updateProfile } from 'firebase/auth';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { SidebarLink } from '@/components/SidebarLink';
+import { Button } from '@/components/ui/button';
+import { doc, updateDoc } from 'firebase/firestore';
 
 export function LayoutClient({ children }: { children: React.ReactNode }) {
     const { userProfile, loading: userProfileLoading } = useUser();
@@ -183,6 +185,19 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                             </SidebarLink>
                                         </SidebarMenuItem>
                                     </SidebarMenu>
+
+                                    {/* Donation Testing (Admin Only) */}
+                                    <div className="px-4 py-2 mt-2">
+                                        <h4 className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                                            <CreditCard className="w-3 h-3" /> Simulate Tier
+                                        </h4>
+                                        <div className="grid grid-cols-3 gap-2 mb-2">
+                                            <SimulateTierButton tier="tier1" label="$1" />
+                                            <SimulateTierButton tier="tier2" label="$2" />
+                                            <SimulateTierButton tier="tier5" label="$5" />
+                                        </div>
+                                        <SimulateTierButton tier="reset" label="Reset (Admin)" fullWidth />
+                                    </div>
                                 </SidebarGroup>
                             </>
                         )}
@@ -193,7 +208,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                         <GlassHeader />
                         <main className={cn(
                             "flex-1 transition-all duration-300 ease-in-out",
-                            !isMoodboardPage && "px-4 md:px-8 pb-8"
+                            (!isMoodboardPage && !isFeedPage) && "px-4 md:px-8 pb-8"
                         )}>
                             {children}
                         </main>
@@ -202,5 +217,49 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                 </SidebarInset>
             </SidebarProvider>
         </UploadProvider>
+    )
+}
+
+
+function SimulateTierButton({ tier, label, fullWidth }: { tier: string, label: string, fullWidth?: boolean }) {
+    const { user } = useAuth();
+    const { db } = useFirebase();
+    const { toast } = useToast();
+    const [loading, setLoading] = useState(false);
+
+    const handleSetTier = async () => {
+        if (!user || !db) return;
+        setLoading(true);
+        try {
+            const userRef = doc(db, "users", user.uid);
+            await updateDoc(userRef, {
+                tier: tier === 'reset' ? null : tier // 'null' removes the field or sets it to null, restoring admin default
+            });
+            toast({
+                title: tier === 'reset' ? "Restored Admin Privileges" : `Tier set to ${label}`,
+                description: tier === 'reset' ? "You now have unlimited access." : "Limits updated."
+            });
+            window.location.reload(); // Reload to ensure context updates immediately
+        } catch (error) {
+            console.error("Error setting tier:", error);
+            toast({ variant: "destructive", title: "Error", description: "Could not update tier." });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSetTier}
+            disabled={loading}
+            className={cn(
+                "h-7 text-xs bg-white/5 border-white/10 hover:bg-white/10 text-zinc-400",
+                fullWidth && "w-full"
+            )}
+        >
+            {loading ? "..." : label}
+        </Button>
     )
 }

@@ -228,7 +228,10 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
             className="group/player relative w-full h-full flex items-center justify-center rounded-lg overflow-hidden bg-black select-none"
             onMouseMove={handleMouseMove}
             onMouseLeave={() => { if (isPlaying) setShowControls(false) }}
-            onClick={() => setShowControls(prev => !prev)}
+            onClick={(e) => {
+                // Background tap toggles controls ONLY
+                setShowControls(prev => !prev);
+            }}
         >
             <div className="relative w-full aspect-video max-w-full max-h-full">
                 <Player
@@ -283,7 +286,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                 <div
                     className="bg-black/60 backdrop-blur-sm rounded-full p-4 text-white hover:bg-black/80 hover:scale-110 transition-all cursor-pointer pointer-events-auto"
                     onClick={(e) => {
-                        e.stopPropagation();
+                        e.stopPropagation(); // Prevent toggling controls
                         handlePlayPause();
                     }}
                 >
@@ -346,7 +349,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                     </div>
 
                     {/* Center: Speed Control */}
-                    <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center">
+                    <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-auto">
                         {showCaptureButton ? (
                             <Button type="button" onClick={handleCaptureFrame} size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-none h-8 text-xs">
                                 <Camera className="mr-2 h-3 w-3" />

@@ -99,14 +99,14 @@ export default function FeedPage() {
       ) : videos.length > 0 ? (
         <>
           {videos.map((video) => (
-            <section key={video.id} className="relative h-full w-full snap-start overflow-hidden bg-black">
+            <section key={video.id} className="relative h-full w-full snap-start snap-always overflow-hidden bg-black">
               <ShortsPlayer video={video} />
             </section>
           ))}
 
           {/* Loader for infinite scroll */}
           {hasMore && (
-            <section ref={inViewRef} className="relative h-full flex items-center justify-center bg-black">
+            <section ref={inViewRef} className="relative h-full w-full snap-start snap-always flex items-center justify-center bg-black">
               <div className="flex flex-col items-center gap-4">
                 <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
                 <p className="text-zinc-500 text-sm animate-pulse">Loading more inspiration...</p>

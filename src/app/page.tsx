@@ -464,6 +464,25 @@ export default function ComingSoonPage() {
         </div>
       </section>
 
+      {/* Final CTA Section */}
+      <section className="py-32 relative overflow-hidden border-t border-white/5">
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-500/5 to-transparent pointer-events-none" />
+        <div className="container mx-auto px-6 text-center space-y-12">
+          <h2 className="text-4xl md:text-6xl font-black tracking-tight max-w-4xl mx-auto leading-tight">
+            Ready to <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">Master Your Animation?</span>
+          </h2>
+          <div className="flex justify-center">
+            <Button asChild className="h-20 px-12 rounded-2xl text-xl font-bold bg-white text-black hover:bg-white/90 shadow-[0_15px_50px_-10px_rgba(255,255,255,0.4)] border border-white/20 transition-all duration-300 group hover:scale-105">
+              <Link href="/home" className="flex items-center gap-3">
+                Start finding references now!
+                <ArrowRight className="h-6 w-6 group-hover:translate-x-2 transition-transform" />
+              </Link>
+            </Button>
+          </div>
+          <p className="text-zinc-500 text-lg">Join our community of artists and start building your collection today.</p>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="border-t border-white/5 py-12 bg-black/20">
         <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">

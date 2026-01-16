@@ -219,7 +219,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
         onMouseLeave={handleMouseLeave}
         className={cn(
           "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lg transform-gpu transition-all duration-300 ease-in-out group/card cursor-pointer",
-          isHovered && !video.isShort && !poster ? "scale-110 z-10 shadow-2xl" : "",
+          isHovered && !video.isShort && !poster ? "scale-110 z-[100] shadow-2xl" : "",
           aspectRatio
         )}>
         {!isImageLoaded && <Skeleton className="absolute inset-0" />}

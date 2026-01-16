@@ -170,7 +170,10 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
 
 
     return (
-        <div ref={containerRef} className="flex flex-col h-full w-full bg-black">
+        <div ref={containerRef} className={cn(
+            "flex flex-col h-full w-full bg-black transition-all duration-300",
+            showUI ? "z-[100]" : "z-0"
+        )}>
 
             {/* 1. Main Video Area */}
             <div

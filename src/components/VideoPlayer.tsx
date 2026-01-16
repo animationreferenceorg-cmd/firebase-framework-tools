@@ -225,7 +225,10 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
     return (
         <div
             ref={containerRef}
-            className="group/player relative w-full h-full flex items-center justify-center rounded-lg overflow-hidden bg-black select-none"
+            className={cn(
+                "group/player relative w-full h-full flex items-center justify-center rounded-lg overflow-hidden bg-black select-none transition-all duration-300",
+                showControls ? "z-[100]" : "z-0"
+            )}
             onMouseMove={handleMouseMove}
             onMouseLeave={() => { if (isPlaying) setShowControls(false) }}
             onClick={(e) => {

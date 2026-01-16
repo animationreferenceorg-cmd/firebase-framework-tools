@@ -965,6 +965,7 @@ export default function VideoForm({ video, isShort, isReference = false, default
         isShort: isShort,
         posterUrl: isShort ? (thumbnailUrl || 'https://placehold.co/400x600.png') : (video?.posterUrl || 'https://placehold.co/400x600.png'),
         status: statusOverride || video?.status || 'published', // Default to published if unknown
+        createdAt: video?.createdAt || serverTimestamp(),
       };
 
       if (isReference) {

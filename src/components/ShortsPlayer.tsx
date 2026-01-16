@@ -47,7 +47,7 @@ function Player({ playerRef, video, ...props }: any) {
     )
 }
 
-export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, startsPaused = false, muted = false }, ref) => {
+export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, startsPaused = false, muted = true }, ref) => {
     const playerRef = React.useRef<ReactPlayer>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -69,7 +69,7 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
             ([entry]) => {
                 setIsPlaying(entry.isIntersecting);
             },
-            { threshold: 0.6 }
+            { threshold: 0.2 }
         );
 
         if (containerRef.current) {
@@ -258,20 +258,20 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
 
                     {/* Speed Control (Above Timeline) - Centered & Large */}
                     <div className="flex justify-center w-full px-1 mb-2">
-                        <div className="hidden sm:flex items-center gap-4 bg-zinc-900/80 backdrop-blur-sm rounded-full px-6 py-2 border border-zinc-700 shadow-lg">
-                            <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Speed</span>
+                        <div className="flex items-center gap-3 sm:gap-4 bg-zinc-900/80 backdrop-blur-sm rounded-full px-4 sm:px-6 py-1.5 sm:py-2 border border-zinc-700 shadow-lg max-w-[95%] sm:max-w-none">
+                            <span className="text-[10px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">Speed</span>
                             <Slider
                                 value={[playbackRate]}
                                 onValueChange={(val) => handlePlaybackRateChange(val[0])}
                                 min={0.5}
                                 max={2}
                                 step={0.1}
-                                className="w-[200px]"
-                                trackClassName="h-2 bg-zinc-700"
+                                className="w-[120px] sm:w-[200px]"
+                                trackClassName="h-1.5 sm:h-2 bg-zinc-700"
                                 rangeClassName="bg-primary"
-                                thumbClassName="h-4 w-4 bg-white hover:scale-125 transition-transform"
+                                thumbClassName="h-3.5 w-3.5 sm:h-4 sm:w-4 bg-white hover:scale-125 transition-transform"
                             />
-                            <span className="text-xs font-mono text-white font-bold w-8 text-right">{playbackRate}x</span>
+                            <span className="text-[10px] sm:text-xs font-mono text-white font-bold w-6 sm:w-8 text-right">{playbackRate}x</span>
                         </div>
                     </div>
 

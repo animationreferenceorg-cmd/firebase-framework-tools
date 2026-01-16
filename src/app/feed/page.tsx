@@ -47,9 +47,9 @@ export default function FeedPage() {
 
       if (isInitial) {
         // Fetch first batch, include everything for the feed
-        q = query(videosRef, orderBy("createdAt", "desc"), limit(VIDEOS_PER_PAGE));
+        q = query(videosRef, limit(VIDEOS_PER_PAGE));
       } else if (lastDoc) {
-        q = query(videosRef, orderBy("createdAt", "desc"), startAfter(lastDoc), limit(VIDEOS_PER_PAGE));
+        q = query(videosRef, startAfter(lastDoc), limit(VIDEOS_PER_PAGE));
       } else {
         return;
       }
@@ -100,7 +100,7 @@ export default function FeedPage() {
         <>
           {videos.map((video) => (
             <section key={video.id} className="relative h-full w-full snap-start overflow-hidden bg-black">
-              <ShortsPlayer video={video} startsPaused={true} />
+              <ShortsPlayer video={video} />
             </section>
           ))}
 

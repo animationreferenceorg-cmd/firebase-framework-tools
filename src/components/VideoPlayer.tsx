@@ -225,9 +225,10 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
     return (
         <div
             ref={containerRef}
-            className="group/player relative w-full h-full flex items-center justify-center rounded-lg overflow-hidden bg-black"
+            className="group/player relative w-full h-full flex items-center justify-center rounded-lg overflow-hidden bg-black select-none"
             onMouseMove={handleMouseMove}
             onMouseLeave={() => { if (isPlaying) setShowControls(false) }}
+            onClick={() => setShowControls(prev => !prev)}
         >
             <div className="relative w-full aspect-video max-w-full max-h-full">
                 <Player
@@ -254,32 +255,82 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                 />
             </div>
 
+            {/* Dark Overlay for Controls Visibility */}
             <div
                 className={cn(
-                    "absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent transition-opacity duration-300 pointer-events-none",
+                    "absolute inset-0 bg-black/40 transition-opacity duration-300 pointer-events-none",
                     showControls ? "opacity-100" : "opacity-0"
                 )}
             />
 
-
-
+            {/* Top Title Bar */}
             <div
                 className={cn(
-                    "absolute top-0 left-0 right-0 p-4 text-white z-10 transition-opacity duration-300 pointer-events-none",
+                    "absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent text-white z-20 transition-opacity duration-300 pointer-events-none",
                     showControls ? "opacity-100" : "opacity-0"
                 )}
             >
                 <h2 className="text-lg font-bold truncate drop-shadow-lg">{video.title}</h2>
             </div>
 
+            {/* Center Play/Pause Button (YouTube Style) */}
             <div
                 className={cn(
-                    "absolute bottom-0 left-0 right-0 p-4 text-white z-10 transition-opacity duration-300",
+                    "absolute inset-0 flex items-center justify-center z-20 pointer-events-none transition-opacity duration-300",
                     showControls ? "opacity-100" : "opacity-0"
                 )}
             >
-                <div className="flex items-center gap-2">
-                    <p className="text-sm font-mono w-14 text-center">{formatTime(currentTime)}</p>
+                <div
+                    className="bg-black/60 backdrop-blur-sm rounded-full p-4 text-white hover:bg-black/80 hover:scale-110 transition-all cursor-pointer pointer-events-auto"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handlePlayPause();
+                    }}
+                >
+                    {isPlaying ? <Pause className="w-8 h-8 md:w-12 md:h-12 fill-white" /> : <Play className="w-8 h-8 md:w-12 md:h-12 fill-white ml-1" />}
+                </div>
+            </div>
+
+            {/* Bottom Controls Container */}
+            <div
+                className={cn(
+                    "absolute bottom-0 left-0 right-0 z-30 transition-all duration-300 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-12 pb-2 px-4 md:px-6",
+                    showControls ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+                )}
+                onClick={(e) => e.stopPropagation()} // Prevent closing controls when interacting with them
+            >
+
+                {/* Row 1: Speed Control (Above Progress) */}
+                <div className="flex justify-end mb-2">
+                    {showCaptureButton ? (
+                        <Button type="button" onClick={handleCaptureFrame} size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-none">
+                            <Camera className="mr-2 h-4 w-4" />
+                            Capture
+                        </Button>
+                    ) : (
+                        <div className="flex items-center gap-3 bg-black/40 rounded-full px-3 py-1 backdrop-blur-md border border-white/5">
+                            <span className="text-xs font-medium text-zinc-300 uppercase tracking-wider">Speed</span>
+                            <div className="flex items-center w-24 md:w-32">
+                                <span className="text-xs font-mono w-8 text-right mr-2">{playbackRate.toFixed(1)}x</span>
+                                <Slider
+                                    value={[playbackRate]}
+                                    onValueChange={handlePlaybackRateChange}
+                                    min={0.25}
+                                    max={2}
+                                    step={0.25}
+                                    className="w-full"
+                                    trackClassName="bg-white/20 h-1"
+                                    rangeClassName="bg-purple-500"
+                                    thumbClassName="h-3 w-3 bg-white border-purple-500 hover:scale-125 transition-transform"
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Row 2: Progress Bar */}
+                <div className="flex items-center gap-3 mb-2 group/timeline">
+                    <p className="text-xs font-mono text-zinc-300 w-10 text-right mobile-hide">{formatTime(currentTime)}</p>
                     <Slider
                         value={[played]}
                         onValueChange={handleSeekChange}
@@ -287,69 +338,44 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                         onPointerUp={handleSeekMouseUp}
                         max={1}
                         step={0.001}
-                        className="w-full"
+                        className="w-full py-2 cursor-pointer"
+                        trackClassName="bg-white/20 h-1 group-hover/timeline:h-1.5 transition-all"
+                        rangeClassName="bg-purple-500"
+                        thumbClassName="h-3 w-3 group-hover/timeline:h-4 group-hover/timeline:w-4 bg-white border-2 border-purple-500 transition-all"
                     />
-                    <p className="text-sm font-mono w-14 text-center">{formatTime(duration)}</p>
+                    <p className="text-xs font-mono text-zinc-300 w-10 mobile-hide">{formatTime(duration)}</p>
                 </div>
 
-                <div className="flex justify-between items-center mt-2">
-                    <div className="flex items-center gap-2 w-[220px]">
-                        {!hidePlayControl && (
-                            <>
-                                <Button type="button" onClick={() => stepFrame('backward')} variant="ghost" size="icon">
-                                    <Rewind />
-                                </Button>
-                                <Button type="button" onClick={handlePlayPause} variant="ghost" size="icon">
-                                    {isPlaying ? <Pause /> : <Play />}
-                                </Button>
-                                <Button type="button" onClick={() => stepFrame('forward')} variant="ghost" size="icon">
-                                    <FastForward />
-                                </Button>
-                            </>
-                        )}
-                        <div className="flex items-center gap-2 w-32 group/volume">
-                            <Button type="button" onClick={handleMuteToggle} variant="ghost" size="icon">
-                                {isMuted || volume === 0 ? <VolumeX /> : <Volume2 />}
-                            </Button>
+                {/* Row 3: Bottom Controls (Volume, Time, Fullscreen) */}
+                <div className="flex justify-between items-center -mx-2">
+
+                    {/* Left: Volume */}
+                    <div className="flex items-center group/volume">
+                        <Button type="button" onClick={handleMuteToggle} variant="ghost" size="icon" className="hover:bg-white/10 text-white rounded-full h-10 w-10">
+                            {isMuted || volume === 0 ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                        </Button>
+                        <div className="w-0 overflow-hidden group-hover/volume:w-24 transition-all duration-300 ease-out flex items-center px-2">
                             <Slider
                                 value={[isMuted ? 0 : volume]}
                                 onValueChange={handleVolumeChange}
                                 max={1}
                                 step={0.05}
-                                className="w-full opacity-0 group-hover/volume:opacity-100 transition-opacity"
+                                className="w-full"
+                                trackClassName="bg-white/20 h-1"
+                                rangeClassName="bg-white"
+                                thumbClassName="h-3 w-3 bg-white"
                             />
                         </div>
+                        <span className="text-xs text-zinc-400 ml-2 md:hidden">
+                            {formatTime(currentTime)} / {formatTime(duration)}
+                        </span>
                     </div>
 
-                    <div className="flex-1 flex justify-center items-center gap-4 px-4 group/speed">
-                        {showCaptureButton ? (
-                            <Button type="button" onClick={handleCaptureFrame}>
-                                <Camera className="mr-2 h-4 w-4" />
-                                Capture Frame
-                            </Button>
-                        ) : (
-                            <div className="flex items-center gap-2 w-full max-w-xs">
-                                <p className="text-sm font-mono w-16 text-center">{playbackRate.toFixed(2)}x</p>
-                                <Slider
-                                    value={[playbackRate]}
-                                    onValueChange={handlePlaybackRateChange}
-                                    min={0.01}
-                                    max={2}
-                                    step={0.01}
-                                    className="w-full"
-                                    trackClassName="bg-white/20 h-0.5 group-hover/speed:h-2 transition-all duration-200"
-                                    rangeClassName="bg-white"
-                                    thumbClassName="h-3 w-3 group-hover/speed:h-5 group-hover/speed:w-5 border-white transition-all duration-200"
-                                />
-                            </div>
-                        )}
-                    </div>
-
-
-                    <div className="flex items-center justify-end w-[220px]">
+                    {/* Right: Fullscreen */}
+                    <div className="flex items-center">
                         {!hideFullscreenControl && (
-                            <Button type="button" onClick={handleFullscreenToggle} variant="ghost" size="icon">
-                                {isFullScreen ? <Minimize /> : <Maximize />}
+                            <Button type="button" onClick={handleFullscreenToggle} variant="ghost" size="icon" className="hover:bg-white/10 text-white rounded-full h-10 w-10">
+                                {isFullScreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
                             </Button>
                         )}
                     </div>

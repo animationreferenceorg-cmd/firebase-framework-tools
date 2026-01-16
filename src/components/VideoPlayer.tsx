@@ -216,7 +216,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
         }
         controlsTimeoutRef.current = setTimeout(() => {
             if (isPlaying) setShowControls(false);
-        }, 3000);
+        }, 6000);
     };
 
     const currentTime = played * duration;
@@ -229,8 +229,18 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
             onMouseMove={handleMouseMove}
             onMouseLeave={() => { if (isPlaying) setShowControls(false) }}
             onClick={(e) => {
-                // Background tap toggles controls ONLY
-                setShowControls(prev => !prev);
+                // Background tap toggles controls
+                setShowControls(prev => {
+                    const newState = !prev;
+                    if (newState) {
+                        // If showing, set timer to hide again
+                        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+                        controlsTimeoutRef.current = setTimeout(() => {
+                            if (isPlaying) setShowControls(false);
+                        }, 6000);
+                    }
+                    return newState;
+                });
             }}
         >
             <div className="relative w-full aspect-video max-w-full max-h-full">

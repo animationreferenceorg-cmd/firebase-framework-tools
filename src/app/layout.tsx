@@ -11,6 +11,22 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 export const metadata: Metadata = {
   title: 'Animation Reference',
   description: 'A Netflix-inspired platform for discovering and enjoying animation clips.',
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
+  openGraph: {
+    title: 'Animation Reference',
+    description: 'The definitive collection of curated animation references.',
+    images: [
+      {
+        url: '/logo.png',
+        width: 800,
+        height: 800,
+        alt: 'Animation Reference Logo',
+      },
+    ],
+  },
 };
 
 export default function RootLayout({

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Sparkles, Film, Construction, Heart, Search, Users, Clapperboard } from 'lucide-react';
 import { VideoPlayer } from '@/components/VideoPlayer';
@@ -486,11 +487,16 @@ export default function ComingSoonPage() {
       {/* Footer */}
       <footer className="border-t border-white/5 py-12 bg-black/20">
         <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2">
-            <div className="bg-white/5 p-1 rounded-md">
-              <Film className="h-4 w-4 text-zinc-400" />
+          <div className="flex items-center gap-3">
+            <div className="relative h-10 w-10 overflow-hidden rounded-xl bg-white/5 border border-white/10 p-1">
+              <Image
+                src="/logo.png"
+                alt="Logo"
+                fill
+                className="object-contain p-1"
+              />
             </div>
-            <span className="text-md font-semibold text-zinc-400">AnimationReference</span>
+            <span className="text-xl font-black tracking-tighter text-zinc-300">AnimationReference</span>
           </div>
           <div className="flex items-center gap-6 text-sm text-zinc-600">
             <Link href="/terms" className="hover:text-zinc-400 transition-colors">

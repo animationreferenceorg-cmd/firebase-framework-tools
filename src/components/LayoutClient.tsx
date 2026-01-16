@@ -88,6 +88,26 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                 <Sidebar>
                     {/* ... sidebar content ... */}
                     <SidebarHeader>
+                        <div className="px-6 pt-6 flex items-center gap-3 group cursor-pointer lowercase">
+                            <Link href="/home" className="flex items-center gap-3">
+                                <div className="relative h-10 w-10 overflow-hidden rounded-xl bg-white/5 border border-white/10 group-hover:border-white/20 transition-all">
+                                    <Image
+                                        src="/logo.png"
+                                        alt="Logo"
+                                        fill
+                                        className="object-contain p-1"
+                                    />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-lg font-black tracking-tighter text-white leading-none">
+                                        Animation
+                                    </span>
+                                    <span className="text-xs font-bold text-zinc-500 group-hover:text-purple-400 transition-colors">
+                                        Reference
+                                    </span>
+                                </div>
+                            </Link>
+                        </div>
                         {/* ... header content ... */}
                         <div className="flex items-center justify-center w-full py-6">
                             <div className={cn(

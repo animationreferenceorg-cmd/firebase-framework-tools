@@ -21,7 +21,19 @@ export function GlassHeader() {
                         <SidebarTrigger className="text-zinc-400 hover:text-white hover:bg-white/10 rounded-full w-8 h-8" />
                     </div>
 
-
+                    <Link href="/home" className="flex items-center gap-2 group">
+                        <div className="relative h-8 w-8 overflow-hidden rounded-lg">
+                            <Image
+                                src="/logo.png"
+                                alt="Logo"
+                                fill
+                                className="object-contain transition-transform group-hover:scale-110"
+                            />
+                        </div>
+                        <span className="hidden sm:block text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70 group-hover:to-white transition-all">
+                            AnimationReference
+                        </span>
+                    </Link>
                 </div>
 
                 {/* Center: Navigation (Visible on all screens) */}

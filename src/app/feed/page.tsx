@@ -46,10 +46,10 @@ export default function FeedPage() {
       let q;
 
       if (isInitial) {
-        // Fetch first batch, include everything for the feed
-        q = query(videosRef, limit(VIDEOS_PER_PAGE));
+        // Fetch first batch, include ONLY shorts for the feed
+        q = query(videosRef, where("isShort", "==", true), limit(VIDEOS_PER_PAGE));
       } else if (lastDoc) {
-        q = query(videosRef, startAfter(lastDoc), limit(VIDEOS_PER_PAGE));
+        q = query(videosRef, where("isShort", "==", true), startAfter(lastDoc), limit(VIDEOS_PER_PAGE));
       } else {
         return;
       }

@@ -190,7 +190,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                 </Sidebar>
                 <SidebarInset>
                     <div className="flex flex-col flex-1 min-h-screen relative">
-                        {!isFeedPage && <GlassHeader />}
+                        <GlassHeader />
                         <main className={cn(
                             "flex-1 transition-all duration-300 ease-in-out",
                             !isMoodboardPage && "px-4 md:px-8 pb-8"

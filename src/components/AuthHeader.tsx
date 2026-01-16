@@ -76,7 +76,7 @@ export default function AuthHeader() {
   }
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-2 md:gap-4">
       {user ? (
         <>
           <DonateDialog>
@@ -109,7 +109,7 @@ export default function AuthHeader() {
           </DropdownMenu>
         </>
       ) : (
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
           <DonateDialog>
             <div className="animated-gradient-border p-[2px]">
               <Button variant="outline" className="relative z-10 bg-background hover:bg-background/80">Donate</Button>

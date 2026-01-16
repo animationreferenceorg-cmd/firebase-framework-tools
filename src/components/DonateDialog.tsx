@@ -110,7 +110,7 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                     {children}
                 </DialogTrigger>
             )}
-            <DialogContent className="max-w-5xl w-[95vw] p-0 overflow-hidden bg-[#050505] border-white/10 text-white">
+            <DialogContent className="max-w-5xl w-[95vw] max-h-[85vh] overflow-y-auto p-0 bg-[#050505] border-white/10 text-white">
                 <div className="absolute inset-0 bg-grid-white/5 mask-image-gradient-b pointer-events-none" />
 
                 {/* Why Donate Info Button */}

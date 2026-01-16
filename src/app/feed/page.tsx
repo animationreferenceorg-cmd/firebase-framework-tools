@@ -34,48 +34,34 @@ export default function FeedPage() {
   });
 
   const fetchVideos = useCallback(async (isInitial = false) => {
-    if (isInitial) {
-      setLoading(true);
-    } else {
-      if (!hasMore || loadingMore) return;
-      setLoadingMore(true);
-    }
+    if (!isInitial) return; // For discovery, we fetch one large randomized batch
+    setLoading(true);
 
     try {
       const videosRef = collection(db, "videos");
-      let q;
-
-      if (isInitial) {
-        // Fetch first batch, include ONLY shorts for the feed
-        q = query(videosRef, where("isShort", "==", true), limit(VIDEOS_PER_PAGE));
-      } else if (lastDoc) {
-        q = query(videosRef, where("isShort", "==", true), startAfter(lastDoc), limit(VIDEOS_PER_PAGE));
-      } else {
-        return;
-      }
-
+      // Fetch a larger sample to randomize from
+      const q = query(videosRef, limit(200));
       const snapshot = await getDocs(q);
-      const newVideos = snapshot.docs.map(doc => ({
+
+      const allFetched = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as Video));
 
-      if (isInitial) {
-        setVideos(newVideos);
-      } else {
-        setVideos(prev => [...prev, ...newVideos]);
-      }
+      // Filter: Only include videos that ARE NOT marked as shorts
+      const nonShorts = allFetched.filter(v => v.isShort !== true);
 
-      const lastVisible = snapshot.docs[snapshot.docs.length - 1];
-      setLastDoc(lastVisible || null);
-      setHasMore(snapshot.docs.length === VIDEOS_PER_PAGE);
+      // Randomize the order
+      const randomized = [...nonShorts].sort(() => Math.random() - 0.5);
+
+      setVideos(randomized);
+      setHasMore(false); // We show the full randomized pool
     } catch (error) {
       console.error("Error fetching feed videos:", error);
     } finally {
       setLoading(false);
-      setLoadingMore(false);
     }
-  }, [lastDoc, hasMore, loadingMore]);
+  }, []);
 
   // Initial Fetch
   useEffect(() => {

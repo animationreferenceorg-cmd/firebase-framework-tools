@@ -24,7 +24,7 @@ export default function BetaPage() {
     // "Featured" is the new default tab
     const [activeTab, setActiveTab] = useState<TabOption>('featured');
     const [activeType, setActiveType] = useState<TypeOption>('all');
-    const [columns, setColumns] = useState<number>(3);
+    const [columns, setColumns] = useState<number>(2);
 
     // Mock Liked History (In a real app, this would come from local storage or user profile)
     const [likedVideos, setLikedVideos] = useState<Video[]>([]);

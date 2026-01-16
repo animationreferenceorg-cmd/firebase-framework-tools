@@ -57,7 +57,7 @@ export function VideoGrid({ title, videos, columns = 5 }: VideoGridProps) {
     <section>
       {title && <h2 className="text-xl md:text-2xl font-bold mb-4 text-white">{title}</h2>}
       <div className={cn(
-        "grid grid-cols-1 sm:grid-cols-2 gap-4",
+        "grid grid-cols-2 gap-4",
         getGridClass()
       )}>
         {visibleVideos.map(video => (
@@ -67,7 +67,7 @@ export function VideoGrid({ title, videos, columns = 5 }: VideoGridProps) {
 
       {/* Loader */}
       {visibleCount < videos.length && (
-        <div ref={ref} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+        <div ref={ref} className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
           {Array.from({ length: Math.min(VIDEOS_PER_PAGE, videos.length - visibleCount) }).map((_, index) => (
             <Skeleton key={`loader-${index}`} className="w-full aspect-video rounded-lg" />
           ))}

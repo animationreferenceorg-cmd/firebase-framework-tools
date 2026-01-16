@@ -58,7 +58,7 @@ export default function BrowsePageClient() {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<TabOption>('latest'); // Default to latest for consistent pagination
     const [activeType, setActiveType] = useState<TypeOption>('all');
-    const [columns, setColumns] = useState<number>(3);
+    const [columns, setColumns] = useState<number>(2);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
 

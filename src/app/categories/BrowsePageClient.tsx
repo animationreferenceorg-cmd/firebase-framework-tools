@@ -144,7 +144,7 @@ export default function BrowsePageClient() {
                 const categorySnapshot = await getDocs(categoriesQuery);
                 const fetchedCategories = categorySnapshot.docs.map(doc => ({
                     id: doc.id,
-                    href: `/browse?category=${doc.id}`,
+                    href: `/categories?category=${doc.id}`,
                     ...doc.data()
                 } as Category));
 

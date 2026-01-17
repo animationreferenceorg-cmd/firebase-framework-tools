@@ -52,7 +52,7 @@ export default function RootLayout({
           <div className="absolute bottom-[-10%] left-[5%] w-[700px] h-[700px] bg-indigo-600/10 blur-[130px] rounded-full mix-blend-screen" />
 
           {/* Subtle center grain/noise if needed, or just deep void */}
-          <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02]" />
+          {/* <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02]" /> */}
         </div>
         <FirebaseClientProvider>
           <AuthProvider>

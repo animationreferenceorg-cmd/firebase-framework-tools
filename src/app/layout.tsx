@@ -27,6 +27,8 @@ export const metadata: Metadata = {
         alt: 'Animation Reference Logo',
       },
     ],
+    url: 'https://animationreference.org',
+    type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
@@ -34,6 +36,9 @@ export const metadata: Metadata = {
     description: 'The definitive collection of curated animation references.',
     images: ['/logo.png'],
   },
+  alternates: {
+    canonical: '/',
+  }
 };
 
 export default function RootLayout({

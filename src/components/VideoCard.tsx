@@ -219,7 +219,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
         onMouseLeave={handleMouseLeave}
         className={cn(
           "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lg transform-gpu transition-all duration-300 ease-in-out group/card cursor-pointer",
-          isHovered && !video.isShort && !poster ? "scale-110 z-[100] shadow-2xl" : "",
+          isHovered && !isPlayerOpen && !video.isShort && !poster ? "scale-110 z-[100] shadow-2xl" : "z-0",
           aspectRatio
         )}>
         {!isImageLoaded && <Skeleton className="absolute inset-0" />}
@@ -237,10 +237,10 @@ export function VideoCard({ video, poster }: VideoCardProps) {
             onLoad={() => setIsImageLoaded(true)}
           />
         )}
-        {!video.isShort && !poster && video.videoUrl && isHovered && (
+        {!video.isShort && !poster && video.videoUrl && isHovered && !isPlayerOpen && (
           <div className={cn(
             "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none",
-            isHovered ? "opacity-100" : "opacity-0"
+            isHovered && !isPlayerOpen ? "opacity-100" : "opacity-0"
           )}>
             <Player
               url={videoUrlForPreview}

@@ -216,7 +216,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
         }
         controlsTimeoutRef.current = setTimeout(() => {
             if (isPlaying) setShowControls(false);
-        }, 6000);
+        }, isFullScreen ? 10000 : 5000);
     };
 
     const currentTime = played * duration;
@@ -233,7 +233,12 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
             onMouseMove={handleMouseMove}
             onMouseLeave={() => { if (isPlaying) setShowControls(false) }}
             onClick={(e) => {
-                // Background tap toggles controls
+                // Ignore clicks on actual buttons/sliders if they bubble up (though most have stopPropagation)
+                if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('[role="slider"]')) {
+                    return;
+                }
+
+                // Toggle controls
                 setShowControls(prev => {
                     const newState = !prev;
                     if (newState) {
@@ -241,7 +246,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                         if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
                         controlsTimeoutRef.current = setTimeout(() => {
                             if (isPlaying) setShowControls(false);
-                        }, 6000);
+                        }, isFullScreen ? 10000 : 5000); // Wait longer in fullscreen
                     }
                     return newState;
                 });

@@ -43,11 +43,11 @@ export default function MarketplacePage() {
             <main className="container mx-auto px-4 pt-32 pb-20">
 
                 {/* Marketplace Hero */}
-                <div className="text-center space-y-4 mb-8 md:mb-16">
-                    <h1 className="text-3xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-purple-200 to-white">
+                <div className="text-center space-y-4 mb-10 md:mb-16">
+                    <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-purple-200 to-white px-2">
                         Creator Marketplace
                     </h1>
-                    <p className="text-zinc-400 max-w-2xl mx-auto text-base md:text-lg px-4">
+                    <p className="text-zinc-400 max-w-2xl mx-auto text-sm sm:text-base md:text-lg px-6 leading-relaxed">
                         Premium assets for your animation workflow. Discover top-tier rigs, environments, and plugins curated for professionals.
                     </p>
                 </div>
@@ -64,12 +64,12 @@ export default function MarketplacePage() {
                     </div>
                 ) : (
                     <Tabs defaultValue="all" className="w-full">
-                        <div className="flex justify-start md:justify-center mb-12 overflow-x-auto pb-4 no-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
-                            <TabsList className="bg-white/5 border border-white/10 p-1 rounded-full whitespace-nowrap min-w-max flex">
-                                <TabsTrigger value="all" className="rounded-full px-6 data-[state=active]:bg-purple-600 data-[state=active]:text-white h-10">All Assets</TabsTrigger>
-                                <TabsTrigger value="rigs" className="rounded-full px-6 data-[state=active]:bg-purple-600 data-[state=active]:text-white h-10"><Box className="mr-2 h-4 w-4" /> Rigs</TabsTrigger>
-                                <TabsTrigger value="sets" className="rounded-full px-6 data-[state=active]:bg-purple-600 data-[state=active]:text-white h-10"><Layers className="mr-2 h-4 w-4" /> Sets</TabsTrigger>
-                                <TabsTrigger value="plugins" className="rounded-full px-6 data-[state=active]:bg-purple-600 data-[state=active]:text-white h-10"><Wrench className="mr-2 h-4 w-4" /> Plugins</TabsTrigger>
+                        <div className="flex justify-start md:justify-center mb-12 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 scroll-smooth">
+                            <TabsList className="bg-white/5 border border-white/10 p-1 rounded-full whitespace-nowrap min-w-max flex h-11 items-center">
+                                <TabsTrigger value="all" className="rounded-full px-6 data-[state=active]:bg-purple-600 data-[state=active]:text-white h-9 transition-all">All Assets</TabsTrigger>
+                                <TabsTrigger value="rigs" className="rounded-full px-6 data-[state=active]:bg-purple-600 data-[state=active]:text-white h-9 transition-all"><Box className="mr-2 h-4 w-4" /> Rigs</TabsTrigger>
+                                <TabsTrigger value="sets" className="rounded-full px-6 data-[state=active]:bg-purple-600 data-[state=active]:text-white h-9 transition-all"><Layers className="mr-2 h-4 w-4" /> Sets</TabsTrigger>
+                                <TabsTrigger value="plugins" className="rounded-full px-6 data-[state=active]:bg-purple-600 data-[state=active]:text-white h-9 transition-all"><Wrench className="mr-2 h-4 w-4" /> Plugins</TabsTrigger>
                             </TabsList>
                         </div>
 

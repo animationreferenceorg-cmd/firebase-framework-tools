@@ -9,6 +9,7 @@ import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://animationreference.org'),
   title: 'Animation Reference',
   description: 'A Netflix-inspired platform for discovering and enjoying animation clips.',
   icons: {
@@ -26,6 +27,12 @@ export const metadata: Metadata = {
         alt: 'Animation Reference Logo',
       },
     ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Animation Reference',
+    description: 'The definitive collection of curated animation references.',
+    images: ['/logo.png'],
   },
 };
 

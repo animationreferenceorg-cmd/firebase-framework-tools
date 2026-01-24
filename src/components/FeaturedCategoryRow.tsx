@@ -11,9 +11,10 @@ import type { Category } from '@/lib/types';
 interface FeaturedCategoryRowProps {
     title?: string;
     categories: Category[];
+    onCategorySelect?: (id: string) => void;
 }
 
-export function FeaturedCategoryRow({ title = "Featured Collections", categories }: FeaturedCategoryRowProps) {
+export function FeaturedCategoryRow({ title = "Featured Collections", categories, onCategorySelect }: FeaturedCategoryRowProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(true);
@@ -108,7 +109,13 @@ export function FeaturedCategoryRow({ title = "Featured Collections", categories
                     {categories.map((category, index) => (
                         <Link
                             key={category.id}
-                            href={category.href || `/browse?category=${category.id}`} // Fallback href
+                            href={category.href || `/browse?category=${category.id}`}
+                            onClick={(e) => {
+                                if (onCategorySelect) {
+                                    e.preventDefault();
+                                    onCategorySelect(category.id);
+                                }
+                            }}
                             className="relative flex-shrink-0 group/card block"
                         >
                             <div className="w-[85vw] sm:w-[400px] aspect-[1.85/1] relative rounded-2xl overflow-hidden border border-white/10 bg-zinc-900 shadow-lg transition-all duration-500 hover:shadow-[0_0_30px_-10px_rgba(168,85,247,0.3)] hover:border-purple-500/30 hover:-translate-y-1">

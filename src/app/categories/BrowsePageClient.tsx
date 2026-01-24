@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { collection, getDocs, query, limit, where, startAfter, orderBy, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Video, Category } from '@/lib/types';
@@ -24,12 +24,29 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useInView } from 'react-intersection-observer';
 
 const VIDEOS_PER_PAGE = 24;
 
-export default function BrowsePageClient() {
+const slugify = (text: string) => {
+    return text
+        .toString()
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')        // Replace spaces with -
+        .replace(/&/g, '-and-')      // Replace & with 'and'
+        .replace(/[^\w\-]+/g, '')    // Remove all non-word chars
+        .replace(/\-\-+/g, '-');     // Replace multiple - with single -
+};
+
+interface BrowsePageClientProps {
+    initialCategoryId?: string;
+}
+
+export default function BrowsePageClient({ initialCategoryId }: BrowsePageClientProps) {
     const searchParams = useSearchParams();
+    const router = useRouter();
 
     // Data State
     const [allVideos, setAllVideos] = useState<Video[]>([]);
@@ -55,20 +72,114 @@ export default function BrowsePageClient() {
     }, [inView, hasMore, loadingMore, loading]);
 
     // Filter State
+    // Filter State
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeTab, setActiveTab] = useState<TabOption>('latest'); // Default to latest for consistent pagination
-    const [activeType, setActiveType] = useState<TypeOption>('all');
+    // Map URL params to State
+    const [activeTab, setActiveTabState] = useState<TabOption>(() => {
+        const sort = searchParams.get('sort_by');
+        return (sort === 'trending' || sort === 'latest') ? sort : 'latest';
+    });
+    const [activeType, setActiveTypeState] = useState<TypeOption>(() => {
+        const dim = searchParams.get('dimension');
+        return (dim === '2d' || dim === '3d' || dim === 'all') ? dim : 'all';
+    });
     const [columns, setColumns] = useState<number>(2);
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(() => {
+        if (initialCategoryId) return initialCategoryId;
+        return searchParams.get('category');
+    });
     const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
 
-    // Check URL params for category
+    // Sync with Prop if it changes (Server Navigation)
     useEffect(() => {
-        const catParam = searchParams.get('category');
-        if (catParam) {
-            setSelectedCategory(catParam);
+        if (initialCategoryId) {
+            setSelectedCategory(initialCategoryId);
         }
-    }, [searchParams]);
+    }, [initialCategoryId]);
+
+    // Handle Back/Forward Button
+    useEffect(() => {
+        const handlePopState = (event: PopStateEvent) => {
+            if (event.state && event.state.categoryId !== undefined) {
+                setSelectedCategory(event.state.categoryId);
+            } else {
+                const path = window.location.pathname;
+                const parts = path.split('/');
+                const slug = parts[parts.length - 1]; // /categories/slug
+                if (slug && slug !== 'categories') {
+                    const cat = categories.find(c => c.slug === slug || c.id === slug);
+                    // If categories aren't loaded yet, this might be null. 
+                    // But usually they load fast. If null, we might stay null until user interaction?
+                    // Ideally we should retry match when categories load.
+                    if (cat) setSelectedCategory(cat.id);
+                } else {
+                    setSelectedCategory(null);
+                }
+            }
+
+            // Also restore filters from URL on back/forward
+            const params = new URLSearchParams(window.location.search);
+            const sort = params.get('sort_by');
+            setActiveTabState((sort === 'trending' || sort === 'latest') ? sort : 'latest');
+
+            const dim = params.get('dimension');
+            setActiveTypeState((dim === '2d' || dim === '3d' || dim === 'all') ? dim : 'all');
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [categories]);
+
+    // Helper to update URL without reload
+    const updateUrl = (updates: { category?: string | null, sort?: string, dimension?: string, query?: string }) => {
+        const currentParams = new URLSearchParams(window.location.search);
+
+        // Handle Params
+        if (updates.sort) currentParams.set('sort_by', updates.sort);
+        if (updates.dimension) currentParams.set('dimension', updates.dimension);
+        if (updates.query !== undefined) {
+            if (updates.query) currentParams.set('q', updates.query);
+            else currentParams.delete('q');
+        }
+
+        // Handle Path (Category)
+        let newPath = window.location.pathname;
+        if (updates.category !== undefined) {
+            const catId = updates.category;
+            if (catId) {
+                const category = categories.find(c => c.id === catId);
+                const slug = category?.slug || (category?.title ? slugify(category.title) : null);
+                newPath = slug ? `/categories/${slug}` : `/categories/${catId}`;
+            } else {
+                newPath = '/categories';
+            }
+        }
+
+        const newUrl = `${newPath}?${currentParams.toString()}`;
+        if (window.location.pathname + window.location.search !== newUrl) {
+            window.history.pushState({
+                categoryId: updates.category !== undefined ? updates.category : selectedCategory,
+                // We could store other state here if needed
+            }, '', newUrl);
+        }
+    };
+
+    // Wrappers for state setters to also update URL
+    const setActiveTab = (tab: TabOption) => {
+        setActiveTabState(tab);
+        updateUrl({ sort: tab });
+    };
+
+    const setActiveType = (type: TypeOption) => {
+        setActiveTypeState(type);
+        updateUrl({ dimension: type });
+    };
+
+    const handleSearch = (q: string) => {
+        setSearchQuery(q);
+        // Debounce URL update for search could be nice, but for now direct
+        updateUrl({ query: q });
+    };
 
     // Data Fetching Function
     const fetchVideos = useCallback(async (reset = false) => {
@@ -142,11 +253,16 @@ export default function BrowsePageClient() {
             try {
                 const categoriesQuery = query(collection(db, "categories"), where("status", "==", "published"), limit(100));
                 const categorySnapshot = await getDocs(categoriesQuery);
-                const fetchedCategories = categorySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    href: `/categories?category=${doc.id}`,
-                    ...doc.data()
-                } as Category));
+                const fetchedCategories = categorySnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    const s = data.slug || slugify(data.title || '');
+                    return {
+                        id: doc.id,
+                        href: `/categories/${s}`,
+                        slug: s,
+                        ...data
+                    } as Category;
+                });
 
                 // Fallback: If category has no thumbnail, use a video thumbnail from that category
                 // Note: We need some videos for this match logic. 
@@ -214,8 +330,10 @@ export default function BrowsePageClient() {
     }, [allVideos, activeType, activeTab, selectedCategory, searchQuery]);
 
     const handleCategorySelect = (catId: string | null) => {
+        // Optimistic update
         setSelectedCategory(catId);
         setIsCategoryDialogOpen(false);
+        updateUrl({ category: catId });
     };
 
     // Hero Video Selection (Pick from first batch)
@@ -300,6 +418,9 @@ export default function BrowsePageClient() {
                         <ChannelBar
                             categories={categories}
                             selectedCategory={selectedCategory}
+                            /* 3. Featured Categories (Optional) 
+                <FeaturedCategoryRow categories={categories.slice(0, 5)} onCategorySelect={handleCategorySelect} />
+                */
                             onSelectCategory={handleCategorySelect}
                             onOpenAllCategories={() => setIsCategoryDialogOpen(true)}
                             columns={columns}
@@ -378,8 +499,12 @@ export default function BrowsePageClient() {
                     </DialogHeader>
 
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
-                        <button
-                            onClick={() => handleCategorySelect(null)}
+                        <Link
+                            href="/categories"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleCategorySelect(null);
+                            }}
                             className={cn(
                                 "flex items-center gap-4 p-3 rounded-xl border text-left transition-all hover:scale-[1.02]",
                                 selectedCategory === null
@@ -394,12 +519,16 @@ export default function BrowsePageClient() {
                                 <h3 className="font-bold text-white">All Channels</h3>
                                 <p className="text-xs text-zinc-500">View everything</p>
                             </div>
-                        </button>
+                        </Link>
 
                         {categories.map((cat) => (
-                            <button
+                            <Link
                                 key={cat.id}
-                                onClick={() => handleCategorySelect(cat.id)}
+                                href={cat.slug ? `/categories/${cat.slug}` : `/categories/${cat.id}`}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    handleCategorySelect(cat.id);
+                                }}
                                 className={cn(
                                     "flex items-center gap-4 p-3 rounded-xl border text-left transition-all hover:scale-[1.02]",
                                     selectedCategory === cat.id
@@ -418,7 +547,7 @@ export default function BrowsePageClient() {
                                     <h3 className="font-bold text-white truncate">{cat.title}</h3>
                                     <p className="text-xs text-zinc-500 truncate">{cat.description || 'Collection'}</p>
                                 </div>
-                            </button>
+                            </Link>
                         ))}
                     </div>
                 </DialogContent>

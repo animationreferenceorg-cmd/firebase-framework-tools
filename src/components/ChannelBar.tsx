@@ -2,9 +2,11 @@
 
 import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, Grid, Settings2 } from "lucide-react";
+import Link from 'next/link';
+import { ChevronLeft, ChevronRight, Grid, Settings2, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { useToast } from "@/hooks/use-toast";
 import {
     Popover,
     PopoverContent,
@@ -28,9 +30,21 @@ export function ChannelBar({ categories, selectedCategory, onSelectCategory, onO
     const [canScrollRight, setCanScrollRight] = useState(true);
     const [localColumns, setLocalColumns] = useState(columns);
 
+    const { toast } = useToast();
+
     useEffect(() => {
         setLocalColumns(columns);
     }, [columns]);
+
+    const handleShare = (e: React.MouseEvent, catId: string, catTitle: string) => {
+        e.stopPropagation();
+        const url = `${window.location.origin}/c/${catId}`;
+        navigator.clipboard.writeText(url);
+        toast({
+            title: "Link copied!",
+            description: `Share link for ${catTitle} ready to paste.`,
+        });
+    };
 
     const checkScroll = () => {
         if (scrollRef.current) {
@@ -150,31 +164,46 @@ export function ChannelBar({ categories, selectedCategory, onSelectCategory, onO
                 className="flex items-center gap-4 overflow-x-auto scrollbar-hide py-2 md:pl-[300px] md:pr-12"
             >
                 {categories.map((cat) => (
-                    <button
-                        key={cat.id}
-                        onClick={() => onSelectCategory(cat.id)}
-                        className={cn(
-                            "flex items-center gap-4 pr-6 pl-2 py-2 h-16 rounded-xl border transition-all shrink-0 group relative overflow-hidden min-w-[240px]",
-                            selectedCategory === cat.id
-                                ? "bg-zinc-800 border-zinc-600 text-white shadow-md ring-1 ring-white/10"
-                                : "bg-zinc-900/50 border-transparent hover:bg-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white"
-                        )}
-                    >
-                        {/* Larger Thumbnail */}
-                        <div className="h-12 w-12 relative rounded-lg overflow-hidden bg-zinc-950 shrink-0 border border-white/5">
-                            {cat.imageUrl ? (
-                                <Image
-                                    src={cat.imageUrl}
-                                    alt={cat.title}
-                                    fill
-                                    className="object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                                />
-                            ) : (
-                                <div className="h-full w-full bg-zinc-800" />
+                    <div key={cat.id} className="relative group/item shrink-0">
+                        <Link
+                            href={cat.slug ? `/categories/${cat.slug}` : `/categories/${cat.id}`}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                onSelectCategory(cat.id);
+                            }}
+                            className={cn(
+                                "flex items-center gap-4 pr-12 pl-2 py-2 h-16 rounded-xl border transition-all shrink-0 relative overflow-hidden min-w-[240px]",
+                                selectedCategory === cat.id
+                                    ? "bg-zinc-800 border-zinc-600 text-white shadow-md ring-1 ring-white/10"
+                                    : "bg-zinc-900/50 border-transparent hover:bg-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white"
                             )}
-                        </div>
-                        <span className="text-lg font-semibold whitespace-nowrap">{cat.title}</span>
-                    </button>
+                        >
+                            {/* Larger Thumbnail */}
+                            <div className="h-12 w-12 relative rounded-lg overflow-hidden bg-zinc-950 shrink-0 border border-white/5">
+                                {cat.imageUrl ? (
+                                    <Image
+                                        src={cat.imageUrl}
+                                        alt={cat.title}
+                                        fill
+                                        className="object-cover opacity-80 group-hover/item:opacity-100 transition-opacity"
+                                    />
+                                ) : (
+                                    <div className="h-full w-full bg-zinc-800" />
+                                )}
+                            </div>
+                            <span className="text-lg font-semibold whitespace-nowrap">{cat.title}</span>
+                        </Link>
+
+                        {/* Share Button */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-zinc-500 hover:text-white hover:bg-zinc-700/50 rounded-full z-10 transition-colors"
+                            onClick={(e) => handleShare(e, cat.id, cat.title)}
+                        >
+                            <Share2 className="h-4 w-4" />
+                        </Button>
+                    </div>
                 ))}
             </div>
         </div>

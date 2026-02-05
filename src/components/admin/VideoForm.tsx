@@ -80,6 +80,10 @@ const formSchema = (isShort: boolean, isReference: boolean) => z.object({
 
   tags: z.array(z.string()).min(isReference ? 0 : 1, "Please add at least one tag."),
   categoryIds: z.array(z.string()).min(isReference ? 0 : 1, "Please select at least one category."),
+  folderId: z.string().nullable().optional(),
+  authorUrl: z.string().url("Please enter a valid URL").optional().or(z.literal('')),
+  authorName: z.string().optional(),
+  authorAvatarUrl: z.string().url("Please enter a valid URL").optional().or(z.literal('')),
 }).superRefine((data, ctx) => {
   if (data.videoSourceType === 'url' && (!data.videoUrl || data.videoUrl.trim() === '')) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Video URL is required.", path: ['videoUrl'] });
@@ -654,6 +658,10 @@ export default function VideoForm({ video, isShort, isReference = false, default
       categoryIds: video?.categoryIds || (isShort && video?.categories ? allCategories.filter(c => video.categories!.includes(c.title)).map(c => c.id) : []) || [],
       videoSourceType: video?.videoUrl ? 'url' : 'upload',
       thumbnailSourceType: video?.thumbnailUrl ? 'url' : 'upload',
+      folderId: video?.folderId || defaultFolderId || null,
+      authorUrl: video?.authorUrl || "",
+      authorName: video?.authorName || "",
+      authorAvatarUrl: video?.authorAvatarUrl || "",
     },
   })
 
@@ -966,6 +974,11 @@ export default function VideoForm({ video, isShort, isReference = false, default
         posterUrl: isShort ? (thumbnailUrl || 'https://placehold.co/400x600.png') : (video?.posterUrl || 'https://placehold.co/400x600.png'),
         status: statusOverride || video?.status || 'published', // Default to published if unknown
         createdAt: video?.createdAt || serverTimestamp(),
+        folderId: values.folderId ?? null,
+        authorUrl: values.authorUrl || null,
+        authorName: values.authorName || null,
+        authorAvatarUrl: values.authorAvatarUrl || null,
+        originalUrl: values.uploader_url || null,
       };
 
       if (isReference) {
@@ -1069,10 +1082,13 @@ export default function VideoForm({ video, isShort, isReference = false, default
                         id: 'preview',
                         videoUrl: videoPreview,
                         title: 'Preview',
-                        thumbnailUrl: '',
-                        type: watchedValues.videoSourceType === 'upload' ? 'file' : watchedValues.videoSourceType
+                        thumbnailUrl: thumbnailPreview || '',
+                        type: watchedValues.videoSourceType === 'upload' ? 'file' : watchedValues.videoSourceType,
+                        authorName: watchedValues.authorName,
+                        authorUrl: watchedValues.authorUrl,
+                        authorAvatarUrl: watchedValues.authorAvatarUrl,
                       } as any}
-                      startsPaused
+                      startsPaused={false}
                     />
                   ) : (
                     <UploadPlaceholder text="Video Preview (16:9)" icon={Film} />
@@ -1149,11 +1165,40 @@ export default function VideoForm({ video, isShort, isReference = false, default
                             }
                             setIsImporting(true);
                             try {
-                              const result = await downloadSocialVideo(url);
-                              if (result.success && result.videoId) {
-                                toast({ title: "Success", description: "Video downloaded! Redirecting...", });
-                                // Since downlodaer creates a new video, we redirect to edit valid
-                                router.push(`/admin/videos/${result.videoId}`);
+                              const currentFolderId = getValues('folderId');
+                              // Pass false to prevent saving to Firestore immediately
+                              const result = await downloadSocialVideo(url, false, currentFolderId || null);
+
+                              if (result.success && result.video) {
+                                toast({ title: "Import Successful", description: "Video details loaded. Please review and save.", });
+
+                                // Populate form with imported data
+                                setValue('videoUrl', result.video.videoUrl); // The signed URL from storage
+                                setValue('title', result.video.title);
+                                setValue('description', result.video.description);
+                                setValue('thumbnailUrl', result.video.thumbnailUrl);
+                                setValue('authorName', result.video.authorName);
+                                setValue('authorUrl', result.video.authorUrl);
+                                setValue('authorAvatarUrl', result.video.authorAvatarUrl);
+                                setValue('uploader_url', result.video.originalUrl); // Store original URL
+                                setValue('type', 'video'); // It's now a native video file
+
+
+                                // Switch to URL mode to enable the player
+                                setValue('videoSourceType', 'url', { shouldValidate: true });
+
+                                // Set thumbnail source to URL explicitly so the preview updates
+                                setValue('thumbnailSourceType', 'url', { shouldValidate: true });
+
+                                // Force validation on other fields to ensure UI updates
+                                // setValue('title', result.video.title, { shouldValidate: true });
+                                // setValue('thumbnailUrl', result.video.thumbnailUrl, { shouldValidate: true });
+
+                                // Ensure folderId is set (should be passed back, but good to be safe)
+                                if (result.video.folderId) {
+                                  setValue('folderId', result.video.folderId);
+                                }
+
                               } else {
                                 toast({ variant: 'destructive', title: "Import Failed", description: result.error || "Could not download video." });
                               }
@@ -1182,6 +1227,50 @@ export default function VideoForm({ video, isShort, isReference = false, default
                         )}
                       />
                     )}
+                  </div>
+
+                  <div className="col-span-full pt-4 border-t space-y-4">
+                    <FormField
+                      control={control}
+                      name="authorUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Author Profile URL</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://instagram.com/creator_name" {...field} value={field.value || ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={control}
+                        name="authorName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Author Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="@creator_name" {...field} value={field.value || ''} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={control}
+                        name="authorAvatarUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Author Avatar URL</FormLabel>
+                            <FormControl>
+                              <Input placeholder="https://..." {...field} value={field.value || ''} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
                 </div>
               </CardContent>

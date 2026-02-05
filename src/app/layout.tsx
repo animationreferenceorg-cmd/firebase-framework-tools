@@ -12,16 +12,13 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://animationreference.org'),
   title: 'Animation Reference',
   description: 'A Netflix-inspired platform for discovering and enjoying animation clips.',
-  icons: {
-    icon: '/logo.png',
-    apple: '/logo.png',
-  },
+
   openGraph: {
     title: 'Animation Reference',
     description: 'The definitive collection of curated animation references.',
     images: [
       {
-        url: '/logo.png',
+        url: '/site-icon.png',
         width: 800,
         height: 800,
         alt: 'Animation Reference Logo',
@@ -34,7 +31,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Animation Reference',
     description: 'The definitive collection of curated animation references.',
-    images: ['/logo.png'],
+    images: ['/site-icon.png'],
   },
   alternates: {
     canonical: '/',

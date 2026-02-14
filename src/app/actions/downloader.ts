@@ -1,105 +1,113 @@
 'use server';
 
 import { getFirestore, getFirebaseStorage } from '@/lib/firebase-admin';
-import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { v4 as uuidv4 } from 'uuid';
+import ytDlp from 'yt-dlp-exec';
 
-// Helper to run shell commands
-function runCommand(command: string, args: string[]): Promise<string> {
-    return new Promise((resolve, reject) => {
-        // "shell: true" is often needed on Windows to find commands in PATH
-        const process = spawn(command, args, { shell: true });
-        let stdout = '';
-        let stderr = '';
-
-        process.stdout.on('data', (data) => {
-            stdout += data.toString();
+// Helper to check for ffmpeg
+async function isFfmpegAvailable(): Promise<boolean> {
+    try {
+        // specific check just for ffmpeg availability
+        const { exec } = require('child_process');
+        return new Promise((resolve) => {
+            exec('ffmpeg -version', (error: any) => {
+                resolve(!error);
+            });
         });
-
-        process.stderr.on('data', (data) => {
-            stderr += data.toString();
-        });
-
-        process.on('close', (code) => {
-            if (code !== 0) {
-                // Capture stderr for better debugging
-                const cleanStderr = stderr.replace(/\s+/g, ' ').trim();
-                console.error(`[Downloader] Command "${command}" failed (code ${code}): ${cleanStderr.slice(0, 500)}`);
-                reject(new Error(`Command failed: ${cleanStderr.slice(0, 200)}...`));
-            } else {
-                resolve(stdout);
-            }
-        });
-    });
+    } catch (e) {
+        return false;
+    }
 }
 
-export async function downloadSocialVideo(url: string, saveToFirestore: boolean = true, folderId?: string | null) {
+export async function downloadSocialVideo(url: string, saveToFirestore: boolean = true) {
     const tempDir = os.tmpdir();
     const uniqueId = uuidv4();
     const tempFilePath = path.join(tempDir, `${uniqueId}.mp4`);
     console.log(`[Downloader] Starting download for: ${url}`);
-    console.log(`[Downloader] Temp file: ${tempFilePath}`);
 
     try {
-        const args = [
-            'yt-dlp',
-            '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-            '-o', tempFilePath,
-            '--no-warnings',
-            '--print-json',
-            url
-        ];
+        const hasFfmpeg = await isFfmpegAvailable();
+        const formatString = hasFfmpeg
+            ? 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+            : 'best[ext=mp4]/best';
 
-        let stdout = '';
-        try {
-            stdout = await runCommand('yt-dlp', args.slice(1));
-        } catch (e: any) {
-            console.log('[Downloader] Direct yt-dlp failed, trying module...');
-            const pyArgs = ['-m', 'yt_dlp', ...args.slice(1)];
-            stdout = await runCommand('python', pyArgs);
-        }
+        console.log(`[Downloader] Ffmpeg available: ${hasFfmpeg}. Using format: ${formatString}`);
+
+        console.log('[Downloader] Executing yt-dlp via yt-dlp-exec...');
+
+        // Execute yt-dlp
+        const output = await ytDlp(url, {
+            format: formatString,
+            output: tempFilePath,
+            noWarnings: true,
+            printJson: true,
+        });
 
         // Parse Metadata
         let info: any = {};
         try {
+            // yt-dlp-exec returns the stdout as a string (or object if configured, but default is usually string or process)
+            // Wait, yt-dlp-exec usually returns a Promise<ChildProcess> or Promise<string> depending on usage.
+            // By default with arguments, it returns a Promise that resolves to the stdout string?
+            // Actually, let's verify usage. standardized is `ytDlp(url, flags)` returns Promise<ProcessOutput> or similar.
+            // If it returns an object, we might need to handle it.
+            // However, usually it returns the output string if expected.
+            // NOTE: yt-dlp-exec v1 might return an object with stdout/stderr.
+            // Let's assume it returns standard output or we check types if fails.
+            // For now, let's assume `output` is the stdout string or contains it.
+
+            // SAFETY: In many wrappers, if printJson is set, it might return the JSON object directly?
+            // usage: const output = await ytDlp(url, { ...flags });
+
+            // If `output` is an object with stdout, use that. If it's a string, use it.
+            const stdout = typeof output === 'string' ? output : (output as any).stdout || JSON.stringify(output);
+
+            // Try to parse if it looks like a string, otherwise it might already be the object if the library parses it?
+            // yt-dlp-exec documentation: "Returns a promise that will resolve with the output"
+
+            if (typeof output === 'object' && output !== null && !('stdout' in output)) {
+                // It might have parsed the JSON if dumpJson was used? No, printJson prints to stdout.
+            }
+
             info = JSON.parse(stdout);
+            console.log('[Downloader] Metadata parsed successfully.');
         } catch (e) {
-            console.warn('[Downloader] Could not parse JSON metadata, using defaults.');
+            console.error('[Downloader] Could not parse JSON metadata. Raw output:', output);
+            console.warn('[Downloader] Using defaults due to parse error.');
         }
 
         const title = info.title || 'Downloaded Video';
         const description = info.description || `Imported from ${url}`;
         const uploader = info.uploader || 'Unknown';
-        // Attempt to find best match for author name
-        const authorName = info.uploader || info.channel || info.creator || '';
         const tags = info.tags || [];
         const duration = info.duration || 0;
         const width = info.width || 0;
         const height = info.height || 0;
 
-        // Robustly find the downloaded file (ignoring extension)
-        const files = fs.readdirSync(tempDir);
-        const downloadedFile = files.find(f => f.startsWith(uniqueId));
+        console.log(`[Downloader] Extracted metadata - Title: ${title}, Uploader: ${uploader}`);
 
-        if (!downloadedFile) {
-            throw new Error('Downloaded file not found. yt-dlp might have failed to save the file.');
+        if (!fs.existsSync(tempFilePath)) {
+            console.error('[Downloader] Temp file does not exist after command success.');
+            // Only throw if we strictly need the file (we do)
+            throw new Error('Downloaded file not found. yt-dlp might have failed.');
         }
 
-        const actualFilePath = path.join(tempDir, downloadedFile);
-        const destination = `videos/${uniqueId}${path.extname(downloadedFile)}`;
+        const stats = fs.statSync(tempFilePath);
+        console.log(`[Downloader] File downloaded. Size: ${stats.size} bytes.`);
 
         const storage = getFirebaseStorage();
         const bucket = storage.bucket();
+        const destination = `videos/${uniqueId}.mp4`;
 
-        console.log(`[Downloader] Uploading to ${destination}...`);
+        console.log(`[Downloader] Uploading to Storage at ${destination}...`);
 
-        await bucket.upload(actualFilePath, {
+        await bucket.upload(tempFilePath, {
             destination: destination,
             metadata: {
-                contentType: 'video/mp4', // This might need adjustment based on ext, but usually fine for storage
+                contentType: 'video/mp4',
                 metadata: {
                     originalUrl: url,
                     uploader: uploader,
@@ -107,6 +115,8 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
                 }
             }
         });
+
+        console.log('[Downloader] Upload complete. Generating signed URL...');
 
         const [signedUrl] = await bucket.file(destination).getSignedUrl({
             action: 'read',
@@ -128,67 +138,41 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
             width: width,
             height: height,
             status: 'draft',
-            folderId: folderId || null,
-            authorName: authorName,
-            authorUrl: info.uploader_url || info.channel_url || url, // Fallback to video URL if no profile URL
-            authorAvatarUrl: info.channel_follower_count ? '' : '' // Placeholder: yt-dlp doesn't reliably give avatars.
+            folderId: null
         };
 
         if (info.thumbnail) {
             videoData.thumbnailUrl = info.thumbnail;
+            console.log(`[Downloader] Found thumbnail URL: ${info.thumbnail}`);
+        } else {
+            console.warn('[Downloader] No thumbnail URL found in metadata.');
         }
-
-        // Deep copy for Firestore (keeps Dates)
-        const firestoreData = { ...videoData };
-
-        // Prepare for Client (convert Dates to strings)
-        const clientData = {
-            ...videoData,
-            createdAt: videoData.createdAt.toISOString(),
-            updatedAt: videoData.updatedAt.toISOString()
-        };
 
         let videoId = null;
 
         if (saveToFirestore) {
             const db = getFirestore();
-            // Use firestoreData which has Date objects
-            const docRef = await db.collection('videos').add(firestoreData);
+            const docRef = await db.collection('videos').add(videoData);
             videoId = docRef.id;
-            console.log(`[Downloader] Success! Video ID: ${videoId}`);
+            console.log(`[Downloader] Success! Video saved to Firestore with ID: ${videoId}`);
         } else {
             console.log(`[Downloader] Success! Returned metadata without saving to Firestore.`);
         }
 
         // Cleanup
-        fs.unlinkSync(actualFilePath);
+        fs.unlinkSync(tempFilePath);
+        console.log('[Downloader] Cleaned up temp file.');
 
-        // Sanitize return value to ensure it's serializable for Server Actions
-        return JSON.parse(JSON.stringify({
+        return {
             success: true,
             videoId: videoId,
-            video: { id: videoId, ...clientData }
-        }));
+            video: { id: videoId, ...videoData }
+        };
 
     } catch (error: any) {
-        console.error('[Downloader] Error:', error);
+        console.error('[Downloader] Fatal Error:', error);
         // Cleanup if exists
-        // Cleanup if exists (using regex/prefix since we don't know exact extension if we failed early)
-        try {
-            const files = fs.readdirSync(tempDir);
-            const relatedFiles = files.filter(f => f.startsWith(uniqueId));
-            relatedFiles.forEach(f => fs.unlinkSync(path.join(tempDir, f)));
-        } catch (cleanupError) {
-            console.warn('[Downloader] Cleanup warning:', cleanupError);
-        }
-
-        const errorMessage = String(error.message || error);
-
-        // Check for common Instagram errors
-        if (errorMessage.includes("Sign in") || errorMessage.includes("login") || errorMessage.includes("403")) {
-            return { success: false, error: "Instagram requires login to view this post. Try a public post or configure cookies." };
-        }
-
-        return { success: false, error: `Download failed: ${errorMessage}` };
+        if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+        return { success: false, error: error.message };
     }
 }

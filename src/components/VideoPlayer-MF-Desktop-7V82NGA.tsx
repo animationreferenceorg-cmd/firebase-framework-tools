@@ -4,7 +4,7 @@
 
 import * as React from 'react';
 import type { Video } from '@/lib/types';
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Rewind, FastForward, Camera } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Rewind, FastForward, Camera, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
@@ -266,6 +266,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                     onPlay={() => setIsPlaying(true)}
                     onPause={() => setIsPlaying(false)}
                     onEnded={() => setIsPlaying(false)}
+                    onError={(e) => console.error("Video Player Error:", e)}
                     loop
                     config={{
                         file: {
@@ -285,15 +286,75 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                 )}
             />
 
-            {/* Top Title Bar */}
-            <div
-                className={cn(
-                    "absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent text-white z-20 transition-opacity duration-300 pointer-events-none",
-                    showControls ? "opacity-100" : "opacity-0"
-                )}
-            >
-                <h2 className="text-lg font-bold truncate drop-shadow-lg">{video.status === 'draft' ? 'Reference' : video.title}</h2>
-            </div>
+            {/* Top Title Bar - Only show if NO author info, to avoid overlap */}
+            {(!video.authorName || !video.authorUrl) && (
+                <div
+                    className={cn(
+                        "absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent text-white z-20 transition-opacity duration-300 pointer-events-none",
+                        showControls ? "opacity-100" : "opacity-0"
+                    )}
+                >
+                    <h2 className="text-lg font-bold truncate drop-shadow-lg">{video.status === 'draft' ? 'Reference' : video.title}</h2>
+                </div>
+            )}
+
+
+
+            {/* Author Profile Overlay (Top-Left) */}
+            {video.authorName && video.authorUrl && (
+                <div
+                    className={cn(
+                        "absolute top-6 left-6 z-50 transition-all duration-500 transform ease-out",
+                        showControls
+                            ? "opacity-100 translate-y-0 scale-100"
+                            : "opacity-0 translate-y-4 scale-90 pointer-events-none"
+                    )}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <a
+                        href={video.authorUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 bg-black/60 hover:bg-black/80 backdrop-blur-xl rounded-full pr-5 pl-1.5 py-1.5 transition-all duration-300 group/author border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.4)] hover:shadow-[0_0_20px_rgba(168,85,247,0.6)] hover:border-purple-500/50"
+                    >
+                        {video.authorAvatarUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={video.authorAvatarUrl} alt={video.authorName} className="w-10 h-10 rounded-full border border-white/20 object-cover" />
+                        ) : (
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center border border-white/20 shadow-inner">
+                                <span className="text-white text-sm font-bold">{video.authorName.charAt(0).toUpperCase()}</span>
+                            </div>
+                        )}
+                        <div className="flex flex-col">
+                            <span className="text-purple-300 text-[11px] font-bold leading-none uppercase tracking-wider mb-0.5">Creator</span>
+                            <span className="text-white text-base font-bold leading-none group-hover/author:text-purple-200 transition-colors drop-shadow-md">{video.authorName}</span>
+                        </div>
+                    </a>
+                </div>
+            )}
+
+            {/* Social Source Link Overlay */}
+            {
+                video.originalUrl && (
+                    <div
+                        className={cn(
+                            "absolute top-4 right-4 z-50 transition-all duration-300 transform",
+                            showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
+                        )}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <a
+                            href={video.originalUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-xs font-medium px-3 py-1.5 rounded-full border border-white/10 hover:border-white/30 transition-all group/link"
+                        >
+                            <span>View Original</span>
+                            <ExternalLink className="w-3 h-3 text-zinc-400 group-hover/link:text-white transition-colors" />
+                        </a>
+                    </div>
+                )
+            }
 
             {/* Center Play/Pause Button (YouTube Style) */}
             <div
@@ -405,7 +466,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 });
 

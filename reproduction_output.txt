@@ -1,0 +1,16 @@
+LOG: Starting reproduction test...
+LOG: Attempting to download: https://www.youtube.com/watch?v=jNQXAC9IVRw
+LOG: [Downloader] Starting download for: https://www.youtube.com/watch?v=jNQXAC9IVRw
+ERR: (node:25476) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ERR: [Downloader] Command failed with code 1. Stderr: 'ffmpeg' is not recognized as an internal or external command,
+operable program or batch file.
+
+ERR: [Downloader] Stdout: 
+LOG: [Downloader] Ffmpeg available: false. Using format: best[ext=mp4]/best
+LOG: [Downloader] Metadata parsed successfully.
+LOG: [Downloader] Extracted metadata - Title: Me at the zoo, Uploader: jawed
+LOG: [Downloader] File downloaded. Size: 791367 bytes.
+ERR: ❌ Error initializing Firebase Admin SDK Error: Failed to parse private key: Error: Invalid PEM formatted message.
+ERR: [Downloader] Fatal Error: Error: Could not initialize Firebase Admin SDK. Check your environment variables.
+LOG: Result: [object Object]

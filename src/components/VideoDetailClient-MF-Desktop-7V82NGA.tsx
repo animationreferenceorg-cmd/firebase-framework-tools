@@ -9,7 +9,7 @@ import { VideoActionsBar } from '@/components/VideoActionsBar';
 import { useUser } from '@/hooks/use-user';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Instagram, Twitter, Facebook, Globe } from 'lucide-react';
 import Link from 'next/link';
 
 interface VideoDetailClientProps {
@@ -63,6 +63,50 @@ export function VideoDetailClient({ id, initialData }: VideoDetailClientProps) {
         )
     }
 
+    const getSocialIcon = (url: string) => {
+        if (url.includes('instagram.com')) return Instagram;
+        if (url.includes('twitter.com') || url.includes('x.com')) return Twitter;
+        if (url.includes('facebook.com')) return Facebook;
+        return Globe;
+    };
+
+    const SocialIcon = video.authorUrl ? getSocialIcon(video.authorUrl) : ExternalLink;
+
+    function SocialAuthorCard({ name, url, avatarUrl }: { name?: string, url: string, avatarUrl?: string }) {
+        // Extract handle if name is missing
+        const displayHandle = name || (url.split('/').pop() || 'Creator');
+        const Icon = getSocialIcon(url);
+
+        return (
+            <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full pr-6 pl-2 py-2 transition-all duration-300 hover:scale-105 hover:border-white/20 active:scale-95 no-underline"
+            >
+                <div className="relative h-10 w-10 rounded-full overflow-hidden border border-white/10 bg-black/50 shrink-0">
+                    {avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={avatarUrl} alt={displayHandle} className="h-full w-full object-cover" />
+                    ) : (
+                        <div className="h-full w-full flex items-center justify-center">
+                            <Icon className="h-5 w-5 text-white/70" />
+                        </div>
+                    )}
+                </div>
+                <div className="flex flex-col">
+                    <span className="text-sm font-medium text-white group-hover:text-purple-400 transition-colors">
+                        {displayHandle}
+                    </span>
+                    <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold group-hover:text-zinc-400">
+                        Visit Profile
+                    </span>
+                </div>
+                <ExternalLink className="h-3 w-3 text-zinc-500 ml-1 group-hover:text-white transition-colors" />
+            </a>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-[#030014] text-white">
             <header className="fixed top-0 left-0 p-6 z-50">
@@ -83,7 +127,16 @@ export function VideoDetailClient({ id, initialData }: VideoDetailClientProps) {
 
                     {/* Meta Info */}
                     <div className="space-y-4">
-                        <h1 className="text-3xl md:text-5xl font-bold tracking-tight">{video.title}</h1>
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <h1 className="text-3xl md:text-5xl font-bold tracking-tight">{video.title}</h1>
+                            {video.authorUrl && (
+                                <SocialAuthorCard
+                                    name={video.authorName}
+                                    url={video.authorUrl}
+                                    avatarUrl={video.authorAvatarUrl}
+                                />
+                            )}
+                        </div>
                         <p className="text-zinc-400 text-lg leading-relaxed max-w-3xl">{video.description}</p>
 
                         {/* Tags */}

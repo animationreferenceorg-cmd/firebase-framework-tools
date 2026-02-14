@@ -259,6 +259,41 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           'transition-opacity duration-300'
         )} />
 
+        {/* Author Profile Overlay (Top-Left on Hover) */}
+        {video.authorName && video.authorUrl && (
+          <div
+            className={cn(
+              "absolute top-4 left-4 z-[60] transition-all duration-500 transform ease-out",
+              isHovered && !isPlayerOpen
+                ? "opacity-100 translate-y-0 scale-100" // Pop up into view
+                : "opacity-0 translate-y-4 scale-90 pointer-events-none" // Start lower and smaller
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <a
+              href={video.authorUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 bg-black/60 hover:bg-black/80 backdrop-blur-xl rounded-full pr-4 pl-1.5 py-1.5 transition-all duration-300 group/author border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.4)] hover:shadow-[0_0_20px_rgba(168,85,247,0.6)] hover:border-purple-500/50"
+            >
+              {video.authorAvatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={video.authorAvatarUrl} alt={video.authorName} className="w-8 h-8 rounded-full border border-white/20 object-cover" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center border border-white/20 shadow-inner">
+                  <span className="text-white text-xs font-bold">{video.authorName.charAt(0).toUpperCase()}</span>
+                </div>
+              )}
+              <div className="flex flex-col">
+                <span className="text-purple-300 text-[10px] font-bold leading-none uppercase tracking-wider mb-0.5">Creator</span>
+                <span className="text-white text-sm font-bold leading-none group-hover/author:text-purple-200 transition-colors max-w-[120px] truncate drop-shadow-md">
+                  {video.authorName}
+                </span>
+              </div>
+            </a>
+          </div>
+        )}
+
         <div className={cn(
           "absolute bottom-0 left-0 right-0 p-3 opacity-0 transition-all duration-300",
           !video.isShort && !poster && "group-hover/card:opacity-100"

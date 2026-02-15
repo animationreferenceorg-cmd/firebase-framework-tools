@@ -129,6 +129,47 @@ async function getYtDlpExecutor(): Promise<{ command: string; baseArgs: string[]
     }
 }
 
+/**
+ * Detects the platform from a URL.
+ */
+function detectPlatform(url: string): string | null {
+    try {
+        const hostname = new URL(url).hostname.toLowerCase();
+        if (hostname.includes('instagram.com')) return 'instagram';
+        if (hostname.includes('tiktok.com')) return 'tiktok';
+        if (hostname.includes('twitter.com') || hostname.includes('x.com')) return 'twitter';
+        if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) return 'youtube';
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Fetches stored cookies for a platform from Firestore.
+ * Returns the path to a temp cookies.txt file, or null if no cookies stored.
+ */
+async function getCookieFile(platform: string): Promise<string | null> {
+    try {
+        const db = getFirestore();
+        const doc = await db.collection('config').doc('cookies').get();
+        if (!doc.exists) return null;
+
+        const data = doc.data();
+        const cookieContent = data?.[platform];
+        if (!cookieContent || typeof cookieContent !== 'string') return null;
+
+        // Write cookies to a temp file
+        const cookiePath = path.join(os.tmpdir(), `cookies_${platform}_${Date.now()}.txt`);
+        fs.writeFileSync(cookiePath, cookieContent, 'utf8');
+        console.log(`[Downloader] Loaded ${platform} cookies (${cookieContent.length} bytes)`);
+        return cookiePath;
+    } catch (err: any) {
+        console.warn(`[Downloader] Could not load cookies for ${platform}:`, err.message);
+        return null;
+    }
+}
+
 // --- Main Export ---
 
 export async function downloadSocialVideo(url: string, saveToFirestore: boolean = true) {
@@ -170,9 +211,29 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
             dlArgs.splice(insertIdx, 0, '--merge-output-format', 'mp4');
         }
 
+        // 3b. Inject cookies if available for this platform
+        let cookieFilePath: string | null = null;
+        const platform = detectPlatform(url);
+        if (platform) {
+            cookieFilePath = await getCookieFile(platform);
+            if (cookieFilePath) {
+                // Insert --cookies before the URL (last arg)
+                dlArgs.splice(dlArgs.length - 1, 0, '--cookies', cookieFilePath);
+                console.log(`[Downloader] Using ${platform} cookies`);
+            }
+        }
+
         // 4. Execute
         console.log(`[Downloader] Executing: ${command} ${dlArgs.join(' ')}`);
-        const stdout = await runCommand(command, dlArgs);
+        let stdout: string;
+        try {
+            stdout = await runCommand(command, dlArgs);
+        } finally {
+            // Clean up cookie temp file
+            if (cookieFilePath && fs.existsSync(cookieFilePath)) {
+                fs.unlinkSync(cookieFilePath);
+            }
+        }
         console.log('[Downloader] Download command completed.');
 
         // 5. Parse metadata

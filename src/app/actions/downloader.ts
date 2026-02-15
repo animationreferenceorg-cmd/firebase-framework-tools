@@ -1,16 +1,60 @@
 'use server';
 
 import { getFirestore, getFirebaseStorage } from '@/lib/firebase-admin';
+import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { v4 as uuidv4 } from 'uuid';
-import ytDlp from 'yt-dlp-exec';
+
+// Helper to run shell commands
+function runCommand(command: string, args: string[], options: any = {}): Promise<string> {
+    return new Promise((resolve, reject) => {
+        // Use shell: true by default for better Windows compatibility
+        const finalOptions = { shell: true, ...options };
+        const process = spawn(command, args, finalOptions);
+        let stdout = '';
+        let stderr = '';
+
+        process.stdout.on('data', (data) => {
+            stdout += data.toString();
+        });
+
+        process.stderr.on('data', (data) => {
+            stderr += data.toString();
+        });
+
+        process.on('close', (code) => {
+            if (code !== 0) {
+                console.error(`[Downloader] Command failed with code ${code}. Stderr: ${stderr}`);
+                reject(new Error(`Command failed with code ${code}: ${stderr}`));
+            } else {
+                if (stderr) {
+                    console.warn(`[Downloader] Command succeeded with warnings: ${stderr}`);
+                }
+                resolve(stdout);
+            }
+        });
+    });
+}
+
+function isValidUrl(url: string): boolean {
+    try {
+        const parsed = new URL(url);
+        // Block localhost and private IPs roughly
+        if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname.startsWith('192.168.')) {
+            return false;
+        }
+        // Must be http or https
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
 
 // Helper to check for ffmpeg
 async function isFfmpegAvailable(): Promise<boolean> {
     try {
-        // specific check just for ffmpeg availability
         const { exec } = require('child_process');
         return new Promise((resolve) => {
             exec('ffmpeg -version', (error: any) => {
@@ -23,10 +67,16 @@ async function isFfmpegAvailable(): Promise<boolean> {
 }
 
 export async function downloadSocialVideo(url: string, saveToFirestore: boolean = true) {
+    if (!isValidUrl(url)) {
+        console.error(`[Downloader] Invalid or blocked URL: ${url}`);
+        return { success: false, error: "Invalid URL. Please provide a valid public URL." };
+    }
+
     const tempDir = os.tmpdir();
     const uniqueId = uuidv4();
     const tempFilePath = path.join(tempDir, `${uniqueId}.mp4`);
     console.log(`[Downloader] Starting download for: ${url}`);
+    console.log(`[Downloader] Temp file: ${tempFilePath}`);
 
     try {
         const hasFfmpeg = await isFfmpegAvailable();
@@ -36,46 +86,57 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
 
         console.log(`[Downloader] Ffmpeg available: ${hasFfmpeg}. Using format: ${formatString}`);
 
-        console.log('[Downloader] Executing yt-dlp via yt-dlp-exec...');
+        const args = [
+            'yt-dlp',
+            '-f', formatString,
+            '-o', tempFilePath,
+            '--no-warnings',
+            '--print-json',
+            url
+        ];
 
-        // Execute yt-dlp
-        const output = await ytDlp(url, {
-            format: formatString,
-            output: tempFilePath,
-            noWarnings: true,
-            printJson: true,
-        });
+        if (hasFfmpeg) {
+            args.splice(2, 0, '--merge-output-format', 'mp4');
+        }
+
+        // Determine Python path:
+        // 1. Use PYTHON_PATH env var if set
+        // 2. Fallback to 'python' on Windows, 'python3' on Linux/Unix
+        // 3. Last resort fallback to local dev path (optional, maybe just log warning)
+
+        let pythonPath = process.env.PYTHON_PATH;
+        if (!pythonPath) {
+            pythonPath = process.platform === 'win32' ? 'python' : 'python3';
+        }
+
+        // For local dev fallback if system python isn't set up but we know where it is
+        const localDevPath = String.raw`C:\Users\micha\AppData\Local\Programs\Python\Python314\python.exe`;
+        if (process.env.NODE_ENV === 'development' && process.platform === 'win32' && !process.env.PYTHON_PATH) {
+            // Check if we should use the hardcoded path as a convenience for this specific user
+            // We can check if 'python' command actually works, if not, use localDevPath
+            // For now, let's just stick to the specific path for this user's local env to avoid breaking it,
+            // but allow override.
+            pythonPath = localDevPath;
+        }
+
+        let stdout = '';
+        try {
+            console.log(`[Downloader] Executing yt-dlp via Python: ${pythonPath}`);
+            const pyArgs = ['-m', 'yt_dlp', ...args.slice(1)];
+            stdout = await runCommand(pythonPath, pyArgs);
+            console.log('[Downloader] Command execution successful.');
+        } catch (e: any) {
+            console.error('[Downloader] Python module execution failed:', e);
+            throw new Error(`Failed to execute yt-dlp: ${e.message}`);
+        }
 
         // Parse Metadata
         let info: any = {};
         try {
-            // yt-dlp-exec returns the stdout as a string (or object if configured, but default is usually string or process)
-            // Wait, yt-dlp-exec usually returns a Promise<ChildProcess> or Promise<string> depending on usage.
-            // By default with arguments, it returns a Promise that resolves to the stdout string?
-            // Actually, let's verify usage. standardized is `ytDlp(url, flags)` returns Promise<ProcessOutput> or similar.
-            // If it returns an object, we might need to handle it.
-            // However, usually it returns the output string if expected.
-            // NOTE: yt-dlp-exec v1 might return an object with stdout/stderr.
-            // Let's assume it returns standard output or we check types if fails.
-            // For now, let's assume `output` is the stdout string or contains it.
-
-            // SAFETY: In many wrappers, if printJson is set, it might return the JSON object directly?
-            // usage: const output = await ytDlp(url, { ...flags });
-
-            // If `output` is an object with stdout, use that. If it's a string, use it.
-            const stdout = typeof output === 'string' ? output : (output as any).stdout || JSON.stringify(output);
-
-            // Try to parse if it looks like a string, otherwise it might already be the object if the library parses it?
-            // yt-dlp-exec documentation: "Returns a promise that will resolve with the output"
-
-            if (typeof output === 'object' && output !== null && !('stdout' in output)) {
-                // It might have parsed the JSON if dumpJson was used? No, printJson prints to stdout.
-            }
-
             info = JSON.parse(stdout);
             console.log('[Downloader] Metadata parsed successfully.');
         } catch (e) {
-            console.error('[Downloader] Could not parse JSON metadata. Raw output:', output);
+            console.error('[Downloader] Could not parse JSON metadata. Raw stdout:', stdout);
             console.warn('[Downloader] Using defaults due to parse error.');
         }
 
@@ -90,9 +151,22 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
         console.log(`[Downloader] Extracted metadata - Title: ${title}, Uploader: ${uploader}`);
 
         if (!fs.existsSync(tempFilePath)) {
-            console.error('[Downloader] Temp file does not exist after command success.');
-            // Only throw if we strictly need the file (we do)
-            throw new Error('Downloaded file not found. yt-dlp might have failed.');
+            console.error(`[Downloader] File not found at expected path: ${tempFilePath}`);
+
+            // Debug: Check if any file with the ID exists (maybe different extension)
+            try {
+                const files = fs.readdirSync(tempDir);
+                const matchingFiles = files.filter(f => f.includes(uniqueId));
+                console.error(`[Downloader] Found matching files in temp dir:`, matchingFiles);
+
+                if (matchingFiles.length > 0) {
+                    console.error(`[Downloader] Possible extension mismatch. Expected .mp4, found: ${matchingFiles.join(', ')}`);
+                }
+            } catch (err) {
+                console.error('[Downloader] Failed to list temp dir:', err);
+            }
+
+            throw new Error('Downloaded file not found. yt-dlp might have failed to create the file at the expected path.');
         }
 
         const stats = fs.statSync(tempFilePath);

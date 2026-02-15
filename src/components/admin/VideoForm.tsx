@@ -1147,6 +1147,10 @@ export default function VideoForm({ video, isShort, isReference = false, default
                               toast({ variant: 'destructive', title: "Error", description: "Please enter a URL first." });
                               return;
                             }
+                            if (url.includes('localhost') || url.includes('127.0.0.1')) {
+                              toast({ variant: 'destructive', title: "Invalid URL", description: "Cannot import from localhost. Please use a public URL." });
+                              return;
+                            }
                             setIsImporting(true);
                             try {
                               const result = await downloadSocialVideo(url);

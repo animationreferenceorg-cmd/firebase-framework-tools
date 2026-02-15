@@ -1,5 +1,0 @@
-[Reproduce] Starting download for: https://www.youtube.com/watch?v=jNQXAC9IVRw
-[Reproduce] Temp file: C:\Users\micha\AppData\Local\Temp\e171c92e-d6dd-495f-b244-9e57cbe21e3e.mp4
-[Reproduce] Executing yt-dlp via Python module...
-[Reproduce] Python module execution failed: Cannot access 'process2' before initialization
-[Reproduce] Fatal Error: Failed to execute yt-dlp: Cannot access 'process2' before initialization

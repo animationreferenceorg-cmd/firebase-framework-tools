@@ -1,37 +1,31 @@
 'use server';
 
 import { getFirestore, getFirebaseStorage } from '@/lib/firebase-admin';
-import { spawn } from 'child_process';
+import { spawn, exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { v4 as uuidv4 } from 'uuid';
+import https from 'https';
 
-// Helper to run shell commands
+// --- Helpers ---
+
 function runCommand(command: string, args: string[], options: any = {}): Promise<string> {
     return new Promise((resolve, reject) => {
-        // Use shell: true by default for better Windows compatibility
         const finalOptions = { shell: true, ...options };
-        const process = spawn(command, args, finalOptions);
+        const proc = spawn(command, args, finalOptions);
         let stdout = '';
         let stderr = '';
 
-        process.stdout.on('data', (data) => {
-            stdout += data.toString();
-        });
+        proc.stdout.on('data', (data) => { stdout += data.toString(); });
+        proc.stderr.on('data', (data) => { stderr += data.toString(); });
 
-        process.stderr.on('data', (data) => {
-            stderr += data.toString();
-        });
-
-        process.on('close', (code) => {
+        proc.on('close', (code) => {
             if (code !== 0) {
-                console.error(`[Downloader] Command failed with code ${code}. Stderr: ${stderr}`);
+                console.error(`[Downloader] Command failed (code ${code}). Stderr: ${stderr}`);
                 reject(new Error(`Command failed with code ${code}: ${stderr}`));
             } else {
-                if (stderr) {
-                    console.warn(`[Downloader] Command succeeded with warnings: ${stderr}`);
-                }
+                if (stderr) console.warn(`[Downloader] Warnings: ${stderr}`);
                 resolve(stdout);
             }
         });
@@ -41,30 +35,101 @@ function runCommand(command: string, args: string[], options: any = {}): Promise
 function isValidUrl(url: string): boolean {
     try {
         const parsed = new URL(url);
-        // Block localhost and private IPs roughly
         if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname.startsWith('192.168.')) {
             return false;
         }
-        // Must be http or https
         return parsed.protocol === 'http:' || parsed.protocol === 'https:';
     } catch {
         return false;
     }
 }
 
-// Helper to check for ffmpeg
 async function isFfmpegAvailable(): Promise<boolean> {
-    try {
-        const { exec } = require('child_process');
-        return new Promise((resolve) => {
-            exec('ffmpeg -version', (error: any) => {
-                resolve(!error);
+    return new Promise((resolve) => {
+        exec('ffmpeg -version', (error) => resolve(!error));
+    });
+}
+
+/**
+ * Downloads a file from a URL, following redirects.
+ */
+function downloadFile(url: string, dest: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const file = fs.createWriteStream(dest);
+        const request = (currentUrl: string) => {
+            https.get(currentUrl, (response) => {
+                // Follow redirects (301, 302, 307, 308)
+                if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+                    console.log(`[Downloader] Following redirect to: ${response.headers.location}`);
+                    request(response.headers.location);
+                    return;
+                }
+                if (response.statusCode !== 200) {
+                    reject(new Error(`Failed to download: HTTP ${response.statusCode}`));
+                    return;
+                }
+                response.pipe(file);
+                file.on('finish', () => {
+                    file.close();
+                    resolve();
+                });
+            }).on('error', (err) => {
+                fs.unlink(dest, () => { }); // Cleanup partial file
+                reject(err);
             });
-        });
-    } catch (e) {
-        return false;
+        };
+        request(url);
+    });
+}
+
+/**
+ * Ensures yt-dlp is available and returns the path/command to execute it.
+ * - On Linux (production): Downloads standalone binary to /tmp if needed.
+ * - On Windows (local dev): Uses Python module.
+ */
+async function getYtDlpExecutor(): Promise<{ command: string; baseArgs: string[] }> {
+    const isWindows = process.platform === 'win32';
+
+    if (isWindows) {
+        // Windows: use Python module
+        let pythonPath = process.env.PYTHON_PATH;
+        if (!pythonPath) {
+            // Try the user's known local path first, then generic 'python'
+            const localDevPath = String.raw`C:\Users\micha\AppData\Local\Programs\Python\Python314\python.exe`;
+            if (fs.existsSync(localDevPath)) {
+                pythonPath = localDevPath;
+            } else {
+                pythonPath = 'python';
+            }
+        }
+        console.log(`[Downloader] Windows mode: using Python at ${pythonPath}`);
+        return { command: pythonPath, baseArgs: ['-m', 'yt_dlp'] };
+    }
+
+    // Linux/production: use standalone binary
+    const binaryPath = path.join(os.tmpdir(), 'yt-dlp');
+
+    if (fs.existsSync(binaryPath)) {
+        console.log(`[Downloader] Standalone yt-dlp binary already cached at ${binaryPath}`);
+        return { command: binaryPath, baseArgs: [] };
+    }
+
+    console.log('[Downloader] Downloading standalone yt-dlp binary...');
+    const ytDlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux';
+
+    try {
+        await downloadFile(ytDlpUrl, binaryPath);
+        // Make executable
+        fs.chmodSync(binaryPath, 0o755);
+        console.log(`[Downloader] yt-dlp binary downloaded and ready at ${binaryPath}`);
+        return { command: binaryPath, baseArgs: [] };
+    } catch (err: any) {
+        console.error('[Downloader] Failed to download yt-dlp binary:', err.message);
+        throw new Error(`Could not obtain yt-dlp: ${err.message}`);
     }
 }
+
+// --- Main Export ---
 
 export async function downloadSocialVideo(url: string, saveToFirestore: boolean = true) {
     if (!isValidUrl(url)) {
@@ -79,15 +144,19 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
     console.log(`[Downloader] Temp file: ${tempFilePath}`);
 
     try {
+        // 1. Get yt-dlp executor (downloads binary on first call in production)
+        const { command, baseArgs } = await getYtDlpExecutor();
+
+        // 2. Determine format based on ffmpeg availability
         const hasFfmpeg = await isFfmpegAvailable();
         const formatString = hasFfmpeg
             ? 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
             : 'best[ext=mp4]/best';
+        console.log(`[Downloader] Ffmpeg: ${hasFfmpeg}. Format: ${formatString}`);
 
-        console.log(`[Downloader] Ffmpeg available: ${hasFfmpeg}. Using format: ${formatString}`);
-
-        const args = [
-            'yt-dlp',
+        // 3. Build args
+        const dlArgs = [
+            ...baseArgs,
             '-f', formatString,
             '-o', tempFilePath,
             '--no-warnings',
@@ -96,48 +165,24 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
         ];
 
         if (hasFfmpeg) {
-            args.splice(2, 0, '--merge-output-format', 'mp4');
+            // Insert merge format after baseArgs
+            const insertIdx = baseArgs.length;
+            dlArgs.splice(insertIdx, 0, '--merge-output-format', 'mp4');
         }
 
-        // Determine Python path:
-        // 1. Use PYTHON_PATH env var if set
-        // 2. Fallback to 'python' on Windows, 'python3' on Linux/Unix
-        // 3. Last resort fallback to local dev path (optional, maybe just log warning)
+        // 4. Execute
+        console.log(`[Downloader] Executing: ${command} ${dlArgs.join(' ')}`);
+        const stdout = await runCommand(command, dlArgs);
+        console.log('[Downloader] Download command completed.');
 
-        let pythonPath = process.env.PYTHON_PATH;
-        if (!pythonPath) {
-            pythonPath = process.platform === 'win32' ? 'python' : 'python3';
-        }
-
-        // For local dev fallback if system python isn't set up but we know where it is
-        const localDevPath = String.raw`C:\Users\micha\AppData\Local\Programs\Python\Python314\python.exe`;
-        if (process.env.NODE_ENV === 'development' && process.platform === 'win32' && !process.env.PYTHON_PATH) {
-            // Check if we should use the hardcoded path as a convenience for this specific user
-            // We can check if 'python' command actually works, if not, use localDevPath
-            // For now, let's just stick to the specific path for this user's local env to avoid breaking it,
-            // but allow override.
-            pythonPath = localDevPath;
-        }
-
-        let stdout = '';
-        try {
-            console.log(`[Downloader] Executing yt-dlp via Python: ${pythonPath}`);
-            const pyArgs = ['-m', 'yt_dlp', ...args.slice(1)];
-            stdout = await runCommand(pythonPath, pyArgs);
-            console.log('[Downloader] Command execution successful.');
-        } catch (e: any) {
-            console.error('[Downloader] Python module execution failed:', e);
-            throw new Error(`Failed to execute yt-dlp: ${e.message}`);
-        }
-
-        // Parse Metadata
+        // 5. Parse metadata
         let info: any = {};
         try {
             info = JSON.parse(stdout);
             console.log('[Downloader] Metadata parsed successfully.');
         } catch (e) {
-            console.error('[Downloader] Could not parse JSON metadata. Raw stdout:', stdout);
-            console.warn('[Downloader] Using defaults due to parse error.');
+            console.error('[Downloader] Could not parse JSON metadata.');
+            console.warn('[Downloader] Using defaults.');
         }
 
         const title = info.title || 'Downloaded Video';
@@ -148,104 +193,90 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
         const width = info.width || 0;
         const height = info.height || 0;
 
-        console.log(`[Downloader] Extracted metadata - Title: ${title}, Uploader: ${uploader}`);
+        console.log(`[Downloader] Metadata - Title: ${title}, Uploader: ${uploader}`);
 
+        // 6. Verify file exists
         if (!fs.existsSync(tempFilePath)) {
-            console.error(`[Downloader] File not found at expected path: ${tempFilePath}`);
-
-            // Debug: Check if any file with the ID exists (maybe different extension)
+            console.error(`[Downloader] File not found at: ${tempFilePath}`);
             try {
                 const files = fs.readdirSync(tempDir);
                 const matchingFiles = files.filter(f => f.includes(uniqueId));
-                console.error(`[Downloader] Found matching files in temp dir:`, matchingFiles);
-
-                if (matchingFiles.length > 0) {
-                    console.error(`[Downloader] Possible extension mismatch. Expected .mp4, found: ${matchingFiles.join(', ')}`);
-                }
+                console.error(`[Downloader] Matching files in temp dir:`, matchingFiles);
             } catch (err) {
                 console.error('[Downloader] Failed to list temp dir:', err);
             }
-
-            throw new Error('Downloaded file not found. yt-dlp might have failed to create the file at the expected path.');
+            throw new Error('Downloaded file not found at expected path.');
         }
 
         const stats = fs.statSync(tempFilePath);
-        console.log(`[Downloader] File downloaded. Size: ${stats.size} bytes.`);
+        console.log(`[Downloader] File size: ${stats.size} bytes.`);
 
+        // 7. Upload to Firebase Storage
         const storage = getFirebaseStorage();
         const bucket = storage.bucket();
         const destination = `videos/${uniqueId}.mp4`;
 
-        console.log(`[Downloader] Uploading to Storage at ${destination}...`);
-
+        console.log(`[Downloader] Uploading to ${destination}...`);
         await bucket.upload(tempFilePath, {
-            destination: destination,
+            destination,
             metadata: {
                 contentType: 'video/mp4',
-                metadata: {
-                    originalUrl: url,
-                    uploader: uploader,
-                    title: title
-                }
+                metadata: { originalUrl: url, uploader, title }
             }
         });
 
         console.log('[Downloader] Upload complete. Generating signed URL...');
-
         const [signedUrl] = await bucket.file(destination).getSignedUrl({
             action: 'read',
             expires: '03-01-2500'
         });
 
+        // 8. Build video data
         const videoData = {
             title: title || 'Untitled',
             description: description || '',
             videoUrl: signedUrl,
-            thumbnailUrl: '',
-            tags: tags,
+            thumbnailUrl: info.thumbnail || '',
+            tags,
             type: 'video',
             originalUrl: url,
             createdAt: new Date(),
             updatedAt: new Date(),
-            uploader: uploader,
-            duration: duration,
-            width: width,
-            height: height,
+            uploader,
+            duration,
+            width,
+            height,
             status: 'draft',
             folderId: null
         };
 
         if (info.thumbnail) {
-            videoData.thumbnailUrl = info.thumbnail;
-            console.log(`[Downloader] Found thumbnail URL: ${info.thumbnail}`);
+            console.log(`[Downloader] Thumbnail: ${info.thumbnail}`);
         } else {
-            console.warn('[Downloader] No thumbnail URL found in metadata.');
+            console.warn('[Downloader] No thumbnail in metadata.');
         }
 
+        // 9. Save to Firestore
         let videoId = null;
-
         if (saveToFirestore) {
             const db = getFirestore();
             const docRef = await db.collection('videos').add(videoData);
             videoId = docRef.id;
-            console.log(`[Downloader] Success! Video saved to Firestore with ID: ${videoId}`);
-        } else {
-            console.log(`[Downloader] Success! Returned metadata without saving to Firestore.`);
+            console.log(`[Downloader] Saved to Firestore: ${videoId}`);
         }
 
-        // Cleanup
+        // 10. Cleanup
         fs.unlinkSync(tempFilePath);
-        console.log('[Downloader] Cleaned up temp file.');
+        console.log('[Downloader] Temp file cleaned up.');
 
         return {
             success: true,
-            videoId: videoId,
+            videoId,
             video: { id: videoId, ...videoData }
         };
 
     } catch (error: any) {
         console.error('[Downloader] Fatal Error:', error);
-        // Cleanup if exists
         if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
         return { success: false, error: error.message };
     }

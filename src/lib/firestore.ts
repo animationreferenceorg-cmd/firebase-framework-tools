@@ -89,24 +89,36 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 
     if (hasActiveSubscription) {
       // Find the tier based on the price ID
-      let detectedTier: UserProfile['tier'] = 'tier1'; // Default to tier1 if active
       const subDoc = subscriptionSnap.docs[0].data();
-      const priceId = subDoc.items?.[0]?.price?.id || subDoc.price?.id;
+      const priceId = subDoc.items?.[0]?.price?.id || subDoc.price?.id || subDoc.plan?.id;
+      
+      console.log(`[Subscription Check] Active subscription found! Status: ${subDoc.status}, PriceId: ${priceId}`);
 
-      console.log(`[Subscription Check] Active subscription found with priceId: ${priceId}`);
-
+      let detectedTier: UserProfile['tier'] = 'tier1'; 
       if (priceId === 'price_1SFgiV59QHehw05fc0lPRRf7') detectedTier = 'tier2';
       else if (priceId === 'price_1SFgiq59QHehw05fy017h1gR') detectedTier = 'tier5';
       else if (priceId === 'price_1SFgUc59QHehw05fROtqwkLN') detectedTier = 'tier1';
+      else {
+          console.warn(`[Subscription Check] Unknown Price ID: ${priceId}. Defaulting to tier1 (Supporter).`);
+          detectedTier = 'tier1';
+      }
 
       if (profile) {
         // If the profile exists but isPremium is not set or false, update it locally and sync back
         if (!profile.isPremium || profile.tier !== detectedTier) {
+          console.log(`[Subscription Check] Updating local profile: isPremium=true, tier=${detectedTier}`);
           profile.isPremium = true;
           profile.tier = detectedTier;
           // Lazy sync back to Firestore so subsequent reads are faster and consistent
-          await updateDoc(userRef, { isPremium: true, tier: detectedTier });
-          console.log(`[Subscription Check] Updated user profile to Premium with tier: ${detectedTier}`);
+          try {
+            await updateDoc(userRef, { 
+                isPremium: true, 
+                tier: detectedTier,
+                updatedAt: new Date().toISOString()
+            });
+          } catch (e) {
+            console.error("[Subscription Check] Failed to sync back to Firestore:", e);
+          }
         }
       } else {
         // Fallback: If no profile exists yet but they have a subscription

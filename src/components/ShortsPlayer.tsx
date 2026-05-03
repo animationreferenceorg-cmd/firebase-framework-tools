@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import type { Video } from '@/lib/types';
-import { Play, Pause, Volume2, VolumeX, Heart, Share2, MoreHorizontal } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Heart, Share2, MoreHorizontal, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
@@ -230,18 +230,69 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
                     </div>
                 )}
 
-                {/* Info Overlay (Top) */}
-                <div className={cn(
-                    "absolute top-0 left-0 right-0 p-6 z-20 bg-gradient-to-b from-black/80 to-transparent pointer-events-none transition-all duration-300",
-                    showUI ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
-                )}>
-                    <h3 className="font-bold text-lg text-white drop-shadow-md mb-1">
-                        {video.status === 'draft' ? 'Reference' : video.title}
-                    </h3>
-                    {video.status !== 'draft' && (
-                        <p className="text-sm text-zinc-300 line-clamp-2 drop-shadow-md">{video.description}</p>
-                    )}
-                </div>
+                {/* Info Overlay (Top) - Only show if NO creator info, to avoid overlap */}
+                {(!video.uploader || !video.originalUrl) && (
+                    <div className={cn(
+                        "absolute top-0 left-0 right-0 p-6 z-20 bg-gradient-to-b from-black/80 to-transparent pointer-events-none transition-all duration-300",
+                        showUI ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
+                    )}>
+                        <h3 className="font-bold text-lg text-white drop-shadow-md mb-1">
+                            {video.status === 'draft' ? 'Reference' : video.title}
+                        </h3>
+                        {video.status !== 'draft' && (
+                            <p className="text-sm text-zinc-300 line-clamp-2 drop-shadow-md">{video.description}</p>
+                        )}
+                    </div>
+                )}
+
+                {/* Author Profile Overlay (Top-Left) */}
+                {video.uploader && video.originalUrl && (
+                    <div
+                        className={cn(
+                            "absolute top-6 left-6 z-50 transition-all duration-500 transform ease-out",
+                            showUI
+                                ? "opacity-100 translate-y-0 scale-100"
+                                : "opacity-0 translate-y-4 scale-90 pointer-events-none"
+                        )}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <a
+                            href={video.originalUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 bg-black/60 hover:bg-black/80 backdrop-blur-xl rounded-full pr-5 pl-1.5 py-1.5 transition-all duration-300 group/author border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.4)] hover:shadow-[0_0_20px_rgba(168,85,247,0.6)] hover:border-purple-500/50"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center border border-white/20 shadow-inner">
+                                <span className="text-white text-sm font-bold">{video.uploader.charAt(0).toUpperCase()}</span>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-purple-300 text-[11px] font-bold leading-none uppercase tracking-wider mb-0.5">Creator</span>
+                                <span className="text-white text-base font-bold leading-none group-hover/author:text-purple-200 transition-colors drop-shadow-md">{video.uploader}</span>
+                            </div>
+                        </a>
+                    </div>
+                )}
+
+                {/* Social Source Link Overlay (Top-Right) */}
+                {video.originalUrl && (
+                    <div
+                        className={cn(
+                            "absolute top-6 right-6 z-50 transition-all duration-300 transform",
+                            showUI ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
+                        )}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <a
+                            href={video.originalUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-xs font-medium px-3 py-1.5 rounded-full border border-white/10 hover:border-white/30 transition-all group/link"
+                        >
+                            <span>View Original</span>
+                            <ExternalLink className="w-3 h-3 text-zinc-400 group-hover/link:text-white transition-colors" />
+                        </a>
+                    </div>
+                )}
 
                 {/* Side Actions (Like & Share) */}
                 <div className="absolute bottom-20 right-4 z-30 flex flex-col gap-4 sm:gap-6 items-center">

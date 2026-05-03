@@ -20,6 +20,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 import { useDonate } from '@/hooks/use-donate';
+import { useUser } from '@/hooks/use-user';
 
 interface DonateDialogProps {
     children?: React.ReactNode;
@@ -36,6 +37,12 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
     ];
 
     const { handleDonate, isCheckingOut } = useDonate();
+    const { userProfile } = useUser();
+
+    const isPremium = userProfile?.isPremium;
+    // For now, we assume if they are premium, they are at least on the $1 tier
+    // A more advanced version would check the actual subscription priceId
+    const currentTier = isPremium ? 'premium' : 'free';
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -110,8 +117,13 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                                 </li>
                             </ul>
                             <div className="mt-auto">
-                                <Button disabled className="w-full bg-white/5 text-zinc-500 border border-white/5">
-                                    Current Plan
+                                <Button disabled={currentTier === 'free'} onClick={() => currentTier !== 'free' && onOpenChange?.(false)} className={cn(
+                                    "w-full border transition-all",
+                                    currentTier === 'free' 
+                                        ? "bg-white/5 text-zinc-500 border-white/5" 
+                                        : "bg-white/10 hover:bg-white/20 text-white border-white/10"
+                                )}>
+                                    {currentTier === 'free' ? 'Current Plan' : 'Basic Plan'}
                                 </Button>
                             </div>
                         </div>
@@ -138,11 +150,16 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                             </ul>
                             <div className="mt-auto">
                                 <Button
-                                    onClick={() => handleDonate('price_1SFgUc59QHehw05fROtqwkLN')}
+                                    onClick={() => isPremium ? onOpenChange?.(false) : handleDonate('price_1SFgUc59QHehw05fROtqwkLN')}
                                     disabled={isCheckingOut}
-                                    className="w-full bg-white/5 hover:bg-blue-500/20 text-white border border-white/10 hover:border-blue-500/50"
+                                    className={cn(
+                                        "w-full border transition-all",
+                                        isPremium 
+                                            ? "bg-blue-500/20 text-blue-300 border-blue-500/50" 
+                                            : "bg-white/5 hover:bg-blue-500/20 text-white border-white/10 hover:border-blue-500/50"
+                                    )}
                                 >
-                                    {isCheckingOut ? 'Loading...' : 'Donate $1'}
+                                    {isCheckingOut ? 'Loading...' : isPremium ? 'Current Plan' : 'Donate $1'}
                                 </Button>
                             </div>
                         </div>

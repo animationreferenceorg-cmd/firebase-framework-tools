@@ -80,6 +80,7 @@ const formSchema = (isShort: boolean, isReference: boolean) => z.object({
 
   tags: z.array(z.string()).min(isReference ? 0 : 1, "Please add at least one tag."),
   categoryIds: z.array(z.string()).min(isReference ? 0 : 1, "Please select at least one category."),
+  uploader: z.string().optional(),
 }).superRefine((data, ctx) => {
   if (data.videoSourceType === 'url' && (!data.videoUrl || data.videoUrl.trim() === '')) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Video URL is required.", path: ['videoUrl'] });
@@ -654,6 +655,7 @@ export default function VideoForm({ video, isShort, isReference = false, default
       categoryIds: video?.categoryIds || (isShort && video?.categories ? allCategories.filter(c => video.categories!.includes(c.title)).map(c => c.id) : []) || [],
       videoSourceType: video?.videoUrl ? 'url' : 'upload',
       thumbnailSourceType: video?.thumbnailUrl ? 'url' : 'upload',
+      uploader: video?.uploader || "",
     },
   })
 
@@ -966,6 +968,8 @@ export default function VideoForm({ video, isShort, isReference = false, default
         posterUrl: isShort ? (thumbnailUrl || 'https://placehold.co/400x600.png') : (video?.posterUrl || 'https://placehold.co/400x600.png'),
         status: statusOverride || video?.status || 'published', // Default to published if unknown
         createdAt: video?.createdAt || serverTimestamp(),
+        uploader: values.uploader || '',
+        originalUrl: video?.originalUrl || values.videoUrl || '',
       };
 
       if (isReference) {
@@ -1262,6 +1266,22 @@ export default function VideoForm({ video, isShort, isReference = false, default
                     <FormControl>
                       <Textarea placeholder="A breathtaking journey through..." {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={control}
+                name="uploader"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Creator / Uploader</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. @artist_name" {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormDescription>
+                      The original creator of the content (auto-filled for social imports).
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

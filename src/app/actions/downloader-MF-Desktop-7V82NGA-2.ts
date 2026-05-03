@@ -292,12 +292,48 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
             expires: '03-01-2500'
         });
 
-        // 8. Build video data
+        // 8. Download and upload thumbnail if available
+        let finalizedThumbnailUrl = info.thumbnail || '';
+        if (info.thumbnail && isValidUrl(info.thumbnail)) {
+            try {
+                console.log(`[Downloader] Fetching thumbnail from ${info.thumbnail}`);
+                const thumbDest = path.join(tempDir, `${uniqueId}_thumb.jpg`);
+
+                const res = await fetch(info.thumbnail);
+                if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
+                const buffer = await res.arrayBuffer();
+                fs.writeFileSync(thumbDest, Buffer.from(buffer));
+
+                const thumbContentType = res.headers.get('content-type') || 'image/jpeg';
+                const thumbStorageDest = `thumbnails/${uniqueId}.jpg`;
+
+                console.log(`[Downloader] Uploading thumbnail to ${thumbStorageDest}...`);
+                await bucket.upload(thumbDest, {
+                    destination: thumbStorageDest,
+                    metadata: { contentType: thumbContentType }
+                });
+
+                const [thumbSignedUrl] = await bucket.file(thumbStorageDest).getSignedUrl({
+                    action: 'read',
+                    expires: '03-01-2500'
+                });
+
+                finalizedThumbnailUrl = thumbSignedUrl;
+                fs.unlinkSync(thumbDest);
+                console.log('[Downloader] Thumbnail uploaded successfully.');
+            } catch (err) {
+                console.error('[Downloader] Failed to process thumbnail:', err);
+                // Keep the original fallback
+            }
+        }
+
+        // 9. Build video data
         const videoData = {
             title: title || 'Untitled',
             description: description || '',
             videoUrl: signedUrl,
-            thumbnailUrl: info.thumbnail || '',
+            thumbnailUrl: finalizedThumbnailUrl,
+            posterUrl: finalizedThumbnailUrl,
             tags,
             type: 'social',
             originalUrl: url,

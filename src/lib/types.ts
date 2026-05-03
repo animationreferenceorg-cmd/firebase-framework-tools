@@ -15,6 +15,8 @@ export interface Video {
   isShort?: boolean;
   status?: 'draft' | 'published';
   folderId?: string;
+  uploader?: string;
+  originalUrl?: string;
 }
 
 export interface Folder {

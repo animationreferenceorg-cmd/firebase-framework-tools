@@ -31,22 +31,16 @@ import { useFirebase } from '@/firebase';
 import { useEffect } from 'react';
 import { onSnapshot, doc, collection, addDoc } from 'firebase/firestore';
 import { DonateDialog } from './DonateDialog';
+import { useUser } from '@/hooks/use-user';
 
 export default function AuthHeader() {
   const { user, loading } = useAuth();
   const { db, auth } = useFirebase();
   const { toast } = useToast();
+  const { userProfile, loading: userProfileLoading } = useUser();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [isPremium, setIsPremium] = useState(false);
 
-  // Listen for user premium status
-  useEffect(() => {
-    if (!user || !db) return;
-    const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
-      setIsPremium(!!doc.data()?.isPremium);
-    });
-    return () => unsub();
-  }, [user, db]);
+  const isPremium = userProfile?.isPremium;
 
   const handlePortal = async () => {
     if (isCheckingOut) return;
@@ -66,7 +60,7 @@ export default function AuthHeader() {
     }
   }
 
-  if (loading) {
+  if (loading || userProfileLoading) {
     return (
       <div className="flex items-center gap-4">
         <Skeleton className="h-9 w-24 rounded-md" />

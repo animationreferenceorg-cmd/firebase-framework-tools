@@ -92,7 +92,16 @@ export default function BetaPage() {
         // 0. Global Filter: Remove Shorts
         let result = allVideos.filter(v => !v.isShort);
 
-        // 1. Filter by Type (2D / 3D)
+        // 1. Tab-specific filtering (Community vs Main)
+        if (activeTab === 'community') {
+            // Show ONLY social imports in Community tab
+            result = result.filter(v => v.type === 'social' || (v.type as string) === 'instagram');
+        } else {
+            // Hide social imports from Featured, Latest, Trending
+            result = result.filter(v => v.type !== 'social' && (v.type as string) !== 'instagram');
+        }
+
+        // 2. Filter by Type (2D / 3D)
         if (activeType !== 'all') {
             const typeLower = activeType.toLowerCase();
             result = result.filter(v => {

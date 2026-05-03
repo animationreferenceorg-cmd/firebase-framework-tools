@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { CreditCard, LogOut, Edit, ShieldCheck, Rss } from 'lucide-react';
+import { CreditCard, LogOut, Edit, ShieldCheck } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { auth, isFirebaseConfigured } from '@/lib/firebase';
 import {
@@ -40,45 +40,8 @@ export default function ProfilePage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
 
   const { mutate } = useUser();
-
-  const handleSync = async () => {
-    if (!authUser) return;
-    setIsSyncing(true);
-    toast({ title: 'Syncing...', description: 'Pulling your latest info directly from Stripe.' });
-    
-    try {
-      const response = await fetch('/api/sync-stripe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: authUser.uid, email: authUser.email }),
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        await mutate(); // Refresh the local profile state
-        toast({ title: 'Success!', description: data.message });
-      } else {
-        toast({ 
-          variant: 'destructive', 
-          title: 'Sync Issue', 
-          description: data.message || 'Could not find an active subscription.' 
-        });
-      }
-    } catch (e: any) {
-      console.error(e);
-      toast({ 
-        variant: 'destructive', 
-        title: 'Error', 
-        description: 'Something went wrong while connecting to Stripe.' 
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   const handlePortal = async () => {
     if (isPortalLoading) return;
@@ -243,17 +206,6 @@ export default function ProfilePage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleSync} 
-                disabled={isSyncing}
-                className="border-white/10 text-zinc-400 hover:text-white"
-              >
-                <Rss className={cn("mr-2 h-3 w-3", isSyncing && "animate-spin")} />
-                {isSyncing ? 'Syncing...' : 'Sync Subscription'}
-              </Button>
-              
               {userProfile?.isPremium ? (
                 <Button variant="secondary" onClick={handlePortal} disabled={isPortalLoading}>
                   <CreditCard className="mr-2 h-4 w-4" />

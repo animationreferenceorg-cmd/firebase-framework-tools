@@ -34,7 +34,7 @@ function initializeAdminApp(): App {
         projectId: projectId,
         clientEmail: clientEmail,
         // Replace escaped newlines in private key
-        privateKey: privateKey.replace(/\\n/g, "\n"),
+        privateKey: privateKey.replace(/^"|"$/g, '').replace(/\\n/g, "\n"),
       }),
       storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     });

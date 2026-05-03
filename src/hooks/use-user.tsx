@@ -40,30 +40,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
             setUserProfile(profile);
         }
 
-        // Auto-sync: If the user is logged in but NOT premium, silently check Stripe
-        // This fires in the background so the user never has to click anything
-        if (profile && !profile.isPremium && authUser.email) {
-          console.log('[AutoSync] User is not premium, silently checking Stripe...');
-          fetch('/api/sync-stripe', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: authUser.uid, email: authUser.email }),
-          })
-            .then(res => res.json())
-            .then(data => {
-              if (data.success) {
-                console.log('[AutoSync] Stripe subscription found! Refreshing profile...');
-                // Re-fetch the profile now that Firestore has been updated
-                getUserProfile(authUser.uid).then(updatedProfile => {
-                  if (updatedProfile) setUserProfile(updatedProfile);
-                });
-              } else {
-                console.log('[AutoSync] No active subscription found in Stripe:', data.message);
-              }
-            })
-            .catch(err => console.error('[AutoSync] Stripe sync failed silently:', err));
-        }
-
       } catch (error) {
         console.error("Failed to fetch user profile:", error);
         setUserProfile(null);

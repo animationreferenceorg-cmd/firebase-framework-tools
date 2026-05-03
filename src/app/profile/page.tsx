@@ -192,17 +192,17 @@ export default function ProfilePage() {
               <p className="font-semibold text-white">
                 Current Plan: <span className={userProfile?.isPremium ? "text-primary font-bold" : "text-zinc-400"}>
                   {userProfile?.isPremium ? (
-                    userProfile?.tier === 'tier1' ? 'Supporter ($1)' :
-                    userProfile?.tier === 'tier2' ? 'Super Fan ($2)' :
-                    userProfile?.tier === 'tier5' ? 'Pro ($5)' :
+                    userProfile?.tier === 'tier1' ? '$1 Supporter' :
+                    userProfile?.tier === 'tier2' ? '$2 Super Fan' :
+                    userProfile?.tier === 'tier5' ? '$5 Pro' :
                     'Premium'
                   ) : 'Free Plan'}
                 </span>
               </p>
               <p className="text-muted-foreground text-sm">
                 {userProfile?.isPremium
-                  ? 'Your subscription is active. Thank you for your support!'
-                  : 'Upgrade to Premium to support the creator!'}
+                  ? `Your subscription is ${userProfile?.subscriptionStatus || 'active'}. Thank you for your support!`
+                  : 'Upgrade to a $1, $2, or $5 plan to support the creator!'}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">

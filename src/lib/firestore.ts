@@ -67,11 +67,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   }
 
   // Check for active subscription in Stripe extension collection
-  // This is a more reliable way to determine premium status when using the Firebase Stripe Extension
-  // Check for active subscription in Stripe extension collection
-  // This is a more reliable way to determine premium status when using the Firebase Stripe Extension
   try {
-    // Check both standard locations: customers/{uid}/subscriptions AND users/{uid}/subscriptions
     const locations = [
         collection(db, CUSTOMERS_COLLECTION, uid, 'subscriptions'),
         collection(db, USERS_COLLECTION, uid, 'subscriptions')
@@ -79,26 +75,37 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 
     let activeSubDoc = null;
 
+    console.log(`[Subscription Check] Checking locations for UID: ${uid}`);
+
     for (const subRef of locations) {
-        const q = query(subRef, where('status', 'in', ['active', 'trialing']));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-            activeSubDoc = snap.docs[0];
-            console.log(`[Subscription Check] Found active subscription in ${subRef.path}`);
-            break;
+        // First, check for ANY docs in this collection to see if we're even looking in the right place
+        const anySnap = await getDocs(subRef);
+        console.log(`[Subscription Check] Found ${anySnap.size} total docs in ${subRef.path}`);
+        
+        if (!anySnap.empty) {
+            // Log statuses of all found docs to help debug
+            anySnap.forEach(d => console.log(`[Subscription Check] Doc ${d.id} has status: ${d.data().status}`));
+            
+            // Now find an active or trialing one
+            const active = anySnap.docs.find(d => ['active', 'trialing'].includes(d.data().status));
+            if (active) {
+                activeSubDoc = active;
+                console.log(`[Subscription Check] Found active subscription in ${subRef.path}`);
+                break;
+            }
         }
     }
 
     if (activeSubDoc) {
       const subData = activeSubDoc.data();
-      const priceId = subData.items?.[0]?.price?.id || subData.price?.id || subData.plan?.id;
+      const priceId = subData.items?.[0]?.price?.id || subData.price?.id || subData.plan?.id || subData.items?.[0]?.plan?.id;
       
-      console.log(`[Subscription Check] Active subscription details: Status: ${subData.status}, PriceId: ${priceId}`);
+      console.log(`[Subscription Check] Found priceId: ${priceId}`);
 
       let detectedTier: UserProfile['tier'] = 'tier1'; 
       if (priceId === 'price_1SFgiV59QHehw05fc0lPRRf7') detectedTier = 'tier2';
       else if (priceId === 'price_1SFgiq59QHehw05fy017h1gR') detectedTier = 'tier5';
-      else if (priceId === 'price_1SFgUc59QHehw05fROtqwkLN') detectedTier = 'tier1';
+      else if (priceId === 'price_1SFgUc59QHehw05fROtqwkLN' || priceId?.includes('1SFgUc')) detectedTier = 'tier1';
       else {
           console.warn(`[Subscription Check] Unknown Price ID: ${priceId}. Defaulting to tier1.`);
           detectedTier = 'tier1';
@@ -106,7 +113,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 
       if (profile) {
         if (!profile.isPremium || profile.tier !== detectedTier) {
-          console.log(`[Subscription Check] Syncing detected premium status to profile.`);
+          console.log(`[Subscription Check] Syncing detected tier: ${detectedTier}`);
           profile.isPremium = true;
           profile.tier = detectedTier;
           try {
@@ -136,9 +143,11 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
           recentlyViewedShortIds: [],
         } as UserProfile;
       }
+    } else {
+        console.log("[Subscription Check] No active/trialing subscription found in any location.");
     }
   } catch (error) {
-    console.error("Error checking subscription status from Stripe extension:", error);
+    console.error("[Subscription Check] Error during search:", error);
   }
 
   if (profile) {

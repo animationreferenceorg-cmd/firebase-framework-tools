@@ -68,60 +68,59 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 
   // Check for active subscription in Stripe extension collection
   // This is a more reliable way to determine premium status when using the Firebase Stripe Extension
+  // Check for active subscription in Stripe extension collection
+  // This is a more reliable way to determine premium status when using the Firebase Stripe Extension
   try {
-    const subscriptionsRef = collection(db, CUSTOMERS_COLLECTION, uid, 'subscriptions');
-    const q = query(subscriptionsRef, where('status', 'in', ['active', 'trialing']));
-    const subscriptionSnap = await getDocs(q);
+    // Check both standard locations: customers/{uid}/subscriptions AND users/{uid}/subscriptions
+    const locations = [
+        collection(db, CUSTOMERS_COLLECTION, uid, 'subscriptions'),
+        collection(db, USERS_COLLECTION, uid, 'subscriptions')
+    ];
 
-    console.log(`[Subscription Check] Found ${subscriptionSnap.size} active subscriptions for UID: ${uid}`);
-    
-    if (subscriptionSnap.empty) {
-        // Also check for 'past_due' or 'unpaid' just in case
-        const qAll = query(subscriptionsRef);
-        const allSnap = await getDocs(qAll);
-        console.log(`[Subscription Check] Total subscription docs found: ${allSnap.size}`);
-        allSnap.forEach(doc => {
-            console.log(`[Subscription Check] Doc ${doc.id} status: ${doc.data().status}`);
-        });
+    let activeSubDoc = null;
+
+    for (const subRef of locations) {
+        const q = query(subRef, where('status', 'in', ['active', 'trialing']));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+            activeSubDoc = snap.docs[0];
+            console.log(`[Subscription Check] Found active subscription in ${subRef.path}`);
+            break;
+        }
     }
 
-    const hasActiveSubscription = !subscriptionSnap.empty;
-
-    if (hasActiveSubscription) {
-      // Find the tier based on the price ID
-      const subDoc = subscriptionSnap.docs[0].data();
-      const priceId = subDoc.items?.[0]?.price?.id || subDoc.price?.id || subDoc.plan?.id;
+    if (activeSubDoc) {
+      const subData = activeSubDoc.data();
+      const priceId = subData.items?.[0]?.price?.id || subData.price?.id || subData.plan?.id;
       
-      console.log(`[Subscription Check] Active subscription found! Status: ${subDoc.status}, PriceId: ${priceId}`);
+      console.log(`[Subscription Check] Active subscription details: Status: ${subData.status}, PriceId: ${priceId}`);
 
       let detectedTier: UserProfile['tier'] = 'tier1'; 
       if (priceId === 'price_1SFgiV59QHehw05fc0lPRRf7') detectedTier = 'tier2';
       else if (priceId === 'price_1SFgiq59QHehw05fy017h1gR') detectedTier = 'tier5';
       else if (priceId === 'price_1SFgUc59QHehw05fROtqwkLN') detectedTier = 'tier1';
       else {
-          console.warn(`[Subscription Check] Unknown Price ID: ${priceId}. Defaulting to tier1 (Supporter).`);
+          console.warn(`[Subscription Check] Unknown Price ID: ${priceId}. Defaulting to tier1.`);
           detectedTier = 'tier1';
       }
 
       if (profile) {
-        // If the profile exists but isPremium is not set or false, update it locally and sync back
         if (!profile.isPremium || profile.tier !== detectedTier) {
-          console.log(`[Subscription Check] Updating local profile: isPremium=true, tier=${detectedTier}`);
+          console.log(`[Subscription Check] Syncing detected premium status to profile.`);
           profile.isPremium = true;
           profile.tier = detectedTier;
-          // Lazy sync back to Firestore so subsequent reads are faster and consistent
           try {
             await updateDoc(userRef, { 
                 isPremium: true, 
                 tier: detectedTier,
+                subscriptionStatus: subData.status,
                 updatedAt: new Date().toISOString()
             });
           } catch (e) {
-            console.error("[Subscription Check] Failed to sync back to Firestore:", e);
+            console.error("[Subscription Check] Failed to update profile doc:", e);
           }
         }
       } else {
-        // Fallback: If no profile exists yet but they have a subscription
         profile = {
           uid: uid,
           email: null,
@@ -130,6 +129,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
           role: 'user',
           isPremium: true,
           tier: detectedTier,
+          subscriptionStatus: subData.status,
           likedVideoIds: [],
           likedCategoryTitles: [],
           savedShortIds: [],
@@ -139,7 +139,6 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     }
   } catch (error) {
     console.error("Error checking subscription status from Stripe extension:", error);
-    // Continue with the profile we have from the users collection
   }
 
   if (profile) {

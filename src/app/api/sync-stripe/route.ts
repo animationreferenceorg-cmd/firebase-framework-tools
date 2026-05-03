@@ -29,33 +29,41 @@ export async function POST(req: Request) {
             });
         }
 
-        // Search through customers for an active subscription
+        // Search through customers for an active or trialing subscription
         let activeSub = null;
         let customerId = '';
 
         for (const customer of customers.data) {
+            console.log(`[Sync Stripe API] Checking subscriptions for customer: ${customer.id}`);
             const subscriptions = await stripe.subscriptions.list({
                 customer: customer.id,
-                status: 'active',
+                status: 'all', // Fetch all to filter manually
+                limit: 10,
             });
 
-            if (subscriptions.data.length > 0) {
-                activeSub = subscriptions.data[0];
+            // Find an active or trialing subscription
+            const foundSub = subscriptions.data.find(sub => 
+                sub.status === 'active' || sub.status === 'trialing'
+            );
+
+            if (foundSub) {
+                activeSub = foundSub;
                 customerId = customer.id;
+                console.log(`[Sync Stripe API] Found ${foundSub.status} subscription: ${foundSub.id}`);
                 break;
             }
         }
 
         if (!activeSub) {
-            console.log(`[Sync Stripe API] No active subscriptions found in Stripe for ${email}`);
+            console.log(`[Sync Stripe API] No active or trialing subscriptions found in Stripe for ${email}`);
             return NextResponse.json({ 
                 success: false, 
-                message: 'No active subscriptions found in Stripe. If you just paid, it might take a minute to appear.' 
+                message: 'No active subscription found. If you just paid, it might take a few minutes. Status checked: active, trialing.' 
             });
         }
 
         const priceId = activeSub.items.data[0].price.id;
-        console.log(`[Sync Stripe API] Found active subscription! PriceId: ${priceId}`);
+        console.log(`[Sync Stripe API] Syncing subscription with PriceId: ${priceId}`);
 
         // Map price ID to tier (Matching the IDs in .env.local)
         let tier = 'tier1';

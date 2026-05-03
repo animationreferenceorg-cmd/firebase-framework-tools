@@ -39,9 +39,33 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
 
   const { mutate } = useUser();
+
+  const handleSync = async () => {
+    if (isSyncing || !authUser) return;
+    setIsSyncing(true);
+    try {
+      const response = await fetch('/api/sync-stripe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: authUser.uid, email: authUser.email }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast({ title: 'Sync Successful', description: data.message });
+        mutate(); // Refresh profile
+      } else {
+        toast({ title: 'Sync Failed', description: data.message, variant: 'destructive' });
+      }
+    } catch (e: any) {
+      toast({ title: 'Error', description: 'Failed to sync with Stripe.', variant: 'destructive' });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handlePortal = async () => {
     if (isPortalLoading) return;
@@ -206,6 +230,9 @@ export default function ProfilePage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={handleSync} disabled={isSyncing}>
+                {isSyncing ? 'Syncing...' : 'Sync Subscription'}
+              </Button>
               {userProfile?.isPremium ? (
                 <Button variant="secondary" onClick={handlePortal} disabled={isPortalLoading}>
                   <CreditCard className="mr-2 h-4 w-4" />

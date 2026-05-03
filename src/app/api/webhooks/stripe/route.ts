@@ -61,13 +61,34 @@ export async function POST(req: Request) {
                 const session = event.data.object as Stripe.Checkout.Session;
                 const userId = session.client_reference_id || session.metadata?.userId;
                 const customerId = session.customer as string;
+                const subscriptionId = session.subscription as string;
 
                 if (userId && customerId) {
                     console.log(`Linking Stripe Customer ${customerId} to User ${userId}`);
+                    
+                    let tier = 'tier1';
+                    if (subscriptionId) {
+                        try {
+                            const stripe = getStripe();
+                            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+                            const priceId = subscription.items.data[0].price.id;
+                            
+                            // Map price ID to tier
+                            if (priceId === 'price_1SFgiV59QHehw05fc0lPRRf7') tier = 'tier2';
+                            else if (priceId === 'price_1SFgiq59QHehw05fy017h1gR') tier = 'tier5';
+                            else if (priceId === 'price_1SFgUc59QHehw05fROtqwkLN') tier = 'tier1';
+                            
+                            console.log(`[Webhook] Found subscription ${subscriptionId} with price ${priceId}, assigning tier ${tier}`);
+                        } catch (err) {
+                            console.error('[Webhook] Error retrieving subscription details:', err);
+                        }
+                    }
+
                     await db.collection('users').doc(userId).set({
                         stripeCustomerId: customerId,
                         isPremium: true,
-                        subscriptionStatus: 'active', // You might want to get actual status from subscription object
+                        tier: tier,
+                        subscriptionStatus: 'active',
                         updatedAt: new Date().toISOString(),
                     }, { merge: true });
                 }

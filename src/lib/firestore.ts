@@ -70,7 +70,8 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   try {
     const locations = [
         collection(db, CUSTOMERS_COLLECTION, uid, 'subscriptions'),
-        collection(db, USERS_COLLECTION, uid, 'subscriptions')
+        collection(db, USERS_COLLECTION, uid, 'subscriptions'),
+        collection(db, 'stripe_customers', uid, 'subscriptions')
     ];
 
     let activeSubDoc = null;
@@ -78,21 +79,21 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     console.log(`[Subscription Check] Checking locations for UID: ${uid}`);
 
     for (const subRef of locations) {
-        // First, check for ANY docs in this collection to see if we're even looking in the right place
-        const anySnap = await getDocs(subRef);
-        console.log(`[Subscription Check] Found ${anySnap.size} total docs in ${subRef.path}`);
-        
-        if (!anySnap.empty) {
-            // Log statuses of all found docs to help debug
-            anySnap.forEach(d => console.log(`[Subscription Check] Doc ${d.id} has status: ${d.data().status}`));
+        try {
+            const anySnap = await getDocs(subRef);
+            console.log(`[Subscription Check] Found ${anySnap.size} total docs in ${subRef.path}`);
             
-            // Now find an active or trialing one
-            const active = anySnap.docs.find(d => ['active', 'trialing'].includes(d.data().status));
-            if (active) {
-                activeSubDoc = active;
-                console.log(`[Subscription Check] Found active subscription in ${subRef.path}`);
-                break;
+            if (!anySnap.empty) {
+                anySnap.forEach(d => console.log(`[Subscription Check] Doc ${d.id} has status: ${d.data().status}`));
+                const active = anySnap.docs.find(d => ['active', 'trialing'].includes(d.data().status));
+                if (active) {
+                    activeSubDoc = active;
+                    console.log(`[Subscription Check] Found active subscription in ${subRef.path}`);
+                    break;
+                }
             }
+        } catch (e) {
+            console.warn(`[Subscription Check] Could not access ${subRef.path}:`, e);
         }
     }
 

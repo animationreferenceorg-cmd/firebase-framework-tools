@@ -201,10 +201,9 @@ export function VideoCard({ video, poster }: VideoCardProps) {
 
   // --- Dedicated Component for Community/Social Cards ---
   const isSocialType = video.type === 'social' || (video.type as string) === 'instagram';
-  const hasNoThumbnail = !imageUrl || imageUrl.includes('placehold.co') || imageUrl === '';
   const isSocialLink = video.originalUrl && (video.originalUrl.includes('instagram.com') || video.originalUrl.includes('tiktok.com'));
   
-  if (isSocialType || (isSocialLink && hasNoThumbnail)) {
+  if (isSocialType || isSocialLink) {
     return (
       <Dialog open={isPlayerOpen} onOpenChange={setIsPlayerOpen}>
         <div
@@ -216,11 +215,33 @@ export function VideoCard({ video, poster }: VideoCardProps) {
             aspectRatio
           )}
         >
-          {/* Main Social Background */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-purple-600/30 to-pink-600/30 border border-white/10 group-hover/card:from-purple-600/40 group-hover/card:to-pink-600/40 transition-colors">
-            <Share2 className="h-12 w-12 text-white/60 mb-3 group-hover/card:scale-110 transition-transform duration-300" />
-            <span className="text-white font-bold px-4 text-center line-clamp-2 w-full drop-shadow-md">{displayTitle}</span>
-          </div>
+          {!isImageLoaded && <Skeleton className="absolute inset-0" />}
+          
+          {/* Main Social Background / Thumbnail */}
+          {imageUrl ? (
+            <Image
+              src={imageUrl}
+              alt={video.title}
+              fill
+              className={cn(
+                "w-full h-full object-cover transition-transform duration-500",
+                isHovered && !isPlayerOpen ? "scale-110" : "scale-100",
+                !isImageLoaded && "opacity-0"
+              )}
+              data-ai-hint={video.dataAiHint}
+              onLoad={() => setIsImageLoaded(true)}
+            />
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-purple-600/30 to-pink-600/30 border border-white/10 group-hover/card:from-purple-600/40 group-hover/card:to-pink-600/40 transition-colors">
+              <Share2 className="h-12 w-12 text-white/60 mb-3 group-hover/card:scale-110 transition-transform duration-300" />
+            </div>
+          )}
+
+          {/* Dark Overlay Gradient (always visible on hover to make text readable) */}
+          <div className={cn(
+            "absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none transition-opacity duration-300",
+            isHovered ? "opacity-100" : "opacity-60"
+          )} />
 
           {/* Bouncing Top-Left Original Link Animation */}
           {video.originalUrl && (
@@ -246,9 +267,12 @@ export function VideoCard({ video, poster }: VideoCardProps) {
 
           {/* Bottom Actions Bar */}
           <div className={cn(
-            "absolute bottom-0 left-0 right-0 p-3 transition-all duration-300 bg-black/60 backdrop-blur-sm",
+            "absolute bottom-0 left-0 right-0 p-3 transition-all duration-300",
             isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
           )}>
+            <h3 className="text-white font-bold text-base truncate mb-2 drop-shadow-md">
+              {displayTitle}
+            </h3>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <DialogTrigger asChild>

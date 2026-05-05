@@ -100,7 +100,13 @@ export default function ProfilePage() {
 
       syncWithRetry();
     }
-  }, [authUser]);
+  }, [authUser, mutate, toast]);
+
+  useEffect(() => {
+    if (!loading && !authUser && isFirebaseConfigured()) {
+      router.push('/login');
+    }
+  }, [loading, authUser, router]);
 
 
   const handleSignOut = async () => {
@@ -148,7 +154,6 @@ export default function ProfilePage() {
   }
 
   if (!authUser && isFirebaseConfigured()) {
-    router.push('/login');
     return null;
   }
 

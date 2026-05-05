@@ -180,8 +180,11 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
                 className="relative flex-1 bg-black overflow-hidden group"
                 onClick={handleVideoClick}
             >
-                {/* Blurred Background Video */}
-
+                {/* Blurred Background Image */}
+                <div 
+                    className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat blur-2xl scale-110 opacity-40 pointer-events-none"
+                    style={{ backgroundImage: `url(${video.posterUrl || video.thumbnailUrl})` }}
+                />
 
                 {/* Main Video Content */}
                 <div className="absolute inset-0 z-10 flex items-center justify-center p-0 md:p-12 lg:p-24 transition-all duration-300 pointer-events-none">

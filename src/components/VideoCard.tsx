@@ -200,10 +200,15 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   }
 
   // --- Dedicated Component for Community/Social Cards ---
+  // A video is "social" if it has a social type, a social originalUrl, OR has an uploader (community submitted)
   const isSocialType = video.type === 'social' || (video.type as string) === 'instagram';
   const isSocialLink = video.originalUrl && (video.originalUrl.includes('instagram.com') || video.originalUrl.includes('tiktok.com'));
-  
-  if (isSocialType || isSocialLink) {
+  const isCommunityVideo = isSocialType || isSocialLink || !!video.uploader;
+
+  // Best link to use: prefer originalUrl, fall back to videoUrl (for older imports)
+  const communityLinkUrl = video.originalUrl || (video.uploader ? video.videoUrl : null);
+
+  if (isCommunityVideo) {
     return (
       <Dialog open={isPlayerOpen} onOpenChange={setIsPlayerOpen}>
         <div
@@ -244,6 +249,24 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           )} />
 
           {/* Bouncing link moved to bottom title bar */}
+
+          {/* Permanent top-left bouncing badge — always visible for community videos */}
+          {communityLinkUrl && (
+            <a
+              href={communityLinkUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="absolute top-3 left-3 z-[110] flex items-center justify-center w-11 h-11 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-xl hover:shadow-[0_0_20px_rgba(236,72,153,0.6)] transition-all duration-300 animate-bounce hover:animate-none hover:scale-110"
+              title="View original post"
+            >
+              {communityLinkUrl.toLowerCase().includes('instagram.com') ? (
+                <Instagram className="w-5 h-5" />
+              ) : (
+                <ExternalLink className="w-5 h-5" />
+              )}
+            </a>
+          )}
 
           {/* Bottom Actions Bar */}
           <div className={cn(
@@ -306,15 +329,15 @@ export function VideoCard({ video, poster }: VideoCardProps) {
             </Button>
 
             {/* Bouncing original post link — TOP LEFT, always visible, above everything */}
-            {video.originalUrl && (
+            {communityLinkUrl && (
               <a
-                href={video.originalUrl}
+                href={communityLinkUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="absolute top-4 left-4 z-[200] flex items-center justify-center w-14 h-14 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-[0_0_20px_rgba(236,72,153,0.5)] hover:shadow-[0_0_28px_rgba(236,72,153,0.8)] transition-all duration-300 animate-bounce hover:animate-none hover:scale-110"
                 title="View Original Post"
               >
-                {video.originalUrl.toLowerCase().includes('instagram.com') ? (
+                {communityLinkUrl.toLowerCase().includes('instagram.com') ? (
                   <Instagram className="w-7 h-7" />
                 ) : (
                   <ExternalLink className="w-7 h-7" />

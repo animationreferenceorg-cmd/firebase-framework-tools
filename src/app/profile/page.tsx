@@ -32,6 +32,7 @@ import { DonateDialog } from '@/components/DonateDialog';
 export default function ProfilePage() {
   const { user: authUser, loading: authLoading } = useAuth();
   const { userProfile, loading: userProfileLoading } = useUser();
+  const loading = authLoading || userProfileLoading;
   const router = useRouter();
   const { toast } = useToast();
 
@@ -128,7 +129,6 @@ export default function ProfilePage() {
     }
   };
 
-  const loading = authLoading || userProfileLoading;
 
   if (loading) {
     return (

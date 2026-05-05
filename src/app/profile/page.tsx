@@ -48,9 +48,12 @@ export default function ProfilePage() {
     if (isPortalLoading) return;
     setIsPortalLoading(true);
     try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('sync', 'true');
+      
       const response = await fetch('/api/portal', {
         method: 'POST',
-        body: JSON.stringify({ userId: authUser?.uid, returnUrl: window.location.href }),
+        body: JSON.stringify({ userId: authUser?.uid, returnUrl: url.toString() }),
       });
       const data = await response.json();
       if (data.url) window.location.assign(data.url);
@@ -65,6 +68,37 @@ export default function ProfilePage() {
   useEffect(() => {
     if (authUser?.displayName) {
       setDisplayName(authUser.displayName);
+    }
+  }, [authUser]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('sync') === 'true' && authUser?.uid && authUser?.email) {
+      toast({ title: 'Updating...', description: 'Syncing your subscription changes...' });
+      
+      const syncWithRetry = async (retries = 3) => {
+        try {
+          const r = await fetch('/api/sync-stripe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: authUser.uid, email: authUser.email })
+          });
+          const data = await r.json();
+          if(data.success) {
+             toast({ title: 'Success!', description: 'Your plan changes have been applied.' });
+             mutate(); // Refresh the user profile data
+             window.history.replaceState({}, '', '/profile');
+          } else if (retries > 0) {
+             setTimeout(() => syncWithRetry(retries - 1), 3000);
+          } else {
+             window.history.replaceState({}, '', '/profile');
+          }
+        } catch (e) {
+          if (retries > 0) setTimeout(() => syncWithRetry(retries - 1), 3000);
+        }
+      };
+
+      syncWithRetry();
     }
   }, [authUser]);
 

@@ -60,6 +60,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
     const [isFullScreen, setIsFullScreen] = React.useState(false);
     const [showControls, setShowControls] = React.useState(true);
     const [playbackRate, setPlaybackRate] = React.useState(1);
+    const [videoError, setVideoError] = React.useState(false);
     const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
     const stepFrame = (direction: 'forward' | 'backward') => {
@@ -262,10 +263,21 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                     playbackRate={playbackRate}
                     onProgress={handleProgress}
                     onDuration={setDuration}
-                    onPlay={() => setIsPlaying(true)}
+                    onPlay={() => { setIsPlaying(true); setVideoError(false); }}
                     onPause={() => setIsPlaying(false)}
                     onEnded={() => setIsPlaying(false)}
-                    onError={(e: any) => console.error("Video Player Error:", e)}
+                    onError={(e: any) => {
+                        // HLS/CORS errors are expected for Instagram/TikTok CDN links
+                        const isSocialUrl = video.originalUrl && (
+                            video.originalUrl.includes('instagram.com') ||
+                            video.originalUrl.includes('tiktok.com')
+                        );
+                        if (isSocialUrl) {
+                            setVideoError(true); // Show friendly fallback
+                        } else {
+                            console.warn("Video Player Error:", e);
+                        }
+                    }}
                     loop
                     config={{
                         file: {
@@ -275,6 +287,32 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                         }
                     }}
                 />
+
+                {/* Fallback overlay when social video can't be played due to CORS */}
+                {videoError && video.originalUrl && (
+                    <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm rounded-lg gap-4 p-6 text-center">
+                        <div className="w-16 h-16 bg-gradient-to-tr from-pink-500 to-purple-500 rounded-full flex items-center justify-center shadow-xl animate-bounce">
+                            {video.originalUrl.toLowerCase().includes('instagram.com') ? (
+                                <Instagram className="w-8 h-8 text-white" />
+                            ) : (
+                                <ExternalLink className="w-8 h-8 text-white" />
+                            )}
+                        </div>
+                        <div>
+                            <p className="text-white font-bold text-lg mb-1">View on Original Platform</p>
+                            <p className="text-zinc-400 text-sm mb-4">This video can only be played on the original platform.</p>
+                            <a
+                                href={video.originalUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 text-white font-semibold px-6 py-2.5 rounded-full transition-all hover:scale-105 shadow-lg"
+                            >
+                                <ExternalLink className="w-4 h-4" />
+                                Open Original Post
+                            </a>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Dark Overlay for Controls Visibility */}

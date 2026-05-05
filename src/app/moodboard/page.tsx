@@ -1021,7 +1021,24 @@ export default function MoodboardPage() {
 
                                         {/* Meta Info */}
                                         <div className="space-y-4 text-white">
-                                            <h1 className="text-3xl md:text-5xl font-bold tracking-tight">{(expandedVideo as Video).title}</h1>
+                                            <div className="flex items-center gap-4">
+                                                <h1 className="text-3xl md:text-5xl font-bold tracking-tight">{(expandedVideo as Video).title}</h1>
+                                                {((expandedVideo as Video).originalUrl || (expandedVideo as Video).uploader) && (
+                                                    <a
+                                                        href={(expandedVideo as Video).originalUrl || (expandedVideo as Video).videoUrl || '#'}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex-shrink-0 flex items-center justify-center w-14 h-14 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-xl hover:shadow-[0_0_24px_rgba(236,72,153,0.7)] transition-all duration-300 animate-bounce hover:animate-none hover:scale-110"
+                                                        title="View Original Post"
+                                                    >
+                                                        {((expandedVideo as Video).originalUrl || '').toLowerCase().includes('instagram.com') ? (
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+                                                        ) : (
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
+                                                        )}
+                                                    </a>
+                                                )}
+                                            </div>
                                             <p className="text-zinc-400 text-lg leading-relaxed max-w-3xl">{(expandedVideo as Video).description}</p>
 
 

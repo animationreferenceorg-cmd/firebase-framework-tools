@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/popover"
 import { useDonate } from '@/hooks/use-donate';
 import { useUser } from '@/hooks/use-user';
+import { useRouter } from 'next/navigation';
 
 interface DonateDialogProps {
     children?: React.ReactNode;
@@ -38,9 +39,44 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
 
     const { handleDonate, isCheckingOut } = useDonate();
     const { userProfile } = useUser();
+    const { user } = useAuth();
+    const [isPortalLoading, setIsPortalLoading] = useState(false);
 
     const isPremium = userProfile?.isPremium;
     const currentTier = isPremium ? (userProfile?.tier || 'tier1') : 'free';
+
+    const handlePlanAction = async (targetTier: string, priceId: string) => {
+        if (currentTier === targetTier) {
+            onOpenChange?.(false);
+            return;
+        }
+
+        if (isPremium) {
+            // Already subscribed, send to portal to upgrade/downgrade
+            if (isPortalLoading) return;
+            setIsPortalLoading(true);
+            try {
+                const response = await fetch('/api/portal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user?.uid, returnUrl: window.location.href }),
+                });
+                const data = await response.json();
+                if (data.url) {
+                    window.location.assign(data.url);
+                } else {
+                    toast({ title: 'Error', description: data.error || 'Failed to open portal', variant: 'destructive' });
+                }
+            } catch (e: any) {
+                toast({ title: 'Error', description: 'Failed to open billing portal', variant: 'destructive' });
+            } finally {
+                setIsPortalLoading(false);
+            }
+        } else {
+            // New subscription
+            handleDonate(priceId);
+        }
+    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -148,8 +184,8 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                             </ul>
                             <div className="mt-auto">
                                 <Button
-                                    onClick={() => currentTier === 'tier1' ? onOpenChange?.(false) : handleDonate('price_1SFgUc59QHehw05fROtqwkLN')}
-                                    disabled={isCheckingOut || currentTier === 'tier1'}
+                                    onClick={() => handlePlanAction('tier1', 'price_1SFgUc59QHehw05fROtqwkLN')}
+                                    disabled={isCheckingOut || isPortalLoading || currentTier === 'tier1'}
                                     className={cn(
                                         "w-full border transition-all",
                                         currentTier === 'tier1' 
@@ -157,7 +193,7 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                                             : "bg-white/5 hover:bg-blue-500/20 text-white border-white/10 hover:border-blue-500/50"
                                     )}
                                 >
-                                    {isCheckingOut ? 'Loading...' : currentTier === 'tier1' ? 'Current Plan' : 'Donate $1'}
+                                    {isCheckingOut || isPortalLoading ? 'Loading...' : currentTier === 'tier1' ? 'Current Plan' : isPremium ? 'Change Plan' : 'Donate $1'}
                                 </Button>
                             </div>
                         </div>
@@ -184,8 +220,8 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                             </ul>
                             <div className="mt-auto">
                                 <Button
-                                    onClick={() => currentTier === 'tier2' ? onOpenChange?.(false) : handleDonate('price_1SFgiV59QHehw05fc0lPRRf7')}
-                                    disabled={isCheckingOut || currentTier === 'tier2'}
+                                    onClick={() => handlePlanAction('tier2', 'price_1SFgiV59QHehw05fc0lPRRf7')}
+                                    disabled={isCheckingOut || isPortalLoading || currentTier === 'tier2'}
                                     className={cn(
                                         "w-full border transition-all",
                                         currentTier === 'tier2'
@@ -193,7 +229,7 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                                             : "bg-white/5 hover:bg-purple-500/20 text-white border-white/10 hover:border-purple-500/50"
                                     )}
                                 >
-                                    {isCheckingOut ? 'Loading...' : currentTier === 'tier2' ? 'Current Plan' : 'Donate $2'}
+                                    {isCheckingOut || isPortalLoading ? 'Loading...' : currentTier === 'tier2' ? 'Current Plan' : isPremium ? 'Change Plan' : 'Donate $2'}
                                 </Button>
                             </div>
                         </div>
@@ -223,8 +259,8 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                             </ul>
                             <div className="mt-auto">
                                 <Button
-                                    onClick={() => currentTier === 'tier5' ? onOpenChange?.(false) : handleDonate('price_1SFgiq59QHehw05fy017h1gR')}
-                                    disabled={isCheckingOut || currentTier === 'tier5'}
+                                    onClick={() => handlePlanAction('tier5', 'price_1SFgiq59QHehw05fy017h1gR')}
+                                    disabled={isCheckingOut || isPortalLoading || currentTier === 'tier5'}
                                     className={cn(
                                         "w-full h-12 shadow-lg font-bold transition-all",
                                         currentTier === 'tier5'
@@ -232,7 +268,7 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                                             : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white"
                                     )}
                                 >
-                                    {isCheckingOut ? 'Loading...' : currentTier === 'tier5' ? 'Current Plan' : 'Donate $5'}
+                                    {isCheckingOut || isPortalLoading ? 'Loading...' : currentTier === 'tier5' ? 'Current Plan' : isPremium ? 'Change Plan' : 'Donate $5'}
                                 </Button>
                             </div>
                         </div>

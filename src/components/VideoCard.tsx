@@ -181,9 +181,9 @@ export function VideoCard({ video, poster }: VideoCardProps) {
                 window.open(video.originalUrl, '_blank', 'noopener,noreferrer');
               }}
               className={cn(
-                "absolute top-3 right-3 z-[110] bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full p-2.5 text-white shadow-xl cursor-pointer",
+                "absolute top-3 left-3 z-[110] bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full p-2.5 text-white shadow-xl cursor-pointer",
                 "transform transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
-                "scale-50 -translate-y-4 opacity-0 group-hover/card:scale-100 group-hover/card:translate-y-0 group-hover/card:opacity-100"
+                "scale-50 -translate-x-4 opacity-0 group-hover/card:scale-100 group-hover/card:translate-x-0 group-hover/card:opacity-100"
               )}
               title="View original post"
             >
@@ -200,7 +200,11 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   }
 
   // --- Dedicated Component for Community/Social Cards ---
-  if (video.type === 'social' || (video.type as string) === 'instagram') {
+  const isSocialType = video.type === 'social' || (video.type as string) === 'instagram';
+  const hasNoThumbnail = !imageUrl || imageUrl.includes('placehold.co') || imageUrl === '';
+  const isSocialLink = video.originalUrl && (video.originalUrl.includes('instagram.com') || video.originalUrl.includes('tiktok.com'));
+  
+  if (isSocialType || (isSocialLink && hasNoThumbnail)) {
     return (
       <Dialog open={isPlayerOpen} onOpenChange={setIsPlayerOpen}>
         <div
@@ -326,9 +330,9 @@ export function VideoCard({ video, poster }: VideoCardProps) {
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()} // Prevent opening the video player when clicking the link
             className={cn(
-              "absolute top-3 right-3 z-[110] bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full p-2.5 text-white shadow-xl",
+              "absolute top-3 left-3 z-[110] bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full p-2.5 text-white shadow-xl",
               "transform transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
-              isHovered ? "scale-100 translate-y-0 opacity-100" : "scale-50 -translate-y-4 opacity-0 pointer-events-none"
+              isHovered ? "scale-100 translate-x-0 opacity-100" : "scale-50 -translate-x-4 opacity-0 pointer-events-none"
             )}
             title="View original post"
           >

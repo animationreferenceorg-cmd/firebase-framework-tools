@@ -81,6 +81,7 @@ const formSchema = (isShort: boolean, isReference: boolean) => z.object({
   tags: z.array(z.string()).min(isReference ? 0 : 1, "Please add at least one tag."),
   categoryIds: z.array(z.string()).min(isReference ? 0 : 1, "Please select at least one category."),
   uploader: z.string().optional(),
+  originalUrl: z.string().optional(),
 }).superRefine((data, ctx) => {
   if (data.videoSourceType === 'url' && (!data.videoUrl || data.videoUrl.trim() === '')) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Video URL is required.", path: ['videoUrl'] });
@@ -656,6 +657,7 @@ export default function VideoForm({ video, isShort, isReference = false, default
       videoSourceType: video?.videoUrl ? 'url' : 'upload',
       thumbnailSourceType: video?.thumbnailUrl ? 'url' : 'upload',
       uploader: video?.uploader || "",
+      originalUrl: video?.originalUrl || "",
     },
   })
 
@@ -969,7 +971,7 @@ export default function VideoForm({ video, isShort, isReference = false, default
         status: statusOverride || video?.status || 'published', // Default to published if unknown
         createdAt: video?.createdAt || serverTimestamp(),
         uploader: values.uploader || '',
-        originalUrl: video?.originalUrl || values.videoUrl || '',
+        originalUrl: values.originalUrl || video?.originalUrl || values.videoUrl || '',
       };
 
       if (isReference) {
@@ -1270,6 +1272,21 @@ export default function VideoForm({ video, isShort, isReference = false, default
                   </FormItem>
                 )}
               />
+              {/* Original Post URL */}
+              <FormField
+                control={control}
+                name="originalUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Original Post URL (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. https://instagram.com/p/..." {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={control}
                 name="uploader"

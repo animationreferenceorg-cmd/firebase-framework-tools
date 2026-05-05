@@ -140,6 +140,9 @@ export function VideoCard({ video, poster }: VideoCardProps) {
 
   const videoUrlForPreview = video.videoUrl;
 
+  // Universal: show link badge on ANY video that has an uploader or originalUrl
+  const linkUrl = video.originalUrl || (video.uploader ? video.videoUrl : null);
+
   if (video.isShort || poster) {
     return (
       <Link href={`/shorts/${video.id}`} className="w-full cursor-pointer group/card block">
@@ -172,25 +175,21 @@ export function VideoCard({ video, poster }: VideoCardProps) {
             <PlayCircle className="h-12 w-12 text-white/80" />
           </div>
           
-          {/* Source Link Pop-out for Shorts */}
-          {video.originalUrl && (
+          {/* Original post link — always visible top-left for any video with uploader/originalUrl */}
+          {linkUrl && (
             <div
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                window.open(video.originalUrl, '_blank', 'noopener,noreferrer');
+                window.open(linkUrl, '_blank', 'noopener,noreferrer');
               }}
-              className={cn(
-                "absolute top-3 left-3 z-[110] bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full p-2.5 text-white shadow-xl cursor-pointer",
-                "transform transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
-                "scale-50 -translate-x-4 opacity-0 group-hover/card:scale-100 group-hover/card:translate-x-0 group-hover/card:opacity-100"
-              )}
+              className="absolute top-3 left-3 z-[110] flex items-center justify-center w-10 h-10 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-xl hover:shadow-[0_0_16px_rgba(236,72,153,0.7)] cursor-pointer transition-all duration-300 animate-bounce hover:animate-none hover:scale-110"
               title="View original post"
             >
-              {video.originalUrl.toLowerCase().includes('instagram.com') ? (
-                <Instagram className="w-5 h-5" />
+              {linkUrl.toLowerCase().includes('instagram.com') ? (
+                <Instagram className="w-4 h-4" />
               ) : (
-                <ExternalLink className="w-5 h-5" />
+                <ExternalLink className="w-4 h-4" />
               )}
             </div>
           )}
@@ -398,7 +397,23 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           </div>
         )}
         
-        {/* Bouncing link moved to bottom title bar */}
+        {/* Permanent top-left badge for any video with uploader/originalUrl — shows across all pages */}
+        {linkUrl && (
+          <a
+            href={linkUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="absolute top-3 left-3 z-[110] flex items-center justify-center w-10 h-10 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-xl hover:shadow-[0_0_16px_rgba(236,72,153,0.7)] transition-all duration-300 animate-bounce hover:animate-none hover:scale-110"
+            title="View original post"
+          >
+            {linkUrl.toLowerCase().includes('instagram.com') ? (
+              <Instagram className="w-4 h-4" />
+            ) : (
+              <ExternalLink className="w-4 h-4" />
+            )}
+          </a>
+        )}
 
         {!video.isShort && !poster && video.videoUrl && isHovered && !isPlayerOpen && (
           <div className={cn(

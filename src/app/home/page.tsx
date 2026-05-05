@@ -92,14 +92,16 @@ export default function BetaPage() {
         // 0. Global Filter: Remove Shorts
         let result = allVideos.filter(v => !v.isShort);
 
-        // 1. Tab-specific filtering (Community vs Main)
+        // 1. Tab-specific filtering
         if (activeTab === 'community') {
-            // Show ONLY social imports in Community tab
-            result = result.filter(v => v.type === 'social' || (v.type as string) === 'instagram');
-        } else {
-            // Hide social imports from Featured, Latest, Trending
-            result = result.filter(v => v.type !== 'social' && (v.type as string) !== 'instagram');
+            // Community tab: show ONLY social imports / uploader-tagged videos
+            result = result.filter(v =>
+                v.type === 'social' ||
+                (v.type as string) === 'instagram' ||
+                !!v.uploader
+            );
         }
+        // All other tabs (Featured, Latest, Trending): show ALL videos including community ones
 
         // 2. Filter by Type (2D / 3D)
         if (activeType !== 'all') {
@@ -117,18 +119,14 @@ export default function BetaPage() {
             });
         }
 
-        // 2. Sort by Tab
+        // 3. Sort by Tab
         if (activeTab === 'featured') {
-            // For now, simulate "Featured" by picking items with high play counts or just "trending" logic + some editorial picks
-            // Since we don't have a 'featured' flag, we'll randomize efficiently
-            // Ideally this should use a 'featured' field from DB
             result = [...result].sort(() => 0.5 - Math.random());
         } else if (activeTab === 'latest') {
             result = [...result].reverse();
         } else if (activeTab === 'trending') {
             result = [...result].sort(() => 0.5 - Math.random());
         }
-        // 'community' is default order for now
 
         return result;
     }, [allVideos, activeType, activeTab]);

@@ -201,21 +201,21 @@ export default function ProfilePage() {
                 </span>
               </p>
               <p className="text-muted-foreground text-sm">
-                {userProfile?.isPremium
-                  ? `Your subscription is ${userProfile?.subscriptionStatus || 'active'}. Thank you for your support!`
-                  : 'Upgrade to a $1, $2, or $5 plan to support the creator!'}
+                {!userProfile?.isPremium && 'Upgrade to a $1, $2, or $5 plan to support the creator!'}
+                {userProfile?.tier === 'tier1' && 'Upgrade to a $2 or $5 plan to unlock more moodboards and priority support!'}
+                {userProfile?.tier === 'tier2' && 'Upgrade to the $5 Pro plan to unlock unlimited features!'}
+                {userProfile?.tier === 'tier5' && 'You have unlocked all features. Thank you for your incredible support!'}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {userProfile?.isPremium ? (
-                <Button variant="secondary" onClick={handlePortal} disabled={isPortalLoading}>
-                  <CreditCard className="mr-2 h-4 w-4" />
+              <Button variant="default" onClick={() => setShowDonateDialog(true)} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold">
+                <CreditCard className="mr-2 h-4 w-4" />
+                {userProfile?.isPremium && userProfile?.tier !== 'tier5' ? 'Upgrade Plan' : userProfile?.tier === 'tier5' ? 'View Plans' : 'Upgrade Plan'}
+              </Button>
+              
+              {userProfile?.isPremium && (
+                <Button variant="secondary" onClick={handlePortal} disabled={isPortalLoading} className="bg-white/10 hover:bg-white/20 text-white border-0">
                   {isPortalLoading ? 'Loading...' : 'Manage Billing'}
-                </Button>
-              ) : (
-                <Button variant="default" onClick={() => setShowDonateDialog(true)} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold">
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Upgrade Plan
                 </Button>
               )}
             </div>

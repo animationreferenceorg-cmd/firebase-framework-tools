@@ -56,10 +56,13 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
             if (isPortalLoading) return;
             setIsPortalLoading(true);
             try {
+                const url = new URL(window.location.href);
+                url.searchParams.set('sync', 'true');
+                
                 const response = await fetch('/api/portal', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: user?.uid, returnUrl: window.location.href }),
+                    body: JSON.stringify({ userId: user?.uid, returnUrl: url.toString() }),
                 });
                 const data = await response.json();
                 if (data.url) {

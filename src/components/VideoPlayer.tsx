@@ -297,11 +297,11 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                 </div>
             )}
 
-            {/* Circular Original Post Link Overlay (Top-Left) */}
+            {/* Bouncing Original Post Link — Top-Left, appears on hover */}
             {video.originalUrl && (
                 <div
                     className={cn(
-                        "absolute top-6 left-6 z-50 transition-all duration-500 transform ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+                        "absolute top-4 left-4 z-50 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
                         showControls
                             ? "opacity-100 translate-y-0 scale-100"
                             : "opacity-0 -translate-y-4 scale-50 pointer-events-none"
@@ -312,7 +312,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                         href={video.originalUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center w-12 h-12 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-xl hover:shadow-[0_0_20px_rgba(236,72,153,0.6)] transition-all duration-300 group/link"
+                        className="flex items-center justify-center w-12 h-12 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-xl hover:shadow-[0_0_24px_rgba(236,72,153,0.7)] transition-all duration-300 animate-bounce hover:animate-none hover:scale-110"
                         title="View Original Post"
                     >
                         {video.originalUrl.toLowerCase().includes('instagram.com') ? (
@@ -320,27 +320,6 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                         ) : (
                             <ExternalLink className="w-6 h-6" />
                         )}
-                    </a>
-                </div>
-            )}
-
-            {/* Social Source Link Overlay (Top-Right) */}
-            {video.originalUrl && (
-                <div
-                    className={cn(
-                        "absolute top-6 right-6 z-50 transition-all duration-300 transform",
-                        showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
-                    )}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <a
-                        href={video.originalUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-xs font-medium px-3 py-1.5 rounded-full border border-white/10 hover:border-white/30 transition-all group/link"
-                    >
-                        <span>View Original</span>
-                        <ExternalLink className="w-3 h-3 text-zinc-400 group-hover/link:text-white transition-colors" />
                     </a>
                 </div>
             )}

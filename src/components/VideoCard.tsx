@@ -295,15 +295,34 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           </div>
 
           <DialogContent className="w-screen h-screen max-w-none m-0 p-0 rounded-none border-0 bg-[#0f0c1d]/95 backdrop-blur-xl overflow-y-auto">
-            <div className="flex flex-col h-full items-center justify-center p-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsPlayerOpen(false)}
-                className="absolute top-4 left-4 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md h-10 w-10 z-[100]"
+            {/* Back button — top RIGHT so it doesn't cover the top-left social link */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsPlayerOpen(false)}
+              className="absolute top-4 right-4 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md h-10 w-10 z-[200]"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+
+            {/* Bouncing original post link — TOP LEFT, always visible, above everything */}
+            {video.originalUrl && (
+              <a
+                href={video.originalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute top-4 left-4 z-[200] flex items-center justify-center w-14 h-14 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-[0_0_20px_rgba(236,72,153,0.5)] hover:shadow-[0_0_28px_rgba(236,72,153,0.8)] transition-all duration-300 animate-bounce hover:animate-none hover:scale-110"
+                title="View Original Post"
               >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
+                {video.originalUrl.toLowerCase().includes('instagram.com') ? (
+                  <Instagram className="w-7 h-7" />
+                ) : (
+                  <ExternalLink className="w-7 h-7" />
+                )}
+              </a>
+            )}
+
+            <div className="flex flex-col h-full items-center justify-center p-4">
               <div className="w-full max-w-6xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl relative mb-6">
                  <VideoPlayer video={video} />
               </div>
@@ -312,19 +331,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
                   {displayTitle}
                 </h1>
                 {video.originalUrl && (
-                  <a
-                    href={video.originalUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center w-12 h-12 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-xl hover:shadow-[0_0_20px_rgba(236,72,153,0.6)] transition-all duration-300 group/link animate-bounce hover:animate-none hover:scale-110"
-                    title="View Original Post"
-                  >
-                    {video.originalUrl.toLowerCase().includes('instagram.com') ? (
-                      <Instagram className="w-6 h-6" />
-                    ) : (
-                      <ExternalLink className="w-6 h-6" />
-                    )}
-                  </a>
+                  <span className="text-zinc-400 text-sm">← Click the icon above to view original post</span>
                 )}
               </div>
             </div>

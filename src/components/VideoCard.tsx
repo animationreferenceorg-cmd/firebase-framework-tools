@@ -199,7 +199,90 @@ export function VideoCard({ video, poster }: VideoCardProps) {
     )
   }
 
+  // --- Dedicated Component for Community/Social Cards ---
+  if (video.type === 'social' || (video.type as string) === 'instagram') {
+    return (
+      <Dialog open={isPlayerOpen} onOpenChange={setIsPlayerOpen}>
+        <div
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          className={cn(
+            "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lg transform-gpu transition-all duration-300 ease-in-out group/card cursor-pointer",
+            isHovered && !isPlayerOpen ? "scale-105 z-[100] shadow-2xl" : "z-0",
+            aspectRatio
+          )}
+        >
+          {/* Main Social Background */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-purple-600/30 to-pink-600/30 border border-white/10 group-hover/card:from-purple-600/40 group-hover/card:to-pink-600/40 transition-colors">
+            <Share2 className="h-12 w-12 text-white/60 mb-3 group-hover/card:scale-110 transition-transform duration-300" />
+            <span className="text-white font-bold px-4 text-center line-clamp-2 w-full drop-shadow-md">{displayTitle}</span>
+          </div>
 
+          {/* Bouncing Top-Left Original Link Animation */}
+          {video.originalUrl && (
+            <a
+              href={video.originalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()} // Prevent opening player
+              className={cn(
+                "absolute top-3 left-3 z-[110] bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full p-2.5 text-white shadow-xl",
+                "transform transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+                isHovered ? "scale-100 translate-x-0 opacity-100" : "scale-50 -translate-x-4 opacity-0 pointer-events-none"
+              )}
+              title="View original post"
+            >
+              {video.originalUrl.toLowerCase().includes('instagram.com') ? (
+                <Instagram className="w-5 h-5" />
+              ) : (
+                <ExternalLink className="w-5 h-5" />
+              )}
+            </a>
+          )}
+
+          {/* Bottom Actions Bar */}
+          <div className={cn(
+            "absolute bottom-0 left-0 right-0 p-3 transition-all duration-300 bg-black/60 backdrop-blur-sm",
+            isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
+          )}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white/90 text-black hover:bg-white backdrop-blur-sm">
+                    <PlayCircle className="fill-black h-5 w-5" />
+                  </Button>
+                </DialogTrigger>
+                <Button variant="ghost" size="icon" onClick={handleLikeToggle} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm">
+                  <Heart className={cn("text-white h-4 w-4", isLiked && "fill-red-500 text-red-500")} />
+                </Button>
+              </div>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm">
+                  <Maximize className="text-white h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+            </div>
+          </div>
+
+          <DialogContent className="w-screen h-screen max-w-none m-0 p-0 rounded-none border-0 bg-[#0f0c1d]/95 backdrop-blur-xl overflow-y-auto">
+            <div className="flex flex-col h-full items-center justify-center p-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsPlayerOpen(false)}
+                className="absolute top-4 left-4 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md h-10 w-10 z-[100]"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div className="w-full max-w-6xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl relative">
+                 <VideoPlayer video={video} />
+              </div>
+            </div>
+          </DialogContent>
+        </div>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isPlayerOpen} onOpenChange={setIsPlayerOpen}>

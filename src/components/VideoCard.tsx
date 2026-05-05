@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { useState, useRef, useMemo } from 'react';
 import Image from 'next/image';
-import { Heart, Maximize, Share2, PlayCircle, ArrowLeft } from 'lucide-react';
+import { Heart, Maximize, Share2, PlayCircle, ArrowLeft, ExternalLink, Instagram } from 'lucide-react';
 import { VideoActionsBar } from '@/components/VideoActionsBar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -237,6 +237,29 @@ export function VideoCard({ video, poster }: VideoCardProps) {
             onLoad={() => setIsImageLoaded(true)}
           />
         )}
+        
+        {/* Source Link Pop-out */}
+        {video.originalUrl && !video.isShort && !poster && (
+          <a
+            href={video.originalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()} // Prevent opening the video player when clicking the link
+            className={cn(
+              "absolute top-3 right-3 z-[110] bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full p-2.5 text-white shadow-xl",
+              "transform transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+              isHovered ? "scale-100 translate-y-0 opacity-100" : "scale-50 -translate-y-4 opacity-0 pointer-events-none"
+            )}
+            title="View original post"
+          >
+            {video.originalUrl.toLowerCase().includes('instagram.com') ? (
+              <Instagram className="w-5 h-5" />
+            ) : (
+              <ExternalLink className="w-5 h-5" />
+            )}
+          </a>
+        )}
+
         {!video.isShort && !poster && video.videoUrl && isHovered && !isPlayerOpen && (
           <div className={cn(
             "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none",

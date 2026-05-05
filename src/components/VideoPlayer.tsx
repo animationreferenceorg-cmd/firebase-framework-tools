@@ -269,9 +269,9 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                     loop
                     config={{
                         file: {
-                            attributes: {
+                            attributes: showCaptureButton ? {
                                 crossOrigin: 'anonymous'
-                            }
+                            } : {}
                         }
                     }}
                 />

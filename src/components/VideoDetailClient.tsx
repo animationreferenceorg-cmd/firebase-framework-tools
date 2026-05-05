@@ -9,7 +9,7 @@ import { VideoActionsBar } from '@/components/VideoActionsBar';
 import { useUser } from '@/hooks/use-user';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Instagram } from 'lucide-react';
 import Link from 'next/link';
 
 interface VideoDetailClientProps {
@@ -83,7 +83,24 @@ export function VideoDetailClient({ id, initialData }: VideoDetailClientProps) {
 
                     {/* Meta Info */}
                     <div className="space-y-4">
-                        <h1 className="text-3xl md:text-5xl font-bold tracking-tight">{video.title}</h1>
+                        <div className="flex items-center gap-4">
+                            <h1 className="text-3xl md:text-5xl font-bold tracking-tight">{video.title}</h1>
+                            {video.originalUrl && (
+                                <a
+                                    href={video.originalUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center justify-center w-12 h-12 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-xl hover:shadow-[0_0_20px_rgba(236,72,153,0.6)] transition-all duration-300 group/link animate-bounce hover:animate-none hover:scale-110"
+                                    title="View Original Post"
+                                >
+                                    {video.originalUrl.toLowerCase().includes('instagram.com') ? (
+                                        <Instagram className="w-6 h-6" />
+                                    ) : (
+                                        <ExternalLink className="w-6 h-6" />
+                                    )}
+                                </a>
+                            )}
+                        </div>
                         <p className="text-zinc-400 text-lg leading-relaxed max-w-3xl">{video.description}</p>
 
                         {/* Tags */}

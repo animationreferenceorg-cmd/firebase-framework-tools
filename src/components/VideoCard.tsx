@@ -150,17 +150,24 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           )}
         >
           {!isImageLoaded && <Skeleton className="absolute inset-0" />}
-          <Image
-            src={imageUrl}
-            alt={video.title}
-            fill
-            className={cn(
-              "w-full h-full object-cover transition-opacity duration-300",
-              !isImageLoaded && "opacity-0",
-            )}
-            data-ai-hint={video.dataAiHint}
-            onLoad={() => setIsImageLoaded(true)}
-          />
+          {imageUrl ? (
+            <Image
+              src={imageUrl}
+              alt={video.title}
+              fill
+              className={cn(
+                "w-full h-full object-cover transition-opacity duration-300",
+                !isImageLoaded && "opacity-0",
+              )}
+              data-ai-hint={video.dataAiHint}
+              onLoad={() => setIsImageLoaded(true)}
+            />
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-purple-900/40 to-pink-900/40 border border-white/5">
+              <PlayCircle className="h-10 w-10 text-white/40 mb-2" />
+              <span className="text-white/70 font-medium px-4 text-center text-sm line-clamp-2 w-full">{displayTitle}</span>
+            </div>
+          )}
           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/card:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
             <PlayCircle className="h-12 w-12 text-white/80" />
           </div>
@@ -205,7 +212,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           aspectRatio
         )}>
         {!isImageLoaded && <Skeleton className="absolute inset-0" />}
-        {imageUrl && (
+        {imageUrl ? (
           <Image
             src={imageUrl}
             alt={video.title}
@@ -218,6 +225,14 @@ export function VideoCard({ video, poster }: VideoCardProps) {
             data-ai-hint={video.dataAiHint}
             onLoad={() => setIsImageLoaded(true)}
           />
+        ) : (
+          <div className={cn(
+            "absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-purple-900/40 to-pink-900/40 border border-white/5",
+            (isHovered && !video.isShort && !poster) && "opacity-0"
+          )}>
+            <PlayCircle className="h-10 w-10 text-white/40 mb-2" />
+            <span className="text-white/70 font-medium px-4 text-center text-sm truncate w-full">{displayTitle}</span>
+          </div>
         )}
         
         {/* Source Link Pop-out */}

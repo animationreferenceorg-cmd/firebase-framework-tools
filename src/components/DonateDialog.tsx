@@ -40,9 +40,7 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
     const { userProfile } = useUser();
 
     const isPremium = userProfile?.isPremium;
-    // For now, we assume if they are premium, they are at least on the $1 tier
-    // A more advanced version would check the actual subscription priceId
-    const currentTier = isPremium ? 'premium' : 'free';
+    const currentTier = isPremium ? (userProfile?.tier || 'tier1') : 'free';
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -120,7 +118,7 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                                 <Button disabled={currentTier === 'free'} onClick={() => currentTier !== 'free' && onOpenChange?.(false)} className={cn(
                                     "w-full border transition-all",
                                     currentTier === 'free' 
-                                        ? "bg-white/5 text-zinc-500 border-white/5" 
+                                        ? "bg-white/5 text-zinc-500 border-white/5 cursor-not-allowed" 
                                         : "bg-white/10 hover:bg-white/20 text-white border-white/10"
                                 )}>
                                     {currentTier === 'free' ? 'Current Plan' : 'Basic Plan'}
@@ -150,16 +148,16 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                             </ul>
                             <div className="mt-auto">
                                 <Button
-                                    onClick={() => isPremium ? onOpenChange?.(false) : handleDonate('price_1SFgUc59QHehw05fROtqwkLN')}
-                                    disabled={isCheckingOut}
+                                    onClick={() => currentTier === 'tier1' ? onOpenChange?.(false) : handleDonate('price_1SFgUc59QHehw05fROtqwkLN')}
+                                    disabled={isCheckingOut || currentTier === 'tier1'}
                                     className={cn(
                                         "w-full border transition-all",
-                                        isPremium 
-                                            ? "bg-blue-500/20 text-blue-300 border-blue-500/50" 
+                                        currentTier === 'tier1' 
+                                            ? "bg-blue-500/20 text-blue-300 border-blue-500/50 cursor-not-allowed" 
                                             : "bg-white/5 hover:bg-blue-500/20 text-white border-white/10 hover:border-blue-500/50"
                                     )}
                                 >
-                                    {isCheckingOut ? 'Loading...' : isPremium ? 'Current Plan' : 'Donate $1'}
+                                    {isCheckingOut ? 'Loading...' : currentTier === 'tier1' ? 'Current Plan' : 'Donate $1'}
                                 </Button>
                             </div>
                         </div>
@@ -186,11 +184,16 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                             </ul>
                             <div className="mt-auto">
                                 <Button
-                                    onClick={() => handleDonate('price_1SFgiV59QHehw05fc0lPRRf7')}
-                                    disabled={isCheckingOut}
-                                    className="w-full bg-white/5 hover:bg-purple-500/20 text-white border border-white/10 hover:border-purple-500/50"
+                                    onClick={() => currentTier === 'tier2' ? onOpenChange?.(false) : handleDonate('price_1SFgiV59QHehw05fc0lPRRf7')}
+                                    disabled={isCheckingOut || currentTier === 'tier2'}
+                                    className={cn(
+                                        "w-full border transition-all",
+                                        currentTier === 'tier2'
+                                            ? "bg-purple-500/20 text-purple-300 border-purple-500/50 cursor-not-allowed"
+                                            : "bg-white/5 hover:bg-purple-500/20 text-white border-white/10 hover:border-purple-500/50"
+                                    )}
                                 >
-                                    {isCheckingOut ? 'Loading...' : 'Donate $2'}
+                                    {isCheckingOut ? 'Loading...' : currentTier === 'tier2' ? 'Current Plan' : 'Donate $2'}
                                 </Button>
                             </div>
                         </div>
@@ -220,11 +223,16 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
                             </ul>
                             <div className="mt-auto">
                                 <Button
-                                    onClick={() => handleDonate('price_1SFgiq59QHehw05fy017h1gR')}
-                                    disabled={isCheckingOut}
-                                    className="w-full h-12 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg font-bold"
+                                    onClick={() => currentTier === 'tier5' ? onOpenChange?.(false) : handleDonate('price_1SFgiq59QHehw05fy017h1gR')}
+                                    disabled={isCheckingOut || currentTier === 'tier5'}
+                                    className={cn(
+                                        "w-full h-12 shadow-lg font-bold transition-all",
+                                        currentTier === 'tier5'
+                                            ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/50 cursor-not-allowed"
+                                            : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white"
+                                    )}
                                 >
-                                    {isCheckingOut ? 'Loading...' : 'Donate $5'}
+                                    {isCheckingOut ? 'Loading...' : currentTier === 'tier5' ? 'Current Plan' : 'Donate $5'}
                                 </Button>
                             </div>
                         </div>

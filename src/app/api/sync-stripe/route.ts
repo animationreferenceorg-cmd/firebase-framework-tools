@@ -14,18 +14,52 @@ export async function POST(req: Request) {
         console.log(`[Sync Stripe API] Syncing for user: ${userId}, email: ${email}`);
 
         const stripe = getStripe();
+        const adminApp = getAdminApp();
+        const db = getFirestore(adminApp);
         
-        // 1. Search for customers with this email in Stripe
-        const customers = await stripe.customers.list({
-            email: email,
-            limit: 5, // Check a few just in case of duplicates
-        });
+        let customerIdsToTry = new Set<string>();
 
-        if (customers.data.length === 0) {
-            console.log(`[Sync Stripe API] No customer found in Stripe for ${email}`);
+        // 1. Try to get stripeId from customers/{uid}
+        try {
+            const customerDoc = await db.collection('customers').doc(userId).get();
+            if (customerDoc.exists && customerDoc.data()?.stripeId) {
+                customerIdsToTry.add(customerDoc.data()!.stripeId);
+            }
+        } catch (e) {}
+
+        // 2. Try to get stripeCustomerId from users/{uid}
+        try {
+            const userDoc = await db.collection('users').doc(userId).get();
+            if (userDoc.exists && userDoc.data()?.stripeCustomerId) {
+                customerIdsToTry.add(userDoc.data()!.stripeCustomerId);
+            }
+        } catch (e) {}
+
+        // 3. Search Stripe by firebaseUID metadata
+        try {
+            const searchResult = await stripe.customers.search({
+                query: `metadata['firebaseUID']:'${userId}'`,
+                limit: 5
+            });
+            searchResult.data.forEach(c => customerIdsToTry.add(c.id));
+        } catch (e) {
+            console.log("[Sync Stripe API] Search by metadata failed or not supported", e);
+        }
+
+        // 4. Search Stripe by email
+        try {
+            const emailCustomers = await stripe.customers.list({
+                email: email,
+                limit: 5,
+            });
+            emailCustomers.data.forEach(c => customerIdsToTry.add(c.id));
+        } catch (e) {}
+
+        if (customerIdsToTry.size === 0) {
+            console.log(`[Sync Stripe API] No customer found in Stripe for ${email} or ${userId}`);
             return NextResponse.json({ 
                 success: false, 
-                message: 'No Stripe customer found for this email. Make sure you used the same email for payment.' 
+                message: 'No Stripe customer found. Make sure you completed the checkout process.' 
             });
         }
 
@@ -33,24 +67,28 @@ export async function POST(req: Request) {
         let activeSub = null;
         let customerId = '';
 
-        for (const customer of customers.data) {
-            console.log(`[Sync Stripe API] Checking subscriptions for customer: ${customer.id}`);
-            const subscriptions = await stripe.subscriptions.list({
-                customer: customer.id,
-                status: 'all', // Fetch all to filter manually
-                limit: 10,
-            });
+        for (const cid of Array.from(customerIdsToTry)) {
+            console.log(`[Sync Stripe API] Checking subscriptions for customer: ${cid}`);
+            try {
+                const subscriptions = await stripe.subscriptions.list({
+                    customer: cid,
+                    status: 'all', // Fetch all to filter manually
+                    limit: 10,
+                });
 
-            // Find an active or trialing subscription
-            const foundSub = subscriptions.data.find(sub => 
-                sub.status === 'active' || sub.status === 'trialing'
-            );
+                // Find an active or trialing subscription
+                const foundSub = subscriptions.data.find(sub => 
+                    sub.status === 'active' || sub.status === 'trialing'
+                );
 
-            if (foundSub) {
-                activeSub = foundSub;
-                customerId = customer.id;
-                console.log(`[Sync Stripe API] Found ${foundSub.status} subscription: ${foundSub.id}`);
-                break;
+                if (foundSub) {
+                    activeSub = foundSub;
+                    customerId = cid;
+                    console.log(`[Sync Stripe API] Found ${foundSub.status} subscription: ${foundSub.id}`);
+                    break;
+                }
+            } catch (e) {
+                console.log(`[Sync Stripe API] Failed to fetch subs for ${cid}`, e);
             }
         }
 
@@ -72,8 +110,7 @@ export async function POST(req: Request) {
         else if (priceId === 'price_1SFgUc59QHehw05fROtqwkLN') tier = 'tier1';
 
         // 3. Update Firestore users collection using Admin SDK
-        const adminApp = getAdminApp();
-        const db = getFirestore(adminApp);
+        // (db is already initialized above)
         
         await db.collection('users').doc(userId).set({
             isPremium: true,

@@ -12,10 +12,37 @@ import type { Video } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BrowseHero } from '@/components/BrowseHero';
 import { VideoGrid } from '@/components/VideoGrid';
+import { useAuth } from '@/hooks/use-auth';
+import { useUser } from '@/hooks/use-user';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ComingSoonPage() {
   const [allVideos, setAllVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { mutate } = useUser();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // Check for checkout success
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') === 'true' && user?.uid && user?.email) {
+      toast({ title: 'Payment successful', description: 'Syncing your subscription status...' });
+      
+      fetch('/api/sync-stripe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.uid, email: user.email })
+      }).then(r => r.json()).then(data => {
+        if(data.success) {
+           toast({ title: 'Subscription Activated!', description: 'Your new plan is ready.' });
+           mutate(); // Instantly update global profile context!
+           // Clean up the URL
+           window.history.replaceState({}, '', '/');
+        }
+      }).catch(e => console.error("Sync error", e));
+    }
+  }, [user]);
 
   // Data Fetching for Hero Video
   useEffect(() => {

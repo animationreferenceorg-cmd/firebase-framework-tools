@@ -95,7 +95,8 @@ export async function POST(req: Request) {
                 break;
             }
 
-            case 'customer.subscription.deleted': {
+            case 'customer.subscription.deleted':
+            case 'customer.subscription.updated': {
                 const subscription = event.data.object as Stripe.Subscription;
                 // We need to find the user with this customer ID
                 const customerId = subscription.customer as string;
@@ -104,15 +105,27 @@ export async function POST(req: Request) {
 
                 if (!snapshot.empty) {
                     const batch = db.batch();
+                    const isDeleted = event.type === 'customer.subscription.deleted';
+                    const isCanceled = subscription.status === 'canceled' || subscription.status === 'unpaid';
+                    
+                    let tier = 'tier1';
+                    if (!isDeleted && !isCanceled && subscription.items.data.length > 0) {
+                        const priceId = subscription.items.data[0].price.id;
+                        if (priceId === 'price_1SFgiV59QHehw05fc0lPRRf7') tier = 'tier2';
+                        else if (priceId === 'price_1SFgiq59QHehw05fy017h1gR') tier = 'tier5';
+                        else if (priceId === 'price_1SFgUc59QHehw05fROtqwkLN') tier = 'tier1';
+                    }
+
                     snapshot.forEach(doc => {
                         batch.update(doc.ref, {
-                            isPremium: false,
-                            subscriptionStatus: 'canceled',
+                            isPremium: !isDeleted && !isCanceled,
+                            tier: !isDeleted && !isCanceled ? tier : null,
+                            subscriptionStatus: isDeleted ? 'canceled' : subscription.status,
                             updatedAt: new Date().toISOString()
                         });
                     });
                     await batch.commit();
-                    console.log(`Marked user(s) with customer ${customerId} as canceled`);
+                    console.log(`Updated user(s) with customer ${customerId}: ${event.type}`);
                 }
                 break;
             }

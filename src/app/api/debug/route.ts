@@ -1,80 +1,24 @@
 import { NextResponse } from 'next/server';
-import { spawn } from 'child_process';
-import os from 'os';
-
-// Helper to run shell commands
-function runCommand(command: string, args: string[]): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const process = spawn(command, args, { shell: true });
-        let stdout = '';
-        let stderr = '';
-
-        process.stdout.on('data', (data) => {
-            stdout += data.toString();
-        });
-
-        process.stderr.on('data', (data) => {
-            stderr += data.toString();
-        });
-
-        process.on('close', (code) => {
-            if (code !== 0) {
-                resolve(`Error (Code ${code}): ${stderr}`);
-            } else {
-                resolve(stdout.trim());
-            }
-        });
-
-        process.on('error', (err) => {
-            resolve(`Execution error: ${err.message}`);
-        });
-    });
-}
+import { getFirestore } from 'firebase-admin/firestore';
+import { getAdminApp } from '@/lib/firebase-admin';
 
 export async function GET() {
-    const diagnostics: any = {
-        timestamp: new Date().toISOString(),
-        os: {
-            platform: os.platform(),
-            release: os.release(),
-            tmpdir: os.tmpdir(),
-        },
-        env: {
-            pythonPath: process.env.PYTHON_PATH || 'Not Set',
-            nodeEnv: process.env.NODE_ENV,
-        }
-    };
-
     try {
-        // 1. Check Python
-        // Try reliable paths or system python
-        const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
-        diagnostics.pythonVersion = await runCommand(pythonCmd, ['--version']);
+        const adminApp = getAdminApp();
+        const db = getFirestore(adminApp);
+        
+        const usersSnap = await db.collection('users').get();
+        const users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        // 2. Check yt-dlp
-        // Try module execution first as it's most reliable
-        diagnostics.ytDlpVersion = await runCommand(pythonCmd, ['-m', 'yt_dlp', '--version']);
+        const customersSnap = await db.collection('customers').get();
+        const customers = await Promise.all(customersSnap.docs.map(async (doc) => {
+            const subsSnap = await db.collection('customers').doc(doc.id).collection('subscriptions').get();
+            const subscriptions = subsSnap.docs.map(s => ({ id: s.id, ...s.data() }));
+            return { id: doc.id, ...doc.data(), subscriptions };
+        }));
 
-        // 3. DNS Check (using node)
-        try {
-            const dns = require('dns').promises;
-            const googleIp = await dns.lookup('google.com');
-            diagnostics.dns = {
-                google: googleIp,
-            };
-            try {
-                const instaIp = await dns.lookup('instagram.com');
-                diagnostics.dns.instagram = instaIp;
-            } catch (e: any) {
-                diagnostics.dns.instagram = `Failed: ${e.message}`;
-            }
-        } catch (e: any) {
-            diagnostics.dns = `Failed: ${e.message}`;
-        }
-
-    } catch (error: any) {
-        diagnostics.error = error.message;
+        return NextResponse.json({ users, customers });
+    } catch (e: any) {
+        return NextResponse.json({ error: e.message }, { status: 500 });
     }
-
-    return NextResponse.json(diagnostics);
 }

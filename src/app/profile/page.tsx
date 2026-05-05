@@ -40,6 +40,7 @@ export default function ProfilePage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const { mutate } = useUser();
 
@@ -196,7 +197,7 @@ export default function ProfilePage() {
                     userProfile?.tier === 'tier2' ? '$2 Super Fan' :
                     userProfile?.tier === 'tier5' ? '$5 Pro' :
                     'Premium'
-                  ) : 'Free Plan'}
+                  ) : 'Basic Plan'}
                 </span>
               </p>
               <p className="text-muted-foreground text-sm">

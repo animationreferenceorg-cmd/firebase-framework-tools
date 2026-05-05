@@ -10,6 +10,7 @@ import {
   Video,
   Film,
   BookCopy,
+  Users,
 } from 'lucide-react';
 import { useUser } from '@/hooks/use-user';
 import { useRouter } from 'next/navigation';
@@ -22,6 +23,7 @@ function AdminNav() {
   const pathname = usePathname();
   const navItems = [
     { href: '/admin', label: 'Dashboard', icon: Shield },
+    { href: '/admin/users', label: 'Users & Subscriptions', icon: Users },
     { href: '/admin/videos', label: 'Videos', icon: Video },
     { href: '/admin/categories', label: 'Categories', icon: LayoutGrid },
     { href: '/admin/marketplace', label: 'Marketplace', icon: BookCopy },

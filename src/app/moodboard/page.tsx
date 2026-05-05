@@ -203,6 +203,8 @@ export default function MoodboardPage() {
                         y: item.y,
                         type: item.type as 'image' | 'video' | 'note', // Map type
                         text: item.text, // Map text
+                        width: item.width,
+                        height: item.height,
                         // If videoData is saved, use it. Otherwise try to construct/fallback.
                         video: item.videoData || (item.imageUrl ? {
                             id: item.id,
@@ -262,6 +264,8 @@ export default function MoodboardPage() {
                     type: isVideo ? 'video' : 'image',
                     x: item.x,
                     y: item.y,
+                    width: item.width,
+                    height: item.height,
                     videoData: cleanVideoData,
                     videoId: isVideo ? item.video.id : null,
                     imageUrl: !isVideo ? (item.video as any).thumbnailUrl || (item.video as any).url : null
@@ -310,6 +314,8 @@ export default function MoodboardPage() {
                                 } as Video,
                                 x: window.innerWidth / 2 - 150,
                                 y: window.innerHeight / 2 - 100,
+                                width: 384, // Default pasted image size
+                                height: 216
                             };
                             setCanvasItems(prev => [...prev, newItem]);
                         } catch (err) {
@@ -587,6 +593,8 @@ export default function MoodboardPage() {
                                                         type: isVideo ? 'video' : 'image',
                                                         x: item.x,
                                                         y: item.y,
+                                                        width: item.width,
+                                                        height: item.height,
                                                         videoData: cleanVideoData,
                                                         videoId: isVideo ? item.video.id : null,
                                                         imageUrl: !isVideo ? (item.video as any).thumbnailUrl || (item.video as any).url : null
@@ -784,6 +792,7 @@ export default function MoodboardPage() {
                                     key={item.id}
                                     item={item}
                                     index={index}
+                                    zoomScale={viewport.scale}
                                     style={{
                                         // Apply visual transform if selected and being dragged (by a group member)
                                         // activeDragItem must be one of the selected items
@@ -794,6 +803,7 @@ export default function MoodboardPage() {
                                     onRemove={() => setCanvasItems(prev => prev.filter(i => i.id !== item.id))}
                                     onMaximize={() => setExpandedVideo(item.video)}
                                     onUpdate={(id, text) => setCanvasItems(prev => prev.map(i => i.id === id ? { ...i, text } : i))}
+                                    onResize={(id, width, height) => setCanvasItems(prev => prev.map(i => i.id === id ? { ...i, width, height } : i))}
                                     isSelected={selectedItemIds.has(item.id)}
                                     onSelect={(e) => {
                                         e.stopPropagation();

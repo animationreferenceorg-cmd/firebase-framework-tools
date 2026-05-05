@@ -7,6 +7,8 @@ export interface DraggableCanvasItem {
     video: Video | LocalImage;
     x: number;
     y: number;
+    width?: number;
+    height?: number;
 }
 
 export interface DraggableSidebarItemProps {

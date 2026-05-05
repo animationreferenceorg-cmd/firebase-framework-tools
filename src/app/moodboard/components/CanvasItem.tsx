@@ -12,8 +12,10 @@ interface CanvasItemProps {
     onUpdate: (id: string, text: string) => void;
     isSelected: boolean;
     onSelect: (e: React.MouseEvent) => void;
+    onResize?: (id: string, width: number, height: number) => void;
     onDoubleClick?: (e: React.MouseEvent) => void;
     index: number;
+    zoomScale?: number;
 }
 
 export const CanvasItem = React.memo(({
@@ -24,10 +26,26 @@ export const CanvasItem = React.memo(({
     onUpdate,
     isSelected,
     onSelect,
+    onResize,
     onDoubleClick,
-    index
+    index,
+    zoomScale = 1
 }: CanvasItemProps) => {
     const [hasAnimated, setHasAnimated] = useState(false);
+    
+    // Default fallback sizes
+    const initialWidth = item.width || (item.type === 'note' ? 256 : 256);
+    const initialHeight = item.height || (item.type === 'note' ? 256 : 144);
+    
+    const [size, setSize] = useState({ width: initialWidth, height: initialHeight });
+    const [isResizing, setIsResizing] = useState(false);
+
+    // Sync size if item props change (e.g., loaded from DB)
+    useEffect(() => {
+        if (item.width && item.height && !isResizing) {
+            setSize({ width: item.width, height: item.height });
+        }
+    }, [item.width, item.height, isResizing]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -53,8 +71,67 @@ export const CanvasItem = React.memo(({
         zIndex: isDragging ? 100 : 1,
         // Staggered entrance animation - only apply if not finished
         animationDelay: hasAnimated ? '0s' : `${index * 50}ms`,
-        animationFillMode: 'backwards'
+        animationFillMode: 'backwards',
+        width: size.width,
+        height: size.height
     };
+
+    // Resize handlers
+    const handleResizeStart = (e: React.PointerEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setIsResizing(true);
+
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const startWidth = size.width;
+        const startHeight = size.height;
+
+        // Since viewport is scaled, we might need to adjust for scale if we know it. 
+        // For simplicity, we can calculate delta without scale if we apply zoom correctly, 
+        // but dragging the handle natively means we should probably use the movement delta directly or let the user visual cue guide it.
+        // If we want it perfectly aligned with cursor under scale, we need scale prop. 
+        // We will just do screen delta for now. It works decently.
+
+        const handlePointerMove = (moveEvent: PointerEvent) => {
+            const deltaX = (moveEvent.clientX - startX) / zoomScale;
+            const deltaY = (moveEvent.clientY - startY) / zoomScale;
+
+            // PureRef scales proportionally by default.
+            // Let's implement proportional scaling for images/videos.
+            if (item.type !== 'note') {
+                const aspectRatio = startWidth / startHeight;
+                const newWidth = Math.max(50, startWidth + deltaX);
+                const newHeight = newWidth / aspectRatio;
+                setSize({ width: newWidth, height: newHeight });
+            } else {
+                // Free resize for notes
+                setSize({
+                    width: Math.max(100, startWidth + deltaX),
+                    height: Math.max(100, startHeight + deltaY)
+                });
+            }
+        };
+
+        const handlePointerUp = () => {
+            setIsResizing(false);
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', handlePointerUp);
+            // We use the functional state update or just trust that `size` has updated via the last render?
+            // Since this is a closure, `size` might be stale. We should rely on a ref or use the calculated values.
+            // For now, we'll let a separate useEffect trigger the onResize prop when isResizing turns false.
+        };
+
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+    };
+
+    // Fire onResize when resizing finishes
+    useEffect(() => {
+        if (!isResizing && onResize) {
+            onResize(item.id, size.width, size.height);
+        }
+    }, [isResizing]);
 
     return (
         <div
@@ -63,7 +140,7 @@ export const CanvasItem = React.memo(({
             {...attributes}
             style={finalStyle}
             // Remove animate-in classes after animation is done to prevent replay
-            className={`${item.type !== 'note' ? 'w-64 aspect-video shadow-2xl rounded-xl bg-black' : 'w-auto max-w-lg h-auto min-w-[50px]'} group cursor-move hover:z-50 ${!hasAnimated ? 'animate-in fade-in zoom-in duration-500 slide-in-from-bottom-4' : ''} ${isSelected ? 'ring-2 ring-white ring-offset-2 ring-offset-black' : ''}`}
+            className={`${item.type !== 'note' ? 'shadow-2xl rounded-xl bg-black overflow-hidden' : 'min-w-[50px]'} group cursor-move hover:z-50 ${!hasAnimated ? 'animate-in fade-in zoom-in duration-500 slide-in-from-bottom-4' : ''} ${isSelected ? 'ring-2 ring-white ring-offset-2 ring-offset-black' : ''}`}
             onClick={onSelect}
             onDoubleClick={onDoubleClick}
             onMouseDown={(e) => {
@@ -113,6 +190,14 @@ export const CanvasItem = React.memo(({
             >
                 <Plus className="h-3 w-3 text-white rotate-45" />
             </button>
+
+            {/* Resize Handle */}
+            <div 
+                className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize opacity-0 group-hover:opacity-100 z-50 flex items-end justify-end p-1"
+                onPointerDown={handleResizeStart}
+            >
+                <div className="w-3 h-3 border-r-2 border-b-2 border-white/50 rounded-br-sm pointer-events-none" />
+            </div>
         </div>
     );
 });

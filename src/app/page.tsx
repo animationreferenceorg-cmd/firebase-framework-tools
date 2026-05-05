@@ -29,18 +29,33 @@ export default function ComingSoonPage() {
     if (params.get('success') === 'true' && user?.uid && user?.email) {
       toast({ title: 'Payment successful', description: 'Syncing your subscription status...' });
       
-      fetch('/api/sync-stripe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.uid, email: user.email })
-      }).then(r => r.json()).then(data => {
-        if(data.success) {
-           toast({ title: 'Subscription Activated!', description: 'Your new plan is ready.' });
-           mutate(); // Instantly update global profile context!
-           // Clean up the URL
-           window.history.replaceState({}, '', '/');
+      const syncWithRetry = async (retries = 3) => {
+        try {
+          const r = await fetch('/api/sync-stripe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.uid, email: user.email })
+          });
+          const data = await r.json();
+          if(data.success) {
+             toast({ title: 'Subscription Activated!', description: 'Your new plan is ready.' });
+             mutate(); // Instantly update global profile context!
+             // Clean up the URL
+             window.history.replaceState({}, '', '/');
+          } else if (retries > 0) {
+             console.log("Sync failed, retrying in 3s...", data.message);
+             setTimeout(() => syncWithRetry(retries - 1), 3000);
+          } else {
+             toast({ title: 'Sync Failed', description: data.message, variant: 'destructive' });
+             window.history.replaceState({}, '', '/');
+          }
+        } catch (e) {
+          console.error("Sync error", e);
+          if (retries > 0) setTimeout(() => syncWithRetry(retries - 1), 3000);
         }
-      }).catch(e => console.error("Sync error", e));
+      };
+
+      syncWithRetry();
     }
   }, [user]);
 

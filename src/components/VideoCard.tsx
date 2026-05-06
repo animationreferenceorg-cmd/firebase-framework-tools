@@ -5,6 +5,7 @@ import * as React from 'react';
 import { useState, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import { Heart, Maximize, Share2, PlayCircle, ArrowLeft, ExternalLink, Instagram } from 'lucide-react';
+import { CreatorBadge } from '@/components/CreatorBadge';
 import { VideoActionsBar } from '@/components/VideoActionsBar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -175,24 +176,8 @@ export function VideoCard({ video, poster }: VideoCardProps) {
             <PlayCircle className="h-12 w-12 text-white/80" />
           </div>
           
-          {/* Original post link — always visible top-left for any video with uploader/originalUrl */}
-          {linkUrl && (
-            <div
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                window.open(linkUrl, '_blank', 'noopener,noreferrer');
-              }}
-              className="absolute top-3 left-3 z-[110] flex items-center justify-center w-10 h-10 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-xl hover:shadow-[0_0_16px_rgba(236,72,153,0.7)] cursor-pointer transition-all duration-300 animate-bounce hover:animate-none hover:scale-110"
-              title="View original post"
-            >
-              {linkUrl.toLowerCase().includes('instagram.com') ? (
-                <Instagram className="w-4 h-4" />
-              ) : (
-                <ExternalLink className="w-4 h-4" />
-              )}
-            </div>
-          )}
+          {/* Subtle creator badge — top-left, always visible */}
+          <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} size="sm" />
         </div>
       </Link>
     )
@@ -249,23 +234,8 @@ export function VideoCard({ video, poster }: VideoCardProps) {
 
           {/* Bouncing link moved to bottom title bar */}
 
-          {/* Permanent top-left bouncing badge — always visible for community videos */}
-          {communityLinkUrl && (
-            <a
-              href={communityLinkUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="absolute top-3 left-3 z-[110] flex items-center justify-center w-11 h-11 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-xl hover:shadow-[0_0_20px_rgba(236,72,153,0.6)] transition-all duration-300 animate-bounce hover:animate-none hover:scale-110"
-              title="View original post"
-            >
-              {communityLinkUrl.toLowerCase().includes('instagram.com') ? (
-                <Instagram className="w-5 h-5" />
-              ) : (
-                <ExternalLink className="w-5 h-5" />
-              )}
-            </a>
-          )}
+          {/* Subtle creator badge — top-left, always visible for community videos */}
+          <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} />
 
           {/* Bottom Actions Bar */}
           <div className={cn(
@@ -397,23 +367,8 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           </div>
         )}
         
-        {/* Permanent top-left badge for any video with uploader/originalUrl — shows across all pages */}
-        {linkUrl && (
-          <a
-            href={linkUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="absolute top-3 left-3 z-[110] flex items-center justify-center w-10 h-10 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-xl hover:shadow-[0_0_16px_rgba(236,72,153,0.7)] transition-all duration-300 animate-bounce hover:animate-none hover:scale-110"
-            title="View original post"
-          >
-            {linkUrl.toLowerCase().includes('instagram.com') ? (
-              <Instagram className="w-4 h-4" />
-            ) : (
-              <ExternalLink className="w-4 h-4" />
-            )}
-          </a>
-        )}
+        {/* Subtle creator badge — top-left, always visible for any video with uploader/originalUrl */}
+        <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} />
 
         {!video.isShort && !poster && video.videoUrl && isHovered && !isPlayerOpen && (
           <div className={cn(

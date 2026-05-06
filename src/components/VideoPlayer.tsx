@@ -4,6 +4,7 @@
 import * as React from 'react';
 import type { Video } from '@/lib/types';
 import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Rewind, FastForward, Camera, ExternalLink, Instagram } from 'lucide-react';
+import { CreatorBadge } from '@/components/CreatorBadge';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
@@ -335,32 +336,19 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                 </div>
             )}
 
-            {/* Bouncing Original Post Link — Top-Left, appears on hover */}
-            {video.originalUrl && (
-                <div
-                    className={cn(
-                        "absolute top-4 left-4 z-50 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
-                        showControls
-                            ? "opacity-100 translate-y-0 scale-100"
-                            : "opacity-0 -translate-y-4 scale-50 pointer-events-none"
-                    )}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <a
-                        href={video.originalUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center w-12 h-12 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-xl hover:shadow-[0_0_24px_rgba(236,72,153,0.7)] transition-all duration-300 animate-bounce hover:animate-none hover:scale-110"
-                        title="View Original Post"
-                    >
-                        {video.originalUrl.toLowerCase().includes('instagram.com') ? (
-                            <Instagram className="w-6 h-6" />
-                        ) : (
-                            <ExternalLink className="w-6 h-6" />
-                        )}
-                    </a>
+            {/* Subtle creator badge — top-left, shown when controls are visible */}
+            {video.originalUrl || video.uploader ? (
+                <div className={cn(
+                    "absolute top-3 left-3 z-50 transition-all duration-300",
+                    showControls ? "opacity-100" : "opacity-0 pointer-events-none"
+                )}>
+                    <CreatorBadge
+                        uploader={video.uploader}
+                        originalUrl={video.originalUrl}
+                        videoUrl={video.videoUrl}
+                    />
                 </div>
-            )}
+            ) : null}
 
             {/* Center Play/Pause Button (YouTube Style) */}
             <div

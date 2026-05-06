@@ -7,7 +7,7 @@ import ReactPlayer from 'react-player/lazy';
 import type { Video, LocalImage } from '@/lib/types';
 
 import { Skeleton } from '@/components/ui/skeleton';
-import { Instagram, ExternalLink } from 'lucide-react';
+import { CreatorBadge } from '@/components/CreatorBadge';
 
 interface MoodboardItemCardProps {
     video: Video | LocalImage;
@@ -123,22 +123,14 @@ export function MoodboardItemCard({ video, className, onMaximize, playbackSpeed 
                 </button>
             )}
 
-            {/* Bouncing original post link — top-left, always visible for community/uploader videos */}
-            {isVideo && ((video as Video).originalUrl || (video as Video).uploader) && (
-                <a
-                    href={(video as Video).originalUrl || (video as Video).videoUrl || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute top-2 left-2 z-30 flex items-center justify-center w-8 h-8 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-lg hover:shadow-[0_0_12px_rgba(236,72,153,0.7)] transition-all duration-300 animate-bounce hover:animate-none hover:scale-110"
-                    title="View original post"
-                >
-                    {((video as Video).originalUrl || '').toLowerCase().includes('instagram.com') ? (
-                        <Instagram className="w-3.5 h-3.5" />
-                    ) : (
-                        <ExternalLink className="w-3.5 h-3.5" />
-                    )}
-                </a>
+            {/* Subtle creator badge — top-left */}
+            {isVideo && (
+                <CreatorBadge
+                    uploader={(video as any).uploader}
+                    originalUrl={(video as any).originalUrl}
+                    videoUrl={(video as any).videoUrl}
+                    size="sm"
+                />
             )}
         </div>
     );

@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 import type { Video, Category } from '@/lib/types';
 import { findCategoryThumbnailMatch } from '@/lib/category-utils';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Construction, Heart, LogIn } from 'lucide-react';
+import { ArrowRight, Construction, Heart, LogIn, Clock } from 'lucide-react';
 import { BrowseHero } from '@/components/BrowseHero';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FilterBar, TabOption, TypeOption } from '@/components/FilterBar';
@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { DonateDialog } from '@/components/DonateDialog';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
+import { getRecentCategoryIds } from '@/lib/recent-categories';
 
 export default function BetaPage() {
     const { user } = useAuth();
@@ -32,6 +33,9 @@ export default function BetaPage() {
     // Real liked data from user profile
     const [likedVideos, setLikedVideos] = useState<Video[]>([]);
     const [likedCategories, setLikedCategories] = useState<Category[]>([]);
+
+    // Recently viewed categories (from localStorage)
+    const [recentCategories, setRecentCategories] = useState<Category[]>([]);
 
     // Data Fetching
     useEffect(() => {
@@ -110,6 +114,15 @@ export default function BetaPage() {
         if (likedCatIds.length === 0) { setLikedCategories([]); return; }
         setLikedCategories(categories.filter(c => likedCatIds.includes(c.id)));
     }, [userProfile?.likedCategoryIds, categories]);
+
+    // Derive recently viewed categories from localStorage
+    useEffect(() => {
+        const recentIds = getRecentCategoryIds();
+        if (recentIds.length === 0 || categories.length === 0) { setRecentCategories([]); return; }
+        // Preserve the order from localStorage
+        const map = new Map(categories.map(c => [c.id, c]));
+        setRecentCategories(recentIds.map(id => map.get(id)).filter(Boolean) as Category[]);
+    }, [categories]);
 
     // Filter Logic
     const filteredVideos = useMemo(() => {
@@ -251,7 +264,18 @@ export default function BetaPage() {
                     )}
                 </div>
 
-                {/* 3. Filter Bar (Cleaned up, no ChannelBar) */}
+                {/* 3. Recently Viewed Categories */}
+                {recentCategories.length > 0 && (
+                    <div className="mb-8">
+                        <div className="flex items-center gap-2 text-zinc-400 px-1 mb-4">
+                            <Clock className="w-4 h-4" />
+                            <h3 className="text-sm font-semibold tracking-wider">Recently Viewed</h3>
+                        </div>
+                        <LikedCategoryRow categories={recentCategories} />
+                    </div>
+                )}
+
+                {/* 4. Filter Bar */}
                 <div className="mt-4 mb-4">
                     <FilterBar
                         activeTab={activeTab}

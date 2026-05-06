@@ -11,6 +11,7 @@ import { BrowseHero } from '@/components/BrowseHero';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VideoCard } from '@/components/VideoCard';
+import { CategoryViewTracker } from '@/components/CategoryViewTracker';
 
 export const revalidate = 3600;
 
@@ -147,6 +148,8 @@ export default async function Page({ params }: Props) {
 
     return (
         <div className="min-h-screen bg-transparent text-white overflow-x-hidden font-sans selection:bg-purple-500/30 -mt-24">
+            {/* Record this category view in localStorage */}
+            <CategoryViewTracker categoryId={category.id} />
 
             {/* 1. HERO SECTION */}
             {heroVideo ? (

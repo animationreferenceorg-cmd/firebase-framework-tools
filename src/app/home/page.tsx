@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, getDocs, query, limit, where } from 'firebase/firestore';
+import { collection, getDocs, query, limit, where, documentId } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Video, Category } from '@/lib/types';
 import { findCategoryThumbnailMatch } from '@/lib/category-utils';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Construction } from 'lucide-react';
+import { ArrowRight, Construction, Heart, LogIn } from 'lucide-react';
 import { BrowseHero } from '@/components/BrowseHero';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FilterBar, TabOption, TypeOption } from '@/components/FilterBar';
@@ -14,19 +14,22 @@ import { VideoGrid } from '@/components/VideoGrid';
 import { LikedVideoRow, LikedCategoryRow } from '@/components/RecentlyViewed';
 import Link from 'next/link';
 import { DonateDialog } from '@/components/DonateDialog';
+import { useAuth } from '@/hooks/use-auth';
+import { useUser } from '@/hooks/use-user';
 
 export default function BetaPage() {
+    const { user } = useAuth();
+    const { userProfile } = useUser();
     const [allVideos, setAllVideos] = useState<Video[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Filter State
-    // "Featured" is the new default tab
     const [activeTab, setActiveTab] = useState<TabOption>('featured');
     const [activeType, setActiveType] = useState<TypeOption>('all');
     const [columns, setColumns] = useState<number>(2);
 
-    // Mock Liked History (In a real app, this would come from local storage or user profile)
+    // Real liked data from user profile
     const [likedVideos, setLikedVideos] = useState<Video[]>([]);
     const [likedCategories, setLikedCategories] = useState<Category[]>([]);
 
@@ -70,14 +73,6 @@ export default function BetaPage() {
                 setAllVideos(videos);
                 setCategories(fetchedCategories);
 
-                // Simulate Liked Items (Take first few)
-                setLikedVideos(videos.filter(v => !v.isShort).slice(0, 5));
-
-                // Force "The Rookies" to appear in Liked Collections for demo
-                const rookies = fetchedCategories.find(c => c.title === "The Rookies");
-                const others = fetchedCategories.filter(c => c.title !== "The Rookies").slice(0, 10);
-                setLikedCategories(rookies ? [rookies, ...others] : others);
-
             } catch (error) {
                 console.error("Error fetching data:", error);
             } finally {
@@ -86,6 +81,35 @@ export default function BetaPage() {
         }
         fetchData();
     }, []);
+
+    // Fetch real liked videos when user profile loads
+    useEffect(() => {
+        const fetchLikedVideos = async () => {
+            const ids = userProfile?.likedVideoIds || [];
+            if (ids.length === 0) { setLikedVideos([]); return; }
+            try {
+                const chunks: Video[] = [];
+                // Firestore 'in' query max 30 items
+                for (let i = 0; i < ids.length; i += 30) {
+                    const slice = ids.slice(i, i + 30);
+                    const q = query(collection(db, 'videos'), where(documentId(), 'in', slice));
+                    const snap = await getDocs(q);
+                    snap.docs.forEach(d => chunks.push({ id: d.id, ...d.data() } as Video));
+                }
+                setLikedVideos(chunks);
+            } catch (e) {
+                console.error('Failed to fetch liked videos', e);
+            }
+        };
+        fetchLikedVideos();
+    }, [userProfile?.likedVideoIds]);
+
+    // Derive liked categories from already-fetched categories list
+    useEffect(() => {
+        const likedCatIds: string[] = userProfile?.likedCategoryIds || [];
+        if (likedCatIds.length === 0) { setLikedCategories([]); return; }
+        setLikedCategories(categories.filter(c => likedCatIds.includes(c.id)));
+    }, [userProfile?.likedCategoryIds, categories]);
 
     // Filter Logic
     const filteredVideos = useMemo(() => {
@@ -205,10 +229,26 @@ export default function BetaPage() {
 
             <div className="px-4 md:px-20 max-w-[1800px] mx-auto mt-8" id="content">
 
-                {/* 2. Recently Viewed Section (Rebranded to Liked) */}
+                {/* 2. Liked section — real user data */}
                 <div className="mb-8">
-                    <LikedCategoryRow categories={likedCategories} />
-                    <LikedVideoRow videos={likedVideos} />
+                    {!user ? (
+                        // Not signed in
+                        <div className="flex items-center justify-center gap-4 py-8 px-6 rounded-2xl border border-white/5 bg-white/[0.02] text-zinc-500">
+                            <LogIn className="w-5 h-5 flex-shrink-0" />
+                            <span className="text-sm">Please <Link href="/login" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">sign in</Link> to start saving liked videos and collections.</span>
+                        </div>
+                    ) : likedVideos.length === 0 && likedCategories.length === 0 ? (
+                        // Signed in but nothing liked yet
+                        <div className="flex items-center justify-center gap-4 py-8 px-6 rounded-2xl border border-white/5 bg-white/[0.02] text-zinc-500">
+                            <Heart className="w-5 h-5 flex-shrink-0" />
+                            <span className="text-sm">You haven't liked any videos or collections yet. Start exploring and hit ♥ to save your favourites!</span>
+                        </div>
+                    ) : (
+                        <>
+                            <LikedCategoryRow categories={likedCategories} />
+                            <LikedVideoRow videos={likedVideos} />
+                        </>
+                    )}
                 </div>
 
                 {/* 3. Filter Bar (Cleaned up, no ChannelBar) */}

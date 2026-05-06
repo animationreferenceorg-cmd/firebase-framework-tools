@@ -15,8 +15,8 @@ interface CreatorBadgeProps {
 /**
  * Subtle creator badge — top left of video cards.
  * - Resting: small frosted circle showing the creator's initial
- * - Hover (badge hover): expands to show "@username [link icon]"
- * - Clicking opens the original post in a new tab
+ * - Hover the VIDEO CARD (group/card): pill expands to show "@username [link icon]"
+ * - Click anywhere on it to open the original post in a new tab
  */
 export function CreatorBadge({
   uploader,
@@ -47,17 +47,17 @@ export function CreatorBadge({
       onClick={handleClick}
       title={`View @${displayName}'s original post`}
       className={cn(
-        'group/badge absolute top-2.5 left-2.5 z-[110] cursor-pointer select-none',
+        'absolute top-2.5 left-2.5 z-[110] cursor-pointer select-none',
         className
       )}
     >
-      {/* Expanding pill */}
+      {/* Expanding pill — expands when the parent CARD is hovered */}
       <div className={cn(
         'flex items-center overflow-hidden rounded-full',
         'bg-black/55 backdrop-blur-md border border-white/20 shadow-md',
         'transition-all duration-300 ease-in-out',
-        // Collapsed: just wide enough for the circle
-        'max-w-[32px] group-hover/badge:max-w-[200px]',
+        // Collapsed to just the circle width; expands on card hover
+        'max-w-[32px] group-hover/card:max-w-[200px]',
       )}>
         {/* Creator initial */}
         <div className={cn(
@@ -68,8 +68,8 @@ export function CreatorBadge({
           {initial}
         </div>
 
-        {/* Expanded: name + divider + link icon */}
-        <div className="flex items-center gap-1.5 pr-2 pl-1.5 opacity-0 group-hover/badge:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+        {/* Expanded content — fades in on card hover */}
+        <div className="flex items-center gap-1.5 pr-2 pl-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-200 whitespace-nowrap">
           <span className={cn('text-white/90 font-medium max-w-[110px] truncate', textSize)}>
             @{displayName}
           </span>

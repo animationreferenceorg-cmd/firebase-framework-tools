@@ -246,26 +246,6 @@ export function VideoCard({ video, poster }: VideoCardProps) {
               <h3 className="text-white font-bold text-base truncate drop-shadow-md">
                 {displayTitle}
               </h3>
-              {video.originalUrl && (
-                <a
-                  href={video.originalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()} // Prevent opening player
-                  className={cn(
-                    "flex-shrink-0 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full p-1.5 text-white shadow-xl",
-                    "transform transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
-                    isHovered ? "scale-100 opacity-100 animate-bounce" : "scale-50 opacity-0 pointer-events-none"
-                  )}
-                  title="View original post"
-                >
-                  {video.originalUrl.toLowerCase().includes('instagram.com') ? (
-                    <Instagram className="w-4 h-4" />
-                  ) : (
-                    <ExternalLink className="w-4 h-4" />
-                  )}
-                </a>
-              )}
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
@@ -297,22 +277,14 @@ export function VideoCard({ video, poster }: VideoCardProps) {
               <ArrowLeft className="h-5 w-5" />
             </Button>
 
-            {/* Bouncing original post link — TOP LEFT, always visible, above everything */}
-            {communityLinkUrl && (
-              <a
-                href={communityLinkUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="absolute top-4 left-4 z-[200] flex items-center justify-center w-14 h-14 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-[0_0_20px_rgba(236,72,153,0.5)] hover:shadow-[0_0_28px_rgba(236,72,153,0.8)] transition-all duration-300 animate-bounce hover:animate-none hover:scale-110"
-                title="View Original Post"
-              >
-                {communityLinkUrl.toLowerCase().includes('instagram.com') ? (
-                  <Instagram className="w-7 h-7" />
-                ) : (
-                  <ExternalLink className="w-7 h-7" />
-                )}
-              </a>
-            )}
+            {/* Creator badge — top left of the fullscreen dialog */}
+            <div className="absolute top-4 left-4 z-[200]">
+              <CreatorBadge
+                uploader={video.uploader}
+                originalUrl={communityLinkUrl || video.originalUrl}
+                videoUrl={video.videoUrl}
+              />
+            </div>
 
             <div className="flex flex-col h-full items-center justify-center p-4">
               <div className="w-full max-w-6xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl relative mb-6">
@@ -396,30 +368,9 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           "absolute bottom-0 left-0 right-0 p-3 opacity-0 transition-all duration-300",
           !video.isShort && !poster && "group-hover/card:opacity-100"
         )}>
-          <div className="flex items-center gap-2 mb-2">
             <h3 className="text-white font-bold text-base truncate drop-shadow-md">
               {displayTitle}
             </h3>
-            {video.originalUrl && (
-              <a
-                href={video.originalUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()} // Prevent opening the video player when clicking the link
-                className={cn(
-                  "flex-shrink-0 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full p-1.5 text-white shadow-xl",
-                  "transform transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
-                  isHovered ? "scale-100 opacity-100 animate-bounce" : "scale-50 opacity-0 pointer-events-none"
-                )}
-                title="View original post"
-              >
-                {video.originalUrl.toLowerCase().includes('instagram.com') ? (
-                  <Instagram className="w-4 h-4" />
-                ) : (
-                  <ExternalLink className="w-4 h-4" />
-                )}
-              </a>
-            )}
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">

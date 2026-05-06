@@ -265,15 +265,34 @@ export default function BetaPage() {
                 </div>
 
                 {/* 3. Recently Viewed Categories */}
-                {recentCategories.length > 0 && (
-                    <div className="mb-8">
-                        <div className="flex items-center gap-2 text-zinc-400 px-1 mb-4">
-                            <Clock className="w-4 h-4" />
-                            <h3 className="text-sm font-semibold tracking-wider">Recently Viewed</h3>
-                        </div>
-                        <LikedCategoryRow categories={recentCategories} />
+                <div className="mb-8">
+                    <div className="flex items-center gap-2 text-zinc-400 px-1 mb-4">
+                        <Clock className="w-4 h-4" />
+                        <h3 className="text-sm font-semibold tracking-wider">Recently Viewed</h3>
                     </div>
-                )}
+
+                    {recentCategories.length > 0 ? (
+                        <LikedCategoryRow categories={recentCategories} />
+                    ) : (
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-6 rounded-2xl border border-white/5 bg-white/[0.02] text-zinc-400">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
+                                    <Clock className="w-5 h-5 text-zinc-500" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-zinc-300">No recently viewed categories</p>
+                                    <p className="text-xs text-zinc-500 mt-0.5">Browse the library and categories will appear here.</p>
+                                </div>
+                            </div>
+                            <Link href="/categories">
+                                <Button variant="outline" size="sm" className="flex-shrink-0 rounded-full border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white">
+                                    Take a Browse
+                                    <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                                </Button>
+                            </Link>
+                        </div>
+                    )}
+                </div>
 
                 {/* 4. Filter Bar */}
                 <div className="mt-4 mb-4">

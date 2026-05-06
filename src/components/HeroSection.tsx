@@ -135,7 +135,7 @@ export function HeroSection({ video, isShort = false }: HeroSectionProps) {
     <div className="relative w-full h-[56.25vw] max-h-[850px] min-h-[400px]">
       <div className="absolute inset-0">
         <Image
-          src={video.thumbnailUrl}
+          src={video.thumbnailUrl || video.posterUrl || '/placeholder.png'}
           alt={video.title}
           fill
           className="object-cover"

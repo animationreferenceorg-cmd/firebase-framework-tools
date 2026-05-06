@@ -5,7 +5,7 @@ import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarTrigger, 
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Clapperboard, Film, Home, LayoutGrid, List, Rss, Shield, BookCopy, Star, Camera, User, Box, ShoppingBag, CreditCard } from 'lucide-react';
+import { Clapperboard, Film, Home, LayoutGrid, List, Rss, Shield, BookCopy, Star, Camera, User, Box, ShoppingBag, CreditCard, MessageSquare } from 'lucide-react';
 import AuthHeader from '@/components/AuthHeader';
 import { useUser } from '@/hooks/use-user';
 import { useAuth } from '@/hooks/use-auth';
@@ -23,6 +23,8 @@ import { useToast } from '@/hooks/use-toast';
 import { SidebarLink } from '@/components/SidebarLink';
 import { Button } from '@/components/ui/button';
 import { doc, updateDoc } from 'firebase/firestore';
+import { FeedbackModal } from '@/components/FeedbackModal';
+import { UpdatesModal } from '@/components/UpdatesModal';
 
 export function LayoutClient({ children }: { children: React.ReactNode }) {
     const { userProfile, loading: userProfileLoading } = useUser();
@@ -186,6 +188,11 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                                 Admin Panel
                                             </SidebarLink>
                                         </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarLink href="/admin/feedback" icon={MessageSquare} tooltip="User Feedback">
+                                                User Feedback
+                                            </SidebarLink>
+                                        </SidebarMenuItem>
                                     </SidebarMenu>
 
                                     {/* Donation Testing (Admin Only) */}
@@ -204,6 +211,10 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                             </>
                         )}
                     </SidebarContent>
+                    <SidebarFooter className="p-4 border-t border-white/5 space-y-1">
+                        <UpdatesModal />
+                        <FeedbackModal />
+                    </SidebarFooter>
                 </Sidebar>
                 <SidebarInset>
                     <div className="flex flex-col flex-1 min-h-screen relative">
@@ -214,6 +225,19 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                         )}>
                             {children}
                         </main>
+                        
+                        {!isMoodboardPage && (
+                            <footer className="mt-auto py-8 px-4 border-t border-white/5 flex flex-col items-center gap-4 text-center">
+                                <div className="max-w-md space-y-2">
+                                    <h3 className="text-sm font-semibold text-white/90">Have thoughts on the platform?</h3>
+                                    <p className="text-xs text-white/50">Your feedback helps us build the best reference tool for animators.</p>
+                                </div>
+                                <div className="w-48">
+                                    <FeedbackModal />
+                                </div>
+                                <p className="text-[10px] text-white/20 mt-4">© 2026 Animation Reference. Built for the community.</p>
+                            </footer>
+                        )}
                     </div>
                     <UploadProgressManager />
                 </SidebarInset>

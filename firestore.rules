@@ -20,6 +20,13 @@ service cloud.firestore {
     match /tags/{tagId} { allow read: if true; allow write: if isAdmin(); }
     match /shortFilmCategories/{categoryId} { allow read: if true; allow write: if isAdmin(); }
     match /shortFilmTags/{tagId} { allow read: if true; allow write: if isAdmin(); }
+    match /animationreference/{refId} { allow read: if true; allow write: if isAdmin(); }
+
+    // Feedback: Authenticated users can create, only Admin can read/manage
+    match /feedback/{feedbackId} {
+      allow create: if request.auth != null;
+      allow read, write: if isAdmin();
+    }
 
     // Users: A user can only read and write their own data, including ANY subcollections.
     match /users/{userId}/{document=**} {

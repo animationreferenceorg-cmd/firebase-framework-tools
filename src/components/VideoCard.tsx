@@ -136,7 +136,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
     });
   };
 
-  const imageUrl = (video.isShort || poster) ? video.posterUrl : video.thumbnailUrl;
+  const imageUrl = (video.isShort || poster) ? (video.posterUrl || video.thumbnailUrl || '/placeholder.png') : (video.thumbnailUrl || video.posterUrl || '/placeholder.png');
   const aspectRatio = (video.isShort || poster) ? "aspect-[2/3]" : "aspect-[3/4] md:aspect-video";
 
   const videoUrlForPreview = video.videoUrl;

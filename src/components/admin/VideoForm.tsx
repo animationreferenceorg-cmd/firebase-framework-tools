@@ -712,7 +712,7 @@ export default function VideoForm({ video, isShort, isReference = false, default
     const subscription = watch((value, { name }) => {
       if (name === 'videoUrl' || name === 'videoFile' || name === 'videoSourceType') {
         const file = value.videoFile?.[0];
-        if (value.videoSourceType === 'upload' && file) {
+        if (value.videoSourceType === 'upload' && file instanceof Blob) {
           setVideoPreview(URL.createObjectURL(file));
         } else {
           setVideoPreview(value.videoUrl || null);
@@ -720,7 +720,7 @@ export default function VideoForm({ video, isShort, isReference = false, default
       }
       if (name === 'thumbnailUrl' || name === 'thumbnailFile' || name === 'thumbnailSourceType') {
         const file = value.thumbnailFile?.[0];
-        if (value.thumbnailSourceType === 'upload' && file) {
+        if (value.thumbnailSourceType === 'upload' && file instanceof Blob) {
           setThumbnailPreview(URL.createObjectURL(file));
         } else if (value.thumbnailSourceType === 'url') {
           setThumbnailPreview(value.thumbnailUrl || null);
@@ -731,7 +731,21 @@ export default function VideoForm({ video, isShort, isReference = false, default
   }, [watch]);
 
 
-  const fetchVideoData = useCallback(async (url: string) => {
+  const fetchVideoData = useCallback(async (input: string) => {
+    let url = input.trim();
+    
+    // If it looks like an iframe embed, extract the src
+    if (url.includes('<iframe') && url.includes('src=')) {
+      const srcMatch = url.match(/src="([^"]+)"/);
+      if (srcMatch?.[1]) {
+        url = srcMatch[1];
+        // If it's a protocol-relative URL (//www.youtube.com...), add https:
+        if (url.startsWith('//')) {
+          url = 'https:' + url;
+        }
+      }
+    }
+
     const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts?|watch)\/?(?:\?v=)?|v\/|e\/|watch\?v=)|youtu\.be\/)([^"&?\/ ]{11})/;
     const vimeoRegex = /vimeo\.com\/(?:video\/)?(\d+)/;
 
@@ -753,6 +767,17 @@ export default function VideoForm({ video, isShort, isReference = false, default
       return;
     }
 
+    // NEW: Auto-generate thumbnail immediately for YouTube/Vimeo even before fetching metadata
+    const highResThumbnail = provider === 'youtube'
+      ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+      : null; // Vimeo still needs oEmbed for its specific thumbnail URL
+
+    if (highResThumbnail) {
+      setValue('thumbnailUrl', highResThumbnail, { shouldValidate: true });
+      setValue('thumbnailSourceType', 'url');
+      setThumbnailPreview(highResThumbnail);
+    }
+
     const canonicalUrl = provider === 'youtube'
       ? `https://www.youtube.com/watch?v=${videoId}`
       : `https://vimeo.com/${videoId}`;
@@ -761,12 +786,17 @@ export default function VideoForm({ video, isShort, isReference = false, default
 
     try {
       const response = await fetch(oEmbedUrl);
+      
+      if (!response.ok) {
+        console.warn(`oEmbed service returned ${response.status} for URL: ${canonicalUrl}`);
+        return;
+      }
+
       const data = await response.json();
 
       if (data.error) {
         if (data.error !== "no matching providers found") {
-          console.error('Error fetching video oEmbed data:', data.error);
-          toast({ variant: 'destructive', title: "Metadata Fetch Error", description: "An error occurred while fetching video metadata." });
+          console.warn('Metadata fetch notice:', data.error);
         }
         return;
       }
@@ -783,15 +813,11 @@ export default function VideoForm({ video, isShort, isReference = false, default
         setValue('description', newDescription, { shouldValidate: true });
       }
 
-      if (data.thumbnail_url) {
-        const highResThumbnail = (provider === 'youtube')
-          ? `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`
-          : data.thumbnail_url;
-
-        setValue('thumbnailUrl', highResThumbnail, { shouldValidate: true });
+      // If we didn't have a high-res one yet (e.g. for Vimeo), use the oEmbed one
+      if (data.thumbnail_url && !highResThumbnail) {
+        setValue('thumbnailUrl', data.thumbnail_url, { shouldValidate: true });
         setValue('thumbnailSourceType', 'url');
-        setThumbnailPreview(highResThumbnail);
-
+        setThumbnailPreview(data.thumbnail_url);
       }
 
       toast({ title: "Metadata Fetched!", description: "Title, description, and images have been auto-filled." });
@@ -804,7 +830,7 @@ export default function VideoForm({ video, isShort, isReference = false, default
 
   useEffect(() => {
     const subscription = watch((value, { name, type }) => {
-      if (name === 'videoUrl' && type === 'change' && value.videoSourceType === 'url' && value.videoUrl) {
+      if (name === 'videoUrl' && value.videoSourceType === 'url' && value.videoUrl) {
         fetchVideoData(value.videoUrl);
       }
     });
@@ -1202,7 +1228,17 @@ export default function VideoForm({ video, isShort, isReference = false, default
               <CardHeader><CardTitle>Thumbnail</CardTitle></CardHeader>
               <CardContent>
                 <div className="relative w-full aspect-video rounded-lg overflow-hidden border-2 border-dashed border-border mb-4">
-                  {thumbnailPreview ? <Image src={thumbnailPreview} alt="Thumbnail preview" fill className="object-cover" /> : <UploadPlaceholder text="Thumbnail (16:9)" icon={ImageIcon} />}
+                  {thumbnailPreview ? (
+                    <Image 
+                      src={thumbnailPreview} 
+                      alt="Thumbnail preview" 
+                      fill 
+                      className="object-cover" 
+                      onError={() => setThumbnailPreview('/placeholder.png')}
+                    />
+                  ) : (
+                    <UploadPlaceholder text="Thumbnail (16:9)" icon={ImageIcon} />
+                  )}
                 </div>
                 <div className="flex justify-center mb-4">
                   <ImageCaptureDialog

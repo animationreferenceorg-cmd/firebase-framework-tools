@@ -48,16 +48,17 @@ export function LikedVideoRow({ videos }: LikedVideoRowProps) {
 
 interface LikedCategoryRowProps {
     categories: Category[];
+    title?: string;
 }
 
-export function LikedCategoryRow({ categories }: LikedCategoryRowProps) {
+export function LikedCategoryRow({ categories, title = 'Liked Collections' }: LikedCategoryRowProps) {
     if (categories.length === 0) return null;
 
     return (
         <div className="space-y-4 mb-8">
             <div className="flex items-center gap-2 text-zinc-400 px-1">
                 <Heart className="w-4 h-4" />
-                <h3 className="text-sm font-semibold tracking-wider">Liked Collections</h3>
+                <h3 className="text-sm font-semibold tracking-wider">{title}</h3>
             </div>
 
             <Carousel

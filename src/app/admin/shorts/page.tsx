@@ -208,12 +208,12 @@ export default function ShortsPage() {
                 filteredVideos.map((video) => (
                   <Card key={video.id} className="flex flex-col">
                     <div className="relative aspect-video w-full rounded-t-lg overflow-hidden">
-                       <Image
-                          alt={video.title}
-                          className="object-cover"
-                          fill
-                          src={video.posterUrl}
-                        />
+                        <Image
+                           alt={video.title}
+                           className="object-cover"
+                           fill
+                           src={video.posterUrl || video.thumbnailUrl || '/placeholder.png'}
+                         />
                     </div>
                     <CardHeader className="flex-1 pb-2">
                       <CardTitle className="text-base leading-tight line-clamp-2">{video.title}</CardTitle>

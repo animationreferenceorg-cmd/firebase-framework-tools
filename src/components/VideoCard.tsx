@@ -368,10 +368,9 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           "absolute bottom-0 left-0 right-0 p-3 opacity-0 transition-all duration-300",
           !video.isShort && !poster && "group-hover/card:opacity-100"
         )}>
-            <h3 className="text-white font-bold text-base truncate drop-shadow-md">
-              {displayTitle}
-            </h3>
-          </div>
+          <h3 className="text-white font-bold text-base truncate drop-shadow-md mb-2">
+            {displayTitle}
+          </h3>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <DialogTrigger asChild>

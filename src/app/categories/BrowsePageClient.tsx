@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useInView } from 'react-intersection-observer';
+import { trackCategoryView } from '@/lib/recent-categories';
 
 const VIDEOS_PER_PAGE = 24;
 
@@ -96,6 +97,13 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
             setSelectedCategory(initialCategoryId);
         }
     }, [initialCategoryId]);
+
+    // Track category views whenever selectedCategory changes
+    useEffect(() => {
+        if (selectedCategory) {
+            trackCategoryView(selectedCategory);
+        }
+    }, [selectedCategory]);
 
     // Handle Back/Forward Button
     useEffect(() => {

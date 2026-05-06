@@ -23,12 +23,6 @@ const RECENT_UPDATES = [
     type: 'Feature'
   },
   {
-    date: 'May 5, 2026',
-    title: 'AI Cover Art',
-    description: 'Generated custom cinematic cover art for featured short films to provide a premium, consistent aesthetic.',
-    type: 'UI/UX'
-  },
-  {
     date: 'May 4, 2026',
     title: 'Admin Panel Improvements',
     description: 'Fixed video metadata fetching and added instant YouTube thumbnail generation.',

@@ -346,6 +346,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                         uploader={video.uploader}
                         originalUrl={video.originalUrl}
                         videoUrl={video.videoUrl}
+                        revealOnCardHover={false}
                     />
                 </div>
             ) : null}

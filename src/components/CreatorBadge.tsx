@@ -10,69 +10,81 @@ interface CreatorBadgeProps {
   videoUrl?: string;
   className?: string;
   size?: 'sm' | 'md';
+  /** When true, uses group-hover/card to reveal. When false, always visible (for player overlay). */
+  revealOnCardHover?: boolean;
 }
 
 /**
- * A subtle, expandable creator badge.
- * - Resting: shows creator's initial in a small circle
- * - Hover: expands to show full creator name + link icon
+ * Subtle creator tag.
+ * - Hidden at rest on the card
+ * - Fades in on card hover showing "@username [link icon]"
+ * - Clicking the icon opens the original post in a new tab
  */
-export function CreatorBadge({ uploader, originalUrl, videoUrl, className, size = 'md' }: CreatorBadgeProps) {
-  // Determine the best URL to link to
+export function CreatorBadge({
+  uploader,
+  originalUrl,
+  videoUrl,
+  className,
+  size = 'md',
+  revealOnCardHover = true,
+}: CreatorBadgeProps) {
   const linkUrl = originalUrl || videoUrl;
   if (!linkUrl || !uploader) return null;
 
-  const initial = uploader.charAt(0).toUpperCase();
+  const displayName = uploader.replace(/^@/, '');
   const isInstagram = linkUrl.toLowerCase().includes('instagram.com');
 
-  // Display name: strip leading @, truncate if too long
-  const displayName = uploader.replace(/^@/, '');
-
-  const handleClick = (e: React.MouseEvent) => {
+  const handleLinkClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     window.open(linkUrl, '_blank', 'noopener,noreferrer');
   };
 
-  const circleSize = size === 'sm' ? 'w-7 h-7 text-[11px]' : 'w-8 h-8 text-xs';
+  const textSize = size === 'sm' ? 'text-[10px]' : 'text-xs';
+  const iconSize = size === 'sm' ? 'w-3 h-3' : 'w-3.5 h-3.5';
+  const padding = size === 'sm' ? 'px-2 py-1' : 'px-2.5 py-1.5';
 
   return (
     <div
-      onClick={handleClick}
       className={cn(
-        'group/badge absolute top-2.5 left-2.5 z-[110] flex items-center cursor-pointer select-none',
+        'absolute bottom-10 left-2.5 z-[110] pointer-events-none',
+        // Hidden by default, revealed on card hover
+        revealOnCardHover
+          ? 'opacity-0 translate-y-1 group-hover/card:opacity-100 group-hover/card:translate-y-0 transition-all duration-300'
+          : 'opacity-100',
         className
       )}
-      title={`View ${uploader}'s original post`}
     >
-      {/* Expanding pill container */}
       <div className={cn(
-        'flex items-center overflow-hidden rounded-full',
-        'bg-black/60 backdrop-blur-md border border-white/20',
-        'transition-all duration-300 ease-in-out',
-        'max-w-[32px] group-hover/badge:max-w-[220px]',
-        'shadow-md hover:shadow-lg'
+        'flex items-center gap-1.5 rounded-full',
+        'bg-black/60 backdrop-blur-md border border-white/15',
+        'shadow-md',
+        padding
       )}>
-        {/* Creator initial avatar */}
-        <div className={cn(
-          'flex-shrink-0 flex items-center justify-center rounded-full font-bold text-white bg-gradient-to-br from-purple-500 to-pink-500',
-          circleSize
-        )}>
-          {initial}
-        </div>
+        {/* Creator name */}
+        <span className={cn('text-white/90 font-medium whitespace-nowrap max-w-[140px] truncate', textSize)}>
+          @{displayName}
+        </span>
 
-        {/* Expanded content - hidden until hover */}
-        <div className="flex items-center gap-1.5 pr-2 pl-1.5 opacity-0 group-hover/badge:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-          <span className="text-white text-[11px] font-medium max-w-[120px] truncate">
-            @{displayName}
-          </span>
-          <div className="w-px h-3 bg-white/20 flex-shrink-0" />
-          {isInstagram ? (
-            <Instagram className="w-3 h-3 text-pink-400 flex-shrink-0" />
-          ) : (
-            <ExternalLink className="w-3 h-3 text-blue-400 flex-shrink-0" />
+        {/* Divider */}
+        <div className="w-px h-3 bg-white/20 flex-shrink-0" />
+
+        {/* Link icon — this part IS clickable */}
+        <button
+          onClick={handleLinkClick}
+          className={cn(
+            'pointer-events-auto flex items-center justify-center rounded-full p-0.5',
+            'text-white/70 hover:text-white transition-colors duration-150',
+            'hover:bg-white/10'
           )}
-        </div>
+          title={`View ${uploader}'s original post`}
+        >
+          {isInstagram ? (
+            <Instagram className={iconSize} />
+          ) : (
+            <ExternalLink className={iconSize} />
+          )}
+        </button>
       </div>
     </div>
   );

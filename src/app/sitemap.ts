@@ -38,23 +38,86 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             changeFrequency: 'monthly',
             priority: 0.3,
         },
+        // Premium Resource Guides
+        {
+            url: `${BASE_URL}/resources/best-animation-reference-websites`,
+            lastModified: new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.9,
+        },
+        {
+            url: `${BASE_URL}/resources/how-to-analyze-animation-reference`,
+            lastModified: new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.9,
+        },
+        {
+            url: `${BASE_URL}/resources/combat-animation-reference`,
+            lastModified: new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.9,
+        },
+        {
+            url: `${BASE_URL}/resources/personal-animation-vault`,
+            lastModified: new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.9,
+        },
+        {
+            url: `${BASE_URL}/resources/12-principles-of-animation-reference`,
+            lastModified: new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.9,
+        },
+        {
+            url: `${BASE_URL}/resources/locomotion-animation-reference`,
+            lastModified: new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.9,
+        },
+        {
+            url: `${BASE_URL}/resources/foundations-of-life`,
+            lastModified: new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.9,
+        },
     ];
 
     try {
-        // 2. Dynamic Categories
+        // 2. Dynamic Categories (SEO Landing Pages)
         const categoriesQuery = query(
             collection(db, 'categories'),
             where('status', '==', 'published')
         );
         const categorySnapshot = await getDocs(categoriesQuery);
-        const categoryRoutes: MetadataRoute.Sitemap = categorySnapshot.docs.map((doc) => ({
-            url: `${BASE_URL}/categories?category=${doc.id}`,
-            lastModified: new Date(),
-            changeFrequency: 'weekly',
-            priority: 0.7,
-        }));
+        const categoryRoutes: MetadataRoute.Sitemap = categorySnapshot.docs.map((doc) => {
+            const data = doc.data();
+            const slug = data.slug || (data.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            return {
+                url: `${BASE_URL}/category/${slug}`,
+                lastModified: new Date(),
+                changeFrequency: 'weekly',
+                priority: 0.8,
+            };
+        });
 
-        // 3. Dynamic Videos (Latest 200 to keep sitemap manageable)
+        // 3. Blog Posts
+        const blogQuery = query(
+            collection(db, 'blogPosts'),
+            where('status', '==', 'published')
+        );
+        const blogSnapshot = await getDocs(blogQuery);
+        const blogRoutes: MetadataRoute.Sitemap = blogSnapshot.docs.map((doc) => {
+            const data = doc.data();
+            return {
+                url: `${BASE_URL}/blog/${data.slug}`,
+                lastModified: new Date(),
+                changeFrequency: 'weekly',
+                priority: 0.7,
+            };
+        });
+
+        // 4. Dynamic Videos (Latest 200)
         const videosQuery = query(
             collection(db, 'videos'),
             where('status', '==', 'published'),
@@ -72,7 +135,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             };
         });
 
-        return [...staticRoutes, ...categoryRoutes, ...videoRoutes];
+        return [...staticRoutes, ...categoryRoutes, ...blogRoutes, ...videoRoutes];
     } catch (error) {
         console.error('Error generating sitemap:', error);
         // Return at least static routes if Firestore fails

@@ -11,6 +11,7 @@ import {
   Film,
   BookCopy,
   Users,
+  BookOpen,
 } from 'lucide-react';
 import { useUser } from '@/hooks/use-user';
 import { useRouter } from 'next/navigation';
@@ -28,6 +29,7 @@ function AdminNav() {
     { href: '/admin/categories', label: 'Categories', icon: LayoutGrid },
     { href: '/admin/marketplace', label: 'Marketplace', icon: BookCopy },
     { href: '/admin/shorts', label: 'Short Films', icon: Film },
+    { href: '/admin/blog', label: 'Articles', icon: BookOpen },
     { href: '/admin/bunny', label: 'Bunny Sync', icon: Video },
   ];
 

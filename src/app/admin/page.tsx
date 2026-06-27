@@ -4,7 +4,7 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Video, LayoutGrid } from 'lucide-react';
+import { Video, LayoutGrid, BookOpen } from 'lucide-react';
 
 export default function AdminPage() {
   return (
@@ -37,6 +37,20 @@ export default function AdminPage() {
           <CardContent>
              <Button asChild>
                 <Link href="/admin/categories">Go to Categories</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen />
+              Articles
+            </CardTitle>
+            <CardDescription>Create and manage articles optimized to rank in search engines (blog posts).</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href="/admin/blog">Go to Articles</Link>
             </Button>
           </CardContent>
         </Card>

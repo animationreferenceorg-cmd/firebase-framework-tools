@@ -13,6 +13,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -41,6 +42,9 @@ const formSchema = z.object({
   videoSourceType: z.enum(['url', 'upload']).default('url'),
   videoUrl: z.string().optional(),
   videoFile: z.any().optional(),
+  longDescription: z.string().optional(),
+  seoTitle: z.string().optional(),
+  seoDescription: z.string().optional(),
 }).superRefine((data, ctx) => {
     if (data.imageSourceType === 'url' && (!data.imageUrl || data.imageUrl.trim() === '')) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Image URL is required.", path: ['imageUrl'] });
@@ -120,6 +124,9 @@ export default function CategoryForm({ category, onSuccess }: CategoryFormProps)
       imageUrl: category?.imageUrl || "",
       videoSourceType: category?.videoUrl ? 'url' : 'upload',
       videoUrl: category?.videoUrl || "",
+      longDescription: category?.longDescription || "",
+      seoTitle: category?.seoTitle || "",
+      seoDescription: category?.seoDescription || "",
     },
   });
   
@@ -213,6 +220,9 @@ export default function CategoryForm({ category, onSuccess }: CategoryFormProps)
         description: values.description,
         imageUrl: imageUrl || 'https://placehold.co/400x300.png',
         videoUrl: videoUrl || '',
+        longDescription: values.longDescription || '',
+        seoTitle: values.seoTitle || '',
+        seoDescription: values.seoDescription || '',
       };
       
       if (category) {
@@ -286,9 +296,62 @@ export default function CategoryForm({ category, onSuccess }: CategoryFormProps)
                         name="description"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Description</FormLabel>
+                            <FormLabel>Short Description (Card text)</FormLabel>
                             <FormControl>
                                 <Textarea placeholder="Character movement and locomotion" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="longDescription"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Long Description (Landing Page Content)</FormLabel>
+                            <FormControl>
+                                <Textarea 
+                                    placeholder="Deep dive into this category. Explain what makes these references special, what artists should look for, etc. (Markdown supported)" 
+                                    className="min-h-[200px]"
+                                    {...field} 
+                                />
+                            </FormControl>
+                            <FormDescription>This text appears on the category's dedicated landing page.</FormDescription>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>SEO Optimization</CardTitle>
+                        <CardDescription>Customize how this category appears in search engines.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <FormField
+                        control={form.control}
+                        name="seoTitle"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Custom SEO Title</FormLabel>
+                            <FormControl>
+                                <Input placeholder="e.g. Animation References of Running" {...field} />
+                            </FormControl>
+                            <FormDescription>Leave blank to use the default format.</FormDescription>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="seoDescription"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Meta Description</FormLabel>
+                            <FormControl>
+                                <Textarea placeholder="Short summary for Google search results" {...field} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>

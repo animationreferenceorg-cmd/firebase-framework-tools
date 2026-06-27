@@ -3,3 +3,5 @@ config();
 
 import '@/ai/flows/video-recommendations.ts';
 import '@/ai/flows/thumbnail-generator.ts';
+import '@/ai/flows/video-categorization.ts';
+

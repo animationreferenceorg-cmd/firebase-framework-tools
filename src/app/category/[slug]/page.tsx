@@ -90,8 +90,8 @@ export async function generateMetadata(
         };
     }
 
-    const title = `${category.title} Animation References | AnimationReference.org`;
-    const description = category.description || `Browse the best curated ${category.title} animation references. High-quality clips for professional satisfaction.`;
+    const title = category.seoTitle || `Animation References of ${category.title} | AnimationReference.org`;
+    const description = category.seoDescription || category.description || `Browse the best curated ${category.title} animation references. High-quality clips for professional artists.`;
 
     return {
         title: title,
@@ -155,24 +155,32 @@ export default async function Page({ params }: Props) {
             {heroVideo ? (
                 <BrowseHero video={heroVideo}>
                     <div className="w-full h-full flex flex-col justify-center items-center text-center pb-20 animate-fade-in-up">
+                        {/* SEO Badge */}
+                        <div className="flex justify-center mb-8 animate-fade-in">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black/40 border border-white/10 backdrop-blur-md shadow-[0_0_30px_-5px_rgba(109,40,217,0.3)]">
+                                <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
+                                <span className="text-sm font-medium text-purple-100/90 capitalize">{category.title} Specialist Library</span>
+                            </div>
+                        </div>
+
                         <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-8 leading-[1.1] md:leading-[1.1] max-w-5xl mx-auto drop-shadow-2xl">
                             <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/70">
-                                The Ultimate
+                                Animation References of
                             </span>
                             <br />
-                            <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 animate-gradient-x">
-                                {category.title} Library
+                            <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400">
+                                {category.title}
                             </span>
                         </h1>
 
-                        <p className="text-lg md:text-xl text-zinc-100 mb-12 max-w-2xl mx-auto leading-relaxed drop-shadow-lg font-medium">
-                            {category.description || `Discover thousands of curated ${category.title.toLowerCase()} clips for your next shot.`}
+                        <p className="text-lg md:text-xl text-zinc-100 mb-12 max-w-2xl mx-auto leading-relaxed drop-shadow-lg font-medium opacity-90">
+                            {category.description || `The industry's most comprehensive collection of ${category.title.toLowerCase()} animation references for professional artists.`}
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-                            <Button asChild className="h-16 px-10 rounded-2xl text-lg font-semibold bg-white text-black hover:bg-white/90 shadow-[0_10px_40px_-10px_rgba(255,255,255,0.4)] border border-white/20 transition-all duration-300 group hover:scale-105">
+                            <Button asChild className="h-16 px-10 rounded-2xl text-lg font-semibold bg-gradient-to-br from-[#7c3aed] to-[#6d28d9] hover:scale-105 shadow-[0_10px_40px_-10px_rgba(124,58,237,0.5)] border border-purple-400/20 transition-all duration-300 group text-white">
                                 <Link href={`/browse?category=${category.id}`}>
-                                    Browse Collection
+                                    Access the Full {category.title} Library
                                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                                 </Link>
                             </Button>
@@ -186,12 +194,32 @@ export default async function Page({ params }: Props) {
                 </div>
             )}
 
-            {/* 2. WHY THIS CATEGORY? (Features) */}
-            <section className="py-24 relative bg-black/20">
+            {/* 2. CONVERSATIONAL HOOK & SEO INTRO */}
+            <section className="py-20 relative bg-black/20">
+                <div className="container mx-auto px-6 max-w-4xl text-center">
+                    <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white leading-tight">
+                        Finding good <span className="text-purple-400">{category.title.toLowerCase()} animation</span> reference is hard.
+                    </h2>
+                    <p className="text-xl md:text-2xl text-zinc-400 leading-relaxed mb-8">
+                        We've curated the highest quality {category.title.toLowerCase()} animations from across the internet, all in one place for you to use. 
+                        <span className="text-white font-semibold"> Stop wasting hours searching for the perfect reference</span> when we have them all right here.
+                    </p>
+                    <div className="flex justify-center gap-4 flex-wrap">
+                        {['Keyframes', 'Breakdowns', 'Inbetweens', 'Weight & Balance'].map(tag => (
+                            <span key={tag} className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-zinc-500 uppercase tracking-widest font-bold">
+                                {tag}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* 3. WHY THIS CATEGORY? (Features) */}
+            <section className="py-24 relative">
                 <div className="container mx-auto px-6">
                     <div className="text-center mb-16">
-                        <h2 className="text-3xl md:text-5xl font-bold mb-4">Why use our <span className="text-purple-400">{category.title}</span> References?</h2>
-                        <p className="text-zinc-400 max-w-2xl mx-auto">Specific tools and curation designed for this animation style.</p>
+                        <h2 className="text-3xl md:text-5xl font-bold mb-4">Deconstruct <span className="text-purple-400">{category.title}</span> Mechanics</h2>
+                        <p className="text-zinc-400 max-w-2xl mx-auto">Master the principles of animation specifically applied to {category.title.toLowerCase()} movement.</p>
                     </div>
 
                     <div className="grid md:grid-cols-3 gap-8">
@@ -381,6 +409,26 @@ export default async function Page({ params }: Props) {
                                 </Link>
                             </Button>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* 7. SEMANTIC KEYWORD FOOTER (SEO) */}
+            <section className="py-24 border-t border-white/5 bg-black/40">
+                <div className="container mx-auto px-6">
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-8 text-center">Semantic Animation Lexicon</h3>
+                    <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm text-zinc-600">
+                        {[
+                            'Frame-by-frame analysis', 'Timing and Spacing', 'Squash and Stretch',
+                            'Weight and Balance', 'Center of Gravity', 'Arcs of Motion',
+                            'Anticipation and Follow-through', 'Smear Frames', 'Motion Blur',
+                            `${category.title} mechanics`, `${category.title} reference library`,
+                            'Professional animation workflow', 'Shot breakdown', 'Keyframe study'
+                        ].map(keyword => (
+                            <span key={keyword} className="hover:text-purple-400 transition-colors cursor-default">
+                                {keyword}
+                            </span>
+                        ))}
                     </div>
                 </div>
             </section>

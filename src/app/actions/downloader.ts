@@ -91,19 +91,46 @@ async function getYtDlpExecutor(): Promise<{ command: string; baseArgs: string[]
     const isWindows = process.platform === 'win32';
 
     if (isWindows) {
-        // Windows: use Python module
         let pythonPath = process.env.PYTHON_PATH;
-        if (!pythonPath) {
-            // Try the user's known local path first, then generic 'python'
-            const localDevPath = String.raw`C:\Users\micha\AppData\Local\Programs\Python\Python314\python.exe`;
-            if (fs.existsSync(localDevPath)) {
-                pythonPath = localDevPath;
-            } else {
-                pythonPath = 'python';
-            }
+        const localDevPath = String.raw`C:\Users\micha\AppData\Local\Programs\Python\Python314\python.exe`;
+        
+        if (pythonPath && pythonPath !== 'python') {
+            console.log(`[Downloader] Windows mode: using custom PYTHON_PATH at ${pythonPath}`);
+            return { command: pythonPath, baseArgs: ['-m', 'yt_dlp'] };
+        } else if (fs.existsSync(localDevPath)) {
+            console.log(`[Downloader] Windows mode: using Python at ${localDevPath}`);
+            return { command: localDevPath, baseArgs: ['-m', 'yt_dlp'] };
         }
-        console.log(`[Downloader] Windows mode: using Python at ${pythonPath}`);
-        return { command: pythonPath, baseArgs: ['-m', 'yt_dlp'] };
+
+        // Test if system python is real and has yt-dlp
+        const hasRealPython = await new Promise<boolean>((resolve) => {
+            exec('python --version', (error, stdout) => {
+                resolve(!error && stdout && stdout.toLowerCase().includes('python'));
+            });
+        });
+
+        if (hasRealPython) {
+            console.log(`[Downloader] Windows mode: using system python`);
+            return { command: 'python', baseArgs: ['-m', 'yt_dlp'] };
+        }
+
+        // Fallback to standalone Windows binary
+        const binaryPath = path.join(os.tmpdir(), 'yt-dlp.exe');
+        if (fs.existsSync(binaryPath)) {
+            console.log(`[Downloader] Standalone Windows yt-dlp binary already cached at ${binaryPath}`);
+            return { command: binaryPath, baseArgs: [] };
+        }
+
+        console.log('[Downloader] Downloading standalone Windows yt-dlp binary...');
+        const ytDlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
+        try {
+            await downloadFile(ytDlpUrl, binaryPath);
+            console.log(`[Downloader] Standalone Windows yt-dlp binary downloaded and ready at ${binaryPath}`);
+            return { command: binaryPath, baseArgs: [] };
+        } catch (err: any) {
+            console.error('[Downloader] Failed to download standalone Windows yt-dlp binary:', err.message);
+            throw new Error(`Could not obtain yt-dlp: ${err.message}`);
+        }
     }
 
     // Linux/production: use standalone binary

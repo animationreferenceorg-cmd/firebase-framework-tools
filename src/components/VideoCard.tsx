@@ -66,6 +66,11 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   const displayTitle = video.status === 'draft' ? 'Reference' : video.title;
   const displayDescription = video.status === 'draft' ? '' : video.description;
 
+  const isSocialType = video.type === 'social' || (video.type as string) === 'instagram';
+  const isSocialLink = video.originalUrl && (video.originalUrl.includes('instagram.com') || video.originalUrl.includes('tiktok.com'));
+  const isCommunityVideo = isSocialType || isSocialLink || !!video.uploader;
+
+
   const isLiked = useMemo(() => {
     return userProfile?.likedVideoIds?.includes(video.id) ?? false;
   }, [userProfile, video.id]);
@@ -154,7 +159,19 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           )}
         >
           {!isImageLoaded && <Skeleton className="absolute inset-0" />}
-          {imageUrl ? (
+          {isCommunityVideo && video.videoUrl ? (
+            <video
+              src={`${video.videoUrl}#t=0.1`}
+              preload="metadata"
+              muted
+              playsInline
+              onLoadedData={() => setIsImageLoaded(true)}
+              className={cn(
+                "w-full h-full object-cover transition-opacity duration-300",
+                !isImageLoaded && "opacity-0",
+              )}
+            />
+          ) : imageUrl ? (
             <Image
               src={imageUrl}
               alt={video.title}
@@ -185,9 +202,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
 
   // --- Dedicated Component for Community/Social Cards ---
   // A video is "social" if it has a social type, a social originalUrl, OR has an uploader (community submitted)
-  const isSocialType = video.type === 'social' || (video.type as string) === 'instagram';
-  const isSocialLink = video.originalUrl && (video.originalUrl.includes('instagram.com') || video.originalUrl.includes('tiktok.com'));
-  const isCommunityVideo = isSocialType || isSocialLink || !!video.uploader;
+
 
   // Best link to use: prefer originalUrl, fall back to videoUrl (for older imports)
   const communityLinkUrl = video.originalUrl || (video.uploader ? video.videoUrl : null);
@@ -207,7 +222,20 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           {!isImageLoaded && <Skeleton className="absolute inset-0" />}
           
           {/* Main Social Background / Thumbnail */}
-          {imageUrl ? (
+          {video.videoUrl ? (
+            <video
+              src={`${video.videoUrl}#t=0.1`}
+              preload="metadata"
+              muted
+              playsInline
+              onLoadedData={() => setIsImageLoaded(true)}
+              className={cn(
+                "w-full h-full object-cover transition-transform duration-500",
+                isHovered && !isPlayerOpen ? "scale-110" : "scale-100",
+                !isImageLoaded && "opacity-0"
+              )}
+            />
+          ) : imageUrl ? (
             <Image
               src={imageUrl}
               alt={video.title}

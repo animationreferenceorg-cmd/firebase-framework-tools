@@ -38,6 +38,9 @@ export interface Category {
   featuredVideoId?: string;
   hint?: string;
   sortIndex?: number;
+  longDescription?: string;
+  seoTitle?: string;
+  seoDescription?: string;
 }
 
 export interface UserProfile {
@@ -94,4 +97,19 @@ export interface Moodboard {
   updatedAt: any;
 }
 
-
+export interface BlogPost {
+  id: string;
+  slug: string;
+  title: string;
+  content: string;
+  excerpt?: string;
+  coverImage?: string;
+  status: 'draft' | 'published';
+  seoTitle?: string;
+  seoDescription?: string;
+  keywords?: string[];
+  videoIds?: string[];
+  createdAt: any;
+  updatedAt: any;
+  author?: string;
+}

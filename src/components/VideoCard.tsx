@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { Heart, Maximize, Share2, PlayCircle, ArrowLeft, ExternalLink, Instagram } from 'lucide-react';
 import { useInView } from 'react-intersection-observer';
@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
+import { incrementCounter, shouldShowDonatePrompt } from '@/lib/paywall';
 import { VideoPlayer } from './VideoPlayer';
 import Link from 'next/link';
 import ReactPlayer from 'react-player/lazy';
@@ -63,9 +64,11 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [showLimitDialog, setShowLimitDialog] = useState(false);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
+  const [triggeredByPlay, setTriggeredByPlay] = useState(false);
   const { ref: cardRef, inView: cardInView } = useInView({ threshold: 0, triggerOnce: true });
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+const [socialAccessible, setSocialAccessible] = useState(true);
 
   const displayTitle = video.status === 'draft' ? 'Reference' : video.title;
   const displayDescription = video.status === 'draft' ? '' : video.description;
@@ -81,10 +84,26 @@ export function VideoCard({ video, poster }: VideoCardProps) {
 
   const handleMouseEnter = () => {
     if (video.isShort || poster) return;
-    hoverTimeoutRef.current = setTimeout(() => {
-      setIsHovered(true);
-      if (videoRef.current) {
-        videoRef.current.play();
+    if (userProfile?.isPremium) {
+      hoverTimeoutRef.current = setTimeout(() => {
+        setIsHovered(true);
+        if (videoRef.current) {
+          videoRef.current.play();
+        }
+      }, 300);
+      return;
+    }
+    hoverTimeoutRef.current = setTimeout(async () => {
+      const prompt = await shouldShowDonatePrompt(authUser?.uid);
+      if (prompt) {
+        setTriggeredByPlay(false);
+        setShowDonateDialog(true);
+      } else {
+        setIsHovered(true);
+        if (videoRef.current) {
+          videoRef.current.play();
+        }
+        await incrementCounter(authUser?.uid);
       }
     }, 300);
   };
@@ -98,6 +117,25 @@ export function VideoCard({ video, poster }: VideoCardProps) {
     if (videoRef.current) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
+    }
+  };
+
+  const handleOpenPlayerChange = async (open: boolean) => {
+    if (open) {
+      if (userProfile?.isPremium) {
+        setIsPlayerOpen(true);
+        return;
+      }
+      const prompt = await shouldShowDonatePrompt(authUser?.uid);
+      if (prompt) {
+        setTriggeredByPlay(true);
+        setShowDonateDialog(true);
+      } else {
+        setIsPlayerOpen(true);
+        await incrementCounter(authUser?.uid);
+      }
+    } else {
+      setIsPlayerOpen(false);
     }
   };
 
@@ -155,7 +193,15 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   const imageUrl = (video.isShort || poster) ? (video.posterUrl || video.thumbnailUrl || '/placeholder.png') : (video.thumbnailUrl || video.posterUrl || '/placeholder.png');
   const aspectRatio = (video.isShort || poster) ? "aspect-[2/3]" : "aspect-[3/4] md:aspect-video";
 
-  const videoUrlForPreview = video.videoUrl;
+  // Optimize hover/card playback by using a lower resolution direct MP4 (480p) instead of HLS.
+  // This bypasses the HLS.js overhead and loads much faster.
+  const videoUrlForPreview = useMemo(() => {
+    const url = video.videoUrl;
+    if (url && url.includes('.b-cdn.net') && url.endsWith('playlist.m3u8')) {
+      return url.replace('playlist.m3u8', 'play_480p.mp4');
+    }
+    return url;
+  }, [video.videoUrl]);
 
   // Universal: show link badge on ANY video that has an uploader or originalUrl
   const linkUrl = video.originalUrl || (video.uploader ? video.videoUrl : null);
@@ -184,7 +230,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           {isCommunityVideo && video.videoUrl ? (
                 <video
                   ref={videoRef}
-                  src={cardInView ? `${video.videoUrl}#t=0.1` : undefined}
+                  src={cardInView ? `${videoUrlForPreview}#t=0.1` : undefined}
                   preload="metadata"
                   muted
                   playsInline
@@ -232,7 +278,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
 
   if (isCommunityVideo) {
     return (
-      <Dialog open={isPlayerOpen} onOpenChange={setIsPlayerOpen}>
+      <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
         <div ref={cardRef}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
@@ -248,7 +294,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           {video.videoUrl ? (
             <video
               ref={videoRef}
-              src={cardInView ? `${video.videoUrl}#t=0.1` : undefined}
+              src={cardInView ? `${videoUrlForPreview}#t=0.1` : undefined}
               preload="metadata"
               muted
               playsInline
@@ -302,13 +348,26 @@ export function VideoCard({ video, poster }: VideoCardProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white/90 text-black hover:bg-white backdrop-blur-sm">
-                    <PlayCircle className="fill-black h-5 w-5" />
-                  </Button>
-                </DialogTrigger>
-                <Button variant="ghost" size="icon" onClick={handleLikeToggle} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm">
-                  <Heart className={cn("text-white h-4 w-4", isLiked && "fill-red-500 text-red-500")} />
-                </Button>
+  <Button
+    variant="ghost"
+    size="icon"
+    className="h-8 w-8 rounded-full bg-white/90 text-black hover:bg-white backdrop-blur-sm"
+    onClick={(e) => {
+      e.stopPropagation();
+      setIsPlayerOpen(true);
+    }}
+  >
+    <PlayCircle className="fill-black h-5 w-5" />
+  </Button>
+</DialogTrigger>
+<Button
+  variant="ghost"
+  size="icon"
+  onClick={handleLikeToggle}
+  className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+>
+  <Heart className={cn("text-white h-4 w-4", isLiked && "fill-red-500 text-red-500")} />
+</Button>
               </div>
               <DialogTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm">
@@ -358,7 +417,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   }
 
   return (
-    <Dialog open={isPlayerOpen} onOpenChange={setIsPlayerOpen}>
+    <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
       <div
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -481,21 +540,25 @@ export function VideoCard({ video, poster }: VideoCardProps) {
                     <h1 className="text-3xl md:text-5xl font-bold tracking-tight">
                       {displayTitle}
                     </h1>
-                    {video.originalUrl && (
-                      <a
-                        href={video.originalUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center w-12 h-12 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-xl hover:shadow-[0_0_20px_rgba(236,72,153,0.6)] transition-all duration-300 group/link animate-bounce hover:animate-none hover:scale-110"
-                        title="View Original Post"
-                      >
-                        {video.originalUrl.toLowerCase().includes('instagram.com') ? (
-                          <Instagram className="w-6 h-6" />
-                        ) : (
-                          <ExternalLink className="w-6 h-6" />
-                        )}
-                      </a>
-                    )}
+                    {video.originalUrl && (socialAccessible ? (
+  <a
+    href={video.originalUrl}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="flex items-center justify-center w-12 h-12 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-xl hover:shadow-[0_0_20px_rgba(236,72,153,0.6)] transition-all duration-300 group/link animate-bounce hover:animate-none hover:scale-110"
+    title="View Original Post"
+  >
+    {video.originalUrl.toLowerCase().includes('instagram.com') ? (
+      <Instagram className="w-6 h-6" />
+    ) : (
+      <ExternalLink className="w-6 h-6" />
+    )}
+  </a>
+) : (
+  <span className="flex items-center justify-center w-12 h-12 bg-gray-600 rounded-full text-white opacity-50" title="Link disabled after free limit reached">
+    <ExternalLink className="w-6 h-6" />
+  </span>
+))}
                   </div>
                   {displayDescription && (
                     <p className="text-zinc-400 text-lg leading-relaxed max-w-3xl">{displayDescription}</p>
@@ -530,7 +593,17 @@ export function VideoCard({ video, poster }: VideoCardProps) {
 
       <DonateDialog
         open={showDonateDialog}
-        onOpenChange={setShowDonateDialog}
+        forceTimer={true}
+        onOpenChange={async (open) => {
+          setShowDonateDialog(open);
+          if (!open) {
+            // User closed the dialog - let them watch/resume and increment counter
+            if (triggeredByPlay) {
+              setIsPlayerOpen(true);
+            }
+            await incrementCounter(authUser?.uid);
+          }
+        }}
       />
     </Dialog >
   );

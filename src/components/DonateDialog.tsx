@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,15 +22,17 @@ import {
 } from "@/components/ui/popover"
 import { useDonate } from '@/hooks/use-donate';
 import { useUser } from '@/hooks/use-user';
+
 import { useRouter } from 'next/navigation';
 
 interface DonateDialogProps {
     children?: React.ReactNode;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
+    forceTimer?: boolean;
 }
 
-export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps) {
+export function DonateDialog({ children, open, onOpenChange, forceTimer = false }: DonateDialogProps) {
     const [selectedAmount, setSelectedAmount] = useState('1');
     const donationOptions = [
         { amount: '1', label: '$1 / month', priceId: 'price_1SFgUc59QHehw05fROtqwkLN' },
@@ -41,6 +44,31 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
     const { userProfile } = useUser();
     const { user } = useAuth();
     const [isPortalLoading, setIsPortalLoading] = useState(false);
+
+    // Timer Gating logic
+    const [seconds, setSeconds] = useState(12);
+    const [canClose, setCanClose] = useState(!forceTimer);
+
+    useEffect(() => {
+        if (!open || !forceTimer) {
+            setSeconds(12);
+            setCanClose(!forceTimer);
+            return;
+        }
+        setCanClose(false);
+        setSeconds(12);
+        const interval = setInterval(() => {
+            setSeconds((prev) => {
+                if (prev <= 1) {
+                    clearInterval(interval);
+                    setCanClose(true);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [open, forceTimer]);
 
     const isPremium = userProfile?.isPremium;
     const currentTier = isPremium ? (userProfile?.tier || 'tier1') : 'free';
@@ -81,14 +109,49 @@ export function DonateDialog({ children, open, onOpenChange }: DonateDialogProps
         }
     };
 
+    const progress = ((12 - seconds) / 12) * 100;
+
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={(val) => {
+            if (forceTimer && !canClose) return;
+            onOpenChange?.(val);
+        }}>
             {children && (
                 <DialogTrigger asChild>
                     {children}
                 </DialogTrigger>
             )}
-            <DialogContent className="max-w-5xl w-[95vw] max-h-[85vh] p-0 bg-[#050505] border-white/10 text-white flex flex-col">
+            <DialogContent 
+                onInteractOutside={(e) => {
+                    if (forceTimer && !canClose) e.preventDefault();
+                }}
+                onEscapeKeyDown={(e) => {
+                    if (forceTimer && !canClose) e.preventDefault();
+                }}
+                className={cn(
+                    "max-w-5xl w-[95vw] max-h-[85vh] p-0 bg-[#050505] border-white/10 text-white flex flex-col",
+                    forceTimer && !canClose && "[&>button]:hidden"
+                )}
+            >
+                {forceTimer && !canClose && (
+                    <div className="absolute top-4 right-4 flex items-center space-x-2 z-50 bg-[#050505]/80 py-1.5 px-3 rounded-full border border-white/10 backdrop-blur-md select-none pointer-events-none">
+                        <svg className="w-4 h-4 text-purple-400 rotate-[-90deg]" viewBox="0 0 36 36">
+                            <circle cx="18" cy="18" r="16" stroke="rgba(255,255,255,0.1)" strokeWidth="4" fill="none" />
+                            <circle
+                                cx="18"
+                                cy="18"
+                                r="16"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                                fill="none"
+                                strokeDasharray="100"
+                                strokeDashoffset={100 - progress}
+                                className="transition-all duration-1000"
+                            />
+                        </svg>
+                        <span className="text-xs font-semibold text-zinc-400">{seconds}s</span>
+                    </div>
+                )}
                 <div className="absolute inset-0 bg-grid-white/5 mask-image-gradient-b pointer-events-none" />
 
                 {/* Why Donate Info Button - Fixed Position */}

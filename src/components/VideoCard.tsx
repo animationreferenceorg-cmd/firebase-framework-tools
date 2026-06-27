@@ -83,6 +83,9 @@ export function VideoCard({ video, poster }: VideoCardProps) {
     if (video.isShort || poster) return;
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovered(true);
+      if (videoRef.current) {
+        videoRef.current.play();
+      }
     }, 300);
   };
 
@@ -92,6 +95,10 @@ export function VideoCard({ video, poster }: VideoCardProps) {
       clearTimeout(hoverTimeoutRef.current);
     }
     setIsHovered(false);
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
   };
 
   const handleLikeToggle = async (e: React.MouseEvent) => {
@@ -240,7 +247,8 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           {/* Main Social Background / Thumbnail */}
           {video.videoUrl ? (
             <video
-              src={`${video.videoUrl}#t=0.1`}
+              ref={videoRef}
+              src={cardInView ? `${video.videoUrl}#t=0.1` : undefined}
               preload="metadata"
               muted
               playsInline
@@ -381,8 +389,6 @@ export function VideoCard({ video, poster }: VideoCardProps) {
             <PlayCircle className="h-10 w-10 text-white/40 mb-2" />
             <span className="text-white/70 font-medium px-4 text-center text-sm truncate w-full">{displayTitle}</span>
           </div>
-              <span className="text-white/70 font-medium px-4 text-center text-sm truncate w-full">{displayTitle}</span>
-            </div>
           )}
         
         {/* Subtle creator badge — top-left, always visible for any video with uploader/originalUrl */}

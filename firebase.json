@@ -10,6 +10,20 @@
         "firebase.json",
         "**/.*",
         "**/node_modules/**"
+      ],
+      "redirects": [
+        { "source": "/.well-known/**", "type": 404 },
+        { "source": "/**/phpinfo*", "type": 404 },
+        { "source": "/**/phpinfo.php*", "type": 404 }
+      ],
+      "headers": [
+        {
+          "source": "/**",
+          "headers": [
+            { "key": "X-Content-Type-Options", "value": "nosniff" },
+            { "key": "X-Frame-Options", "value": "DENY" }
+          ]
+        }
       ]
     }
   ],

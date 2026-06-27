@@ -5,6 +5,8 @@ import * as React from 'react';
 import { useState, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import { Heart, Maximize, Share2, PlayCircle, ArrowLeft, ExternalLink, Instagram } from 'lucide-react';
+import { useInView } from 'react-intersection-observer';
+
 import { CreatorBadge } from '@/components/CreatorBadge';
 import { VideoActionsBar } from '@/components/VideoActionsBar';
 import { Button } from '@/components/ui/button';
@@ -61,7 +63,9 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [showLimitDialog, setShowLimitDialog] = useState(false);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
+  const { ref: cardRef, inView: cardInView } = useInView({ threshold: 0, triggerOnce: true });
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const displayTitle = video.status === 'draft' ? 'Reference' : video.title;
   const displayDescription = video.status === 'draft' ? '' : video.description;
@@ -152,7 +156,18 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   if (video.isShort || poster) {
     return (
       <Link href={`/shorts/${video.id}`} className="w-full cursor-pointer group/card block">
-        <div
+        <div ref={cardRef} onMouseEnter={() => {
+            setIsHovered(true);
+            if (videoRef.current) {
+              videoRef.current.play();
+            }
+          }} onMouseLeave={() => {
+            setIsHovered(false);
+            if (videoRef.current) {
+              videoRef.current.pause();
+              videoRef.current.currentTime = 0;
+            }
+          }}
           className={cn(
             "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lg transform-gpu transition-all duration-300 ease-in-out",
             aspectRatio
@@ -160,19 +175,20 @@ export function VideoCard({ video, poster }: VideoCardProps) {
         >
           {!isImageLoaded && <Skeleton className="absolute inset-0" />}
           {isCommunityVideo && video.videoUrl ? (
-            <video
-              src={`${video.videoUrl}#t=0.1`}
-              preload="metadata"
-              muted
-              playsInline
-              onLoadedData={() => setIsImageLoaded(true)}
-              className={cn(
-                "w-full h-full object-cover transition-opacity duration-300",
-                !isImageLoaded && "opacity-0",
-              )}
-            />
+                <video
+                  ref={videoRef}
+                  src={cardInView ? `${video.videoUrl}#t=0.1` : undefined}
+                  preload="metadata"
+                  muted
+                  playsInline
+                  onLoadedData={() => setIsImageLoaded(true)}
+                  className={cn(
+                    "w-full h-full object-cover transition-opacity duration-300",
+                    !isImageLoaded && "opacity-0",
+                  )}
+                />
           ) : imageUrl ? (
-            <Image
+            <Image loading="lazy"
               src={imageUrl}
               alt={video.title}
               fill
@@ -210,7 +226,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   if (isCommunityVideo) {
     return (
       <Dialog open={isPlayerOpen} onOpenChange={setIsPlayerOpen}>
-        <div
+        <div ref={cardRef}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           className={cn(
@@ -236,7 +252,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
               )}
             />
           ) : imageUrl ? (
-            <Image
+            <Image loading="lazy"
               src={imageUrl}
               alt={video.title}
               fill
@@ -365,12 +381,14 @@ export function VideoCard({ video, poster }: VideoCardProps) {
             <PlayCircle className="h-10 w-10 text-white/40 mb-2" />
             <span className="text-white/70 font-medium px-4 text-center text-sm truncate w-full">{displayTitle}</span>
           </div>
-        )}
+              <span className="text-white/70 font-medium px-4 text-center text-sm truncate w-full">{displayTitle}</span>
+            </div>
+          )}
         
         {/* Subtle creator badge — top-left, always visible for any video with uploader/originalUrl */}
         <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} />
 
-        {!video.isShort && !poster && video.videoUrl && isHovered && !isPlayerOpen && (
+        {!video.isShort && !poster && video.videoUrl && cardInView && isHovered && !isPlayerOpen && video.tags?.length > 0 && (
           <div className={cn(
             "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none",
             isHovered && !isPlayerOpen ? "opacity-100" : "opacity-0"

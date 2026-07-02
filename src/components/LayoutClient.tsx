@@ -11,7 +11,7 @@ import { useUser } from '@/hooks/use-user';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from './ui/skeleton';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { UploadProvider } from '@/hooks/use-upload';
 import { UploadProgressManager } from './UploadProgressManager';
 import { cn } from '@/lib/utils';
@@ -229,7 +229,9 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                 </Sidebar>
                 <SidebarInset>
                     <div className="flex flex-col flex-1 min-h-screen relative">
-                        <GlassHeader />
+                        <Suspense fallback={null}>
+                            <GlassHeader />
+                        </Suspense>
                         <main className={cn(
                             "flex-1 transition-all duration-300 ease-in-out",
                             (!isMoodboardPage && !isFeedPage) && "px-4 md:px-8 pb-8"

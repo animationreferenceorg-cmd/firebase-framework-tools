@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useDraggable } from '@dnd-kit/core';
 import { Plus } from 'lucide-react';
 import { MoodboardItemCard } from '@/components/MoodboardItemCard';
 import { DraggableCanvasItem } from '../types';
+import { StickyNoteItem } from './StickyNoteItem';
+import { TextItem } from './TextItem';
+import { ShapeItem } from './ShapeItem';
+import { DrawingItem } from './DrawingItem';
 
 interface CanvasItemProps {
     item: DraggableCanvasItem;
-    style: React.CSSProperties;
+    style?: React.CSSProperties;
     onRemove: () => void;
     onMaximize: () => void;
     onUpdate: (id: string, text: string) => void;
@@ -14,6 +17,7 @@ interface CanvasItemProps {
     onSelect: (e: React.MouseEvent) => void;
     onResize?: (id: string, width: number, height: number) => void;
     onDoubleClick?: (e: React.MouseEvent) => void;
+    onPointerDown?: (e: React.PointerEvent, item: DraggableCanvasItem) => void;
     index: number;
     zoomScale?: number;
 }
@@ -28,14 +32,15 @@ export const CanvasItem = React.memo(({
     onSelect,
     onResize,
     onDoubleClick,
+    onPointerDown,
     index,
     zoomScale = 1
 }: CanvasItemProps) => {
     const [hasAnimated, setHasAnimated] = useState(false);
     
     // Default fallback sizes
-    const initialWidth = item.width || (item.type === 'note' ? 256 : 256);
-    const initialHeight = item.height || (item.type === 'note' ? 256 : 144);
+    const initialWidth = item.width || (item.type === 'note' || item.type === 'shape' ? 256 : item.type === 'text' ? 200 : 256);
+    const initialHeight = item.height || (item.type === 'note' || item.type === 'shape' ? 256 : item.type === 'text' ? 80 : 144);
     
     const [size, setSize] = useState({ width: initialWidth, height: initialHeight });
     const [isResizing, setIsResizing] = useState(false);
@@ -54,21 +59,12 @@ export const CanvasItem = React.memo(({
         return () => clearTimeout(timer);
     }, [index]);
 
-    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-        id: item.id,
-        data: { id: item.id, type: 'canvas', video: item.video },
-    });
-
     const finalStyle: React.CSSProperties = {
         ...style,
-        transform: transform
-            ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
-            : style.transform,
         left: item.x,
         top: item.y,
         position: 'absolute',
-        opacity: isDragging ? 0 : 1, // Hide original when dragging
-        zIndex: isDragging ? 100 : 1,
+        zIndex: item.zIndex || 1,
         // Staggered entrance animation - only apply if not finished
         animationDelay: hasAnimated ? '0s' : `${index * 50}ms`,
         animationFillMode: 'backwards',
@@ -87,28 +83,21 @@ export const CanvasItem = React.memo(({
         const startWidth = size.width;
         const startHeight = size.height;
 
-        // Since viewport is scaled, we might need to adjust for scale if we know it. 
-        // For simplicity, we can calculate delta without scale if we apply zoom correctly, 
-        // but dragging the handle natively means we should probably use the movement delta directly or let the user visual cue guide it.
-        // If we want it perfectly aligned with cursor under scale, we need scale prop. 
-        // We will just do screen delta for now. It works decently.
-
         const handlePointerMove = (moveEvent: PointerEvent) => {
             const deltaX = (moveEvent.clientX - startX) / zoomScale;
             const deltaY = (moveEvent.clientY - startY) / zoomScale;
 
-            // PureRef scales proportionally by default.
-            // Let's implement proportional scaling for images/videos.
-            if (item.type !== 'note') {
+            if (item.type === 'video' || item.type === 'image') {
+                // Proportional scaling for media
                 const aspectRatio = startWidth / startHeight;
-                const newWidth = Math.max(50, startWidth + deltaX);
+                const newWidth = Math.max(100, startWidth + deltaX);
                 const newHeight = newWidth / aspectRatio;
                 setSize({ width: newWidth, height: newHeight });
             } else {
-                // Free resize for notes
+                // Free resize for text/notes/shapes
                 setSize({
-                    width: Math.max(100, startWidth + deltaX),
-                    height: Math.max(100, startHeight + deltaY)
+                    width: Math.max(80, startWidth + deltaX),
+                    height: Math.max(40, startHeight + deltaY)
                 });
             }
         };
@@ -117,9 +106,6 @@ export const CanvasItem = React.memo(({
             setIsResizing(false);
             window.removeEventListener('pointermove', handlePointerMove);
             window.removeEventListener('pointerup', handlePointerUp);
-            // We use the functional state update or just trust that `size` has updated via the last render?
-            // Since this is a closure, `size` might be stale. We should rely on a ref or use the calculated values.
-            // For now, we'll let a separate useEffect trigger the onResize prop when isResizing turns false.
         };
 
         window.addEventListener('pointermove', handlePointerMove);
@@ -133,71 +119,130 @@ export const CanvasItem = React.memo(({
         }
     }, [isResizing]);
 
+    const renderContent = () => {
+        switch (item.type) {
+            case 'note':
+                return (
+                    <StickyNoteItem
+                        id={item.id}
+                        text={item.text}
+                        color={item.color}
+                        fontSize={item.fontSize}
+                        textColor={item.textColor}
+                        onUpdate={onUpdate}
+                        isSelected={isSelected}
+                    />
+                );
+            case 'text':
+                return (
+                    <TextItem
+                        id={item.id}
+                        text={item.text}
+                        fontSize={item.fontSize}
+                        textColor={item.textColor}
+                        onUpdate={onUpdate}
+                        isSelected={isSelected}
+                    />
+                );
+            case 'shape':
+                return (
+                    <ShapeItem
+                        id={item.id}
+                        shapeType={item.shapeType}
+                        text={item.text}
+                        color={item.color}
+                        borderColor={item.borderColor}
+                        borderWidth={item.borderWidth}
+                        fontSize={item.fontSize}
+                        textColor={item.textColor}
+                        onUpdate={onUpdate}
+                        isSelected={isSelected}
+                    />
+                );
+            case 'drawing':
+                return (
+                    <DrawingItem
+                        points={item.points}
+                        color={item.color}
+                        borderWidth={item.borderWidth}
+                        x={item.x}
+                        y={item.y}
+                        width={size.width}
+                        height={size.height}
+                    />
+                );
+            case 'video':
+            case 'image':
+            default:
+                return (
+                    <div className="w-full h-full pointer-events-auto rounded-xl overflow-hidden">
+                        <MoodboardItemCard
+                            video={item.video!}
+                            className="w-full h-full rounded-xl border-2 border-purple-500/0 hover:border-purple-500/50 transition-colors"
+                            onMaximize={onMaximize}
+                        />
+                    </div>
+                );
+        }
+    };
+
+    const isDrawingType = item.type === 'drawing';
+
     return (
         <div
-            ref={setNodeRef}
-            {...listeners}
-            {...attributes}
             style={finalStyle}
             // Remove animate-in classes after animation is done to prevent replay
-            className={`${item.type !== 'note' ? 'shadow-2xl rounded-xl bg-black overflow-hidden' : 'min-w-[50px]'} group cursor-move hover:z-50 ${!hasAnimated ? 'animate-in fade-in zoom-in duration-500 slide-in-from-bottom-4' : ''} ${isSelected ? 'ring-2 ring-white ring-offset-2 ring-offset-black' : ''}`}
+            className={`group cursor-move hover:z-50 ${
+                !hasAnimated ? 'animate-in fade-in zoom-in duration-500 slide-in-from-bottom-4' : ''
+            } ${
+                isSelected && !isDrawingType ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-black' : ''
+            } ${
+                !isDrawingType && item.type !== 'note' && item.type !== 'text' && item.type !== 'shape'
+                    ? 'shadow-2xl rounded-xl bg-black'
+                    : ''
+            }`}
             onClick={onSelect}
             onDoubleClick={onDoubleClick}
-            onMouseDown={(e) => {
-                e.stopPropagation();
-                listeners?.onMouseDown?.(e);
+            onPointerDown={(e) => {
+                // Ignore dragging triggers if clicking inputs, resize handles, delete button
+                const target = e.target as HTMLElement;
+                if (
+                    target.closest('[contenteditable]') || 
+                    target.closest('.cursor-nwse-resize') || 
+                    target.closest('.delete-btn')
+                ) {
+                    return;
+                }
+                if (onPointerDown) {
+                    onPointerDown(e, item);
+                }
             }}
         >
-            {item.type === 'note' ? (
-                <div className="w-full h-full p-2 relative group-hover:block min-w-[50px] min-h-[50px] hover:bg-white/10 rounded-lg transition-colors">
-                    <div
-                        role="textbox"
-                        contentEditable
-                        suppressContentEditableWarning
-                        className="w-full h-full bg-transparent outline-none font-medium text-2xl text-white placeholder-white/20 leading-relaxed font-sans whitespace-pre-wrap break-words"
-                        style={{ fieldSizing: 'content' } as any} // Future proofing, though likely ignored
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onInput={(e) => {
-                            // Optional: Local mutation if needed, or rely on onBlur
-                        }}
-                        onBlur={(e) => {
-                            // Trigger state update to ensure save
-                            onUpdate(item.id, (e.target as HTMLDivElement).innerText);
-                        }}
-                    >
-                        {item.text}
-                    </div>
-                </div>
-            ) : (
-                <div className="w-full h-full pointer-events-auto">
-                    <MoodboardItemCard
-                        video={item.video}
-                        className="w-full h-full rounded-xl border-2 border-purple-500/0 hover:border-purple-500/50 transition-colors"
-                        onMaximize={onMaximize}
-                    />
-                </div>
+            {renderContent()}
+
+            {/* Remove button */}
+            {!isDrawingType && (
+                <button
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onRemove();
+                    }}
+                    className="delete-btn absolute -top-2 -right-2 bg-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-50 hover:bg-red-600 shadow-md"
+                >
+                    <Plus className="h-3 w-3 text-white rotate-45" />
+                </button>
             )}
 
-            <button
-                onPointerDown={(e) => {
-                    e.stopPropagation();
-                }}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onRemove();
-                }}
-                className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-50 hover:bg-red-600"
-            >
-                <Plus className="h-3 w-3 text-white rotate-45" />
-            </button>
-
             {/* Resize Handle */}
-            <div 
-                className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize opacity-0 group-hover:opacity-100 z-50 flex items-end justify-end p-1"
-                onPointerDown={handleResizeStart}
-            >
-                <div className="w-3 h-3 border-r-2 border-b-2 border-white/50 rounded-br-sm pointer-events-none" />
-            </div>
+            {!isDrawingType && (
+                <div 
+                    className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize opacity-0 group-hover:opacity-100 z-50 flex items-end justify-end p-1"
+                    onPointerDown={handleResizeStart}
+                >
+                    <div className="w-3 h-3 border-r-2 border-b-2 border-white/50 rounded-br-sm pointer-events-none" />
+                </div>
+            )}
         </div>
     );
 });

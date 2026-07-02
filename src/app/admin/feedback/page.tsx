@@ -1,36 +1,14 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, getDocs, query, orderBy, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { collection, query, orderBy, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Trash2, CheckCircle2, Clock } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useToast } from '@/hooks/use-toast';
-import { formatDistanceToNow } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
+import { MessageSquare, Check, Trash2, Clock } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface Feedback {
   id: string;
@@ -38,134 +16,171 @@ interface Feedback {
   userEmail: string;
   content: string;
   createdAt: any;
-  status: 'new' | 'reviewed' | 'resolved';
+  status: 'new' | 'read' | 'archived';
 }
 
-export default function AdminFeedbackPage() {
+export default function FeedbackPage() {
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-
-  const fetchFeedback = async () => {
-    setLoading(true);
-    try {
-      const q = query(collection(db, 'feedback'), orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
-      const list = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Feedback));
-      setFeedback(list);
-    } catch (error) {
-      console.error("Error fetching feedback:", error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch feedback.' });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    fetchFeedback();
+    const q = query(
+      collection(db, 'feedback'),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const feedbackData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Feedback[];
+      setFeedback(feedbackData);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const handleStatusUpdate = async (id: string, status: string) => {
+  const handleMarkAsRead = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'read' ? 'new' : 'read';
     try {
-      await updateDoc(doc(db, 'feedback', id), { status });
-      setFeedback(prev => prev.map(f => f.id === id ? { ...f, status: status as any } : f));
-      toast({ title: 'Status Updated', description: `Feedback marked as ${status}.` });
+      await updateDoc(doc(db, 'feedback', id), { status: newStatus });
     } catch (error) {
-      console.error(error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not update status.' });
+      console.error('Error updating feedback:', error);
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleArchive = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'feedback', id));
-      setFeedback(prev => prev.filter(f => f.id !== id));
-      toast({ title: 'Feedback Deleted' });
+      await updateDoc(doc(db, 'feedback', id), { status: 'archived' });
     } catch (error) {
-      console.error(error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not delete feedback.' });
+      console.error('Error archiving feedback:', error);
     }
   };
+
+  const newCount = feedback.filter(f => f.status === 'new').length;
+  const archivedCount = feedback.filter(f => f.status === 'archived').length;
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
+  }
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">User Feedback</h1>
-          <p className="text-muted-foreground">Manage and respond to user-submitted feedback.</p>
-        </div>
+    <div className="space-y-6">
+      {/* Header with stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Feedback</CardTitle>
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{feedback.length}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">New</CardTitle>
+            <Badge variant="default">{newCount}</Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{newCount}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Archived</CardTitle>
+            <Badge variant="secondary">{archivedCount}</Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{archivedCount}</div>
+          </CardContent>
+        </Card>
       </div>
 
+      {/* Feedback list */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Feedback</CardTitle>
-          <CardDescription>A list of all feedback messages sent by users.</CardDescription>
+          <CardTitle>All Feedback</CardTitle>
+          <CardDescription>User requests, bug reports, and suggestions</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead className="w-[40%]">Feedback</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8">Loading feedback...</TableCell></TableRow>
-              ) : feedback.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8">No feedback found.</TableCell></TableRow>
-              ) : (
-                feedback.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {item.createdAt?.toDate ? formatDistanceToNow(item.createdAt.toDate(), { addSuffix: true }) : 'Just now'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium text-sm">{item.userEmail}</span>
-                        <span className="text-[10px] text-muted-foreground">{item.userId}</span>
+          {feedback.length === 0 ? (
+            <div className="text-center py-12">
+              <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+              <p className="text-muted-foreground">No feedback yet</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {feedback.map((item) => (
+                <div
+                  key={item.id}
+                  className={`border rounded-lg p-4 space-y-3 transition-colors ${
+                    item.status === 'archived'
+                      ? 'bg-muted/30 opacity-60'
+                      : item.status === 'new'
+                      ? 'bg-primary/5 border-primary/20'
+                      : ''
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-sm">{item.userEmail}</p>
+                        {item.status === 'new' && (
+                          <Badge variant="default" className="text-xs">
+                            New
+                          </Badge>
+                        )}
+                        {item.status === 'archived' && (
+                          <Badge variant="secondary" className="text-xs">
+                            Archived
+                          </Badge>
+                        )}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-sm line-clamp-2 hover:line-clamp-none transition-all cursor-default">
-                        {item.content}
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                        <Clock className="h-3 w-3" />
+                        {item.createdAt?.toDate
+                          ? format(item.createdAt.toDate(), 'MMM d, yyyy h:mm a')
+                          : 'Unknown date'}
                       </p>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={item.status === 'new' ? 'default' : item.status === 'resolved' ? 'secondary' : 'outline'}>
-                        {item.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm"><MoreHorizontal className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Manage Status</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleStatusUpdate(item.id, 'reviewed')}>
-                            <Clock className="mr-2 h-4 w-4" /> Mark as Reviewed
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleStatusUpdate(item.id, 'resolved')}>
-                            <CheckCircle2 className="mr-2 h-4 w-4" /> Mark as Resolved
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDelete(item.id)} className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleMarkAsRead(item.id, item.status)}
+                        title={item.status === 'new' ? 'Mark as read' : 'Mark as unread'}
+                      >
+                        <Check className={`h-4 w-4 ${item.status === 'new' ? '' : 'text-primary'}`} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleArchive(item.id)}
+                        disabled={item.status === 'archived'}
+                        title="Archive"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive/50" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <p className="text-sm leading-relaxed text-foreground/90 break-words">
+                    {item.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

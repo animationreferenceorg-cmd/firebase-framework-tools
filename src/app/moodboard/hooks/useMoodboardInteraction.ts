@@ -46,14 +46,13 @@ export function useMoodboardInteraction({
     });
 
     // 2. The Move Handler
-    const handleGlobalMouseMove = useCallback((e: MouseEvent) => {
+    const handleGlobalPointerMove = useCallback((e: PointerEvent) => {
         const state = interactionState.current;
         // Adjust for container offset captured at start
         const currentX = e.clientX - (state.containerLeft || 0);
         const currentY = e.clientY - (state.containerTop || 0);
 
         if (state.isPanning) {
-            // For Panning, we just need delta, which is invariant to offset if both are offset.
             const deltaX = currentX - state.startX;
             const deltaY = currentY - state.startY;
             setViewport(prev => ({
@@ -61,57 +60,79 @@ export function useMoodboardInteraction({
                 x: state.initialViewportX + deltaX,
                 y: state.initialViewportY + deltaY
             }));
-        } else if (state.isMarquee) {
-            // Update Visual Rect
-            const x = Math.min(currentX, state.startX);
-            const y = Math.min(currentY, state.startY);
-            const w = Math.abs(currentX - state.startX);
-            const h = Math.abs(currentY - state.startY);
-            setMarqueeSelectionRect({ x, y, w, h });
+        } else {
+            // Check if user dragged far enough to start a marquee selection (15px threshold)
+            const dx = currentX - state.startX;
+            const dy = currentY - state.startY;
+            const distance = Math.hypot(dx, dy);
 
-            // --- HIT TESTING ---
-            const mLeft = x;
-            const mRight = x + w;
-            const mTop = y;
-            const mBottom = y + h;
+            if (!state.isMarquee && distance > 15) {
+                state.isMarquee = true;
+                setIsMarqueeSelecting(true);
+            }
 
-            const newSelected = new Set(state.initialSelected);
+            if (state.isMarquee) {
+                // Update Visual Rect
+                const x = Math.min(currentX, state.startX);
+                const y = Math.min(currentY, state.startY);
+                const w = Math.abs(currentX - state.startX);
+                const h = Math.abs(currentY - state.startY);
+                setMarqueeSelectionRect({ x, y, w, h });
 
-            canvasItems.forEach(item => {
-                // Project Item to Screen Space (Local to Container)
-                const itemW = (item.type === 'note' ? 200 : 256);
-                const itemH = (item.type === 'note' ? 100 : 144);
+                // --- HIT TESTING ---
+                const mLeft = x;
+                const mRight = x + w;
+                const mTop = y;
+                const mBottom = y + h;
 
-                // Note: viewport.x/y are applied to the transform layer
-                // item.x/y are local to that layer
-                const itemScreenX = (item.x * viewport.scale) + viewport.x;
-                const itemScreenY = (item.y * viewport.scale) + viewport.y;
-                const itemScreenW = itemW * viewport.scale;
-                const itemScreenH = itemH * viewport.scale;
+                const newSelected = new Set(state.initialSelected);
 
-                // AABB Intersection
-                const iLeft = itemScreenX;
-                const iRight = itemScreenX + itemScreenW;
-                const iTop = itemScreenY;
-                const iBottom = itemScreenY + itemScreenH;
+                canvasItems.forEach(item => {
+                    // Connections don't have bounding boxes for marquee selection
+                    if (item.type === 'connection') return;
 
-                const intersects = (
-                    iLeft < mRight &&
-                    iRight > mLeft &&
-                    iTop < mBottom &&
-                    iBottom > mTop
-                );
+                    // Project Item to Screen Space (Local to Container)
+                    const itemW = item.width || (item.type === 'note' || item.type === 'shape' ? 256 : item.type === 'text' ? 200 : 256);
+                    const itemH = item.height || (item.type === 'note' || item.type === 'shape' ? 256 : item.type === 'text' ? 80 : 144);
 
-                if (intersects) {
-                    newSelected.add(item.id);
-                }
-            });
-            setSelectedItemIds(newSelected);
+                    const itemScreenX = (item.x * viewport.scale) + viewport.x;
+                    const itemScreenY = (item.y * viewport.scale) + viewport.y;
+                    const itemScreenW = itemW * viewport.scale;
+                    const itemScreenH = itemH * viewport.scale;
+
+                    const iLeft = itemScreenX;
+                    const iRight = itemScreenX + itemScreenW;
+                    const iTop = itemScreenY;
+                    const iBottom = itemScreenY + itemScreenH;
+
+                    const intersects = (
+                        iLeft < mRight &&
+                        iRight > mLeft &&
+                        iTop < mBottom &&
+                        iBottom > mTop
+                    );
+
+                    if (intersects) {
+                        newSelected.add(item.id);
+                    }
+                });
+                setSelectedItemIds(newSelected);
+            }
         }
-    }, [viewport, canvasItems, setSelectedItemIds]); // Added setSelectedItemIds dependency
+    }, [viewport, canvasItems, setSelectedItemIds]);
 
     // 3. The End Handler
-    const handleGlobalMouseUp = useCallback(() => {
+    const handleGlobalPointerUp = useCallback((e: PointerEvent) => {
+        const state = interactionState.current;
+
+        // If it was a simple click without dragging, clear selection (unless holding shift)
+        if (!state.isPanning && !state.isMarquee) {
+            const isShift = e.shiftKey;
+            if (!isShift) {
+                setSelectedItemIds(new Set());
+            }
+        }
+
         // Cleanup State
         setIsPanning(false);
         setIsMarqueeSelecting(false);
@@ -119,16 +140,16 @@ export function useMoodboardInteraction({
         document.body.style.cursor = '';
 
         // Detach Listeners
-        window.removeEventListener('mousemove', handleGlobalMouseMove);
-        window.removeEventListener('mouseup', handleGlobalMouseUp);
-    }, [handleGlobalMouseMove]);
+        window.removeEventListener('pointermove', handleGlobalPointerMove);
+        window.removeEventListener('pointerup', handleGlobalPointerUp);
+    }, [handleGlobalPointerMove, setSelectedItemIds]);
 
-    // 1. The Entry Point: onMouseDown on the Data-Grid
-    const handleBackgroundMouseDown = (e: React.MouseEvent) => {
-        // Only Left or Middle mouse
+    // 1. The Entry Point: onPointerDown on the Data-Grid
+    const handleBackgroundMouseDown = (e: React.PointerEvent) => {
+        // Only Left or Middle mouse/pointer clicks
         if (e.button !== 0 && e.button !== 1) return;
 
-        // CRITICAL: Stop browser selection
+        // Stop browser default selections
         e.preventDefault();
 
         // Setup State
@@ -141,8 +162,6 @@ export function useMoodboardInteraction({
         const isSpace = isSpacePressed.current;
         const isMiddle = e.button === 1;
         const isShift = e.shiftKey;
-
-        // (Removed strict target check as propagation is now stopped by items)
 
         // Decide Mode
         if (isMiddle || isSpace) {
@@ -161,48 +180,41 @@ export function useMoodboardInteraction({
             setIsPanning(true);
             document.body.style.cursor = 'grabbing';
         } else {
-            // MARQUEE (Default for Left Click on background)
+            // MARQUEE (Ready to marquee but only activates past a movement threshold)
             interactionState.current = {
                 ...interactionState.current,
                 isPanning: false,
-                isMarquee: true,
+                isMarquee: false, // Start as false, set to true on drag threshold
                 startX,
                 startY,
                 containerLeft,
                 containerTop,
-                initialSelected: isShift ? new Set(selectedItemIds) : new Set(), // Snapshot selection
-                initialViewportX: 0, // Unused
+                initialSelected: isShift ? new Set(selectedItemIds) : new Set(),
+                initialViewportX: 0,
                 initialViewportY: 0
             };
-            setIsMarqueeSelecting(true);
-            setMarqueeSelectionRect({ x: startX, y: startY, w: 0, h: 0 });
-
-            // Immediate Clear if not adding
-            if (!isShift) {
-                setSelectedItemIds(new Set());
-            }
         }
 
         // Attach Global Listeners
-        window.addEventListener('mousemove', handleGlobalMouseMove);
-        window.addEventListener('mouseup', handleGlobalMouseUp);
+        window.addEventListener('pointermove', handleGlobalPointerMove);
+        window.addEventListener('pointerup', handleGlobalPointerUp);
     };
 
     // Clean up on unmount just in case
     useEffect(() => {
         return () => {
-            window.removeEventListener('mousemove', handleGlobalMouseMove);
-            window.removeEventListener('mouseup', handleGlobalMouseUp);
+            window.removeEventListener('pointermove', handleGlobalPointerMove);
+            window.removeEventListener('pointerup', handleGlobalPointerUp);
         };
-    }, [handleGlobalMouseMove, handleGlobalMouseUp]);
+    }, [handleGlobalPointerMove, handleGlobalPointerUp]);
 
     return {
         viewport,
         setViewport,
         isPanning,
-        setIsPanning, // Exported if needed externally
+        setIsPanning,
         isMarqueeSelecting,
         marqueeSelectionRect,
-        handleBackgroundMouseDown // Attached to the container
+        handleBackgroundMouseDown
     };
 }

@@ -36,6 +36,10 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "temp_downloader",
+    "functions",
+    "VideoCard_old.tsx",
+    "**/*-MF-Desktop-7V82NGA*"
   ]
 }

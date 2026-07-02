@@ -86,6 +86,17 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
 
     return (
         <UploadProvider>
+            {isMoodboardPage && (
+                <style dangerouslySetInnerHTML={{ __html: `
+                    /* Completely hide collapsed sidebar on moodboard workspace */
+                    [data-state="collapsed"] {
+                        --sidebar-width-icon: 0px !important;
+                        width: 0px !important;
+                        border-right-width: 0px !important;
+                        overflow: hidden !important;
+                    }
+                ` }} />
+            )}
             <SidebarProvider>
                 <Sidebar>
                     {/* ... sidebar content ... */}
@@ -259,7 +270,8 @@ function SimulateTierButton({ tier, label, fullWidth }: { tier: string, label: s
         try {
             const userRef = doc(db, "users", user.uid);
             await updateDoc(userRef, {
-                tier: tier === 'reset' ? null : tier // 'null' removes the field or sets it to null, restoring admin default
+                tier: tier === 'reset' ? null : tier,
+                isPremium: tier !== 'reset'
             });
             toast({
                 title: tier === 'reset' ? "Restored Admin Privileges" : `Tier set to ${label}`,

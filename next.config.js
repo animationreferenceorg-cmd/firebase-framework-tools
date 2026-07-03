@@ -15,12 +15,6 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'studio.blender.org',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
         hostname: 'placehold.co',
         port: '',
         pathname: '/**',
@@ -40,12 +34,6 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'www.youtube.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'img.youtube.com',
         port: '',
         pathname: '/**',
       },
@@ -82,37 +70,7 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'scontent-sjc3-1.cdninstagram.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
         hostname: '**.cdninstagram.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: '*.cdninstagram.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'instagram.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'studio.blender.org',
         port: '',
         pathname: '/**',
       }

@@ -44,6 +44,7 @@ export function QuickEditVideoDialog({
     const [categoryIds, setCategoryIds] = useState<string[]>([]);
     const [tags, setTags] = useState<string[]>([]);
     const [thumbnailUrl, setThumbnailUrl] = useState("");
+    const [fps, setFps] = useState<number | "">("");
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<'details' | 'thumbnail'>('details');
 
@@ -54,6 +55,7 @@ export function QuickEditVideoDialog({
             setCategoryIds(video.categoryIds || []);
             setTags(video.tags || []);
             setThumbnailUrl(video.thumbnailUrl || "");
+            setFps(video.fps || "");
         }
     }, [video]);
 
@@ -67,6 +69,7 @@ export function QuickEditVideoDialog({
                 categoryIds,
                 tags,
                 thumbnailUrl,
+                fps: fps !== "" ? Number(fps) : null,
             });
             toast({ title: "Video Updated", description: "Changes saved successfully." });
             onSave();
@@ -143,6 +146,16 @@ export function QuickEditVideoDialog({
                                     selectedTags={tags}
                                     onChange={setTags}
                                     allTags={allTags}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="fps">Framerate (FPS)</Label>
+                                <Input
+                                    id="fps"
+                                    type="number"
+                                    placeholder="24"
+                                    value={fps}
+                                    onChange={(e) => setFps(e.target.value === "" ? "" : Number(e.target.value))}
                                 />
                             </div>
                         </>

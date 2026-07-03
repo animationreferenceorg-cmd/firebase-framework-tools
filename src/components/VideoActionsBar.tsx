@@ -74,6 +74,56 @@ export function VideoActionsBar({ video, userProfile }: VideoActionsBarProps) {
     toast({ title: "Link Copied!", description: "Video link copied to clipboard." });
   };
 
+  const isDownloadable = useMemo(() => {
+    const url = video.videoUrl;
+    if (!url) return false;
+    const isEmbed = url.includes('youtube.com') || url.includes('youtu.be') || url.includes('vimeo.com');
+    return !isEmbed;
+  }, [video.videoUrl]);
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!video.videoUrl) return;
+
+    let url = video.videoUrl;
+    if (url.includes('.b-cdn.net') && url.endsWith('playlist.m3u8')) {
+      url = url.replace('playlist.m3u8', 'play.mp4');
+    }
+
+    toast({
+      title: "Starting Download",
+      description: "Preparing your video file...",
+    });
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Network response was not ok");
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      const cleanTitle = video.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      a.download = `${cleanTitle}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(blobUrl);
+      
+      toast({
+        title: "Download Complete!",
+        description: "Your video has been downloaded successfully.",
+      });
+    } catch (error) {
+      console.warn("Direct download failed, opening in new tab:", error);
+      window.open(url, '_blank');
+      toast({
+        title: "Opening Video Source",
+        description: "Right-click the video and select 'Save Video As...'",
+      });
+    }
+  };
+
   return (
     <>
       <div className="absolute right-4 bottom-28 z-10 flex flex-col items-center gap-4">

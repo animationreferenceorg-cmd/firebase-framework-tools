@@ -93,10 +93,18 @@ export async function POST(req: Request) {
         }
 
         if (!activeSub) {
-            console.log(`[Sync Stripe API] No active or trialing subscriptions found in Stripe for ${email}`);
+            console.log(`[Sync Stripe API] No active or trialing subscriptions found in Stripe for ${email}. Deactivating premium status.`);
+            // Update Firestore to clear premium status
+            await db.collection('users').doc(userId).set({
+                isPremium: false,
+                tier: null,
+                subscriptionStatus: 'canceled',
+                updatedAt: new Date().toISOString(),
+            }, { merge: true });
+
             return NextResponse.json({ 
                 success: false, 
-                message: 'No active subscription found. If you just paid, it might take a few minutes. Status checked: active, trialing.' 
+                message: 'No active subscription found. Your subscription status has been synced as inactive.' 
             });
         }
 

@@ -32,9 +32,41 @@ export function useDonate() {
         }
 
         setIsCheckingOut(true);
-        toast({ title: 'Starting checkout...', description: 'Redirecting to Stripe...' });
+        toast({ title: 'Checking subscription status...', description: 'Verifying with Stripe...' });
 
         try {
+            // Check for duplicate subscription first
+            if (user.email) {
+                const checkRes = await fetch('/api/check-subscription', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: user.email, userId: user.uid })
+                });
+                const checkData = await checkRes.json();
+                if (checkData.hasActiveSubscription) {
+                    toast({
+                        title: "Subscription Detected",
+                        description: "You already have an active subscription under this email! Redirecting to your Billing Portal...",
+                    });
+                    
+                    // Redirect to Billing Portal
+                    const portalRes = await fetch('/api/portal', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: user.uid }),
+                    });
+                    const portalData = await portalRes.json();
+                    if (portalData.url) {
+                        window.location.assign(portalData.url);
+                    } else {
+                        throw new Error(portalData.error || 'Failed to open billing portal');
+                    }
+                    return;
+                }
+            }
+
+            toast({ title: 'Starting checkout...', description: 'Redirecting to Stripe...' });
+
             // Create a checkout session in Firestore (Stripe Extension listens to this)
             const collectionRef = collection(db, 'customers', user.uid, 'checkout_sessions');
 

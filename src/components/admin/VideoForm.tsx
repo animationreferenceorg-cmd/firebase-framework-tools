@@ -82,6 +82,7 @@ const formSchema = (isShort: boolean, isReference: boolean) => z.object({
   categoryIds: z.array(z.string()).min(isReference ? 0 : 1, "Please select at least one category."),
   uploader: z.string().optional(),
   originalUrl: z.string().optional(),
+  fps: z.preprocess((val) => val === '' || val === undefined ? undefined : Number(val), z.number().min(1, "FPS must be at least 1").optional()),
 }).superRefine((data, ctx) => {
   if (data.videoSourceType === 'url' && (!data.videoUrl || data.videoUrl.trim() === '')) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Video URL is required.", path: ['videoUrl'] });
@@ -658,6 +659,7 @@ export default function VideoForm({ video, isShort, isReference = false, default
       thumbnailSourceType: video?.thumbnailUrl ? 'url' : 'upload',
       uploader: video?.uploader || "",
       originalUrl: video?.originalUrl || "",
+      fps: video?.fps || undefined,
     },
   })
 
@@ -998,6 +1000,7 @@ export default function VideoForm({ video, isShort, isReference = false, default
         createdAt: video?.createdAt || serverTimestamp(),
         uploader: values.uploader || '',
         originalUrl: values.originalUrl || video?.originalUrl || values.videoUrl || '',
+        fps: values.fps || null,
       };
 
       if (isReference) {
@@ -1334,6 +1337,29 @@ export default function VideoForm({ video, isShort, isReference = false, default
                     </FormControl>
                     <FormDescription>
                       The original creator of the content (auto-filled for social imports).
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="fps"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Framerate (FPS)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="e.g. 24"
+                        {...field}
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      The framerate of the video (optional, defaults to 24).
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

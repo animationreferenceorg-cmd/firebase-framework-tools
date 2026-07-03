@@ -59,9 +59,26 @@ export async function POST(req: Request) {
         switch (event.type) {
             case 'checkout.session.completed': {
                 const session = event.data.object as Stripe.Checkout.Session;
-                const userId = session.client_reference_id || session.metadata?.userId;
+                let userId = session.client_reference_id || session.metadata?.userId;
                 const customerId = session.customer as string;
                 const subscriptionId = session.subscription as string;
+
+                // FALLBACK: If userId is missing, try to resolve user by customer email
+                if (!userId && session.customer_details?.email) {
+                    const email = session.customer_details.email;
+                    console.log(`[Webhook] No client_reference_id/userId found in checkout session. Trying to search user by email: ${email}`);
+                    try {
+                        const usersSnapshot = await db.collection('users').where('email', '==', email).get();
+                        if (!usersSnapshot.empty) {
+                            userId = usersSnapshot.docs[0].id;
+                            console.log(`[Webhook] Found user by email fallback: ${userId}`);
+                        } else {
+                            console.log(`[Webhook] No user found with email: ${email}`);
+                        }
+                    } catch (err) {
+                        console.error('[Webhook] Error searching user by email fallback:', err);
+                    }
+                }
 
                 if (userId && customerId) {
                     console.log(`Linking Stripe Customer ${customerId} to User ${userId}`);
@@ -101,7 +118,32 @@ export async function POST(req: Request) {
                 // We need to find the user with this customer ID
                 const customerId = subscription.customer as string;
 
-                const snapshot = await db.collection('users').where('stripeCustomerId', '==', customerId).get();
+                let snapshot = await db.collection('users').where('stripeCustomerId', '==', customerId).get();
+
+                // FALLBACK: If no user found by stripeCustomerId, lookup email from Stripe
+                if (snapshot.empty) {
+                    try {
+                        const stripe = getStripe();
+                        const customer = await stripe.customers.retrieve(customerId);
+                        if (customer && !customer.deleted && (customer as Stripe.Customer).email) {
+                            const email = (customer as Stripe.Customer).email!;
+                            console.log(`[Webhook] Subscription event: User not found by stripeCustomerId ${customerId}. Searching by email fallback: ${email}`);
+                            snapshot = await db.collection('users').where('email', '==', email).get();
+                            
+                            // Proactively link the stripeCustomerId so future hooks match directly
+                            if (!snapshot.empty) {
+                                const linkBatch = db.batch();
+                                snapshot.forEach(doc => {
+                                    linkBatch.update(doc.ref, { stripeCustomerId: customerId });
+                                });
+                                await linkBatch.commit();
+                                console.log(`[Webhook] Proactively linked stripeCustomerId ${customerId} to user by email fallback`);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('[Webhook] Error during subscription email fallback resolution:', err);
+                    }
+                }
 
                 if (!snapshot.empty) {
                     const batch = db.batch();

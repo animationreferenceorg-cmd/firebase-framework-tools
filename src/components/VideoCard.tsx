@@ -453,7 +453,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
         {/* Subtle creator badge — top-left, always visible for any video with uploader/originalUrl */}
         <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} />
 
-        {!video.isShort && !poster && video.videoUrl && cardInView && isHovered && !isPlayerOpen && video.tags?.length > 0 && (
+        {!video.isShort && !poster && video.videoUrl && cardInView && isHovered && !isPlayerOpen && (
           <div className={cn(
             "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none",
             isHovered && !isPlayerOpen ? "opacity-100" : "opacity-0"

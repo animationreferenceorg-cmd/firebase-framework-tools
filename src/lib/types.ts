@@ -17,6 +17,7 @@ export interface Video {
   folderId?: string;
   uploader?: string;
   originalUrl?: string;
+  fps?: number;
 }
 
 export interface Folder {
@@ -74,26 +75,18 @@ export interface LocalImage {
 
 export interface MoodboardItem {
   id: string;
-  type: 'video' | 'image' | 'note' | 'text' | 'shape' | 'drawing' | 'connection';
+  type: 'video' | 'image' | 'note'; // Added 'note'
   videoId?: string | null;
   imageUrl?: string | null;
-  text?: string; // Content for notes, text boxes, and shapes
+  text?: string; // Content for notes
   videoData?: Video;
   x: number;
   y: number;
-  width?: number;
+  width?: number; // Important for resizing notes
   height?: number;
-  color?: string; // Background color for note/shape, stroke color for drawing, line color for connection
+  color?: string; // Optional: sticky note color
   rotation?: number;
   zIndex?: number;
-  shapeType?: 'rectangle' | 'circle' | 'triangle' | 'arrow-right' | 'arrow-left' | 'arrow-up' | 'arrow-down';
-  borderColor?: string;
-  borderWidth?: number;
-  fontSize?: number;
-  textColor?: string;
-  points?: { x: number; y: number }[]; // For drawings
-  fromItem?: string; // For connections
-  toItem?: string; // For connections
 }
 
 export interface Moodboard {

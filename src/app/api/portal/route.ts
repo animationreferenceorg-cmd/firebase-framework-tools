@@ -22,10 +22,33 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        const stripeCustomerId = userDoc.data()?.stripeCustomerId;
+        let stripeCustomerId = userDoc.data()?.stripeCustomerId;
+
+        // FALLBACK: If stripeCustomerId is missing, search Stripe by user's email
+        if (!stripeCustomerId && userDoc.data()?.email) {
+            const email = userDoc.data().email;
+            console.log(`[Portal] stripeCustomerId missing for user ${userId}. Searching Stripe by email: ${email}`);
+            try {
+                const stripe = getStripe();
+                const customers = await stripe.customers.list({
+                    email: email,
+                    limit: 1,
+                });
+                if (customers.data.length > 0) {
+                    stripeCustomerId = customers.data[0].id;
+                    // Proactively link the stripeCustomerId in Firestore
+                    await db.collection('users').doc(userId).update({
+                        stripeCustomerId: stripeCustomerId
+                    });
+                    console.log(`[Portal] Proactively linked stripeCustomerId ${stripeCustomerId} to user ${userId}`);
+                }
+            } catch (err) {
+                console.error('[Portal] Error searching Stripe customer by email:', err);
+            }
+        }
 
         if (!stripeCustomerId) {
-            return NextResponse.json({ error: 'No subscription found for this user' }, { status: 404 });
+            return NextResponse.json({ error: 'No subscription found for this user. Make sure you are subscribed.' }, { status: 404 });
         }
 
         // Create a Billing Portal session

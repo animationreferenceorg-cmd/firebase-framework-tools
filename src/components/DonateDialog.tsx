@@ -43,6 +43,7 @@ export function DonateDialog({ children, open, onOpenChange, forceTimer = false 
     const { handleDonate, isCheckingOut } = useDonate();
     const { userProfile } = useUser();
     const { user } = useAuth();
+    const { toast } = useToast();
     const [isPortalLoading, setIsPortalLoading] = useState(false);
 
     // Timer Gating logic

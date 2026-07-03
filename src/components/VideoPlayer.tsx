@@ -62,14 +62,19 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
     const [showControls, setShowControls] = React.useState(true);
     const [playbackRate, setPlaybackRate] = React.useState(1);
     const [videoError, setVideoError] = React.useState(false);
+    const [fps, setFps] = React.useState<number>(video.fps || 24);
     const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-    const stepFrame = (direction: 'forward' | 'backward') => {
+    React.useEffect(() => {
+        setFps(video.fps || 24);
+    }, [video.fps]);
+
+    const stepFrame = React.useCallback((direction: 'forward' | 'backward') => {
         if (!playerRef.current) return;
         if (isPlaying) {
             setIsPlaying(false);
         }
-        const frameTime = 1 / 24; // Common frame rate
+        const frameTime = 1 / fps;
         const internalPlayer = playerRef.current.getInternalPlayer();
         if (internalPlayer && typeof (internalPlayer as HTMLVideoElement).currentTime === 'number') {
             const newTime = direction === 'forward'
@@ -77,7 +82,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                 : Math.max(0, (internalPlayer as HTMLVideoElement).currentTime - frameTime);
             playerRef.current.seekTo(newTime, 'seconds');
         }
-    };
+    }, [duration, isPlaying, fps]);
 
     const handleFullscreenToggle = () => {
         if (!containerRef.current) return;
@@ -88,13 +93,13 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
         }
     };
 
-    const handlePlayPause = () => {
+    const handlePlayPause = React.useCallback(() => {
         setIsPlaying(prev => !prev);
         // Unmute when the user manually plays
         if (!isPlaying) {
             setIsMuted(false);
         }
-    };
+    }, [isPlaying]);
 
     React.useImperativeHandle(ref, () => ({
         handlePlayPause,
@@ -128,8 +133,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
             document.removeEventListener('fullscreenchange', onFullScreenChange);
             window.removeEventListener('keydown', handleKeyDown);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [duration, isPlaying]);
+    }, [duration, isPlaying, stepFrame, handlePlayPause]);
 
 
     const handleMuteToggle = () => {
@@ -397,13 +401,33 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                 {/* Bottom Row: Time | Speed (Center) | Fullscreen */}
                 <div className="flex justify-between items-center relative">
 
-                    {/* Left: Time / Volume */}
-                    <div className="flex items-center gap-4">
+                    {/* Left: Time / Volume / Frames */}
+                    <div className="flex items-center gap-3">
                         <span className="text-xs font-medium text-zinc-300 hidden md:block">
                             {formatTime(currentTime)} / {formatTime(duration)}
                         </span>
 
-                        <div className="flex items-center group/volume hidden md:flex">
+                        <span className="text-xs font-mono text-zinc-400 border-l border-white/20 pl-3 hidden md:block">
+                            Frame {Math.floor(currentTime * fps)} / {duration ? Math.floor(duration * fps) : 0}
+                        </span>
+
+                        <div className="flex items-center gap-1 border-l border-white/20 pl-3 hidden sm:flex">
+                            <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mr-1">FPS</span>
+                            <select
+                                value={fps}
+                                onChange={(e) => setFps(Number(e.target.value))}
+                                className="bg-black/60 hover:bg-black/80 text-zinc-300 text-[11px] font-mono rounded px-1 py-0.5 border border-white/10 focus:outline-none focus:border-white/30 cursor-pointer transition-all duration-200"
+                            >
+                                <option value={24}>24</option>
+                                <option value={25}>25</option>
+                                <option value={29.97}>29.97</option>
+                                <option value={30}>30</option>
+                                <option value={50}>50</option>
+                                <option value={60}>60</option>
+                            </select>
+                        </div>
+
+                        <div className="flex items-center group/volume hidden md:flex border-l border-white/20 pl-2">
                             <Button type="button" onClick={handleMuteToggle} variant="ghost" size="icon" className="hover:bg-white/10 text-white rounded-full h-8 w-8">
                                 {isMuted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                             </Button>

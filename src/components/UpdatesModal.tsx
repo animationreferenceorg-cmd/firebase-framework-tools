@@ -17,9 +17,9 @@ import { FeedbackModal } from "./FeedbackModal";
 const RECENT_UPDATES = [
   {
     date: 'July 3, 2026',
-    title: 'Bug Fixes & Hover Previews',
-    description: 'We fixed several critical issues across the site. Thank you all for your continued support and feedback!\n\n• Fixed laggy or unresponsive hover-to-play video previews so they load instantly without showing grey placeholders.\n• Fixed community video thumbnails so they display correctly for user-uploaded files.\n• Patched the billing portal checkout to prevent duplicate subscriptions.',
-    type: 'Fix'
+    title: 'Frame Counter & Performance Fixes',
+    description: 'We have introduced new features and resolved several bugs to improve your browsing experience. Thank you all for your continued support and feedback!\n\n• Added a precise frame counter and frame-by-frame scrubbing tools to all video players.\n• Fixed laggy or unresponsive hover-to-play video previews so they load instantly.\n• Fixed broken thumbnails on community-uploaded video posts.\n• Patched checkout issues to prevent duplicate plan subscriptions.',
+    type: 'Update'
   },
   {
     date: 'July 1, 2026',

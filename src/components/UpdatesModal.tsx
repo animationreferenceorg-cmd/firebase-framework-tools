@@ -18,7 +18,7 @@ const RECENT_UPDATES = [
   {
     date: 'July 3, 2026',
     title: 'Bug Fixes & Hover Previews',
-    description: 'We fixed several critical issues across the site. Thank you all for your continued support and feedback!\n\n• Fixed hover previews for YouTube and Bunny.net videos so they load instantly without showing grey placeholders.\n• Fixed community video thumbnails so they display correctly for user-uploaded MP4 files.\n• Patched the billing portal checkout to prevent duplicate subscriptions.',
+    description: 'We fixed several critical issues across the site. Thank you all for your continued support and feedback!\n\n• Fixed laggy or unresponsive hover-to-play video previews so they load instantly without showing grey placeholders.\n• Fixed community video thumbnails so they display correctly for user-uploaded files.\n• Patched the billing portal checkout to prevent duplicate subscriptions.',
     type: 'Fix'
   },
   {

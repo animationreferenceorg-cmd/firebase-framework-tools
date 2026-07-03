@@ -11,16 +11,6 @@ runConfig:
   # `gcloud secrets add-iam-policy-binding <secret> --project=<project> --role=roles/secretmanager.secretAccessor --member=serviceAccount:<service-account-email>`
   # You can find your service account email in the Firebase console settings.
   env:
-    - variable: FIREBASE_PROJECT_ID
-      secret: FIREBASE_PROJECT_ID
-    - variable: FIREBASE_PRIVATE_KEY
-      secret: FIREBASE_PRIVATE_KEY
-    - variable: FIREBASE_CLIENT_EMAIL
-      secret: FIREBASE_CLIENT_EMAIL
-    - variable: FIREBASE_STORAGE_BUCKET
-      secret: FIREBASE_STORAGE_BUCKET
     - variable: STRIPE_SECRET_KEY
-      secret: STRIPE_SECRET_KEY
     - variable: STRIPE_WEBHOOK_SECRET
-      secret: STRIPE_WEBHOOK_SECRET
 

@@ -18,7 +18,7 @@ const RECENT_UPDATES = [
   {
     date: 'July 3, 2026',
     title: 'Frame Counter & Performance Fixes',
-    description: 'We have introduced new features and resolved several bugs to improve your browsing experience. Thank you all for your continued support and feedback!\n\n• Added a precise frame counter and frame-by-frame scrubbing tools to all video players.\n• Fixed laggy or unresponsive hover-to-play video previews so they load instantly.\n• Fixed broken thumbnails on community-uploaded video posts.\n• Patched checkout issues to prevent duplicate plan subscriptions.',
+    description: 'We have introduced new features and resolved several bugs to improve your browsing experience. Thank you all for your continued support and feedback!\n\n• Added a precise frame counter and frame-by-frame scrubbing tools to all video players.\n• Fixed laggy or unresponsive hover-to-play video previews so they load instantly.\n• Fixed broken thumbnails on community-uploaded video posts.\n• Updated subscription billing flows to accurately reflect chosen plan tiers on upgrade.\n• Patched checkout issues to prevent duplicate plan subscriptions.',
     type: 'Update'
   },
   {

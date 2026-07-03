@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useUser } from '@/hooks/use-user';
 import { collection, query, where, documentId, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -72,7 +72,7 @@ const getConstrainedDimensions = (width: number, height: number, maxSize: number
     }
 };
 
-export default function MoodboardPage() {
+function MoodboardContent() {
     const { user } = useAuth();
     const { userProfile } = useUser();
     const { board_id } = useParams();
@@ -2813,5 +2813,20 @@ export default function MoodboardPage() {
                 className="hidden"
             />
         </div>
+    );
+}
+
+export default function MoodboardPage() {
+    return (
+        <Suspense fallback={
+            <div className="h-screen w-screen bg-neutral-900 flex items-center justify-center text-white">
+                <div className="animate-pulse flex flex-col items-center gap-4">
+                    <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-zinc-400">Loading Moodboard...</p>
+                </div>
+            </div>
+        }>
+            <MoodboardContent />
+        </Suspense>
     );
 }

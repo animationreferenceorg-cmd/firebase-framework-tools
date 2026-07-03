@@ -27,7 +27,7 @@ import ReactPlayer from 'react-player/lazy';
 import type { Video } from '@/lib/types';
 
 
-function Player({ playerRef, ...props }: any) {
+function Player({ playerRef, onReady, ...props }: any) {
   const [hasMounted, setHasMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -35,7 +35,7 @@ function Player({ playerRef, ...props }: any) {
   }, []);
 
   if (!hasMounted) {
-    return <div className="w-full h-full bg-black flex items-center justify-center text-white">Loading...</div>;
+    return null;
   }
 
   return (
@@ -44,6 +44,7 @@ function Player({ playerRef, ...props }: any) {
       width="100%"
       height="100%"
       style={{ position: 'absolute', top: 0, left: 0 }}
+      onReady={onReady}
       {...props}
     />
   )
@@ -60,7 +61,9 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   const { toast } = useToast();
 
   const [isHovered, setIsHovered] = useState(false);
+  const [hoverPlayerReady, setHoverPlayerReady] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [hasImageError, setHasImageError] = useState(false);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [showLimitDialog, setShowLimitDialog] = useState(false);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
@@ -114,6 +117,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
       clearTimeout(hoverTimeoutRef.current);
     }
     setIsHovered(false);
+    setHoverPlayerReady(false);
     if (videoRef.current) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
@@ -190,18 +194,14 @@ const [socialAccessible, setSocialAccessible] = useState(true);
     });
   };
 
-  const imageUrl = (video.isShort || poster) ? (video.posterUrl || video.thumbnailUrl || '/placeholder.png') : (video.thumbnailUrl || video.posterUrl || '/placeholder.png');
+  const imageUrl = (video.isShort || poster) ? (video.posterUrl || video.thumbnailUrl) : (video.thumbnailUrl || video.posterUrl);
   const aspectRatio = (video.isShort || poster) ? "aspect-[2/3]" : "aspect-[3/4] md:aspect-video";
 
-  // Optimize hover/card playback by using a lower resolution direct MP4 (480p) instead of HLS.
-  // This bypasses the HLS.js overhead and loads much faster.
-  const videoUrlForPreview = useMemo(() => {
-    const url = video.videoUrl;
-    if (url && url.includes('.b-cdn.net') && url.endsWith('playlist.m3u8')) {
-      return url.replace('playlist.m3u8', 'play_480p.mp4');
-    }
-    return url;
-  }, [video.videoUrl]);
+  // Bypass Next.js image optimizer for external CDNs that block server-side fetches (403)
+  const isExternalCdn = imageUrl?.includes('.b-cdn.net') || imageUrl?.includes('cdninstagram.com') || imageUrl?.includes('instagram.com');
+
+  // Use original URL for preview. ReactPlayer handles HLS natively.
+  const videoUrlForPreview = video.videoUrl;
 
   // Universal: show link badge on ANY video that has an uploader or originalUrl
   const linkUrl = video.originalUrl || (video.uploader ? video.videoUrl : null);
@@ -227,33 +227,56 @@ const [socialAccessible, setSocialAccessible] = useState(true);
           )}
         >
           {!isImageLoaded && <Skeleton className="absolute inset-0" />}
-          {isCommunityVideo && video.videoUrl ? (
-                <video
-                  ref={videoRef}
-                  src={cardInView ? `${videoUrlForPreview}#t=0.1` : undefined}
-                  preload="metadata"
-                  muted
-                  playsInline
-                  onLoadedData={() => setIsImageLoaded(true)}
-                  className={cn(
-                    "w-full h-full object-cover transition-opacity duration-300",
-                    !isImageLoaded && "opacity-0",
-                  )}
-                />
-          ) : imageUrl ? (
-            <Image loading="lazy"
-              src={imageUrl}
-              alt={video.title}
-              fill
+          {imageUrl && !hasImageError ? (
+            <>
+              <Image loading="lazy"
+                src={imageUrl}
+                alt={video.title}
+                fill
+                unoptimized={isExternalCdn}
+                className={cn(
+                  "w-full h-full object-cover transition-opacity duration-300",
+                  (!isImageLoaded || (isHovered && video.videoUrl && isCommunityVideo)) && "opacity-0"
+                )}
+                data-ai-hint={video.dataAiHint}
+                onLoad={() => setIsImageLoaded(true)}
+                onError={() => {
+                  setHasImageError(true);
+                  setIsImageLoaded(true);
+                }}
+              />
+              {isCommunityVideo && video.videoUrl && cardInView && isHovered && (
+                <div className="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-100">
+                  <Player
+                    url={videoUrlForPreview}
+                    playing={isHovered}
+                    loop={true}
+                    muted={true}
+                    playsinline={true}
+                    controls={false}
+                    config={{ youtube: { playerVars: { autoplay: 1, mute: 1, controls: 0 } } }}
+                  />
+                </div>
+              )}
+            </>
+          ) : isCommunityVideo && video.videoUrl ? (
+            <video
+              ref={videoRef}
+              src={cardInView ? `${videoUrlForPreview}#t=0.1` : undefined}
+              preload="metadata"
+              muted
+              playsInline
+              onLoadedData={() => setIsImageLoaded(true)}
               className={cn(
                 "w-full h-full object-cover transition-opacity duration-300",
-                !isImageLoaded && "opacity-0",
+                !isImageLoaded && "opacity-0"
               )}
-              data-ai-hint={video.dataAiHint}
-              onLoad={() => setIsImageLoaded(true)}
             />
           ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-purple-900/40 to-pink-900/40 border border-white/5">
+            <div className={cn(
+              "absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-purple-900/40 to-pink-900/40 border border-white/5",
+              (isHovered && video.videoUrl && isCommunityVideo) && "opacity-0"
+            )}>
               <PlayCircle className="h-10 w-10 text-white/40 mb-2" />
               <span className="text-white/70 font-medium px-4 text-center text-sm line-clamp-2 w-full">{displayTitle}</span>
             </div>
@@ -291,7 +314,43 @@ const [socialAccessible, setSocialAccessible] = useState(true);
           {!isImageLoaded && <Skeleton className="absolute inset-0" />}
           
           {/* Main Social Background / Thumbnail */}
-          {video.videoUrl ? (
+          {imageUrl && !hasImageError ? (
+            <>
+              <Image loading="lazy"
+                src={imageUrl}
+                alt={video.title}
+                fill
+                unoptimized={isExternalCdn}
+                className={cn(
+                  "w-full h-full object-cover transition-transform duration-500",
+                  isHovered && !isPlayerOpen ? "scale-110" : "scale-100",
+                  (!isImageLoaded || (hoverPlayerReady && !isPlayerOpen && video.videoUrl)) && "opacity-0"
+                )}
+                data-ai-hint={video.dataAiHint}
+                onLoad={() => setIsImageLoaded(true)}
+                onError={() => {
+                  setHasImageError(true);
+                  setIsImageLoaded(true);
+                }}
+              />
+              {video.videoUrl && cardInView && isHovered && !isPlayerOpen && (
+                <div className={cn(
+                  "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none opacity-100"
+                )}>
+                  <Player
+                    url={videoUrlForPreview}
+                    playing={isHovered}
+                    loop={true}
+                    muted={true}
+                    playsinline={true}
+                    controls={false}
+                    onReady={() => setHoverPlayerReady(true)}
+                    config={{ youtube: { playerVars: { autoplay: 1, mute: 1, controls: 0 } } }}
+                  />
+                </div>
+              )}
+            </>
+          ) : video.videoUrl ? (
             <video
               ref={videoRef}
               src={cardInView ? `${videoUrlForPreview}#t=0.1` : undefined}
@@ -305,21 +364,10 @@ const [socialAccessible, setSocialAccessible] = useState(true);
                 !isImageLoaded && "opacity-0"
               )}
             />
-          ) : imageUrl ? (
-            <Image loading="lazy"
-              src={imageUrl}
-              alt={video.title}
-              fill
-              className={cn(
-                "w-full h-full object-cover transition-transform duration-500",
-                isHovered && !isPlayerOpen ? "scale-110" : "scale-100",
-                !isImageLoaded && "opacity-0"
-              )}
-              data-ai-hint={video.dataAiHint}
-              onLoad={() => setIsImageLoaded(true)}
-            />
           ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-purple-600/30 to-pink-600/30 border border-white/10 group-hover/card:from-purple-600/40 group-hover/card:to-pink-600/40 transition-colors">
+            <div className={cn(
+              "absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-purple-600/30 to-pink-600/30 border border-white/10 group-hover/card:from-purple-600/40 group-hover/card:to-pink-600/40 transition-colors"
+            )}>
               <Share2 className="h-12 w-12 text-white/60 mb-3 group-hover/card:scale-110 transition-transform duration-300" />
             </div>
           )}
@@ -419,6 +467,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
   return (
     <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
       <div
+        ref={cardRef}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         className={cn(
@@ -427,23 +476,28 @@ const [socialAccessible, setSocialAccessible] = useState(true);
           aspectRatio
         )}>
         {!isImageLoaded && <Skeleton className="absolute inset-0" />}
-        {imageUrl ? (
+        {imageUrl && !hasImageError ? (
           <Image
             src={imageUrl}
             alt={video.title}
             fill
+            unoptimized={isExternalCdn}
             className={cn(
               "w-full h-full object-cover transition-opacity duration-300",
-              (isHovered && !video.isShort && !poster || !isImageLoaded) && "opacity-0",
+              (hoverPlayerReady && !video.isShort && !poster || !isImageLoaded) && "opacity-0",
               (video.isShort || poster) && isImageLoaded && "opacity-100"
             )}
             data-ai-hint={video.dataAiHint}
             onLoad={() => setIsImageLoaded(true)}
+            onError={() => {
+              setHasImageError(true);
+              setIsImageLoaded(true);
+            }}
           />
         ) : (
           <div className={cn(
             "absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-purple-900/40 to-pink-900/40 border border-white/5",
-            (isHovered && !video.isShort && !poster) && "opacity-0"
+            (hoverPlayerReady && !video.isShort && !poster) && "opacity-0"
           )}>
             <PlayCircle className="h-10 w-10 text-white/40 mb-2" />
             <span className="text-white/70 font-medium px-4 text-center text-sm truncate w-full">{displayTitle}</span>
@@ -465,6 +519,8 @@ const [socialAccessible, setSocialAccessible] = useState(true);
               muted={true}
               playsinline={true}
               controls={false}
+              onReady={() => setHoverPlayerReady(true)}
+              config={{ youtube: { playerVars: { autoplay: 1, mute: 1, controls: 0 } } }}
             />
           </div>
         )}

@@ -22,27 +22,28 @@ function initializeAdminApp(): App {
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-  if (!projectId || !clientEmail || !privateKey) {
-    console.warn("Firebase Admin credentials are not fully set in environment variables. Admin SDK will not be initialized.");
-    // Return a dummy object or handle as an error if critical for the build
-    return null as any; 
-  }
-  
   try {
-    adminApp = admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: projectId,
-        clientEmail: clientEmail,
-        // Replace escaped newlines in private key
-        privateKey: privateKey.replace(/^"|"$/g, '').replace(/\\n/g, "\n"),
-      }),
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-    });
-    console.log("✅ Firebase Admin initialized successfully");
+    if (projectId && clientEmail && privateKey) {
+      adminApp = admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: projectId,
+          clientEmail: clientEmail,
+          // Replace escaped newlines in private key
+          privateKey: privateKey.replace(/^"|"$/g, '').replace(/\\n/g, "\n"),
+        }),
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+      });
+      console.log("✅ Firebase Admin initialized successfully with cert credentials");
+    } else {
+      // Fallback to default credentials (e.g. production Cloud Run / Firebase App Hosting environment)
+      adminApp = admin.initializeApp({
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+      });
+      console.log("✅ Firebase Admin initialized successfully with default credentials");
+    }
   } catch (err: any) {
     console.error("❌ Error initializing Firebase Admin SDK", err);
-    // In a build process, it's better to throw to signal failure clearly
-    throw new Error("Could not initialize Firebase Admin SDK. Check your environment variables.");
+    throw new Error("Could not initialize Firebase Admin SDK. Check your environment configuration.");
   }
   
   return adminApp;

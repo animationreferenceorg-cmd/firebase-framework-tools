@@ -87,9 +87,6 @@ const formSchema = (isShort: boolean, isReference: boolean) => z.object({
   if (data.videoSourceType === 'url' && (!data.videoUrl || data.videoUrl.trim() === '')) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Video URL is required.", path: ['videoUrl'] });
   }
-  if (data.videoSourceType === 'social' && (!data.videoUrl || data.videoUrl.trim() === '')) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Social URL is required.", path: ['videoUrl'] });
-  }
   if (data.thumbnailSourceType === 'url' && (!data.thumbnailUrl || data.thumbnailUrl.trim() === '')) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Thumbnail URL is required.", path: ['thumbnailUrl'] });
   }
@@ -1000,7 +997,7 @@ export default function VideoForm({ video, isShort, isReference = false, default
         createdAt: video?.createdAt || serverTimestamp(),
         uploader: values.uploader || '',
         originalUrl: values.originalUrl || video?.originalUrl || values.videoUrl || '',
-        fps: values.fps || null,
+        fps: values.fps || undefined,
       };
 
       if (isReference) {

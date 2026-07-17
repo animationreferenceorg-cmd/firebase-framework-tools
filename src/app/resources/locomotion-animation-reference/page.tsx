@@ -1,6 +1,10 @@
 
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { collection, getDocs, limit, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { Video } from '@/lib/types';
+import { VideoCard } from '@/components/VideoCard';
 import { Button } from '@/components/ui/button';
 import { Footprints, Zap, Wind, FastForward, Timer, Play, Layers, ArrowRight } from 'lucide-react';
 
@@ -8,9 +12,42 @@ export const metadata: Metadata = {
     title: 'Walk & Run Cycle Reference Library | Professional Locomotion Animation',
     description: 'Master locomotion with the world\'s best walk and run cycle reference library. From realistic human gates to animal locomotion and parkour traversal.',
     keywords: 'walk cycle reference, run cycle reference, animation locomotion, character movement reference, jumping animation reference, parkour animation',
+    alternates: { canonical: 'https://animationreference.org/resources/locomotion-animation-reference' },
 };
 
-export default function LocomotionResources() {
+async function getLocomotionVideos(): Promise<Video[]> {
+    const tags = ['walk-cycle', 'run-cycle', 'locomotion', 'running'];
+    const snapshots = await Promise.all(tags.map((tag) => getDocs(query(
+        collection(db, 'videos'),
+        where('tags', 'array-contains', tag),
+        limit(12),
+    ))));
+
+    const videos = new Map<string, Video>();
+    snapshots.flatMap((snapshot) => snapshot.docs).forEach((doc) => {
+        const data = doc.data();
+        if (data.status !== 'draft') {
+            videos.set(doc.id, { id: doc.id, ...data } as Video);
+        }
+    });
+
+    return Array.from(videos.values()).slice(0, 12);
+}
+
+export default async function LocomotionResources() {
+    const videos = await getLocomotionVideos();
+    const itemListSchema = videos.length > 0 ? {
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: 'Walk and run cycle animation references',
+        itemListElement: videos.map((video, index) => ({
+            '@type': 'ListItem',
+            position: index + 1,
+            url: `https://animationreference.org/video/${video.id}`,
+            name: video.title,
+        })),
+    } : null;
+
     return (
         <div className="min-h-screen bg-[#02040a] text-white -mt-24">
             {/* Dynamic Motion Hero Section */}
@@ -33,13 +70,31 @@ export default function LocomotionResources() {
                         </p>
                         <div className="pt-8 flex flex-col sm:flex-row gap-4">
                             <Button asChild className="h-20 px-12 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-2xl transition-all hover:scale-105 shadow-[0_0_50px_-10px_rgba(37,99,235,0.5)]">
-                                <Link href="/signup">EXPLORE CYCLES <ArrowRight className="ml-4 h-8 w-8 inline" /></Link>
+                            <Link href="#reference-library">EXPLORE CYCLES <ArrowRight className="ml-4 h-8 w-8 inline" /></Link>
                             </Button>
                             <Button asChild variant="outline" className="h-20 px-12 rounded-2xl border-white/10 bg-white/5 hover:bg-white/10 text-white font-bold text-2xl">
                                 <Link href="/categories?category=locomotion">VIEW GALLERY</Link>
                             </Button>
                         </div>
                     </div>
+                </div>
+            </section>
+
+            {/* Curated references: the page should deliver the collection promised by its title. */}
+            <section id="reference-library" className="py-24 border-y border-white/5 bg-black/20">
+                <div className="container mx-auto px-6">
+                    <div className="max-w-3xl mb-12">
+                        <p className="text-cyan-400 font-bold tracking-[0.2em] uppercase text-sm mb-4">Curated study set</p>
+                        <h2 className="text-4xl md:text-6xl font-black tracking-tight mb-5">Walk &amp; run cycle references</h2>
+                        <p className="text-lg text-slate-400 leading-relaxed">Study contact, passing, compression, propulsion, and weight shift in a focused set of animation references. Open any clip for frame-by-frame playback and related tags.</p>
+                    </div>
+                    {videos.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {videos.map((video) => <VideoCard key={video.id} video={video} />)}
+                        </div>
+                    ) : (
+                        <p className="text-slate-500">New locomotion references are being curated now. Browse the full library to explore related movement clips.</p>
+                    )}
                 </div>
             </section>
 
@@ -154,14 +209,17 @@ export default function LocomotionResources() {
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-600/5 via-transparent to-transparent -z-10" />
                 <div className="max-w-4xl mx-auto space-y-12">
                     <h2 className="text-6xl md:text-9xl font-black tracking-tighter uppercase leading-none">NEVER <br />MISS A <br /><span className="text-blue-500 text-glow-blue">STEP.</span></h2>
-                    <p className="text-2xl text-slate-400 font-medium">Join 5,000+ animators using the industry standard locomotion library.</p>
+                    <p className="text-2xl text-slate-400 font-medium">Build stronger walks, runs, and character movement with focused reference you can study frame by frame.</p>
                     <div className="pt-8">
                         <Button asChild size="lg" className="h-24 px-16 rounded-full bg-white text-black hover:bg-slate-200 font-black text-3xl transition-transform hover:scale-110 shadow-2xl">
-                            <Link href="/signup">GET UNLIMITED ACCESS</Link>
+                            <Link href="/home">EXPLORE THE LIBRARY</Link>
                         </Button>
                     </div>
                 </div>
             </section>
+            {itemListSchema && (
+                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
+            )}
         </div>
     );
 }

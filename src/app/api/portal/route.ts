@@ -22,11 +22,12 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        let stripeCustomerId = userDoc.data()?.stripeCustomerId;
+        const userData = userDoc.data() || {};
+        let stripeCustomerId = userData.stripeCustomerId;
 
         // FALLBACK: If stripeCustomerId is missing, search Stripe by user's email
-        if (!stripeCustomerId && userDoc.data()?.email) {
-            const email = userDoc.data().email;
+        if (!stripeCustomerId && userData.email) {
+            const email = userData.email;
             console.log(`[Portal] stripeCustomerId missing for user ${userId}. Searching Stripe by email: ${email}`);
             try {
                 const stripe = getStripe();

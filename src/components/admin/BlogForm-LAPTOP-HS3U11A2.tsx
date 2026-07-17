@@ -284,7 +284,7 @@ export default function BlogForm({ post, onSuccess }: BlogFormProps) {
                         <FormDescription>
                           Recommended: 50-60 characters.
                         </FormDescription>
-                        <span className={`text-xs ${(field.value || '').length > 60 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                        <span className={`text-xs ${field.value?.length > 60 ? 'text-red-500' : 'text-muted-foreground'}`}>
                           {field.value?.length || 0}/60
                         </span>
                       </div>
@@ -310,7 +310,7 @@ export default function BlogForm({ post, onSuccess }: BlogFormProps) {
                         <FormDescription>
                           Recommended: 150-160 characters.
                         </FormDescription>
-                        <span className={`text-xs ${(field.value || '').length > 160 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                        <span className={`text-xs ${field.value?.length > 160 ? 'text-red-500' : 'text-muted-foreground'}`}>
                           {field.value?.length || 0}/160
                         </span>
                       </div>

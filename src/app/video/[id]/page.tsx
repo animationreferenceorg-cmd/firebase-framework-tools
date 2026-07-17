@@ -23,6 +23,17 @@ async function getVideo(id: string): Promise<Video | null> {
     return null;
 }
 
+function toIsoDate(value: unknown): string | undefined {
+    if (!value) return undefined;
+    if (value instanceof Date) return value.toISOString();
+    if (typeof value === 'number') return new Date(value).toISOString();
+    if (typeof value === 'object' && value !== null && 'seconds' in value) {
+        const seconds = (value as { seconds?: number }).seconds;
+        if (typeof seconds === 'number') return new Date(seconds * 1000).toISOString();
+    }
+    return undefined;
+}
+
 export async function generateMetadata(
     { params }: Props,
     parent: ResolvingMetadata
@@ -70,5 +81,29 @@ export default async function VideoPage({ params }: Props) {
     const id = (await params).id;
     const video = await getVideo(id);
 
-    return <VideoDetailClient id={id} initialData={video} />;
+    if (!video) return <VideoDetailClient id={id} initialData={null} />;
+
+    const pageUrl = `https://animationreference.org/video/${id}`;
+    const videoSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'VideoObject',
+        name: video.title,
+        description: video.description || `Study this ${video.title} animation reference on Animation Reference.`,
+        thumbnailUrl: video.thumbnailUrl || video.posterUrl || 'https://animationreference.org/site-icon.png',
+        contentUrl: video.videoUrl || undefined,
+        embedUrl: pageUrl,
+        uploadDate: toIsoDate((video as Video & { createdAt?: unknown }).createdAt),
+        url: pageUrl,
+        keywords: video.tags?.join(', '),
+    };
+
+    return (
+        <>
+            <VideoDetailClient id={id} initialData={video} />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(videoSchema) }}
+            />
+        </>
+    );
 }

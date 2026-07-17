@@ -1,6 +1,6 @@
 
 import { MetadataRoute } from 'next';
-import { collection, getDocs, query, where, limit, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 const BASE_URL = 'https://animationreference.org';
@@ -76,6 +76,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 0.9,
         },
         {
+            url: `${BASE_URL}/resources/character-acting-animation-reference`,
+            lastModified: new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.9,
+        },
+        {
+            url: `${BASE_URL}/resources/fx-animation-reference`,
+            lastModified: new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.9,
+        },
+        {
             url: `${BASE_URL}/resources/foundations-of-life`,
             lastModified: new Date(),
             changeFrequency: 'monthly',
@@ -117,23 +129,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             };
         });
 
-        // 4. Dynamic Videos (Latest 200)
-        const videosQuery = query(
-            collection(db, 'videos'),
-            where('status', '==', 'published'),
-            limit(200)
-        );
-        const videoSnapshot = await getDocs(videosQuery);
-        const videoRoutes: MetadataRoute.Sitemap = videoSnapshot.docs.map((doc) => {
+        // 4. Dynamic Videos (include the full published library)
+        const videoSnapshot = await getDocs(collection(db, 'videos'));
+        const videoRoutes: MetadataRoute.Sitemap = videoSnapshot.docs
+            .filter((doc) => doc.data().status !== 'draft')
+            .map((doc) => {
             const data = doc.data();
             const path = data.isShort ? 'shorts' : 'video';
+            const timestamp = data.updatedAt || data.createdAt;
+            const lastModified = timestamp?.toDate
+                ? timestamp.toDate()
+                : timestamp?.seconds
+                    ? new Date(timestamp.seconds * 1000)
+                    : undefined;
             return {
                 url: `${BASE_URL}/${path}/${doc.id}`,
-                lastModified: new Date(),
+                ...(lastModified ? { lastModified } : {}),
                 changeFrequency: 'monthly',
                 priority: 0.6,
             };
-        });
+            });
 
         return [...staticRoutes, ...categoryRoutes, ...blogRoutes, ...videoRoutes];
     } catch (error) {

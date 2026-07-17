@@ -10,11 +10,14 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://animationreference.org'),
-  title: 'Animation Reference',
-  description: 'A Netflix-inspired platform for discovering and enjoying animation clips.',
+  title: {
+    default: 'Animation Reference | Study Movement, Timing & Acting',
+    template: '%s | Animation Reference',
+  },
+  description: 'Find curated animation references for movement, timing, acting, combat, locomotion, and effects. Study the exact motion you need for your next shot.',
   openGraph: {
     title: 'Animation Reference',
-    description: 'The definitive collection of curated animation references.',
+    description: 'Curated animation references for movement, timing, acting, combat, locomotion, and effects.',
     images: [
       {
         url: '/site-icon.png',
@@ -29,7 +32,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Animation Reference',
-    description: 'The definitive collection of curated animation references.',
+    description: 'Curated animation references for movement, timing, acting, combat, locomotion, and effects.',
     images: ['/site-icon.png'],
   },
   alternates: {

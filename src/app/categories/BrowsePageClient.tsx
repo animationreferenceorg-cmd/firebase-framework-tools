@@ -82,7 +82,7 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
     });
     const [activeType, setActiveTypeState] = useState<TypeOption>(() => {
         const dim = searchParams.get('dimension');
-        return (dim === '2d' || dim === '3d' || dim === 'all') ? dim : 'all';
+        return dim === '2d' ? '2D' : dim === '3d' ? '3D' : 'all';
     });
     const [columns, setColumns] = useState<number>(2);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(() => {
@@ -131,7 +131,7 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
             setActiveTabState((sort === 'trending' || sort === 'latest') ? sort : 'latest');
 
             const dim = params.get('dimension');
-            setActiveTypeState((dim === '2d' || dim === '3d' || dim === 'all') ? dim : 'all');
+            setActiveTypeState(dim === '2d' ? '2D' : dim === '3d' ? '3D' : 'all');
         };
 
         window.addEventListener('popstate', handlePopState);

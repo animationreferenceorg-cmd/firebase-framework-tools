@@ -105,7 +105,7 @@ async function getYtDlpExecutor(): Promise<{ command: string; baseArgs: string[]
         // Test if system python is real and has yt-dlp
         const hasRealPython = await new Promise<boolean>((resolve) => {
             exec('python --version', (error, stdout) => {
-                resolve(!error && stdout && stdout.toLowerCase().includes('python'));
+                resolve(Boolean(!error && stdout && stdout.toLowerCase().includes('python')));
             });
         });
 

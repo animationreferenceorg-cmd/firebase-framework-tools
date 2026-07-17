@@ -38,8 +38,10 @@
   "exclude": [
     "node_modules",
     "temp_downloader",
+    "scratch",
     "functions",
     "VideoCard_old.tsx",
-    "**/*-MF-Desktop-7V82NGA*"
+    "**/*-MF-Desktop-7V82NGA*",
+    "**/*-LAPTOP-HS3U11A2*"
   ]
 }

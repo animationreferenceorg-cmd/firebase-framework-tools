@@ -18,12 +18,6 @@ export interface Video {
   uploader?: string;
   originalUrl?: string;
   fps?: number;
-  duration?: number;
-  width?: number;
-  height?: number;
-  createdAt?: any;
-  updatedAt?: any;
-  author_name?: string;
 }
 
 export interface Folder {
@@ -58,7 +52,6 @@ export interface UserProfile {
   role: 'admin' | 'user';
   likedVideoIds?: string[];
   likedCategoryTitles?: string[];
-  likedCategoryIds?: string[];
   savedShortIds?: string[];
   recentlyViewedShortIds?: string[];
   isPremium?: boolean;
@@ -82,7 +75,7 @@ export interface LocalImage {
 
 export interface MoodboardItem {
   id: string;
-  type: 'video' | 'image' | 'note' | 'text' | 'shape' | 'drawing' | 'connection';
+  type: 'video' | 'image' | 'note'; // Added 'note'
   videoId?: string | null;
   imageUrl?: string | null;
   text?: string; // Content for notes
@@ -94,14 +87,6 @@ export interface MoodboardItem {
   color?: string; // Optional: sticky note color
   rotation?: number;
   zIndex?: number;
-  shapeType?: 'rectangle' | 'circle' | 'triangle' | 'arrow-right';
-  borderColor?: string;
-  borderWidth?: number;
-  fontSize?: number;
-  textColor?: string;
-  points?: Array<{ x: number; y: number }>;
-  fromItem?: string;
-  toItem?: string;
 }
 
 export interface Moodboard {

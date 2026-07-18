@@ -9,6 +9,8 @@ export const metadata: Metadata = {
     alternates: { canonical: 'https://animationreference.org/resources/fx-animation-reference' },
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function FxResources() {
     const videos = await getResourceHubVideos(['fx-animation', 'fire', 'smoke', 'water', 'explosion', 'debris']);
     return <ResourceHub

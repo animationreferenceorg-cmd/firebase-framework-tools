@@ -9,6 +9,8 @@ export const metadata: Metadata = {
     alternates: { canonical: 'https://animationreference.org/resources/combat-animation-reference' },
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function CombatResources() {
     const videos = await getResourceHubVideos(['combat', 'fight-scene', 'impact', 'attack', 'hit-reaction']);
     return <ResourceHub

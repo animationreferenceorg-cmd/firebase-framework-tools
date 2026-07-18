@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { VideoCard } from '@/components/VideoCard';
 import { CategoryViewTracker } from '@/components/CategoryViewTracker';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 type Props = {
     params: Promise<{ slug: string }>;

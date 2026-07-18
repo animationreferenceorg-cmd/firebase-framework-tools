@@ -5,6 +5,8 @@ import { db } from '@/lib/firebase';
 import { VideoDetailClient } from '@/components/VideoDetailClient';
 import type { Video } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 type Props = {
     params: Promise<{ id: string }>;
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

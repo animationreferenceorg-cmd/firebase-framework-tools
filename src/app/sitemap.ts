@@ -5,6 +5,10 @@ import { db } from '@/lib/firebase';
 
 const BASE_URL = 'https://animationreference.org';
 
+// Generate the sitemap when requested instead of blocking deployments on a full
+// Firestore library read during the build.
+export const dynamic = 'force-dynamic';
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // 1. Static Routes
     const staticRoutes: MetadataRoute.Sitemap = [

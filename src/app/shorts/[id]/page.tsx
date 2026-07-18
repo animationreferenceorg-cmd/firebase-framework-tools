@@ -5,6 +5,8 @@ import { db } from '@/lib/firebase';
 import { ShortFilmDetailClient } from '@/components/ShortFilmDetailClient';
 import type { Video } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 type PageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

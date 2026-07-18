@@ -5,7 +5,7 @@ import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import type { Category } from '@/lib/types';
 import BrowsePageClient from '../BrowsePageClient';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 type Props = {
     params: Promise<{ slug?: string[] }>;

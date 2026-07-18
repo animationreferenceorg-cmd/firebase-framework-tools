@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Sparkles, Film } from 'lucide-react';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 type Props = {
     params: Promise<{ slug: string }>;
 };

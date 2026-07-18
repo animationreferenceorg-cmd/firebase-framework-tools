@@ -15,6 +15,8 @@ export const metadata: Metadata = {
     alternates: { canonical: 'https://animationreference.org/resources/locomotion-animation-reference' },
 };
 
+export const dynamic = 'force-dynamic';
+
 async function getLocomotionVideos(): Promise<Video[]> {
     const tags = ['walk-cycle', 'run-cycle', 'locomotion', 'running'];
     const snapshots = await Promise.all(tags.map((tag) => getDocs(query(

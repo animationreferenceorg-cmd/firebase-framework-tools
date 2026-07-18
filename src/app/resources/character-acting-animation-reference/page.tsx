@@ -9,6 +9,8 @@ export const metadata: Metadata = {
     alternates: { canonical: 'https://animationreference.org/resources/character-acting-animation-reference' },
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function CharacterActingResources() {
     const videos = await getResourceHubVideos(['character-acting', 'acting', 'emotion', 'performance', 'dialogue']);
     return <ResourceHub

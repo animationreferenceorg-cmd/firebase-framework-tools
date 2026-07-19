@@ -53,6 +53,7 @@ export function GlassHeader() {
                 <nav className="hidden md:flex items-center gap-1 bg-white/5 rounded-full p-1 md:p-1.5 border border-white/5 mx-2 md:mx-4">
                     {[
                         { label: 'Home', href: '/home' },
+                        { label: 'References', href: '/references' },
                         { label: 'Categories', href: '/categories' },
                         { label: 'Marketplace', href: '/marketplace' },
                     ].map((item) => (

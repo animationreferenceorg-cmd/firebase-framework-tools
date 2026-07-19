@@ -156,6 +156,11 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
+                                    <SidebarLink href="/references" icon={Clapperboard} tooltip="References">
+                                        References
+                                    </SidebarLink>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
                                     <SidebarLink href="/shorts" icon={Film} tooltip="Short Films">
                                         Short Films
                                     </SidebarLink>

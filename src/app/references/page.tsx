@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, Play, Pause, X, Tag, RefreshCw, ZoomIn, Film, Layers, ChevronRight, Grid } from 'lucide-react';
 import { CLIPS, CATEGORY_MAP, Clip } from './data';
 
+CATEGORY_MAP.sakugabooru = 'Sakugabooru Stream';
+
 // Brand colors
 const BLUE = '#2563EB';
 const DARK_BG = '#0B0B0C';
@@ -18,6 +20,39 @@ export default function AnimRefBrowsePage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   
+  // Sakugabooru Stream State
+  const [isSakugaStream, setIsSakugaStream] = useState(false);
+  const [sakugaClips, setSakugaClips] = useState<Clip[]>([]);
+  const [sakugaLoading, setSakugaLoading] = useState(false);
+
+  const fetchSakugaClips = async (tagsList: string[] = []) => {
+    setSakugaLoading(true);
+    try {
+      const tagsParam = tagsList.length > 0 ? `&tags=${encodeURIComponent(tagsList.join(' '))}` : '';
+      const response = await fetch(`/api/sakugabooru/random?limit=40${tagsParam}`);
+      if (!response.ok) throw new Error('Failed to fetch Sakugabooru stream');
+      const data = await response.json();
+      setSakugaClips(data);
+    } catch (err) {
+      console.error('Sakugabooru stream fetch error:', err);
+    } finally {
+      setSakugaLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isSakugaStream) {
+      const delayDebounce = setTimeout(() => {
+        const combined = [...selectedTags];
+        if (searchQuery.trim()) {
+          combined.push(searchQuery.trim());
+        }
+        fetchSakugaClips(combined);
+      }, 500);
+      return () => clearTimeout(delayDebounce);
+    }
+  }, [isSakugaStream, selectedTags, searchQuery]);
+
   // Video player state in modal
   const [isPlaying, setIsPlaying] = useState(true);
   const [playbackRate, setPlaybackRate] = useState(1.0);
@@ -211,26 +246,36 @@ export default function AnimRefBrowsePage() {
                 <RefreshCw className="w-3.5 h-3.5" /> Reset Filters
               </button>
             )}
+
+            {isSakugaStream && (
+              <button
+                onClick={() => fetchSakugaClips(selectedTags)}
+                disabled={sakugaLoading}
+                className="flex items-center justify-center gap-2 px-4 py-3 border border-purple-500/30 hover:border-purple-500/60 bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 hover:text-purple-300 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${sakugaLoading ? 'animate-spin' : ''}`} /> Reroll Stream
+              </button>
+            )}
           </div>
 
           {/* Categories Tab Bar */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none border-t border-gray-900/60 pt-3">
             <button
-              onClick={() => setActiveCategory('all')}
+              onClick={() => { setActiveCategory('all'); setIsSakugaStream(false); }}
               className={`px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all whitespace-nowrap cursor-pointer ${
-                activeCategory === 'all' 
+                activeCategory === 'all' && !isSakugaStream
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/15'
                   : 'bg-[#131316] text-gray-400 hover:text-white hover:bg-gray-800'
               }`}
             >
               All Categories
             </button>
-            {Object.entries(CATEGORY_MAP).map(([key, name]) => (
+            {Object.entries(CATEGORY_MAP).filter(([key]) => key !== 'sakugabooru').map(([key, name]) => (
               <button
                 key={key}
-                onClick={() => setActiveCategory(key)}
+                onClick={() => { setActiveCategory(key); setIsSakugaStream(false); }}
                 className={`px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all whitespace-nowrap cursor-pointer ${
-                  activeCategory === key
+                  activeCategory === key && !isSakugaStream
                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/15'
                     : 'bg-[#131316] text-gray-400 hover:text-white hover:bg-gray-800'
                 }`}
@@ -238,6 +283,16 @@ export default function AnimRefBrowsePage() {
                 {name}
               </button>
             ))}
+            <button
+              onClick={() => { setIsSakugaStream(true); setActiveCategory('all'); }}
+              className={`px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                isSakugaStream
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/15'
+                  : 'bg-[#131316] text-gray-400 hover:text-white hover:bg-gray-800'
+              }`}
+            >
+              ✨ Sakugabooru Stream (Free)
+            </button>
           </div>
 
           {/* Selected Tags Display */}
@@ -267,7 +322,10 @@ export default function AnimRefBrowsePage() {
               Reference Library
             </h2>
             <p className="text-xs text-gray-500 font-medium">
-              Showing {Math.min(visibleCount, filteredClips.length)} of {filteredClips.length} matching clips
+              {isSakugaStream 
+                ? `Showing ${sakugaClips.length} random Sakugabooru references`
+                : `Showing ${Math.min(visibleCount, filteredClips.length)} of ${filteredClips.length} matching clips`
+              }
             </p>
           </div>
 
@@ -292,10 +350,19 @@ export default function AnimRefBrowsePage() {
           </div>
         </div>
 
-        {filteredClips.length > 0 ? (
+        {isSakugaStream && sakugaLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array.from({ length: 12 }).map((_, idx) => (
+              <div key={idx} className="bg-[#131316] rounded-2xl overflow-hidden border border-gray-900 aspect-[1.33] animate-pulse flex flex-col justify-between p-4">
+                <div className="w-1/3 h-4 bg-gray-800 rounded-md" />
+                <div className="w-2/3 h-4 bg-gray-800 rounded-md" />
+              </div>
+            ))}
+          </div>
+        ) : (isSakugaStream ? sakugaClips : filteredClips).length > 0 ? (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredClips.slice(0, visibleCount).map((clip) => {
+              {(isSakugaStream ? sakugaClips : filteredClips.slice(0, visibleCount)).map((clip) => {
                 const isHovered = hoveredClipId === clip.id;
                 const aspectRatio = clip.width / clip.height;
                 
@@ -336,7 +403,7 @@ export default function AnimRefBrowsePage() {
 
                       {/* Bottom overlay details */}
                       <div className="absolute bottom-2.5 right-2.5 px-2 py-1 bg-black/75 rounded text-[10px] font-black tracking-wide text-white">
-                        {clip.duration.toFixed(1)}s
+                        {clip.duration > 0 ? `${clip.duration.toFixed(1)}s` : 'Sakuga'}
                       </div>
 
                       <div className="absolute top-2.5 left-2.5 px-2.5 py-0.5 bg-blue-600/90 text-white rounded text-[10px] font-black uppercase tracking-wider">
@@ -376,7 +443,7 @@ export default function AnimRefBrowsePage() {
             </div>
 
             {/* Pagination Controls */}
-            {visibleCount < filteredClips.length && (
+            {!isSakugaStream && visibleCount < filteredClips.length && (
               <div className="flex justify-center mt-16">
                 <button
                   onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}

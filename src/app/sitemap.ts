@@ -2,6 +2,7 @@
 import { MetadataRoute } from 'next';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getAllSnapshotVideos, getTagIndex, toIsoDate } from '@/lib/videoSnapshot.server';
 
 const BASE_URL = 'https://animationreference.org';
 
@@ -133,28 +134,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             };
         });
 
-        // 4. Dynamic Videos (include the full published library)
-        const videoSnapshot = await getDocs(collection(db, 'videos'));
-        const videoRoutes: MetadataRoute.Sitemap = videoSnapshot.docs
-            .filter((doc) => doc.data().status !== 'draft')
-            .map((doc) => {
-            const data = doc.data();
-            const path = data.isShort ? 'shorts' : 'video';
-            const timestamp = data.updatedAt || data.createdAt;
-            const lastModified = timestamp?.toDate
-                ? timestamp.toDate()
-                : timestamp?.seconds
-                    ? new Date(timestamp.seconds * 1000)
-                    : undefined;
+        // 4. Dynamic Videos — from the static snapshot, so Googlebot fetching
+        // the sitemap never triggers a full Firestore collection read.
+        const videoRoutes: MetadataRoute.Sitemap = getAllSnapshotVideos().map((video) => {
+            const iso = toIsoDate((video as { createdAt?: unknown }).createdAt);
             return {
-                url: `${BASE_URL}/${path}/${doc.id}`,
-                ...(lastModified ? { lastModified } : {}),
-                changeFrequency: 'monthly',
+                url: `${BASE_URL}/video/${video.id}`,
+                ...(iso ? { lastModified: new Date(iso) } : {}),
+                changeFrequency: 'monthly' as const,
                 priority: 0.6,
             };
-            });
+        });
 
-        return [...staticRoutes, ...categoryRoutes, ...blogRoutes, ...videoRoutes];
+        // 5. Tag landing pages
+        const tagRoutes: MetadataRoute.Sitemap = [...getTagIndex().bySlug.keys()].map((slug) => ({
+            url: `${BASE_URL}/tags/${slug}`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly' as const,
+            priority: 0.7,
+        }));
+        tagRoutes.unshift({
+            url: `${BASE_URL}/tags`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly' as const,
+            priority: 0.8,
+        });
+
+        return [...staticRoutes, ...categoryRoutes, ...blogRoutes, ...tagRoutes, ...videoRoutes];
     } catch (error) {
         console.error('Error generating sitemap:', error);
         // Return at least static routes if Firestore fails

@@ -3,7 +3,14 @@ const nextConfig = {
   output: 'standalone',
   /* config options here */
   images: {
+    formats: ['image/avif', 'image/webp'],
     remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'assets.reflix.dev',
+        port: '',
+        pathname: '/**',
+      },
       {
         protocol: 'https',
         hostname: 'placehold.co',

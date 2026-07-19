@@ -83,6 +83,53 @@ function downloadFile(url: string, dest: string): Promise<void> {
 }
 
 /**
+ * Downloads a file from a URL using curl, to bypass bot protection blocks.
+ */
+function downloadFileWithCurl(url: string, dest: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const curlCmd = process.platform === 'win32' ? 'curl.exe' : 'curl';
+        const args = ['-s', '-L', '-H', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', '-o', dest, url];
+        const proc = spawn(curlCmd, args, { shell: true });
+        
+        proc.on('close', (code) => {
+            if (code !== 0) {
+                reject(new Error(`curl download failed with code ${code}`));
+            } else {
+                resolve();
+            }
+        });
+    });
+}
+
+/**
+ * Fetches JSON from a URL using curl, to bypass bot protection blocks.
+ */
+function fetchJsonWithCurl(url: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+        const curlCmd = process.platform === 'win32' ? 'curl.exe' : 'curl';
+        const args = ['-s', '-L', '-H', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', url];
+        const proc = spawn(curlCmd, args, { shell: true });
+        let stdout = '';
+        let stderr = '';
+        
+        proc.stdout.on('data', (data) => { stdout += data.toString(); });
+        proc.stderr.on('data', (data) => { stderr += data.toString(); });
+        
+        proc.on('close', (code) => {
+            if (code !== 0) {
+                reject(new Error(`curl failed with code ${code}: ${stderr}`));
+            } else {
+                try {
+                    resolve(JSON.parse(stdout));
+                } catch (e: any) {
+                    reject(new Error(`Failed to parse json: ${e.message}. Output was: ${stdout.substring(0, 200)}`));
+                }
+            }
+        });
+    });
+}
+
+/**
  * Ensures yt-dlp is available and returns the path/command to execute it.
  * - On Linux (production): Downloads standalone binary to /tmp if needed.
  * - On Windows (local dev): Uses Python module.
@@ -166,6 +213,7 @@ function detectPlatform(url: string): string | null {
         if (hostname.includes('tiktok.com')) return 'tiktok';
         if (hostname.includes('twitter.com') || hostname.includes('x.com')) return 'twitter';
         if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) return 'youtube';
+        if (hostname.includes('sakugabooru.com')) return 'sakugabooru';
         return null;
     } catch {
         return null;
@@ -212,6 +260,136 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
     console.log(`[Downloader] Temp file: ${tempFilePath}`);
 
     try {
+        const platform = detectPlatform(url);
+
+        if (platform === 'sakugabooru') {
+            try {
+                console.log('[Downloader] Detected Sakugabooru URL. Processing directly...');
+                let postId: string | null = null;
+                const showMatch = url.match(/post\/show\/(\d+)/);
+                if (showMatch) {
+                    postId = showMatch[1];
+                } else {
+                    const tagsMatch = url.match(/tags=id:(\d+)/);
+                    if (tagsMatch) {
+                        postId = tagsMatch[1];
+                    }
+                }
+
+                if (!postId && (url.endsWith('.mp4') || url.endsWith('.webm'))) {
+                    const basename = path.basename(url, path.extname(url));
+                    postId = `file-${basename}`;
+                }
+
+                if (!postId) {
+                    return { success: false, error: "Could not parse Sakugabooru post ID from the provided URL." };
+                }
+
+                const apiUrl = `https://www.sakugabooru.com/post.json?tags=id:${postId}`;
+                console.log(`[Downloader] Fetching Sakugabooru API via curl: ${apiUrl}`);
+
+                const postsList = await fetchJsonWithCurl(apiUrl);
+                if (!postsList || postsList.length === 0) {
+                    return { success: false, error: `Sakugabooru post #${postId} not found via API.` };
+                }
+
+                const postInfo = postsList[0];
+                const videoFileUrl = postInfo.file_url;
+                if (!videoFileUrl) {
+                    return { success: false, error: "Sakugabooru post does not contain a valid direct video link." };
+                }
+
+                console.log(`[Downloader] Downloading Sakugabooru video from: ${videoFileUrl}`);
+                await downloadFileWithCurl(videoFileUrl, tempFilePath);
+
+                if (!fs.existsSync(tempFilePath)) {
+                    throw new Error('Downloaded file not found at expected path.');
+                }
+
+                const stats = fs.statSync(tempFilePath);
+                console.log(`[Downloader] Downloaded file size: ${stats.size} bytes.`);
+
+                const storage = getFirebaseStorage();
+                const bucket = storage.bucket();
+                const destination = `videos/sakugabooru-${postInfo.id}.mp4`;
+
+                console.log(`[Downloader] Uploading to ${destination}...`);
+                await bucket.upload(tempFilePath, {
+                    destination,
+                    metadata: {
+                        contentType: 'video/mp4',
+                        metadata: {
+                            originalUrl: url,
+                            uploader: postInfo.author || 'Unknown',
+                            title: postInfo.source || `Sakugabooru Post #${postInfo.id}`
+                        }
+                    }
+                });
+
+                console.log('[Downloader] Upload complete. Generating signed URL...');
+                const [signedUrl] = await bucket.file(destination).getSignedUrl({
+                    action: 'read',
+                    expires: '03-01-2500'
+                });
+
+                const mappedTags = (postInfo.tags || '')
+                    .split(' ')
+                    .map((t: string) => t.trim().toLowerCase().replace(/_/g, '-'))
+                    .filter(Boolean);
+
+                let description = `Source: ${postInfo.source || 'Unknown'}`;
+                description += `\nOriginal Sakugabooru post: https://www.sakugabooru.com/post/show/${postInfo.id}`;
+                description += `\nRating: ${postInfo.rating}, Score: ${postInfo.score}`;
+
+                const videoData = {
+                    title: postInfo.source || `Sakugabooru Post #${postInfo.id}`,
+                    description,
+                    videoUrl: signedUrl,
+                    thumbnailUrl: postInfo.preview_url || '',
+                    tags: mappedTags,
+                    type: 'social',
+                    originalUrl: url,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    uploader: postInfo.author || 'Unknown',
+                    duration: 0,
+                    width: postInfo.width || 0,
+                    height: postInfo.height || 0,
+                    status: 'published' as const,
+                    folderId: null
+                };
+
+                let videoId = `sakugabooru-${postInfo.id}`;
+                if (saveToFirestore) {
+                    const db = getFirestore();
+                    await db.collection('videos').doc(videoId).set(videoData, { merge: true });
+
+                    const batch = db.batch();
+                    for (const tag of mappedTags) {
+                        if (tag && !tag.includes('/') && tag !== '.' && tag !== '..') {
+                            batch.set(db.collection('tags').doc(tag), { name: tag }, { merge: true });
+                        }
+                    }
+                    await batch.commit();
+                    console.log(`[Downloader] Saved to Firestore: ${videoId}`);
+                }
+
+                fs.unlinkSync(tempFilePath);
+                console.log('[Downloader] Temp file cleaned up.');
+
+                return {
+                    success: true,
+                    videoId,
+                    video: { id: videoId, ...videoData }
+                };
+
+            } catch (error: any) {
+                console.error('[Downloader] Sakugabooru Direct Fetch Error:', error);
+                if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+                return { success: false, error: error.message };
+            }
+        }
+
         // 1. Get yt-dlp executor (downloads binary on first call in production)
         const { command, baseArgs } = await getYtDlpExecutor();
 
@@ -238,9 +416,8 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
             dlArgs.splice(insertIdx, 0, '--merge-output-format', 'mp4');
         }
 
-        // 3b. Inject cookies if available for this platform
+        // Inject cookies if available for this platform
         let cookieFilePath: string | null = null;
-        const platform = detectPlatform(url);
         if (platform) {
             cookieFilePath = await getCookieFile(platform);
             if (cookieFilePath) {

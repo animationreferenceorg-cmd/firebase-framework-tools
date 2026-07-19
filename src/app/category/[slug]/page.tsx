@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { getAllSnapshotVideos } from '@/lib/videoSnapshot.server';
 import type { Category, Video } from '@/lib/types';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -58,20 +59,28 @@ async function getCategoryBySlug(slug: string): Promise<Category | null> {
     return null;
 }
 
-async function getCategoryVideos(categoryId: string): Promise<Video[]> {
+function getCategoryVideos(category: Category): Video[] {
     try {
-        const videosRef = collection(db, 'videos');
-        const q = query(
-            videosRef,
-            where('categoryIds', 'array-contains', categoryId),
-            limit(20)
-        );
-        const snapshot = await getDocs(q);
-        return snapshot.docs
-            .map(doc => {
-                const data = doc.data();
-                return serializeVideo({ id: doc.id, ...data });
-            });
+        // Served from the static snapshot: zero Firestore reads per page view.
+        const all = getAllSnapshotVideos();
+        const matches = all.filter(v => (v.categoryIds || []).includes(category.id));
+
+        // Top up with clips that share the category's tags so newly imported
+        // reference clips (which have tags but no categoryIds) surface too.
+        if (matches.length < 20 && category.tags?.length) {
+            const catTags = new Set(category.tags.map(t => t.toLowerCase()));
+            const seen = new Set(matches.map(v => v.id));
+            for (let i = all.length - 1; i >= 0 && matches.length < 20; i--) {
+                const v = all[i];
+                if (seen.has(v.id)) continue;
+                if ((v.tags || []).some(t => catTags.has(t.toLowerCase()))) {
+                    matches.push(v);
+                    seen.add(v.id);
+                }
+            }
+        }
+
+        return matches.slice(0, 20).map(v => serializeVideo(v));
     } catch (error) {
         console.error("Error fetching category videos:", error);
         return [];
@@ -96,9 +105,11 @@ export async function generateMetadata(
     return {
         title: title,
         description: description,
+        alternates: { canonical: `https://animationreference.org/category/${slug}` },
         openGraph: {
             title: title,
             description: description,
+            url: `https://animationreference.org/category/${slug}`,
             images: category.imageUrl ? [category.imageUrl] : [],
         },
     };
@@ -112,7 +123,35 @@ export default async function Page({ params }: Props) {
         notFound();
     }
 
-    const videos = await getCategoryVideos(category.id);
+    const videos = getCategoryVideos(category);
+
+    const canonicalUrl = `https://animationreference.org/category/${slug}`;
+    const breadcrumbSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://animationreference.org' },
+            { '@type': 'ListItem', position: 2, name: 'Categories', item: 'https://animationreference.org/categories' },
+            { '@type': 'ListItem', position: 3, name: category.title, item: canonicalUrl },
+        ],
+    };
+    const itemListSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: `${category.title} Animation References`,
+        description: category.seoDescription || category.description || undefined,
+        url: canonicalUrl,
+        mainEntity: {
+            '@type': 'ItemList',
+            numberOfItems: videos.length,
+            itemListElement: videos.map((v, i) => ({
+                '@type': 'ListItem',
+                position: i + 1,
+                url: `https://animationreference.org/video/${v.id}`,
+                name: v.title,
+            })),
+        },
+    };
 
     // Hero Logic
     let heroVideo = null;
@@ -433,6 +472,8 @@ export default async function Page({ params }: Props) {
                 </div>
             </section>
 
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
         </div>
     );
 }

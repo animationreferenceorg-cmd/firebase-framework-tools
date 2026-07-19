@@ -8,6 +8,9 @@ export default function robots(): MetadataRoute.Robots {
             allow: '/',
             disallow: ['/admin/', '/profile/', '/login/'],
         },
-        sitemap: 'https://animationreference.org/sitemap.xml',
+        sitemap: [
+            'https://animationreference.org/sitemap.xml',
+            'https://animationreference.org/video-sitemap.xml',
+        ],
     };
 }

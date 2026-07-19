@@ -176,7 +176,7 @@ export default function ComingSoonPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-white/5">
             {[
               { label: "Curated Library", value: "Hand-Picked" },
-              { label: "Fresh Content", value: "Daily" },
+              { label: "References", value: "7,600+" },
               { label: "Industry Standard", value: "Pro" },
               { label: "Beta Access", value: "Free" }
             ].map((stat, i) => (

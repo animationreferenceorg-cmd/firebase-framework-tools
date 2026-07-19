@@ -6,8 +6,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Sparkles, Film, Construction, Heart, Search, Users, Clapperboard } from 'lucide-react';
 import { VideoPlayer } from '@/components/VideoPlayer';
-import { collection, getDocs, query, where, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getSnapshotVideos } from '@/lib/videoSnapshot';
 import type { Video } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BrowseHero } from '@/components/BrowseHero';
@@ -64,15 +63,10 @@ export default function ComingSoonPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch just a few videos to find a hero (Limit 20 for cost optimization)
-        const videosQuery = query(collection(db, "videos"), where("isShort", "!=", true), limit(20));
-        // Note: we filter drafts client-side below because multiple inequality filters require composite indexes
-        const videoSnapshot = await getDocs(videosQuery);
-
-        const videos = videoSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as Video)); // Drafts are now included
+        // Published videos come from the free static snapshot (zero Firestore reads)
+        const all = await getSnapshotVideos();
+        // Keep a small random sample for the hero/showcase sections
+        const videos = [...all].sort(() => 0.5 - Math.random()).slice(0, 20);
         setAllVideos(videos);
 
       } catch (error) {

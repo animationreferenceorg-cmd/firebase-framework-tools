@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs, query, limit, where, documentId } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getSnapshotVideos } from '@/lib/videoSnapshot';
 import type { Video, Category } from '@/lib/types';
 import { findCategoryThumbnailMatch } from '@/lib/category-utils';
 import { Button } from '@/components/ui/button';
@@ -42,21 +43,13 @@ export default function BetaPage() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                // Fetch Videos
-                const videosQuery = query(collection(db, "videos"), limit(1200));
-
-                // Fetch Categories
+                // Fetch Categories (videos come from the free static snapshot)
                 const categoriesQuery = query(collection(db, "categories"), where("status", "==", "published"), limit(100));
 
-                const [videoSnapshot, categorySnapshot] = await Promise.all([
-                    getDocs(videosQuery),
+                const [videos, categorySnapshot] = await Promise.all([
+                    getSnapshotVideos(),
                     getDocs(categoriesQuery)
                 ]);
-
-                const videos = videoSnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                } as Video));
 
                 const fetchedCategories = categorySnapshot.docs.map(doc => ({
                     id: doc.id,

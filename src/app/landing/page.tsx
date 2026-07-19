@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Play, Film, ArrowRight, Sparkles } from 'lucide-react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getSnapshotVideos } from '@/lib/videoSnapshot';
 import type { Category, Video } from '@/lib/types';
 import { VideoCard } from '@/components/VideoCard';
 import { VideoRow } from '@/components/VideoRow';
@@ -24,11 +25,10 @@ export default function LandingPage() {
             setLoading(true);
             try {
                 const categoriesQuery = query(collection(db, "categories"), where("status", "==", "published"));
-                const videosQuery = query(collection(db, "videos"), where("isShort", "!=", true));
 
-                const [categorySnapshot, videoSnapshot] = await Promise.all([
+                const [categorySnapshot, videos] = await Promise.all([
                     getDocs(categoriesQuery),
-                    getDocs(videosQuery)
+                    getSnapshotVideos()
                 ]);
 
                 const categories = categorySnapshot.docs.map(doc => ({
@@ -37,11 +37,6 @@ export default function LandingPage() {
                     ...doc.data()
                 } as Category));
                 setAllCategories(categories);
-
-                const videos = videoSnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                } as Video));
                 setAllVideos(videos);
 
             } catch (error) {

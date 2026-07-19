@@ -6,6 +6,8 @@
     "dev": "next dev",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
+    "prebuild": "node scripts/export-videos-snapshot.cjs",
+    "export:videos": "node scripts/export-videos-snapshot.cjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

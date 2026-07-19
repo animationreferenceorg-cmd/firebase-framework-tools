@@ -3,8 +3,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import type { Video } from '@/lib/types';
-import { collection, getDocs, query, where, limit, startAfter, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getSnapshotVideos } from '@/lib/videoSnapshot';
 import { ShortsPlayer } from '@/components/ShortsPlayer';
 import { Rss, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -38,18 +37,11 @@ export default function FeedPage() {
     setLoading(true);
 
     try {
-      const videosRef = collection(db, "videos");
-      // Fetch a larger sample to randomize from, using the proven isShort filter
-      const q = query(videosRef, where("isShort", "!=", true), limit(300));
-      const snapshot = await getDocs(q);
+      // All published non-shorts come from the free static snapshot
+      const nonShorts = await getSnapshotVideos();
 
-      const nonShorts = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Video));
-
-      // Randomize the order
-      const randomized = [...nonShorts].sort(() => Math.random() - 0.5);
+      // Randomize the order, cap the pool so the scroll DOM stays light
+      const randomized = [...nonShorts].sort(() => Math.random() - 0.5).slice(0, 300);
 
       setVideos(randomized);
       setHasMore(false); // We show the full randomized pool

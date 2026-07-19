@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { collection, getDocs, query, limit, where, startAfter, orderBy, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
+import { collection, getDocs, query, limit, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getSnapshotVideos } from '@/lib/videoSnapshot';
 import type { Video, Category } from '@/lib/types';
 import { findCategoryThumbnailMatch } from '@/lib/category-utils';
 import { Button } from '@/components/ui/button';
@@ -55,22 +56,14 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
 
-    // Pagination State
-    const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-    const [hasMore, setHasMore] = useState(true);
+    // Pagination State (client-side over the static snapshot)
+    const [visibleCount, setVisibleCount] = useState(VIDEOS_PER_PAGE);
 
     // Infinite Scroll Ref
     const { ref, inView } = useInView({
         threshold: 0,
         rootMargin: '200px', // Trigger 200px before bottom
     });
-
-    // Trigger Infinite Scroll
-    useEffect(() => {
-        if (inView && hasMore && !loadingMore && !loading) {
-            fetchVideos(false);
-        }
-    }, [inView, hasMore, loadingMore, loading]);
 
     // Filter State
     // Filter State
@@ -194,65 +187,28 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
         if (reset) {
             setLoading(true);
             setAllVideos([]);
-            setLastDoc(null);
-            setHasMore(true);
+            setVisibleCount(VIDEOS_PER_PAGE);
         } else {
             setLoadingMore(true);
         }
 
         try {
-            // Base constraints
-            const constraints: any[] = [
-                limit(VIDEOS_PER_PAGE)
-            ];
-
-            // If filtering by category server-side (optional optimization, for now we filter client side to match existing hybrid logic, 
-            // BUT to save costs effectively we should ideally filter by category here. 
-            // However, the user agreed to a simplified pagination first. 
-            // Let's implement robust "All Videos" pagination first).
-
-            // To ensure stable pagination, we should order by something.
-            // If activeTab is 'latest', order by createdAt (if exists) or just natural order.
-            // Since we don't have createdAt on Video type explicitly in the file viewed, we'll try to find a proxy or just use logic.
-            // For now, let's just paginate naturally.
-
-            if (!reset && lastDoc) {
-                constraints.push(startAfter(lastDoc));
-            }
-
-            // Construct Query
-            const q = query(collection(db, "videos"), ...constraints);
-
-            // Execute
-            const snapshot = await getDocs(q);
-
-            // Process Results
-            const newVideos = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            } as Video));
-
-            // Include drafts but exclude shorts (shorts are on /shorts page)
-            const validVideos = newVideos.filter(v => !v.isShort);
-
             if (reset) {
-                setAllVideos(validVideos);
+                // The whole published library comes from the free static snapshot,
+                // so filters and search below cover every video, not just loaded pages.
+                const videos = await getSnapshotVideos();
+                setAllVideos(videos.filter(v => !v.isShort));
             } else {
-                setAllVideos(prev => [...prev, ...validVideos]);
+                // "Load more" is just revealing more of the already-loaded list
+                setVisibleCount(prev => prev + VIDEOS_PER_PAGE);
             }
-
-            // Update Cursor
-            const lastVisible = snapshot.docs[snapshot.docs.length - 1];
-            setLastDoc(lastVisible || null);
-            setHasMore(snapshot.docs.length === VIDEOS_PER_PAGE);
-
         } catch (error) {
             console.error("Error fetching videos:", error);
         } finally {
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [lastDoc]);
+    }, []);
 
     // Initial Load & Category Fetch
     useEffect(() => {
@@ -336,6 +292,22 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
 
         return result;
     }, [allVideos, activeType, activeTab, selectedCategory, searchQuery]);
+
+    // Paginate the filtered results client-side
+    const visibleVideos = useMemo(() => filteredVideos.slice(0, visibleCount), [filteredVideos, visibleCount]);
+    const hasMore = visibleCount < filteredVideos.length;
+
+    // Start pagination over whenever the filters change
+    useEffect(() => {
+        setVisibleCount(VIDEOS_PER_PAGE);
+    }, [searchQuery, selectedCategory, activeType, activeTab]);
+
+    // Trigger Infinite Scroll
+    useEffect(() => {
+        if (inView && hasMore && !loadingMore && !loading) {
+            fetchVideos(false);
+        }
+    }, [inView, hasMore, loadingMore, loading, fetchVideos]);
 
     const handleCategorySelect = (catId: string | null) => {
         // Optimistic update
@@ -469,10 +441,10 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
                                 </Button>
                             )}
                         </div>
-                        <span className="text-sm text-zinc-500 font-medium">{filteredVideos.length} Visible</span>
+                        <span className="text-sm text-zinc-500 font-medium">{filteredVideos.length} Matching</span>
                     </div>
 
-                    <VideoGrid title="" videos={filteredVideos} columns={columns} />
+                    <VideoGrid title="" videos={visibleVideos} columns={columns} />
 
                     {filteredVideos.length === 0 && !loading && (
                         <div className="py-20 text-center text-zinc-500">

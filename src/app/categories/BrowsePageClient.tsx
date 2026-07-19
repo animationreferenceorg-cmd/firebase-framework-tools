@@ -327,8 +327,8 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
 
         // 4. Sort by Tab
         if (activeTab === 'latest') {
-            // Already roughly sorted by fetch order
-            // result = [...result].reverse(); // Don't reverse if paginating, usually
+            // Reverse order to show newest videos first
+            result = [...result].reverse();
         } else if (activeTab === 'trending') {
             // Shuffle the VIEWABLE results for variety
             result = [...result].sort(() => 0.5 - Math.random());

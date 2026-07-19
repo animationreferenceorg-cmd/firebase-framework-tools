@@ -10,7 +10,7 @@ const DARK_BG = '#0B0B0C';
 const CARD_BG = '#131316';
 const ITEMS_PER_PAGE = 40;
 
-export default function ReflixBrowsePage() {
+export default function AnimRefBrowsePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [selectedClip, setSelectedClip] = useState<Clip | null>(null);
@@ -419,7 +419,7 @@ export default function ReflixBrowsePage() {
             </div>
             
             <p className="text-gray-400 text-sm leading-relaxed">
-              Reflix delivers fast, high-quality loops. Every video supports instant playback adjustments and frame-by-frame analysis. Using your keyboard (Arrow keys) you can step frame-by-frame forward or backward to inspect the poses and timing details.
+              AnimRef delivers fast, high-quality loops. Every video supports instant playback adjustments and frame-by-frame analysis. Using your keyboard (Arrow keys) you can step frame-by-frame forward or backward to inspect the poses and timing details.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -446,7 +446,7 @@ export default function ReflixBrowsePage() {
                   <div className="w-3 h-3 rounded-full bg-yellow-500" />
                   <div className="w-3 h-3 rounded-full bg-green-500" />
                 </div>
-                <span className="text-[10px] font-mono text-gray-500 tracking-wider">REFLIX PLAYER CONSOLE</span>
+                <span className="text-[10px] font-mono text-gray-500 tracking-wider">ANIMREF PLAYER CONSOLE</span>
               </div>
               
               <div className="my-8 text-center space-y-4">

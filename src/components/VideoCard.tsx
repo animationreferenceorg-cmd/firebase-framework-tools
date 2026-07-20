@@ -416,7 +416,6 @@ const [socialAccessible, setSocialAccessible] = useState(true);
   <Heart className={cn("text-white h-4 w-4", isLiked && "fill-red-500 text-red-500")} />
 </Button>
               </div>
-              </DialogTrigger>
             </div>
           </div>
 

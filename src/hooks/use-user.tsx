@@ -1,7 +1,7 @@
 
 "use client";
 
-import { createContext, useContext, ReactNode, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, ReactNode, useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from './use-auth';
 import type { UserProfile } from '@/lib/types';
 import { getUserProfile, createUserProfile } from '@/lib/firestore';
@@ -19,10 +19,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const { user: authUser, loading: authLoading } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const lastFetchedUidRef = useRef<string | null>(null);
 
   const fetchUserProfile = useCallback(async () => {
     if (authLoading) {
       setLoading(true);
+      return;
+    }
+
+    const currentUid = authUser?.uid || null;
+    if (currentUid === lastFetchedUidRef.current && userProfile !== null) {
       return;
     }
     
@@ -39,6 +45,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             profile = await getUserProfile(authUser.uid);
             setUserProfile(profile);
         }
+        lastFetchedUidRef.current = authUser.uid;
 
       } catch (error) {
         console.error("Failed to fetch user profile:", error);
@@ -49,14 +56,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } else {
       setUserProfile(null);
       setLoading(false);
+      lastFetchedUidRef.current = null;
     }
-  }, [authUser, authLoading]);
+  }, [authUser, authLoading, userProfile]);
 
   useEffect(() => {
     fetchUserProfile();
   }, [fetchUserProfile]);
 
   const mutate = useCallback(() => {
+    lastFetchedUidRef.current = null;
     fetchUserProfile();
   }, [fetchUserProfile]);
 

@@ -55,7 +55,7 @@ export function GlassHeader() {
                         { label: 'Home', href: '/home' },
                         { label: 'Categories', href: '/categories' },
                         { label: 'Tags', href: '/tags' },
-                        { label: 'Portfolio', href: '/portfolio' },
+
                         { label: 'Marketplace', href: '/marketplace' },
                     ].map((item) => (
                         <Link

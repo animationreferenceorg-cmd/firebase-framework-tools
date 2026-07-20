@@ -5,7 +5,7 @@ import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarTrigger, 
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Clapperboard, Film, Home, LayoutGrid, List, Rss, Shield, BookCopy, Star, Camera, User, Box, ShoppingBag, CreditCard, MessageSquare, Tag as TagIcon } from 'lucide-react';
+import { Clapperboard, Film, Home, LayoutGrid, List, Rss, Shield, BookCopy, Star, Camera, Box, ShoppingBag, CreditCard, MessageSquare, Tag as TagIcon } from 'lucide-react';
 import AuthHeader from '@/components/AuthHeader';
 import { useUser } from '@/hooks/use-user';
 import { useAuth } from '@/hooks/use-auth';
@@ -160,11 +160,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                         Tags
                                     </SidebarLink>
                                 </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarLink href="/portfolio" icon={User} tooltip="Portfolio Builder">
-                                        Portfolio
-                                    </SidebarLink>
-                                </SidebarMenuItem>
+
                                 <SidebarMenuItem>
                                     <SidebarLink href="/shorts" icon={Film} tooltip="Short Films">
                                         Short Films

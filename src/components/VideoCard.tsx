@@ -124,23 +124,27 @@ const [socialAccessible, setSocialAccessible] = useState(true);
     }
   };
 
-  const handleOpenPlayerChange = async (open: boolean) => {
-    if (open) {
-      if (userProfile?.isPremium) {
-        setIsPlayerOpen(true);
-        return;
-      }
-      const prompt = await shouldShowDonatePrompt(authUser?.uid);
-      if (prompt) {
-        setTriggeredByPlay(true);
-        setShowDonateDialog(true);
-      } else {
-        setIsPlayerOpen(true);
-        await incrementCounter(authUser?.uid);
-      }
-    } else {
-      setIsPlayerOpen(false);
+  const handlePlayClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (userProfile?.isPremium) {
+      setIsPlayerOpen(true);
+      return;
     }
+
+    const prompt = await shouldShowDonatePrompt(authUser?.uid);
+    if (prompt) {
+      setTriggeredByPlay(true);
+      setShowDonateDialog(true);
+    } else {
+      setIsPlayerOpen(true);
+      await incrementCounter(authUser?.uid);
+    }
+  };
+
+  const handleOpenPlayerChange = (open: boolean) => {
+    setIsPlayerOpen(open);
   };
 
   const handleLikeToggle = async (e: React.MouseEvent) => {
@@ -395,19 +399,14 @@ const [socialAccessible, setSocialAccessible] = useState(true);
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <DialogTrigger asChild>
   <Button
     variant="ghost"
     size="icon"
     className="h-8 w-8 rounded-full bg-white/90 text-black hover:bg-white backdrop-blur-sm"
-    onClick={(e) => {
-      e.stopPropagation();
-      setIsPlayerOpen(true);
-    }}
+    onClick={handlePlayClick}
   >
     <PlayCircle className="fill-black h-5 w-5" />
   </Button>
-</DialogTrigger>
 <Button
   variant="ghost"
   size="icon"
@@ -417,10 +416,6 @@ const [socialAccessible, setSocialAccessible] = useState(true);
   <Heart className={cn("text-white h-4 w-4", isLiked && "fill-red-500 text-red-500")} />
 </Button>
               </div>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm">
-                  <Maximize className="text-white h-4 w-4" />
-                </Button>
               </DialogTrigger>
             </div>
           </div>
@@ -540,11 +535,9 @@ const [socialAccessible, setSocialAccessible] = useState(true);
           </h3>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white/90 text-black hover:bg-white backdrop-blur-sm">
+                <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-8 w-8 rounded-full bg-white/90 text-black hover:bg-white backdrop-blur-sm">
                   <PlayCircle className="fill-black h-5 w-5" />
                 </Button>
-              </DialogTrigger>
               <Button variant="ghost" size="icon" onClick={handleLikeToggle} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm">
                 <Heart className={cn("text-white h-4 w-4", isLiked && "fill-red-500 text-red-500")} />
               </Button>
@@ -553,11 +546,9 @@ const [socialAccessible, setSocialAccessible] = useState(true);
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm">
+                <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm">
                   <Maximize className="text-white h-4 w-4" />
                 </Button>
-              </DialogTrigger>
             </div>
           </div>
         </div>
@@ -653,11 +644,11 @@ const [socialAccessible, setSocialAccessible] = useState(true);
         onOpenChange={async (open) => {
           setShowDonateDialog(open);
           if (!open) {
-            // User closed the dialog - let them watch/resume and increment counter
+            // First increment the counter, then open the player to prevent loops
+            await incrementCounter(authUser?.uid);
             if (triggeredByPlay) {
               setIsPlayerOpen(true);
             }
-            await incrementCounter(authUser?.uid);
           }
         }}
       />

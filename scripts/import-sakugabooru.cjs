@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * Sakugabooru Bulk Video Importer
+ * Sakugabooru Bulk Video Importer (Bunny.net Stream Edition)
  * 
  * Scrapes video posts from https://www.sakugabooru.com using its Moebooru-compatible API
- * and imports them into Firestore. Uses system curl to bypass Cloudflare bot challenges
- * and features a real-time progress bar.
+ * and imports them into Firestore. If --download is enabled, it uploads the video
+ * to your Bunny Stream video library and references the global Bunny CDN.
  * 
  * Usage:
  *   node scripts/import-sakugabooru.cjs [options]
@@ -14,8 +14,8 @@
  *   --limit <number>       Limit the number of videos to fetch (default: 50)
  *   --tags <tags>          Space-separated tags to query (e.g. "effects order:score")
  *   --page <number>        Start page (default: 1)
- *   --download             Download video files and upload to Firebase Storage (takes time and storage)
- *                          If omitted, direct Sakugabooru CDN URLs will be referenced instead.
+ *   --download             Download video files and upload to Bunny.net Stream (extremely cost efficient)
+ *                          If omitted, direct Sakugabooru CDN URLs will be referenced instead ($0/month).
  *   --folder <name>        The name of the Firestore folder under which videos will be filed (default: "Sakugabooru")
  *   --status <status>      Set imported video status: "published" or "draft" (default: "published")
  */
@@ -29,6 +29,11 @@ const admin = require('firebase-admin');
 // Load environment variables
 require('dotenv').config({ path: '.env.local' });
 require('dotenv').config({ path: '.env' });
+
+// Setup Bunny configurations from environment
+const apiKey = process.env.BUNNY_API_KEY;
+const libraryId = process.env.BUNNY_LIBRARY_ID || process.env.NEXT_PUBLIC_BUNNY_LIBRARY_ID;
+const bunnyHost = process.env.NEXT_PUBLIC_BUNNY_STREAM_HOST || 'vz-79893c7f-720.b-cdn.net';
 
 // Setup configurations from command-line arguments
 const args = process.argv.slice(2);
@@ -53,6 +58,13 @@ for (let i = 0; i < args.length; i++) {
   } else if (args[i] === '--status') {
     status = args[++i];
   }
+}
+
+// Validation for Bunny configurations if download is enabled
+if (download && (!apiKey || !libraryId)) {
+  console.error('ERROR: Missing Bunny.net configuration (BUNNY_API_KEY or BUNNY_LIBRARY_ID) in environment variables.');
+  console.log('Please add them to your .env.local file to use the --download option.');
+  process.exit(1);
 }
 
 // Helpers using curl to bypass Cloudflare blocks
@@ -80,6 +92,45 @@ function downloadFile(url, dest) {
       reject(e);
     }
   });
+}
+
+// Helper to interact with Bunny Stream API
+async function uploadToBunny(localFilePath, title) {
+  // 1. Create video entry on Bunny Stream
+  const createRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos`, {
+    method: 'POST',
+    headers: {
+      'AccessKey': apiKey,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ title })
+  });
+
+  if (!createRes.ok) {
+    const text = await createRes.text();
+    throw new Error(`Failed to create video on Bunny Stream: ${createRes.statusText} (${text})`);
+  }
+
+  const createData = await createRes.json();
+  const guid = createData.guid;
+
+  // 2. Upload file binary
+  const fileBuffer = fs.readFileSync(localFilePath);
+  const uploadRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${guid}`, {
+    method: 'PUT',
+    headers: {
+      'AccessKey': apiKey,
+      'Content-Type': 'application/octet-stream'
+    },
+    body: fileBuffer
+  });
+
+  if (!uploadRes.ok) {
+    const text = await uploadRes.text();
+    throw new Error(`Failed to upload binary to Bunny Stream: ${uploadRes.statusText} (${text})`);
+  }
+
+  return guid;
 }
 
 // CLI Interactive Progress Bar Helper
@@ -131,12 +182,11 @@ function initDb() {
   console.log(` - Limit: ${limit} videos`);
   console.log(` - Tags: "${tags || '(none)'}"`);
   console.log(` - Start Page: ${page}`);
-  console.log(` - Download to Storage: ${download}`);
+  console.log(` - Download to Bunny.net: ${download}`);
   console.log(` - Firestore Folder: "${folderName}"`);
   console.log(` - Status: "${status}"\n`);
 
   const db = initDb();
-  const bucket = download ? admin.storage().bucket() : null;
 
   // 1. Collect video posts from Sakugabooru API (handling pagination)
   let videoPosts = [];
@@ -215,34 +265,24 @@ function initDb() {
 
     let videoUrl = post.file_url;
     let thumbnailUrl = post.preview_url;
+    let externalBunnyId = null;
 
     if (download) {
       const tempFilePath = path.join(os.tmpdir(), `${docId}.mp4`);
       try {
         await downloadFile(post.file_url, tempFilePath);
 
-        const storagePath = `videos/${docId}.mp4`;
-        await bucket.upload(tempFilePath, {
-          destination: storagePath,
-          metadata: {
-            contentType: 'video/mp4',
-            metadata: {
-              originalUrl: `https://www.sakugabooru.com/post/show/${post.id}`,
-              importSource: 'sakugabooru',
-              title: post.source || `Sakugabooru Post #${post.id}`
-            }
-          }
-        });
+        drawProgressBar(i, videoPosts.length, `Uploading #${post.id} to Bunny`);
+        const guid = await uploadToBunny(tempFilePath, post.source || `Sakugabooru #${post.id}`);
 
-        const [signedUrl] = await bucket.file(storagePath).getSignedUrl({
-          action: 'read',
-          expires: '03-01-2500'
-        });
+        videoUrl = `https://${bunnyHost}/${guid}/playlist.m3u8`;
+        thumbnailUrl = `https://${bunnyHost}/${guid}/thumbnail.jpg`;
+        externalBunnyId = guid;
 
-        videoUrl = signedUrl;
         fs.unlinkSync(tempFilePath);
       } catch (err) {
         if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+        console.error(`\nFailed to upload #${post.id} to Bunny: ${err.message}. Falling back to source CDN.`);
         // Fallback silently to use direct link in progress
       }
     }
@@ -277,7 +317,8 @@ function initDb() {
         width: post.width || 0,
         height: post.height || 0,
         createdAt: admin.firestore.Timestamp.fromMillis(post.created_at * 1000),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        ...(externalBunnyId ? { externalBunnyId } : {})
       }
     });
 

@@ -309,28 +309,72 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
                 const stats = fs.statSync(tempFilePath);
                 console.log(`[Downloader] Downloaded file size: ${stats.size} bytes.`);
 
-                const storage = getFirebaseStorage();
-                const bucket = storage.bucket();
-                const destination = `videos/sakugabooru-${postInfo.id}.mp4`;
+                const apiKey = process.env.BUNNY_API_KEY;
+                const libraryId = process.env.BUNNY_LIBRARY_ID || process.env.NEXT_PUBLIC_BUNNY_LIBRARY_ID;
+                const bunnyHost = process.env.NEXT_PUBLIC_BUNNY_STREAM_HOST || 'vz-79893c7f-720.b-cdn.net';
 
-                console.log(`[Downloader] Uploading to ${destination}...`);
-                await bucket.upload(tempFilePath, {
-                    destination,
-                    metadata: {
-                        contentType: 'video/mp4',
-                        metadata: {
-                            originalUrl: url,
-                            uploader: postInfo.author || 'Unknown',
-                            title: postInfo.source || `Sakugabooru Post #${postInfo.id}`
-                        }
+                let videoUrl = '';
+                let thumbnailUrl = postInfo.preview_url || '';
+                let externalBunnyId: string | null = null;
+
+                if (apiKey && libraryId) {
+                    console.log(`[Downloader] Uploading to Bunny Stream library ${libraryId}...`);
+                    const createRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos`, {
+                        method: 'POST',
+                        headers: {
+                            'AccessKey': apiKey,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ title: postInfo.source || `Sakugabooru Post #${postInfo.id}` })
+                    });
+                    if (!createRes.ok) {
+                        throw new Error(`Failed to create video on Bunny Stream: ${createRes.statusText}`);
                     }
-                });
+                    const createData = await createRes.json() as any;
+                    const guid = createData.guid;
 
-                console.log('[Downloader] Upload complete. Generating signed URL...');
-                const [signedUrl] = await bucket.file(destination).getSignedUrl({
-                    action: 'read',
-                    expires: '03-01-2500'
-                });
+                    const fileBuffer = fs.readFileSync(tempFilePath);
+                    const uploadRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${guid}`, {
+                        method: 'PUT',
+                        headers: {
+                            'AccessKey': apiKey,
+                            'Content-Type': 'application/octet-stream'
+                        },
+                        body: fileBuffer
+                    });
+                    if (!uploadRes.ok) {
+                        throw new Error(`Failed to upload binary to Bunny Stream: ${uploadRes.statusText}`);
+                    }
+
+                    videoUrl = `https://${bunnyHost}/${guid}/playlist.m3u8`;
+                    thumbnailUrl = `https://${bunnyHost}/${guid}/thumbnail.jpg`;
+                    externalBunnyId = guid;
+                } else {
+                    console.log('[Downloader] Bunny credentials not configured. Falling back to Firebase Storage.');
+                    const storage = getFirebaseStorage();
+                    const bucket = storage.bucket();
+                    const destination = `videos/sakugabooru-${postInfo.id}.mp4`;
+
+                    console.log(`[Downloader] Uploading to ${destination}...`);
+                    await bucket.upload(tempFilePath, {
+                        destination,
+                        metadata: {
+                            contentType: 'video/mp4',
+                            metadata: {
+                                originalUrl: url,
+                                uploader: postInfo.author || 'Unknown',
+                                title: postInfo.source || `Sakugabooru Post #${postInfo.id}`
+                            }
+                        }
+                    });
+
+                    console.log('[Downloader] Upload complete. Generating signed URL...');
+                    const [signedUrl] = await bucket.file(destination).getSignedUrl({
+                        action: 'read',
+                        expires: '03-01-2500'
+                    });
+                    videoUrl = signedUrl;
+                }
 
                 const mappedTags = (postInfo.tags || '')
                     .split(' ')
@@ -344,8 +388,9 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
                 const videoData = {
                     title: postInfo.source || `Sakugabooru Post #${postInfo.id}`,
                     description,
-                    videoUrl: signedUrl,
-                    thumbnailUrl: postInfo.preview_url || '',
+                    videoUrl,
+                    thumbnailUrl,
+                    posterUrl: thumbnailUrl,
                     tags: mappedTags,
                     type: 'social',
                     originalUrl: url,
@@ -356,7 +401,8 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
                     width: postInfo.width || 0,
                     height: postInfo.height || 0,
                     status: 'published' as const,
-                    folderId: null
+                    folderId: null,
+                    ...(externalBunnyId ? { externalBunnyId } : {})
                 };
 
                 let videoId = `sakugabooru-${postInfo.id}`;

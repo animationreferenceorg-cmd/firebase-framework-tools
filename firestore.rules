@@ -58,15 +58,26 @@ service cloud.firestore {
     match /products/{id} {
       allow read: if true;
       match /prices/{id} { allow read: if true; }
-
-  // Portfolios: public read, owners can create/update, admin write
-  match /portfolios/{portfolioId} {
-    allow read: if true;
-    allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-    allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
-    allow write: if isAdmin();
-  }
       match /tax_rates/{id} { allow read: if true; }
+    }
+
+    // Portfolios: public read; owners may update their own doc but NOT change
+    // username/ownerId (those are managed server-side to guarantee uniqueness).
+    // Creation happens through the authenticated API (Admin SDK).
+    match /portfolios/{portfolioId} {
+      allow read: if true;
+      allow update: if request.auth != null
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.username == resource.data.username;
+      allow delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow write: if isAdmin();
+    }
+
+    // Username registry: server-managed (Admin SDK bypasses rules)
+    match /usernames/{username} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }

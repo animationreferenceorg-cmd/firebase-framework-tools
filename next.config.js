@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  async redirects() {
+    return [
+      { source: '/references', destination: '/categories', permanent: true },
+    ];
+  },
   /* config options here */
   images: {
     formats: ['image/avif', 'image/webp'],

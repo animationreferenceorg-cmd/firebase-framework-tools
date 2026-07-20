@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { FilterBar, TabOption, TypeOption } from '@/components/FilterBar';
 import { VideoGrid } from '@/components/VideoGrid';
 import { LikedVideoRow, LikedCategoryRow } from '@/components/RecentlyViewed';
+import { CreatorPortfoliosRow } from '@/components/CreatorPortfoliosRow';
 import Link from 'next/link';
 import { DonateDialog } from '@/components/DonateDialog';
 import { useAuth } from '@/hooks/use-auth';
@@ -256,6 +257,9 @@ export default function BetaPage() {
                         </>
                     )}
                 </div>
+
+                {/* 2b. Creator Portfolios */}
+                <CreatorPortfoliosRow />
 
                 {/* 3. Recently Viewed Categories */}
                 <div className="mb-8">

@@ -156,13 +156,13 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <SidebarLink href="/references" icon={Clapperboard} tooltip="References">
-                                        References
+                                    <SidebarLink href="/tags" icon={TagIcon} tooltip="Tags">
+                                        Tags
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <SidebarLink href="/tags" icon={TagIcon} tooltip="Tags">
-                                        Tags
+                                    <SidebarLink href="/portfolio" icon={User} tooltip="Portfolio Builder">
+                                        Portfolio
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>

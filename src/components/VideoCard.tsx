@@ -305,6 +305,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
 
   if (isCommunityVideo) {
     return (
+      <>
       <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
         <div ref={cardRef}
           onMouseEnter={handleMouseEnter}
@@ -455,10 +456,33 @@ const [socialAccessible, setSocialAccessible] = useState(true);
           </DialogContent>
         </div>
       </Dialog>
+
+      <LimitReachedDialog
+        open={showLimitDialog}
+        onOpenChange={setShowLimitDialog}
+        feature="likes"
+        onDonateClick={() => setShowDonateDialog(true)}
+      />
+
+      <DonateDialog
+        open={showDonateDialog}
+        forceTimer={true}
+        onOpenChange={async (open) => {
+          setShowDonateDialog(open);
+          if (!open) {
+            await incrementCounter(authUser?.uid);
+            if (triggeredByPlay) {
+              setIsPlayerOpen(true);
+            }
+          }
+        }}
+      />
+      </>
     );
   }
 
   return (
+    <>
     <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
       <div
         ref={cardRef}
@@ -628,7 +652,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
           <div className="h-screen w-full flex items-center justify-center bg-black text-white">Loading player...</div>
         )}
       </DialogContent>
-
+    </Dialog>
 
       <LimitReachedDialog
         open={showLimitDialog}
@@ -651,6 +675,6 @@ const [socialAccessible, setSocialAccessible] = useState(true);
           }
         }}
       />
-    </Dialog >
+    </>
   );
 }

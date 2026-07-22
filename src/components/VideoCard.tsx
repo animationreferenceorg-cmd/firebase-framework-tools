@@ -87,25 +87,10 @@ const [socialAccessible, setSocialAccessible] = useState(true);
 
   const handleMouseEnter = () => {
     if (video.isShort || poster) return;
-    if (userProfile?.isPremium) {
-      hoverTimeoutRef.current = setTimeout(() => {
-        setIsHovered(true);
-        if (videoRef.current) {
-          videoRef.current.play();
-        }
-      }, 300);
-      return;
-    }
     hoverTimeoutRef.current = setTimeout(() => {
-      const { showPrompt } = incrementVideoViews(authUser?.uid);
-      if (showPrompt) {
-        setTriggeredByPlay(false);
-        setShowDonateDialog(true);
-      } else {
-        setIsHovered(true);
-        if (videoRef.current) {
-          videoRef.current.play();
-        }
+      setIsHovered(true);
+      if (videoRef.current) {
+        videoRef.current.play();
       }
     }, 300);
   };
@@ -126,19 +111,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
   const handlePlayClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (userProfile?.isPremium) {
-      setIsPlayerOpen(true);
-      return;
-    }
-
-    const { showPrompt } = incrementVideoViews(authUser?.uid);
-    if (showPrompt) {
-      setTriggeredByPlay(true);
-      setShowDonateDialog(true);
-    } else {
-      setIsPlayerOpen(true);
-    }
+    setIsPlayerOpen(true);
   };
 
   const handleOpenPlayerChange = (open: boolean) => {

@@ -47,17 +47,17 @@ export function DonateDialog({ children, open, onOpenChange, forceTimer = false 
     const [isPortalLoading, setIsPortalLoading] = useState(false);
 
     // Timer Gating logic
-    const [seconds, setSeconds] = useState(12);
+    const [seconds, setSeconds] = useState(15);
     const [canClose, setCanClose] = useState(!forceTimer);
 
     useEffect(() => {
         if (!open || !forceTimer) {
-            setSeconds(12);
+            setSeconds(15);
             setCanClose(!forceTimer);
             return;
         }
         setCanClose(false);
-        setSeconds(12);
+        setSeconds(15);
         const interval = setInterval(() => {
             setSeconds((prev) => {
                 if (prev <= 1) {
@@ -110,7 +110,7 @@ export function DonateDialog({ children, open, onOpenChange, forceTimer = false 
         }
     };
 
-    const progress = ((12 - seconds) / 12) * 100;
+    const progress = ((15 - seconds) / 15) * 100;
 
     return (
         <Dialog open={open} onOpenChange={(val) => {

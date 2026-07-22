@@ -20,7 +20,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
-import { incrementVideoViews } from '@/lib/paywall';
 import { VideoPlayer } from './VideoPlayer';
 import Link from 'next/link';
 import ReactPlayer from 'react-player/lazy';
@@ -67,7 +66,6 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [showLimitDialog, setShowLimitDialog] = useState(false);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
-  const [triggeredByPlay, setTriggeredByPlay] = useState(false);
   const { ref: cardRef, inView: cardInView } = useInView({ threshold: 0, triggerOnce: true });
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -438,14 +436,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
       <DonateDialog
         open={showDonateDialog}
         forceTimer={true}
-        onOpenChange={(open) => {
-          setShowDonateDialog(open);
-          // The view was already counted when the dialog was triggered — closing
-          // it (or the forceTimer unlocking) shouldn't count as another view.
-          if (!open && triggeredByPlay) {
-            setIsPlayerOpen(true);
-          }
-        }}
+        onOpenChange={setShowDonateDialog}
       />
       </>
     );
@@ -634,14 +625,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
       <DonateDialog
         open={showDonateDialog}
         forceTimer={true}
-        onOpenChange={(open) => {
-          setShowDonateDialog(open);
-          // The view was already counted when the dialog was triggered — closing
-          // it (or the forceTimer unlocking) shouldn't count as another view.
-          if (!open && triggeredByPlay) {
-            setIsPlayerOpen(true);
-          }
-        }}
+        onOpenChange={setShowDonateDialog}
       />
     </>
   );

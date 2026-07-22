@@ -20,7 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
-import { incrementCounter, shouldShowDonatePrompt } from '@/lib/paywall';
+import { incrementVideoViews } from '@/lib/paywall';
 import { VideoPlayer } from './VideoPlayer';
 import Link from 'next/link';
 import ReactPlayer from 'react-player/lazy';
@@ -96,9 +96,9 @@ const [socialAccessible, setSocialAccessible] = useState(true);
       }, 300);
       return;
     }
-    hoverTimeoutRef.current = setTimeout(async () => {
-      const prompt = await shouldShowDonatePrompt(authUser?.uid);
-      if (prompt) {
+    hoverTimeoutRef.current = setTimeout(() => {
+      const { showPrompt } = incrementVideoViews(authUser?.uid);
+      if (showPrompt) {
         setTriggeredByPlay(false);
         setShowDonateDialog(true);
       } else {
@@ -106,7 +106,6 @@ const [socialAccessible, setSocialAccessible] = useState(true);
         if (videoRef.current) {
           videoRef.current.play();
         }
-        await incrementCounter(authUser?.uid);
       }
     }, 300);
   };
@@ -124,7 +123,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
     }
   };
 
-  const handlePlayClick = async (e: React.MouseEvent) => {
+  const handlePlayClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -133,13 +132,12 @@ const [socialAccessible, setSocialAccessible] = useState(true);
       return;
     }
 
-    const prompt = await shouldShowDonatePrompt(authUser?.uid);
-    if (prompt) {
+    const { showPrompt } = incrementVideoViews(authUser?.uid);
+    if (showPrompt) {
       setTriggeredByPlay(true);
       setShowDonateDialog(true);
     } else {
       setIsPlayerOpen(true);
-      await incrementCounter(authUser?.uid);
     }
   };
 
@@ -469,13 +467,10 @@ const [socialAccessible, setSocialAccessible] = useState(true);
         forceTimer={true}
         onOpenChange={(open) => {
           setShowDonateDialog(open);
-          if (!open) {
-            incrementCounter(authUser?.uid).catch((err) =>
-              console.warn('Failed to increment counter on modal close:', err)
-            );
-            if (triggeredByPlay) {
-              setIsPlayerOpen(true);
-            }
+          // The view was already counted when the dialog was triggered — closing
+          // it (or the forceTimer unlocking) shouldn't count as another view.
+          if (!open && triggeredByPlay) {
+            setIsPlayerOpen(true);
           }
         }}
       />
@@ -668,14 +663,10 @@ const [socialAccessible, setSocialAccessible] = useState(true);
         forceTimer={true}
         onOpenChange={(open) => {
           setShowDonateDialog(open);
-          if (!open) {
-            // Asynchronously increment counter without throwing uncaught promise errors inside dialog state update
-            incrementCounter(authUser?.uid).catch((err) =>
-              console.warn('Failed to increment counter on modal close:', err)
-            );
-            if (triggeredByPlay) {
-              setIsPlayerOpen(true);
-            }
+          // The view was already counted when the dialog was triggered — closing
+          // it (or the forceTimer unlocking) shouldn't count as another view.
+          if (!open && triggeredByPlay) {
+            setIsPlayerOpen(true);
           }
         }}
       />

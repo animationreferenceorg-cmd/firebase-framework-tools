@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Sparkles, Film, Construction, Heart, Search, Users, Clapperboard } from 'lucide-react';
+import { ArrowRight, Sparkles, Film, Construction, Heart, Search, Clapperboard } from 'lucide-react';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { getSnapshotVideos } from '@/lib/videoSnapshot';
 import type { Video } from '@/lib/types';
@@ -227,12 +227,6 @@ export default function ComingSoonPage() {
                   desc: "Access a library of curated clips from top industry studios.",
                   color: "bg-purple-500/5 hover:bg-purple-500/10",
                   icon: <Film className="h-6 w-6 text-white" />
-                },
-                {
-                  title: "Discover New Artists",
-                  desc: "Explore portfolios from veterans and rising stars alike.",
-                  color: "bg-pink-500/5 hover:bg-pink-500/10",
-                  icon: <Users className="h-6 w-6 text-white" />
                 },
                 {
                   title: "Watch Short Films",

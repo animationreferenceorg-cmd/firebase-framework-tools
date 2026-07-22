@@ -60,6 +60,12 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   const { toast } = useToast();
 
   const [isHovered, setIsHovered] = useState(false);
+  // Once true, the hover-preview player stays mounted for this card's lifetime —
+  // only its `playing` prop toggles. Previously the player fully mounted/unmounted
+  // (tearing down and recreating its underlying HLS.js instance) on every single
+  // hover in/out, and enough of those cycles across different cards would cascade
+  // into a "Maximum update depth exceeded" crash.
+  const [hasHoveredOnce, setHasHoveredOnce] = useState(false);
   const [hoverPlayerReady, setHoverPlayerReady] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [hasImageError, setHasImageError] = useState(false);
@@ -87,6 +93,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
     if (video.isShort || poster) return;
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovered(true);
+      setHasHoveredOnce(true);
       if (videoRef.current) {
         videoRef.current.play().catch(() => {});
       }
@@ -307,9 +314,10 @@ const [socialAccessible, setSocialAccessible] = useState(true);
                   setIsImageLoaded(true);
                 }}
               />
-              {video.videoUrl && cardInView && isHovered && !isPlayerOpen && (
+              {video.videoUrl && cardInView && hasHoveredOnce && !isPlayerOpen && (
                 <div className={cn(
-                  "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none opacity-100"
+                  "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none",
+                  isHovered ? "opacity-100" : "opacity-0"
                 )}>
                   <Player
                     url={videoUrlForPreview}
@@ -486,7 +494,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
         {/* Subtle creator badge — top-left, always visible for any video with uploader/originalUrl */}
         <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} />
 
-        {!video.isShort && !poster && video.videoUrl && cardInView && isHovered && !isPlayerOpen && (
+        {!video.isShort && !poster && video.videoUrl && cardInView && hasHoveredOnce && !isPlayerOpen && (
           <div className={cn(
             "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none",
             isHovered && !isPlayerOpen ? "opacity-100" : "opacity-0"

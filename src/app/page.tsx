@@ -427,7 +427,7 @@ export default function ComingSoonPage() {
                 className="group relative h-[400px] rounded-3xl overflow-hidden border border-white/10 bg-[#0f0c1d] hover:border-white/20 transition-all duration-500"
                 onMouseEnter={(e) => {
                   const video = e.currentTarget.querySelector('video');
-                  if (video) video.play();
+                  if (video) video.play().catch(() => {});
                 }}
                 onMouseLeave={(e) => {
                   const video = e.currentTarget.querySelector('video');

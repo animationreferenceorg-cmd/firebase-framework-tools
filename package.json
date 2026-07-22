@@ -53,6 +53,7 @@
     "firebase-admin": "^12.1.0",
     "framer-motion": "^12.26.2",
     "genkit": "1.25.0",
+    "hls.js": "^1.5.20",
     "html-to-image": "^1.11.13",
     "lucide-react": "^0.475.0",
     "nanoid": "^5.0.7",

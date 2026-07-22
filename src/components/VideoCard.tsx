@@ -88,7 +88,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovered(true);
       if (videoRef.current) {
-        videoRef.current.play();
+        videoRef.current.play().catch(() => {});
       }
     }, 300);
   };
@@ -185,7 +185,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
         <div ref={cardRef} onMouseEnter={() => {
             setIsHovered(true);
             if (videoRef.current) {
-              videoRef.current.play();
+              videoRef.current.play().catch(() => {});
             }
           }} onMouseLeave={() => {
             setIsHovered(false);

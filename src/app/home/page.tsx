@@ -81,6 +81,7 @@ export default function BetaPage() {
     }, []);
 
     // Fetch real liked videos when user profile loads
+    const likedVideoIdsStr = (userProfile?.likedVideoIds || []).join(',');
     useEffect(() => {
         const fetchLikedVideos = async () => {
             const ids = userProfile?.likedVideoIds || [];
@@ -100,14 +101,15 @@ export default function BetaPage() {
             }
         };
         fetchLikedVideos();
-    }, [userProfile?.likedVideoIds]);
+    }, [likedVideoIdsStr]);
 
     // Derive liked categories from already-fetched categories list
+    const likedCategoryIdsStr = (userProfile?.likedCategoryIds || []).join(',');
     useEffect(() => {
         const likedCatIds: string[] = userProfile?.likedCategoryIds || [];
         if (likedCatIds.length === 0) { setLikedCategories([]); return; }
         setLikedCategories(categories.filter(c => likedCatIds.includes(c.id)));
-    }, [userProfile?.likedCategoryIds, categories]);
+    }, [likedCategoryIdsStr, categories]);
 
     // Derive recently viewed categories from localStorage
     useEffect(() => {

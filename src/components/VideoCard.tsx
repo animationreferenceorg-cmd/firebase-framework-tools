@@ -22,32 +22,7 @@ import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
 import { VideoPlayer } from './VideoPlayer';
 import Link from 'next/link';
-import ReactPlayer from 'react-player/lazy';
 import type { Video } from '@/lib/types';
-
-
-function Player({ playerRef, onReady, ...props }: any) {
-  const [hasMounted, setHasMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-  if (!hasMounted) {
-    return null;
-  }
-
-  return (
-    <ReactPlayer
-      ref={playerRef}
-      width="100%"
-      height="100%"
-      style={{ position: 'absolute', top: 0, left: 0 }}
-      onReady={onReady}
-      {...props}
-    />
-  )
-}
 
 interface VideoCardProps {
   video: Video;
@@ -60,7 +35,6 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   const { toast } = useToast();
 
   const [isHovered, setIsHovered] = useState(false);
-  const [hoverPlayerReady, setHoverPlayerReady] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [hasImageError, setHasImageError] = useState(false);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
@@ -99,7 +73,6 @@ const [socialAccessible, setSocialAccessible] = useState(true);
       clearTimeout(hoverTimeoutRef.current);
     }
     setIsHovered(false);
-    setHoverPlayerReady(false);
     if (videoRef.current) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
@@ -173,7 +146,9 @@ const [socialAccessible, setSocialAccessible] = useState(true);
   // Bypass Next.js image optimizer for external CDNs that block server-side fetches (403)
   const isExternalCdn = imageUrl?.includes('.b-cdn.net') || imageUrl?.includes('cdninstagram.com') || imageUrl?.includes('instagram.com');
 
-  // Use original URL for preview. ReactPlayer handles HLS natively.
+  // Source for the lightweight native <video> fallback (only used when a card
+  // has no thumbnail image). The grid no longer mounts hls.js players on hover —
+  // full playback happens in the click-to-open VideoPlayer dialog instead.
   const videoUrlForPreview = video.videoUrl;
 
   // Universal: show link badge on ANY video that has an uploader or originalUrl
@@ -218,19 +193,6 @@ const [socialAccessible, setSocialAccessible] = useState(true);
                   setIsImageLoaded(true);
                 }}
               />
-              {isCommunityVideo && video.videoUrl && cardInView && isHovered && (
-                <div className="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-100">
-                  <Player
-                    url={videoUrlForPreview}
-                    playing={isHovered}
-                    loop={true}
-                    muted={true}
-                    playsinline={true}
-                    controls={false}
-                    config={{ youtube: { playerVars: { autoplay: 1, mute: 1, controls: 0 } } }}
-                  />
-                </div>
-              )}
             </>
           ) : isCommunityVideo && video.videoUrl ? (
             <video
@@ -298,7 +260,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
                 className={cn(
                   "w-full h-full object-cover transition-transform duration-500",
                   isHovered && !isPlayerOpen ? "scale-110" : "scale-100",
-                  (!isImageLoaded || (hoverPlayerReady && !isPlayerOpen && video.videoUrl)) && "opacity-0"
+                  !isImageLoaded && "opacity-0"
                 )}
                 data-ai-hint={video.dataAiHint}
                 onLoad={() => setIsImageLoaded(true)}
@@ -307,23 +269,6 @@ const [socialAccessible, setSocialAccessible] = useState(true);
                   setIsImageLoaded(true);
                 }}
               />
-              {video.videoUrl && cardInView && isHovered && !isPlayerOpen && (
-                <div className={cn(
-                  "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none",
-                  isHovered ? "opacity-100" : "opacity-0"
-                )}>
-                  <Player
-                    url={videoUrlForPreview}
-                    playing={isHovered}
-                    loop={true}
-                    muted={true}
-                    playsinline={true}
-                    controls={false}
-                    onReady={() => setHoverPlayerReady(true)}
-                    config={{ youtube: { playerVars: { autoplay: 1, mute: 1, controls: 0 } } }}
-                  />
-                </div>
-              )}
             </>
           ) : video.videoUrl ? (
             <video
@@ -464,7 +409,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
             unoptimized={isExternalCdn}
             className={cn(
               "w-full h-full object-cover transition-opacity duration-300",
-              (hoverPlayerReady && !video.isShort && !poster || !isImageLoaded) && "opacity-0",
+              !isImageLoaded && "opacity-0",
               (video.isShort || poster) && isImageLoaded && "opacity-100"
             )}
             data-ai-hint={video.dataAiHint}
@@ -476,8 +421,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
           />
         ) : (
           <div className={cn(
-            "absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-purple-900/40 to-pink-900/40 border border-white/5",
-            (hoverPlayerReady && !video.isShort && !poster) && "opacity-0"
+            "absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-purple-900/40 to-pink-900/40 border border-white/5"
           )}>
             <PlayCircle className="h-10 w-10 text-white/40 mb-2" />
             <span className="text-white/70 font-medium px-4 text-center text-sm truncate w-full">{displayTitle}</span>
@@ -486,24 +430,6 @@ const [socialAccessible, setSocialAccessible] = useState(true);
         
         {/* Subtle creator badge — top-left, always visible for any video with uploader/originalUrl */}
         <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} />
-
-        {!video.isShort && !poster && video.videoUrl && cardInView && isHovered && !isPlayerOpen && (
-          <div className={cn(
-            "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none",
-            isHovered && !isPlayerOpen ? "opacity-100" : "opacity-0"
-          )}>
-            <Player
-              url={videoUrlForPreview}
-              playing={isHovered}
-              loop={true}
-              muted={true}
-              playsinline={true}
-              controls={false}
-              onReady={() => setHoverPlayerReady(true)}
-              config={{ youtube: { playerVars: { autoplay: 1, mute: 1, controls: 0 } } }}
-            />
-          </div>
-        )}
 
         <div className={cn(
           "absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none",

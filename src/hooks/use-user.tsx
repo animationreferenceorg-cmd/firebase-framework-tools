@@ -1,11 +1,11 @@
 
 "use client";
 
-import { createContext, useContext, ReactNode, useEffect, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, ReactNode, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from './use-auth';
 import type { UserProfile } from '@/lib/types';
 import { getUserProfile, createUserProfile } from '@/lib/firestore';
-import { auth } from '@/lib/firebase';
+
 
 interface UserContextType {
   userProfile: UserProfile | null;
@@ -28,37 +28,38 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
 
     const currentUid = authUser?.uid || null;
-    if (currentUid === lastFetchedUidRef.current && userProfile !== null) {
-      return;
-    }
-    
-    if (authUser) {
-      setLoading(true);
-      try {
-        let profile = await getUserProfile(authUser.uid);
-        
-        if (profile) {
-            setUserProfile(profile);
-        } else {
-             // This case is a fallback, createUserProfile should handle it.
-            await createUserProfile(authUser);
-            profile = await getUserProfile(authUser.uid);
-            setUserProfile(profile);
-        }
-        lastFetchedUidRef.current = authUser.uid;
 
-      } catch (error) {
-        console.error("Failed to fetch user profile:", error);
-        setUserProfile(null);
-      } finally {
-        setLoading(false);
-      }
-    } else {
+    if (!currentUid) {
       setUserProfile(null);
       setLoading(false);
       lastFetchedUidRef.current = null;
+      return;
     }
-  }, [authUser, authLoading, userProfile]);
+
+    if (currentUid === lastFetchedUidRef.current) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      let profile = await getUserProfile(currentUid);
+      
+      if (!profile && authUser) {
+        await createUserProfile(authUser);
+        profile = await getUserProfile(currentUid);
+      }
+
+      setUserProfile(profile);
+      lastFetchedUidRef.current = currentUid;
+    } catch (error) {
+      console.error("Failed to fetch user profile:", error);
+      setUserProfile(null);
+      // Mark current UID to avoid retrying continuously in a loop if rules/network fail
+      lastFetchedUidRef.current = currentUid;
+    } finally {
+      setLoading(false);
+    }
+  }, [authUser?.uid, authLoading]);
 
   useEffect(() => {
     fetchUserProfile();
@@ -69,11 +70,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
     fetchUserProfile();
   }, [fetchUserProfile]);
 
-  const value = {
+  const value = useMemo(() => ({
     userProfile,
     loading: authLoading || loading,
     mutate
-  };
+  }), [userProfile, authLoading, loading, mutate]);
 
   return (
     <UserContext.Provider value={value}>

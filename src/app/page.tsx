@@ -56,7 +56,7 @@ export default function ComingSoonPage() {
 
       syncWithRetry();
     }
-  }, [user]);
+  }, [user?.uid, user?.email]);
 
   // Data Fetching for Hero Video
   useEffect(() => {

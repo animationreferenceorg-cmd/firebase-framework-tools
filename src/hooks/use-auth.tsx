@@ -1,7 +1,7 @@
 
 "use client";
 
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import type { User, Auth } from 'firebase/auth';
@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  const value = { user, loading };
+  const value = useMemo(() => ({ user: user ?? null, loading }), [user, loading]);
 
   return (
     <AuthContext.Provider value={value}>

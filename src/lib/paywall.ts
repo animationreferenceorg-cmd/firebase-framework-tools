@@ -19,16 +19,24 @@ const POST_CLOSE_LIMITS = [20, 35];
 /** Increment the counter and return the new value. */
 export async function incrementCounter(uid?: string): Promise<number> {
   if (uid) {
-    const userRef = doc(db, 'users', uid);
-    const snap = await getDoc(userRef);
-    const data = snap.data() as any;
-    const current = (data?.paywall?.counter ?? 0) + 1;
-    await setDoc(
-      userRef,
-      { paywall: { counter: current, lastShown: data?.paywall?.lastShown ?? null } },
-      { merge: true }
-    );
-    return current;
+    try {
+      const userRef = doc(db, 'users', uid);
+      const snap = await getDoc(userRef);
+      const data = snap.data() as any;
+      const current = (data?.paywall?.counter ?? 0) + 1;
+      await setDoc(
+        userRef,
+        { paywall: { counter: current, lastShown: data?.paywall?.lastShown ?? null } },
+        { merge: true }
+      );
+      return current;
+    } catch (e) {
+      console.warn('Failed to increment counter in Firestore, falling back to local storage:', e);
+      const stored = JSON.parse(localStorage.getItem(LOCAL_KEY) ?? '{}');
+      const current = (stored.counter ?? 0) + 1;
+      localStorage.setItem(LOCAL_KEY, JSON.stringify({ ...stored, counter: current }));
+      return current;
+    }
   } else {
     // anonymous – use localStorage
     const stored = JSON.parse(localStorage.getItem(LOCAL_KEY) ?? '{}');
@@ -145,9 +153,16 @@ export async function recordDonationPromptDismiss(uid?: string): Promise<void> {
 export async function shouldShowDonatePrompt(uid?: string): Promise<boolean> {
   let count = 0;
   if (uid) {
-    const snap = await getDoc(doc(db, 'users', uid));
-    const data = snap.data() as any;
-    count = data?.paywall?.counter ?? 0;
+    try {
+      const snap = await getDoc(doc(db, 'users', uid));
+      const data = snap.data() as any;
+      count = data?.paywall?.counter ?? 0;
+    } catch (e) {
+      console.warn('Failed to read paywall counter from Firestore:', e);
+      const storedRaw = localStorage.getItem(LOCAL_KEY);
+      const stored = storedRaw ? JSON.parse(storedRaw) : {};
+      count = stored.counter ?? 0;
+    }
   } else {
     const storedRaw = localStorage.getItem(LOCAL_KEY);
     const stored = storedRaw ? JSON.parse(storedRaw) : {};

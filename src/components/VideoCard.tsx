@@ -467,10 +467,12 @@ const [socialAccessible, setSocialAccessible] = useState(true);
       <DonateDialog
         open={showDonateDialog}
         forceTimer={true}
-        onOpenChange={async (open) => {
+        onOpenChange={(open) => {
           setShowDonateDialog(open);
           if (!open) {
-            await incrementCounter(authUser?.uid);
+            incrementCounter(authUser?.uid).catch((err) =>
+              console.warn('Failed to increment counter on modal close:', err)
+            );
             if (triggeredByPlay) {
               setIsPlayerOpen(true);
             }
@@ -664,11 +666,13 @@ const [socialAccessible, setSocialAccessible] = useState(true);
       <DonateDialog
         open={showDonateDialog}
         forceTimer={true}
-        onOpenChange={async (open) => {
+        onOpenChange={(open) => {
           setShowDonateDialog(open);
           if (!open) {
-            // First increment the counter, then open the player to prevent loops
-            await incrementCounter(authUser?.uid);
+            // Asynchronously increment counter without throwing uncaught promise errors inside dialog state update
+            incrementCounter(authUser?.uid).catch((err) =>
+              console.warn('Failed to increment counter on modal close:', err)
+            );
             if (triggeredByPlay) {
               setIsPlayerOpen(true);
             }

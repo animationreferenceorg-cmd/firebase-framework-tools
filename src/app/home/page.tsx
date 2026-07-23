@@ -19,6 +19,9 @@ import { DonateDialog } from '@/components/DonateDialog';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { getRecentCategoryIds } from '@/lib/recent-categories';
+import { useInView } from 'react-intersection-observer';
+
+const VIDEOS_PER_PAGE = 24;
 
 export default function BetaPage() {
     const { user } = useAuth();
@@ -26,6 +29,14 @@ export default function BetaPage() {
     const [allVideos, setAllVideos] = useState<Video[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Pagination State (client-side over static snapshot)
+    const [visibleCount, setVisibleCount] = useState(VIDEOS_PER_PAGE);
+
+    const { ref: inViewRef, inView } = useInView({
+        threshold: 0,
+        rootMargin: '200px',
+    });
 
     // Filter State
     const [activeTab, setActiveTab] = useState<TabOption>('featured');
@@ -117,7 +128,7 @@ export default function BetaPage() {
         if (recentIds.length === 0 || categories.length === 0) { setRecentCategories([]); return; }
         // Preserve the order from localStorage
         const map = new Map(categories.map(c => [c.id, c]));
-        setRecentCategories(recentIds.map(id => map.get(id)).filter(Boolean) as Category[]);
+        setRecentCategories(recentIds.map((id: string) => map.get(id)).filter(Boolean) as Category[]);
     }, [categories]);
 
     // Filter Logic
@@ -163,6 +174,22 @@ export default function BetaPage() {
 
         return result;
     }, [allVideos, activeType, activeTab]);
+
+    // Start pagination over whenever the filters change
+    useEffect(() => {
+        setVisibleCount(VIDEOS_PER_PAGE);
+    }, [activeTab, activeType]);
+
+    // Paginate the filtered results client-side
+    const visibleVideos = useMemo(() => filteredVideos.slice(0, visibleCount), [filteredVideos, visibleCount]);
+    const hasMore = visibleCount < filteredVideos.length;
+
+    // Trigger Infinite Scroll
+    useEffect(() => {
+        if (inView && hasMore) {
+            setVisibleCount(prev => prev + VIDEOS_PER_PAGE);
+        }
+    }, [inView, hasMore]);
 
 
     // Hero Video
@@ -314,7 +341,15 @@ export default function BetaPage() {
                         <span className="text-sm text-zinc-500 font-medium">{filteredVideos.length} Results</span>
                     </div>
 
-                    <VideoGrid title="" videos={filteredVideos} columns={columns} />
+                    <VideoGrid title="" videos={visibleVideos} columns={columns} />
+
+                    {hasMore && (
+                        <div ref={inViewRef} className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+                            {Array.from({ length: 8 }).map((_, index) => (
+                                <Skeleton key={`loader-${index}`} className="w-full aspect-video rounded-xl bg-white/5" />
+                            ))}
+                        </div>
+                    )}
 
                     {filteredVideos.length === 0 && (
                         <div className="py-20 text-center text-zinc-500">

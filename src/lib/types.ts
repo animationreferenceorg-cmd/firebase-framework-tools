@@ -113,38 +113,6 @@ export interface Moodboard {
   updatedAt: any;
 }
 
-export interface PortfolioProject {
-  id: string;
-  type: 'video' | 'image';
-  title: string;
-  description?: string;
-  url: string;           // uploaded video file or image URL
-  poster?: string;       // poster frame for videos
-  videoDocId?: string;   // matching doc in the videos collection
-}
-
-export interface Portfolio {
-  id: string;            // == ownerId (one portfolio per user)
-  ownerId: string;
-  username: string;      // unique URL slug, e.g. /p/username
-  displayName: string;
-  headline?: string;     // e.g. "Gameplay Animator — Combat & Locomotion"
-  bio?: string;
-  location?: string;
-  email?: string;        // public contact email (optional)
-  availableForWork?: boolean;
-  avatarUrl?: string;
-  coverUrl?: string;     // banner image
-  accent?: string;       // hex accent color
-  skills?: string[];     // e.g. ["Maya", "Combat Animation", "Motion Matching"]
-  socialLinks?: { platform: string; url: string }[];
-  reel?: { url: string; poster?: string; title?: string; videoDocId?: string };
-  projects: PortfolioProject[];
-  published: boolean;
-  createdAt?: any;
-  updatedAt?: any;
-}
-
 export interface BlogPost {
   id: string;
   slug: string;

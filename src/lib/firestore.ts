@@ -115,17 +115,19 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       if (profile) {
         if (!profile.isPremium || profile.tier !== detectedTier) {
           console.log(`[Subscription Check] Syncing detected tier: ${detectedTier}`);
+          // Reflect the detected tier for this render immediately, but persist it
+          // through the server-side sync route (uses the Admin SDK, which bypasses
+          // Firestore rules) rather than writing tier/isPremium directly from the
+          // client — those fields are locked down in firestore.rules so a client
+          // can't self-grant premium access.
           profile.isPremium = true;
           profile.tier = detectedTier;
-          try {
-            await updateDoc(userRef, { 
-                isPremium: true, 
-                tier: detectedTier,
-                subscriptionStatus: subData.status,
-                updatedAt: new Date().toISOString()
-            });
-          } catch (e) {
-            console.error("[Subscription Check] Failed to update profile doc:", e);
+          if (profile.email) {
+            fetch('/api/sync-stripe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: uid, email: profile.email }),
+            }).catch((e) => console.error('[Subscription Check] Failed to trigger server-side sync:', e));
           }
         }
       } else {

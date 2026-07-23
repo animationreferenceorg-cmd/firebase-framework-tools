@@ -30,6 +30,22 @@ export default function GlobalError({
                     <p style={{ color: '#a1a1aa', maxWidth: '28rem' }}>
                         The app hit an unexpected error. Try again, or reload the page.
                     </p>
+                    <pre style={{
+                        maxWidth: '32rem',
+                        width: '100%',
+                        overflowX: 'auto',
+                        borderRadius: '0.5rem',
+                        background: 'rgba(0,0,0,0.4)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        padding: '1rem',
+                        textAlign: 'left',
+                        fontSize: '0.75rem',
+                        color: '#f87171',
+                        whiteSpace: 'pre-wrap',
+                    }}>
+                        {error.message}
+                        {error.stack ? `\n\n${error.stack}` : ''}
+                    </pre>
                     <button
                         onClick={() => reset()}
                         style={{

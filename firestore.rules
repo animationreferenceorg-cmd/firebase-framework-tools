@@ -30,11 +30,21 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // Users: Users can read/write their own document and any subcollections.
-    // Allow create if authenticated (even before doc exists).
+    // Users: Users can read/write their own document and any subcollections,
+    // but role/tier/isPremium are locked down — those must never be settable
+    // by the client directly (that would let anyone grant themselves admin or
+    // premium access via a raw Firestore write). Only isAdmin() or the
+    // server-side Stripe sync (Admin SDK, bypasses rules) may change them.
     match /users/{userId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null && request.auth.uid == userId;
+      allow read, delete: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId
+        && (!('role' in request.resource.data) || request.resource.data.role == 'user')
+        && (!('isPremium' in request.resource.data) || request.resource.data.isPremium == false)
+        && !('tier' in request.resource.data);
+      allow update: if request.auth != null && request.auth.uid == userId
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.tier == resource.data.tier
+        && request.resource.data.isPremium == resource.data.isPremium;
       allow read, write: if isAdmin();
     }
     match /users/{userId}/{document=**} {
@@ -78,23 +88,5 @@ service cloud.firestore {
       match /tax_rates/{id} { allow read: if true; }
     }
 
-    // Portfolios: public read; owners may update their own doc but NOT change
-    // username/ownerId (those are managed server-side to guarantee uniqueness).
-    // Creation happens through the authenticated API (Admin SDK).
-    match /portfolios/{portfolioId} {
-      allow read: if true;
-      allow update: if request.auth != null
-        && resource.data.ownerId == request.auth.uid
-        && request.resource.data.ownerId == resource.data.ownerId
-        && request.resource.data.username == resource.data.username;
-      allow delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
-      allow write: if isAdmin();
-    }
-
-    // Username registry: server-managed (Admin SDK bypasses rules)
-    match /usernames/{username} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
   }
 }

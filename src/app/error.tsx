@@ -21,6 +21,10 @@ export default function Error({
             <p className="text-zinc-400 max-w-md">
                 This page hit an unexpected error. You can try again, or head back home.
             </p>
+            <pre className="max-w-lg w-full overflow-x-auto rounded-lg bg-black/40 border border-white/10 p-4 text-left text-xs text-red-400 whitespace-pre-wrap">
+                {error.message}
+                {error.stack ? `\n\n${error.stack}` : ''}
+            </pre>
             <div className="flex items-center gap-3">
                 <Button onClick={() => reset()} className="gap-2">
                     <RefreshCw className="h-4 w-4" />

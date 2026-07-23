@@ -3,85 +3,17 @@ const nextConfig = {
   output: 'standalone',
   async redirects() {
     return [
-      { source: '/references', destination: '/categories', permanent: true },
-    ];
-  },
-  /* config options here */
-  images: {
-    formats: ['image/avif', 'image/webp'],
-    remotePatterns: [
+      // Main Hub & References Redirects
       {
-        protocol: 'https',
-        hostname: 'assets.reflix.dev',
-        port: '',
-        pathname: '/**',
+        source: '/references',
+        destination: '/categories',
+        permanent: true,
       },
       {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
+        source: '/references/',
+        destination: '/categories',
+        permanent: true,
       },
-      {
-        protocol: 'https',
-        hostname: 'storage.googleapis.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'i.ytimg.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'www.youtube.com',
-        port: '',
-        pathname: '/**',
-      },
-
-      {
-        protocol: 'https',
-        hostname: 'vimeo.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'public-files.gumroad.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'assets.gumroad.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'vz-79893c7f-720.b-cdn.net',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: '**.cdninstagram.com',
-        port: '',
-        pathname: '/**',
-      }
-    ],
-  },
-  async redirects() {
-    return [
-      // Main Hub Redirect
       {
         source: '/browse',
         destination: '/categories',
@@ -154,6 +86,77 @@ const nextConfig = {
         permanent: true,
       },
     ];
+  },
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'assets.reflix.dev',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'placehold.co',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'storage.googleapis.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.ytimg.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.youtube.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'vimeo.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'public-files.gumroad.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'assets.gumroad.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'vz-79893c7f-720.b-cdn.net',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.cdninstagram.com',
+        port: '',
+        pathname: '/**',
+      }
+    ],
   },
   eslint: {
     // Warning: This allows production builds to successfully complete even if

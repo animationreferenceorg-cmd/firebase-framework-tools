@@ -50,12 +50,14 @@ export function getRelatedSnapshotVideos(video: Video, count = 12): Video[] {
 // ---- Tag index -------------------------------------------------------------
 
 export function slugifyTag(tag: string): string {
-    return tag
+    if (!tag || tag === 'null' || tag === 'undefined') return '';
+    const res = tag
         .toLowerCase()
         .trim()
         .replace(/&/g, ' and ')
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
+    return (res === 'null' || res === 'undefined') ? '' : res;
 }
 
 interface TagIndex {

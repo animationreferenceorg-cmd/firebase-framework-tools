@@ -15,6 +15,11 @@ export const metadata: Metadata = {
     template: '%s | Animation Reference',
   },
   description: 'Find curated animation references for movement, timing, acting, combat, locomotion, and effects. Study the exact motion you need for your next shot.',
+  icons: {
+    icon: '/site-icon.png',
+    shortcut: '/site-icon.png',
+    apple: '/site-icon.png',
+  },
   openGraph: {
     title: 'Animation Reference',
     description: 'Curated animation references for movement, timing, acting, combat, locomotion, and effects.',

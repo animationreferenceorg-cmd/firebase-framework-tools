@@ -199,15 +199,19 @@ export default async function VideoPage({ params }: Props) {
 
                     {video.tags && video.tags.length > 0 && (
                         <div className="mt-8 flex flex-wrap gap-2">
-                            {video.tags.slice(0, 10).map(t => (
-                                <Link
-                                    key={t}
-                                    href={`/tags/${slugifyTag(t)}`}
-                                    className="px-3 py-1.5 rounded-full border border-border bg-card text-xs font-semibold text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-                                >
-                                    #{t}
-                                </Link>
-                            ))}
+                            {video.tags.slice(0, 10).map(t => {
+                                const slug = slugifyTag(t);
+                                if (!slug) return null;
+                                return (
+                                    <Link
+                                        key={t}
+                                        href={`/tags/${slug}`}
+                                        className="px-3 py-1.5 rounded-full border border-border bg-card text-xs font-semibold text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+                                    >
+                                        #{t}
+                                    </Link>
+                                );
+                            })}
                         </div>
                     )}
                 </section>

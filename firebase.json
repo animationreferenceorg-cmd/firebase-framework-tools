@@ -12,7 +12,6 @@
         "**/node_modules/**"
       ],
       "redirects": [
-        { "source": "/.well-known/**", "type": 404 },
         { "source": "/**/phpinfo*", "type": 404 },
         { "source": "/**/phpinfo.php*", "type": 404 }
       ],

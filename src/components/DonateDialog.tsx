@@ -46,18 +46,19 @@ export function DonateDialog({ children, open, onOpenChange, forceTimer = false 
     const { toast } = useToast();
     const [isPortalLoading, setIsPortalLoading] = useState(false);
 
-    // Timer Gating logic
-    const [seconds, setSeconds] = useState(15);
+    // Timer Gating logic (12 seconds)
+    const TIMER_DURATION = 12;
+    const [seconds, setSeconds] = useState(TIMER_DURATION);
     const [canClose, setCanClose] = useState(!forceTimer);
 
     useEffect(() => {
         if (!open || !forceTimer) {
-            setSeconds(15);
+            setSeconds(TIMER_DURATION);
             setCanClose(!forceTimer);
             return;
         }
         setCanClose(false);
-        setSeconds(15);
+        setSeconds(TIMER_DURATION);
         const interval = setInterval(() => {
             setSeconds((prev) => {
                 if (prev <= 1) {
@@ -110,7 +111,7 @@ export function DonateDialog({ children, open, onOpenChange, forceTimer = false 
         }
     };
 
-    const progress = ((15 - seconds) / 15) * 100;
+    const progress = ((TIMER_DURATION - seconds) / TIMER_DURATION) * 100;
 
     return (
         <Dialog open={open} onOpenChange={(val) => {
@@ -245,6 +246,9 @@ export function DonateDialog({ children, open, onOpenChange, forceTimer = false 
                                 <li className="flex items-center text-sm text-white">
                                     <span className="mr-2 text-blue-500">✓</span> 10 Likes
                                 </li>
+                                <li className="flex items-center text-sm text-blue-300 font-medium">
+                                    <span className="mr-2 text-blue-500">✓</span> No donation pop-ups
+                                </li>
                                 <li className="flex items-center text-sm text-zinc-400">
                                     <span className="mr-2 text-blue-500">✓</span> Supporter Badge
                                 </li>
@@ -280,6 +284,9 @@ export function DonateDialog({ children, open, onOpenChange, forceTimer = false 
                                 </li>
                                 <li className="flex items-center text-sm text-white">
                                     <span className="mr-2 text-purple-500">✓</span> 20 Likes
+                                </li>
+                                <li className="flex items-center text-sm text-purple-300 font-medium">
+                                    <span className="mr-2 text-purple-500">✓</span> No donation pop-ups
                                 </li>
                                 <li className="flex items-center text-sm text-zinc-400">
                                     <span className="mr-2 text-purple-500">✓</span> Priority Support
@@ -319,6 +326,9 @@ export function DonateDialog({ children, open, onOpenChange, forceTimer = false 
                                 </li>
                                 <li className="flex items-center text-sm text-white font-medium">
                                     <span className="mr-2 text-green-400">✓</span> Unlimited Likes
+                                </li>
+                                <li className="flex items-center text-sm text-green-300 font-medium">
+                                    <span className="mr-2 text-green-400">✓</span> No donation pop-ups
                                 </li>
                                 <li className="flex items-center text-sm text-zinc-300">
                                     <span className="mr-2 text-green-400">✓</span> Early Access

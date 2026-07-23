@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
+import { recordReferenceView } from '@/lib/watch-tracker';
 import { VideoPlayer } from './VideoPlayer';
 import Link from 'next/link';
 import type { Video } from '@/lib/types';
@@ -40,6 +41,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [showLimitDialog, setShowLimitDialog] = useState(false);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
+  const [donateForceTimer, setDonateForceTimer] = useState(false);
   const { ref: cardRef, inView: cardInView } = useInView({ threshold: 0, triggerOnce: true });
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -94,6 +96,13 @@ const [socialAccessible, setSocialAccessible] = useState(true);
 
   const handleOpenPlayerChange = (open: boolean) => {
     setIsPlayerOpen(open);
+    if (open) {
+      const triggerPopup = recordReferenceView(userProfile?.isPremium);
+      if (triggerPopup) {
+        setDonateForceTimer(true);
+        setShowDonateDialog(true);
+      }
+    }
   };
 
   const handleLikeToggle = async (e: React.MouseEvent) => {
@@ -404,8 +413,11 @@ const [socialAccessible, setSocialAccessible] = useState(true);
 
       <DonateDialog
         open={showDonateDialog}
-        forceTimer={true}
-        onOpenChange={setShowDonateDialog}
+        forceTimer={donateForceTimer}
+        onOpenChange={(val) => {
+          setShowDonateDialog(val);
+          if (!val) setDonateForceTimer(false);
+        }}
       />
       </>
     );
@@ -590,8 +602,11 @@ const [socialAccessible, setSocialAccessible] = useState(true);
 
       <DonateDialog
         open={showDonateDialog}
-        forceTimer={true}
-        onOpenChange={setShowDonateDialog}
+        forceTimer={donateForceTimer}
+        onOpenChange={(val) => {
+          setShowDonateDialog(val);
+          if (!val) setDonateForceTimer(false);
+        }}
       />
     </>
   );

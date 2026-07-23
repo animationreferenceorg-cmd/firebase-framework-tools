@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,7 @@ export function CategoryCard({ title, description, tags, href, imageUrl, videoUr
   const [isHovered, setIsHovered] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const { user: authUser } = useAuth();
   const { userProfile, mutate } = useUser();
@@ -29,10 +30,24 @@ export function CategoryCard({ title, description, tags, href, imageUrl, videoUr
     return userProfile?.likedCategoryTitles?.includes(title) ?? false;
   }, [userProfile, title]);
 
+  useEffect(() => {
+    if (isHovered && videoRef.current) {
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {});
+      }
+    } else if (!isHovered && videoRef.current) {
+      videoRef.current.pause();
+      try {
+        videoRef.current.currentTime = 0;
+      } catch {}
+    }
+  }, [isHovered]);
+
   const handleMouseEnter = () => {
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovered(true);
-    }, 300);
+    }, 200);
   };
 
   const handleMouseLeave = () => {
@@ -99,37 +114,18 @@ export function CategoryCard({ title, description, tags, href, imageUrl, videoUr
         />
 
         {videoUrl && (
-          <div className={cn(
-            "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none",
-            isHovered ? "opacity-100" : "opacity-0"
-          )}>
-            <ReactPlayer
-              url={videoUrl}
-              playing={isHovered}
-              loop={true}
-              muted={true}
-              playsinline={true}
-              controls={false}
-              width="100%"
-              height="100%"
-              onError={(err) => {
-                console.warn("CategoryCard video load error:", err);
-              }}
-              style={{ position: 'absolute', top: 0, left: 0, borderRadius: 'var(--radius)', overflow: 'hidden' }}
-              config={{
-                file: {
-                  attributes: {
-                    style: {
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      borderRadius: 'inherit',
-                    },
-                  },
-                },
-              }}
-            />
-          </div>
+          <video
+            ref={videoRef}
+            src={videoUrl}
+            preload="metadata"
+            muted
+            loop
+            playsInline
+            className={cn(
+              "absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none z-10",
+              isHovered ? "opacity-100 scale-105" : "opacity-0 scale-100"
+            )}
+          />
         )}
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />

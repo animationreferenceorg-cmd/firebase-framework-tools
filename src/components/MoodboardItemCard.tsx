@@ -39,6 +39,21 @@ export function MoodboardItemCard({ video, className, onMaximize, playbackSpeed 
     const [isHovered, setIsHovered] = useState(false);
     const [isImageLoaded, setIsImageLoaded] = useState(false);
     const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    useEffect(() => {
+        if (isHovered && videoRef.current) {
+            const playPromise = videoRef.current.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(() => {});
+            }
+        } else if (!isHovered && videoRef.current) {
+            videoRef.current.pause();
+            try {
+                videoRef.current.currentTime = 0;
+            } catch {}
+        }
+    }, [isHovered]);
 
     const handleMouseEnter = () => {
         if (hoverDelay === 0) {
@@ -74,31 +89,28 @@ export function MoodboardItemCard({ video, className, onMaximize, playbackSpeed 
             <Image
                 src={imageUrl}
                 alt={title || 'Moodboard Item'}
-
                 fill
                 className={cn(
                     "object-cover transition-opacity duration-300",
-                    !isImageLoaded && "opacity-0",
-                    isHovered && "opacity-0" // Hide image when playing
+                    !isImageLoaded && "opacity-0"
                 )}
                 onLoad={() => setIsImageLoaded(true)}
             />
 
             {/* Video Player (Preview) */}
-            {isVideo && (video as Video).videoUrl && isHovered && (
-
-                <div className="absolute inset-0 w-full h-full bg-black animate-in fade-in duration-300">
-                    <Player
-                        url={(video as Video).videoUrl}
-
-                        playing={isHovered}
-                        loop={true}
-                        muted={true}
-                        playbackRate={playbackSpeed}
-                        playsinline={true}
-                        controls={false}
-                    />
-                </div>
+            {isVideo && (video as Video).videoUrl && (
+                <video
+                    ref={videoRef}
+                    src={(video as Video).videoUrl}
+                    preload="metadata"
+                    muted
+                    loop
+                    playsInline
+                    className={cn(
+                        "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none z-10",
+                        isHovered ? "opacity-100" : "opacity-0"
+                    )}
+                />
             )}
 
             {/* Overlay Title */}

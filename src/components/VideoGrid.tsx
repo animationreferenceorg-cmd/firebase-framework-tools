@@ -23,12 +23,17 @@ export function VideoGrid({ title, videos, columns = 5 }: VideoGridProps) {
     triggerOnce: false,
   });
 
+  // Reset pagination when video list changes
   useEffect(() => {
-    if (inView && visibleCount < videos.length) {
-      // Load more videos
-      setVisibleCount(prevCount => prevCount + VIDEOS_PER_PAGE);
+    setVisibleCount(VIDEOS_PER_PAGE);
+  }, [videos]);
+
+  // Load next batch when intersection sentinel enters viewport
+  useEffect(() => {
+    if (inView) {
+      setVisibleCount(prev => Math.min(prev + VIDEOS_PER_PAGE, videos.length));
     }
-  }, [inView, videos.length, visibleCount]);
+  }, [inView, videos.length]);
 
   if (!videos || videos.length === 0) {
     return null;

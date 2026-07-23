@@ -57,14 +57,25 @@ const [socialAccessible, setSocialAccessible] = useState(true);
     return userProfile?.likedVideoIds?.includes(video.id) ?? false;
   }, [userProfile, video.id]);
 
+  useEffect(() => {
+    if (isHovered && videoRef.current) {
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {});
+      }
+    } else if (!isHovered && videoRef.current) {
+      videoRef.current.pause();
+      try {
+        videoRef.current.currentTime = 0;
+      } catch {}
+    }
+  }, [isHovered]);
+
   const handleMouseEnter = () => {
     if (video.isShort || poster) return;
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovered(true);
-      if (videoRef.current) {
-        videoRef.current.play().catch(() => {});
-      }
-    }, 300);
+    }, 200);
   };
 
   const handleMouseLeave = () => {
@@ -73,10 +84,6 @@ const [socialAccessible, setSocialAccessible] = useState(true);
       clearTimeout(hoverTimeoutRef.current);
     }
     setIsHovered(false);
-    if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
-    }
   };
 
   const handlePlayClick = (e: React.MouseEvent) => {
@@ -292,6 +299,22 @@ const [socialAccessible, setSocialAccessible] = useState(true);
             </div>
           )}
 
+          {/* Native video hover preview */}
+          {video.videoUrl && (
+            <video
+              ref={videoRef}
+              src={cardInView ? video.videoUrl : undefined}
+              preload="metadata"
+              muted
+              loop
+              playsInline
+              className={cn(
+                "absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none z-10",
+                isHovered && !isPlayerOpen ? "opacity-100 scale-110" : "opacity-0 scale-100"
+              )}
+            />
+          )}
+
           {/* Dark Overlay Gradient (always visible on hover to make text readable) */}
           <div className={cn(
             "absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none transition-opacity duration-300",
@@ -428,6 +451,22 @@ const [socialAccessible, setSocialAccessible] = useState(true);
           </div>
           )}
         
+        {/* Native video hover preview for standard cards */}
+        {video.videoUrl && !video.isShort && !poster && (
+          <video
+            ref={videoRef}
+            src={cardInView ? video.videoUrl : undefined}
+            preload="metadata"
+            muted
+            loop
+            playsInline
+            className={cn(
+              "absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none z-10",
+              isHovered && !isPlayerOpen ? "opacity-100 scale-110" : "opacity-0 scale-100"
+            )}
+          />
+        )}
+
         {/* Subtle creator badge — top-left, always visible for any video with uploader/originalUrl */}
         <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} />
 

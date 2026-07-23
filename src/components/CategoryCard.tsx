@@ -112,6 +112,9 @@ export function CategoryCard({ title, description, tags, href, imageUrl, videoUr
               controls={false}
               width="100%"
               height="100%"
+              onError={(err) => {
+                console.warn("CategoryCard video load error:", err);
+              }}
               style={{ position: 'absolute', top: 0, left: 0, borderRadius: 'var(--radius)', overflow: 'hidden' }}
               config={{
                 file: {

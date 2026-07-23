@@ -88,10 +88,19 @@ const [socialAccessible, setSocialAccessible] = useState(true);
     setIsHovered(false);
   };
 
+  const openVideoPlayer = () => {
+    setIsPlayerOpen(true);
+    const triggerPopup = recordReferenceView(userProfile?.isPremium);
+    if (triggerPopup) {
+      setDonateForceTimer(true);
+      setShowDonateDialog(true);
+    }
+  };
+
   const handlePlayClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsPlayerOpen(true);
+    openVideoPlayer();
   };
 
   const handleOpenPlayerChange = (open: boolean) => {
@@ -257,6 +266,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
         <div ref={cardRef}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          onClick={handlePlayClick}
           className={cn(
             "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lg transform-gpu transition-all duration-300 ease-in-out group/card cursor-pointer",
             isHovered && !isPlayerOpen ? "scale-105 z-[100] shadow-2xl" : "z-0",
@@ -430,6 +440,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
         ref={cardRef}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onClick={handlePlayClick}
         className={cn(
           "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lg transform-gpu transition-all duration-300 ease-in-out group/card cursor-pointer",
           isHovered && !isPlayerOpen && !video.isShort && !poster ? "scale-110 z-[100] shadow-2xl" : "z-0",

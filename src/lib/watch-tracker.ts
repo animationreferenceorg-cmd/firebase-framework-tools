@@ -10,6 +10,8 @@ export function recordReferenceView(isPremium?: boolean): boolean {
     return false;
   }
 
+  if (typeof window === 'undefined') return false;
+
   try {
     const raw = localStorage.getItem(WATCH_COUNT_KEY);
     const count = raw ? parseInt(raw, 10) || 0 : 0;

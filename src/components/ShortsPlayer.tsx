@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
+import { recordReferenceView } from '@/lib/watch-tracker';
 
 interface ShortsPlayerProps {
     video: Video;
@@ -62,8 +63,19 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
     const [showUI, setShowUI] = React.useState(false);
     const [showLimitDialog, setShowLimitDialog] = React.useState(false);
     const [showDonateDialog, setShowDonateDialog] = React.useState(false);
+    const [donateForceTimer, setDonateForceTimer] = React.useState(false);
     const [isSeeking, setIsSeeking] = React.useState(false);
     const [playbackRate, setPlaybackRate] = React.useState(1);
+
+    React.useEffect(() => {
+        if (isPlaying && video?.id) {
+            const triggerPopup = recordReferenceView(userProfile?.isPremium);
+            if (triggerPopup) {
+                setDonateForceTimer(true);
+                setShowDonateDialog(true);
+            }
+        }
+    }, [isPlaying, video?.id, userProfile?.isPremium]);
 
     React.useEffect(() => {
         const observer = new IntersectionObserver(
@@ -384,7 +396,11 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
 
             <DonateDialog
                 open={showDonateDialog}
-                onOpenChange={setShowDonateDialog}
+                forceTimer={donateForceTimer}
+                onOpenChange={(val) => {
+                    setShowDonateDialog(val);
+                    if (!val) setDonateForceTimer(false);
+                }}
             />
         </div >
     );

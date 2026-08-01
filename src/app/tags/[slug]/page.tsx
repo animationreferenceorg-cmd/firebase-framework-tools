@@ -2,6 +2,8 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTagBySlug, getRelatedTags, slugifyTag } from '@/lib/videoSnapshot.server';
+import { TagViewTracker } from '@/components/TagViewTracker';
+import { VideoCard } from '@/components/VideoCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,6 +92,7 @@ export default async function TagPage({ params, searchParams }: Props) {
 
     return (
         <div className="container mx-auto px-4 md:px-8 py-10">
+            <TagViewTracker tag={entry.tag} />
             {/* Breadcrumb */}
             <nav className="text-xs text-muted-foreground mb-6 flex items-center gap-1.5" aria-label="Breadcrumb">
                 <Link href="/" className="hover:text-foreground">Home</Link>
@@ -112,30 +115,10 @@ export default async function TagPage({ params, searchParams }: Props) {
                 </p>
             </header>
 
-            {/* Video grid — server-rendered links so search engines can crawl every clip */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {/* Video grid — with interactive VideoCard theater player modal */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {videos.map(v => (
-                    <Link
-                        key={v.id}
-                        href={`/video/${v.id}`}
-                        className="group rounded-xl overflow-hidden border border-border bg-card hover:border-primary/40 transition-colors"
-                    >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                            src={v.thumbnailUrl || v.posterUrl}
-                            alt={`${v.title} — ${entry.tag} animation reference`}
-                            loading="lazy"
-                            referrerPolicy="no-referrer"
-                            className="aspect-video w-full object-cover group-hover:scale-[1.02] transition-transform"
-                        />
-                        <div className="p-3">
-                            <h2 className="text-sm font-semibold text-foreground line-clamp-2">{v.title}</h2>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                {v.duration ? `${v.duration.toFixed(1)}s` : 'Clip'}
-                                {v.tags && v.tags.length > 0 && ` · ${v.tags.slice(0, 2).join(', ')}`}
-                            </p>
-                        </div>
-                    </Link>
+                    <VideoCard key={v.id} video={v as any} />
                 ))}
             </div>
 

@@ -8,14 +8,15 @@ import { getSnapshotVideos } from '@/lib/videoSnapshot';
 import type { Video, Category } from '@/lib/types';
 import { findCategoryThumbnailMatch } from '@/lib/category-utils';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Construction, Grid, X, Search, Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ArrowRight, Construction, Grid, X, Search, Loader2, Sparkles, Heart, Share2 } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
 import { BrowseHero } from '@/components/BrowseHero';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { FilterBar, TabOption, TypeOption } from '@/components/FilterBar';
 import { VideoGrid } from '@/components/VideoGrid';
-import { FeaturedCategoryRow } from '@/components/FeaturedCategoryRow';
-import { ChannelBar } from '@/components/ChannelBar';
+import { BrowseDirectory } from '@/components/BrowseDirectory';
 import {
     Dialog,
     DialogContent,
@@ -50,6 +51,27 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
     const searchParams = useSearchParams();
     const router = useRouter();
 
+    const { toast } = useToast();
+    const [favoritedCategories, setFavoritedCategories] = useState<string[]>([]);
+
+    const toggleFavoriteCategory = (id: string, title: string) => {
+        const isFav = favoritedCategories.includes(id);
+        if (isFav) {
+            setFavoritedCategories(prev => prev.filter(item => item !== id));
+            toast({ title: "Removed from Favorites", description: `Removed ${title} from your saved collections.` });
+        } else {
+            setFavoritedCategories(prev => [...prev, id]);
+            toast({ title: "Saved to Favorites", description: `Saved ${title} to your reference collections!` });
+        }
+    };
+
+    const handleShareCategory = (title: string) => {
+        if (typeof window !== 'undefined') {
+            navigator.clipboard.writeText(window.location.href);
+            toast({ title: "Link Copied!", description: `Share link for ${title} copied to clipboard.` });
+        }
+    };
+
     // Data State
     const [allVideos, setAllVideos] = useState<Video[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -82,6 +104,7 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
         if (initialCategoryId) return initialCategoryId;
         return searchParams.get('category');
     });
+    const [selectedTag, setSelectedTag] = useState<string | null>(null);
     const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
 
     // Sync with Prop if it changes (Server Navigation)
@@ -265,6 +288,13 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
             );
         }
 
+        // 2b. Filter by Tag (from the directory tag explorer)
+        if (selectedTag) {
+            result = result.filter(v =>
+                v.tags?.some(t => t.toLowerCase() === selectedTag)
+            );
+        }
+
         // 3. Filter by Type (2D / 3D)
         if (activeType !== 'all') {
             const typeLower = activeType.toLowerCase();
@@ -291,7 +321,7 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
         }
 
         return result;
-    }, [allVideos, activeType, activeTab, selectedCategory, searchQuery]);
+    }, [allVideos, activeType, activeTab, selectedCategory, selectedTag, searchQuery]);
 
     // Paginate the filtered results client-side
     const visibleVideos = useMemo(() => filteredVideos.slice(0, visibleCount), [filteredVideos, visibleCount]);
@@ -300,7 +330,7 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
     // Start pagination over whenever the filters change
     useEffect(() => {
         setVisibleCount(VIDEOS_PER_PAGE);
-    }, [searchQuery, selectedCategory, activeType, activeTab]);
+    }, [searchQuery, selectedCategory, selectedTag, activeType, activeTab]);
 
     // Trigger Infinite Scroll
     useEffect(() => {
@@ -309,11 +339,24 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
         }
     }, [inView, hasMore, loadingMore, loading, fetchVideos]);
 
+    const scrollToResults = () => {
+        setTimeout(() => {
+            document.getElementById('results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 60);
+    };
+
     const handleCategorySelect = (catId: string | null) => {
         // Optimistic update
         setSelectedCategory(catId);
         setIsCategoryDialogOpen(false);
         updateUrl({ category: catId });
+        if (catId) scrollToResults();
+    };
+
+    const handleTagSelect = (tag: string | null) => {
+        setSelectedTag(tag);
+        setVisibleCount(VIDEOS_PER_PAGE);
+        if (tag) scrollToResults();
     };
 
     // Hero Video Selection (Pick from first batch)
@@ -338,8 +381,7 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
     }
 
     return (
-        <div className="min-h-screen bg-transparent text-white overflow-x-hidden font-sans pb-24 -mt-32 -mx-4 md:-mx-8 pt-32">
-
+        <div className="min-h-screen bg-transparent text-white overflow-x-hidden font-sans pb-24 -mt-32 pt-32">
             {/* 1. Hero Section */}
             {heroVideo ? (
                 <BrowseHero video={heroVideo}>
@@ -347,66 +389,50 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
                         {/* Badge */}
                         <div className="flex justify-center mb-8 animate-fade-in">
                             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black/40 border border-white/10 backdrop-blur-md shadow-[0_0_30px_-5px_rgba(109,40,217,0.3)] group hover:scale-105 transition-transform duration-300">
-                                <Construction className="h-4 w-4 text-purple-400 animate-pulse" />
-                                <span className="text-sm font-medium text-purple-100/90">Preview Build</span>
+                                <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
+                                <span className="text-sm font-medium text-purple-100/90">Animation Reference Hub</span>
                             </div>
                         </div>
 
                         {/* Headline */}
-                        <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-8 leading-[1.1] md:leading-[1.1] max-w-5xl mx-auto drop-shadow-2xl">
+                        <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-6 leading-[1.1] md:leading-[1.1] max-w-5xl mx-auto drop-shadow-2xl">
                             <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/70">
-                                The Ultimate
+                                Explore Animation
                             </span>
                             <br />
                             <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 animate-gradient-x">
-                                Reference Library
+                                Reference Categories
                             </span>
                         </h1>
 
                         {/* Subheadline */}
-                        <p className="text-lg md:text-xl text-zinc-100 mb-12 max-w-2xl mx-auto leading-relaxed drop-shadow-lg font-medium">
-                            Browse thousands of curated animation clips.
-                            <br className="hidden md:block" />
-                            Filter by 2D, 3D, source, and more below.
+                        <p className="text-lg md:text-xl text-zinc-100 mb-6 max-w-2xl mx-auto leading-relaxed drop-shadow-lg font-medium">
+                            Browse thousands of curated animation clips. Filter by 2D, 3D, source, and categories below.
                         </p>
-
-                        {/* Search Bar (Replaces CTA) */}
-                        <div className="w-full max-w-2xl mx-auto relative group">
-                            <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
-                            <div className="relative">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-zinc-400 group-focus-within:text-purple-400 transition-colors" />
-                                <Input
-                                    placeholder="Search videos, styles, or tags..."
-                                    className="pl-14 h-16 bg-black/60 backdrop-blur-xl border-white/10 text-xl rounded-2xl focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all placeholder:text-zinc-400 text-white shadow-2xl"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
-                        </div>
                     </div>
                 </BrowseHero>
             ) : null}
 
-            <div className="px-4 md:px-8 max-w-[1800px] mx-auto">
+            <div className="w-full px-2 md:px-4 lg:px-6">
 
-                {/* 2. Channel Bar (Sticky) */}
-                <div id="filters" className="mt-0 mb-0 sticky top-20 z-30 bg-[#030014]/80 backdrop-blur-xl py-4 border-b border-white/5 -mx-4 md:-mx-8 px-4 md:px-8 relative overflow-hidden">
-                    {/* Decorative Glow */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl h-full bg-purple-500/10 blur-3xl pointer-events-none" />
-
-                    <div className="max-w-[1600px] mx-auto">
-                        <ChannelBar
-                            categories={categories}
-                            selectedCategory={selectedCategory}
-                            /* 3. Featured Categories (Optional) 
-                <FeaturedCategoryRow categories={categories.slice(0, 5)} onCategorySelect={handleCategorySelect} />
-                */
-                            onSelectCategory={handleCategorySelect}
-                            onOpenAllCategories={() => setIsCategoryDialogOpen(true)}
-                            columns={columns}
-                            setColumns={setColumns}
-                        />
-                    </div>
+                {/* 2. Browse Directory — indexed search + category grid + tag explorer */}
+                <div className="mt-8 mb-4">
+                    <BrowseDirectory
+                        categories={categories}
+                        videos={allVideos}
+                        onSelectCategory={(catId) => {
+                            setSelectedCategory(catId);
+                            setSelectedTag(null);
+                            updateUrl({ category: catId });
+                            document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        onSelectTag={(tag) => {
+                            setSelectedTag(tag);
+                            setSelectedCategory(null);
+                            updateUrl({ query: tag });
+                            document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                    />
                 </div>
 
                 {/* 4. Filter Bar (Tabs & Toggles) */}
@@ -422,19 +448,112 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
                 </div>
 
                 {/* 5. Main Content Grid */}
-                <div className="mt-4 min-h-[500px]">
+                <div id="results" className="mt-4 min-h-[500px] scroll-mt-24">
+                    {/* SEO Category / Tag Banner Header when selected */}
+                    {(selectedCategory || selectedTag) && (() => {
+                        const activeTitle = selectedCategory
+                            ? `${categories.find(c => c.id === selectedCategory)?.title || 'Category'} Animation Reference`
+                            : selectedTag
+                            ? `${selectedTag.charAt(0).toUpperCase() + selectedTag.slice(1)} Animation Reference`
+                            : '';
+                        const activeKey = selectedCategory || selectedTag || '';
+                        const isFavorited = favoritedCategories.includes(activeKey);
+                        const categoryName = selectedCategory ? categories.find(c => c.id === selectedCategory)?.title.toLowerCase() : selectedTag;
+
+                        return (
+                            <div className="bg-zinc-900/95 backdrop-blur-2xl border border-white/10 p-6 md:p-8 rounded-3xl mb-6 text-left space-y-4 shadow-2xl animate-fade-in relative overflow-hidden">
+                                {/* Ambient Background Glow */}
+                                <div className="absolute top-0 right-0 w-[400px] h-[300px] bg-purple-600/10 blur-[100px] rounded-full pointer-events-none" />
+
+                                {/* Top Action Bar: Badge + Heart / Favorite + Share + Close */}
+                                <div className="flex flex-wrap items-center justify-between gap-3 relative z-10">
+                                    <div className="flex items-center gap-2">
+                                        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-purple-950/80 border border-purple-800/40 text-purple-300 text-xs font-bold shadow-md">
+                                            <Sparkles className="h-3.5 w-3.5" />
+                                            <span>Reference Collection</span>
+                                        </div>
+                                        <Badge variant="outline" className="bg-black/60 text-white font-mono text-xs font-bold border-white/15 px-3 py-1">
+                                            {filteredVideos.length} Curated Clips
+                                        </Badge>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        {/* Heart / Favorite Button */}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => toggleFavoriteCategory(activeKey, activeTitle)}
+                                            className={cn(
+                                                "h-9 px-3.5 rounded-2xl border-white/15 text-xs font-bold transition-all cursor-pointer shadow-md",
+                                                isFavorited
+                                                    ? "bg-rose-500/20 text-rose-300 border-rose-500/50 hover:bg-rose-500/30"
+                                                    : "bg-black/60 text-zinc-300 hover:text-white hover:bg-white/10"
+                                            )}
+                                        >
+                                            <Heart className={cn("h-4 w-4 mr-1.5 transition-colors", isFavorited ? "fill-rose-500 text-rose-500" : "text-zinc-400")} />
+                                            {isFavorited ? 'Favorited' : 'Favorite'}
+                                        </Button>
+
+                                        {/* Share Button */}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleShareCategory(activeTitle)}
+                                            className="h-9 px-3.5 rounded-2xl border-white/15 bg-black/60 text-zinc-300 hover:text-white hover:bg-white/10 text-xs font-bold cursor-pointer shadow-md"
+                                        >
+                                            <Share2 className="h-4 w-4 mr-1.5 text-purple-400" />
+                                            Share
+                                        </Button>
+
+                                        {/* Clear Button */}
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => { setSelectedCategory(null); setSelectedTag(null); updateUrl({ category: null }); }}
+                                            className="h-9 px-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 text-xs font-bold cursor-pointer ml-1"
+                                        >
+                                            <X className="h-4 w-4 mr-1" /> View All Categories
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {/* Title & Detailed SEO Subtitle */}
+                                <div className="space-y-2 relative z-10">
+                                    <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight">
+                                        {activeTitle}
+                                    </h1>
+
+                                    <p className="text-sm md:text-base text-zinc-300 max-w-5xl font-medium leading-relaxed">
+                                        {filteredVideos.length} curated {categoryName} animation reference clips for animators, game developers and motion designers. Open any clip for frame-by-frame playback to study the timing, spacing and posing of real {categoryName} motion — often studied together with staging, cinematic, animation.
+                                    </p>
+                                </div>
+
+                                {/* Related Topic Badges */}
+                                <div className="pt-2 flex flex-wrap gap-2 relative z-10">
+                                    {['#staging', '#cinematic', '#animation', '#keyframe', '#timing', '#mechanics'].map(tag => (
+                                        <span key={tag} className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] font-mono font-semibold text-zinc-400 hover:text-white transition-colors cursor-default">
+                                            {tag}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                             <h2 className="text-xl font-bold text-zinc-200">
                                 {selectedCategory
                                     ? (categories.find(c => c.id === selectedCategory)?.title || 'Selected Category')
+                                    : selectedTag
+                                    ? `#${selectedTag}`
                                     : (activeTab === 'trending' ? 'Trending Now' : activeTab === 'latest' ? 'Fresh Drops' : 'All Videos')}
                             </h2>
-                            {selectedCategory && (
+                            {(selectedCategory || selectedTag) && (
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => setSelectedCategory(null)}
+                                    onClick={() => { setSelectedCategory(null); setSelectedTag(null); updateUrl({ category: null }); }}
                                     className="h-6 w-6 p-0 rounded-full hover:bg-zinc-800"
                                 >
                                     <X className="h-4 w-4 text-zinc-400" />

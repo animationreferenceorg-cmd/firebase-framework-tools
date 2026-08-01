@@ -84,6 +84,9 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     const isFeedPage = pathname === '/feed';
     const isMoodboardPage = pathname.startsWith('/moodboard');
 
+    const isCategoriesPage = pathname.startsWith('/categories');
+    const isProfilePage = pathname.startsWith('/profile') || pathname.startsWith('/u/');
+
     return (
         <UploadProvider>
             {isMoodboardPage && (
@@ -153,11 +156,6 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                 <SidebarMenuItem>
                                     <SidebarLink href="/categories" icon={LayoutGrid} tooltip="Categories">
                                         Categories
-                                    </SidebarLink>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarLink href="/tags" icon={TagIcon} tooltip="Tags">
-                                        Tags
                                     </SidebarLink>
                                 </SidebarMenuItem>
 
@@ -240,7 +238,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                         </Suspense>
                         <main className={cn(
                             "flex-1 transition-all duration-300 ease-in-out",
-                            (!isMoodboardPage && !isFeedPage) && "px-4 md:px-8 pb-8"
+                            (!isMoodboardPage && !isFeedPage && !isProfilePage && !isCategoriesPage) && "px-4 md:px-8 pb-8"
                         )}>
                             {children}
                         </main>

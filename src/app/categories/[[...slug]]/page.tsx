@@ -1,9 +1,10 @@
 
 import { Metadata, ResolvingMetadata } from 'next';
+import { redirect } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import type { Category } from '@/lib/types';
-import BrowsePageClient from '../BrowsePageClient';
+import { CategoriesHub } from '@/components/CategoriesHub';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,21 +103,12 @@ export async function generateMetadata(
 export default async function CategorySlugPage({ params }: Props) {
     const { slug } = await params;
 
-    // Default to 'All' if no slug
+    // Index (/categories) → the browse directory hub.
     if (!slug || slug.length === 0) {
-        return <BrowsePageClient />;
+        return <CategoriesHub />;
     }
 
-    const categorySlug = slug[0];
-    const category = await getCategory(categorySlug);
-
-    // If we found a category, render the BrowsePage with it selected
-    if (category) {
-        return <BrowsePageClient initialCategoryId={category.id} />;
-    }
-
-    // If slug provided but not found, return default (All) instead of 404, 
-    // effectively "ignoring" the bad filter but keeping the page alive.
-    // Or we could show 404. Let's return default BrowsePage so user stays in app.
-    return <BrowsePageClient />;
+    // A specific category now lives on its own dedicated page (/category/[slug]).
+    // Redirect old /categories/[slug] URLs there so links and bookmarks keep working.
+    redirect(`/category/${slug[0]}`);
 }

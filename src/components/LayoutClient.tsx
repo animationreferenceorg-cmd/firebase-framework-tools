@@ -5,7 +5,7 @@ import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarTrigger, 
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Clapperboard, Film, Home, LayoutGrid, List, Rss, Shield, BookCopy, Star, Camera, User, Box, ShoppingBag, CreditCard, MessageSquare, Tag as TagIcon } from 'lucide-react';
+import { Clapperboard, Film, Home, LayoutGrid, List, Rss, Shield, BookCopy, Star, Camera, User, Box, ShoppingBag, CreditCard, MessageSquare } from 'lucide-react';
 import { useUser } from '@/hooks/use-user';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -174,6 +174,11 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                         Marketplace
                                     </SidebarLink>
                                 </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarLink href="/blog" icon={BookCopy} tooltip="Resources">
+                                        Resources
+                                    </SidebarLink>
+                                </SidebarMenuItem>
 
                             </SidebarMenu>
                         </SidebarGroup>
@@ -259,6 +264,12 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                 <div className="w-48">
                                     <FeedbackModal />
                                 </div>
+                                <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/40 mt-2">
+                                    <Link href="/blog" className="hover:text-white/70 transition-colors">Blog</Link>
+                                    <Link href="/resources/12-principles-of-animation-reference" className="hover:text-white/70 transition-colors">12 Principles of Animation</Link>
+                                    <Link href="/resources/combat-animation-reference" className="hover:text-white/70 transition-colors">Combat Reference</Link>
+                                    <Link href="/resources/locomotion-animation-reference" className="hover:text-white/70 transition-colors">Locomotion Reference</Link>
+                                </nav>
                                 <p className="text-[10px] text-white/20 mt-4">© 2026 Animation Reference. Built for the community.</p>
                             </footer>
                         )}

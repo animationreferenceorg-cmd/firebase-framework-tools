@@ -21,7 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
-import { recordReferenceView } from '@/lib/watch-tracker';
+import { recordReferenceView, recordHoverPreview } from '@/lib/watch-tracker';
 import { VideoPlayer } from './VideoPlayer';
 import Link from 'next/link';
 import type { Video } from '@/lib/types';
@@ -100,6 +100,11 @@ export function VideoCard({ video, poster }: VideoCardProps) {
     if (video.isShort || poster) return;
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovered(true);
+      const triggerPopup = recordHoverPreview(userProfile?.isPremium);
+      if (triggerPopup) {
+        setDonateForceTimer(true);
+        setShowDonateDialog(true);
+      }
     }, 150);
   };
 
@@ -135,6 +140,11 @@ export function VideoCard({ video, poster }: VideoCardProps) {
 
     if (isTouchDevice && !isHovered) {
       setIsHovered(true);
+      const triggerPopup = recordHoverPreview(userProfile?.isPremium);
+      if (triggerPopup) {
+        setDonateForceTimer(true);
+        setShowDonateDialog(true);
+      }
       return;
     }
 

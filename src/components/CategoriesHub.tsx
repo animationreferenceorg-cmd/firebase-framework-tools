@@ -1,66 +1,21 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { collection, getDocs, query, where, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { getSnapshotVideos } from '@/lib/videoSnapshot';
+import React, { useEffect, useRef, useState } from 'react';
 import type { Video, Category } from '@/lib/types';
 import { BrowseDirectory } from '@/components/BrowseDirectory';
 import { BrowseHero } from '@/components/BrowseHero';
 import { Input } from '@/components/ui/input';
 import { Search, Sparkles } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
 
-const slugify = (text: string) =>
-    text
-        .toString()
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, '-')
-        .replace(/&/g, '-and-')
-        .replace(/[^\w\-]+/g, '')
-        .replace(/\-\-+/g, '-');
+interface CategoriesHubProps {
+    initialCategories: Category[];
+    initialVideos: Video[];
+    heroVideo: Video | null;
+}
 
-export function CategoriesHub() {
-    const [categories, setCategories] = useState<Category[]>([]);
-    const [videos, setVideos] = useState<Video[]>([]);
-    const [loading, setLoading] = useState(true);
+export function CategoriesHub({ initialCategories, initialVideos, heroVideo }: CategoriesHubProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const prevQuery = useRef('');
-
-    useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            try {
-                const [vids, catSnap] = await Promise.all([
-                    getSnapshotVideos(),
-                    getDocs(query(collection(db, 'categories'), where('status', '==', 'published'), limit(100))),
-                ]);
-                if (cancelled) return;
-                setVideos((vids as Video[]).filter((v) => !v.isShort));
-                setCategories(
-                    catSnap.docs.map((d) => {
-                        const data = d.data();
-                        const s = data.slug || slugify(data.title || '');
-                        return { id: d.id, ...data, slug: s, href: `/category/${s}` } as Category;
-                    })
-                );
-            } catch (e) {
-                console.error('Failed to load categories hub:', e);
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        })();
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
-    // A random clip powers the hero video background, matching the home screen.
-    const heroVideo = useMemo(() => {
-        if (videos.length === 0) return null;
-        return videos[Math.floor(Math.random() * videos.length)];
-    }, [videos]);
 
     // As soon as the user types in the hero search, jump down to the results.
     useEffect(() => {
@@ -118,23 +73,12 @@ export function CategoriesHub() {
 
             {/* 2. Directory — full width, driven by the hero search */}
             <div id="browse-directory" className="w-full px-4 md:px-8 py-8 scroll-mt-24">
-                {loading && videos.length === 0 ? (
-                    <div className="space-y-8">
-                        <Skeleton className="h-12 w-full max-w-2xl rounded-xl bg-zinc-900" />
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                            {Array.from({ length: 10 }).map((_, i) => (
-                                <Skeleton key={i} className="aspect-[4/3] rounded-xl bg-zinc-900" />
-                            ))}
-                        </div>
-                    </div>
-                ) : (
-                    <BrowseDirectory
-                        categories={categories}
-                        videos={videos}
-                        query={searchQuery}
-                        onQueryChange={setSearchQuery}
-                    />
-                )}
+                <BrowseDirectory
+                    categories={initialCategories}
+                    videos={initialVideos}
+                    query={searchQuery}
+                    onQueryChange={setSearchQuery}
+                />
             </div>
         </div>
     );

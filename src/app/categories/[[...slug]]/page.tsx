@@ -3,8 +3,35 @@ import { Metadata, ResolvingMetadata } from 'next';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
-import type { Category } from '@/lib/types';
+import { getAllSnapshotVideos } from '@/lib/videoSnapshot.server';
+import type { Category, Video } from '@/lib/types';
 import { CategoriesHubClient } from '@/components/CategoriesHubClient';
+
+const slugifyCategory = (text: string) =>
+    text
+        .toString()
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/&/g, '-and-')
+        .replace(/[^\w\-]+/g, '')
+        .replace(/\-\-+/g, '-');
+
+async function getCategoriesHubData(): Promise<{ categories: Category[]; videos: Video[] }> {
+    try {
+        const catSnap = await getDocs(query(collection(db, 'categories'), where('status', '==', 'published'), limit(100)));
+        const categories = catSnap.docs.map((d) => {
+            const data = d.data();
+            const s = data.slug || slugifyCategory(data.title || '');
+            return { id: d.id, ...data, slug: s, href: `/category/${s}` } as Category;
+        });
+        const videos = getAllSnapshotVideos().filter((v) => !v.isShort);
+        return { categories, videos };
+    } catch (e) {
+        console.error('Failed to load categories hub data:', e);
+        return { categories: [], videos: [] };
+    }
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -105,7 +132,9 @@ export default async function CategorySlugPage({ params }: Props) {
 
     // Index (/categories) → the browse directory hub.
     if (!slug || slug.length === 0) {
-        return <CategoriesHubClient />;
+        const { categories, videos } = await getCategoriesHubData();
+        const heroVideo = videos.length > 0 ? videos[Math.floor(Math.random() * videos.length)] : null;
+        return <CategoriesHubClient initialCategories={categories} initialVideos={videos} heroVideo={heroVideo} />;
     }
 
     // A specific category now lives on its own dedicated page (/category/[slug]).

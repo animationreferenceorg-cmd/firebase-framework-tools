@@ -33,7 +33,7 @@ export default function VaultResource() {
                                 <Link href="/login?tab=sign-up">Create Your Free Vault</Link>
                             </Button>
                             <Button asChild variant="ghost" size="lg" className="h-16 px-10 rounded-2xl hover:bg-zinc-100">
-                                <Link href="/browse">Browse Examples</Link>
+                                <Link href="/categories">Browse Examples</Link>
                             </Button>
                         </div>
                     </div>

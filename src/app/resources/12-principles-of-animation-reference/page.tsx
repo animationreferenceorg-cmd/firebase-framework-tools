@@ -81,7 +81,7 @@ export default function PrinciplesGuide() {
                         </p>
                     </div>
                     <Button asChild variant="outline" className="border-amber-900/20 text-amber-900 hover:bg-amber-900 hover:text-white">
-                        <Link href="/browse">Explore Full Library</Link>
+                        <Link href="/categories">Explore Full Library</Link>
                     </Button>
                 </div>
 

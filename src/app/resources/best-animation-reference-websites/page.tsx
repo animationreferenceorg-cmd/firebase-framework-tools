@@ -230,7 +230,7 @@ export default function BestReferenceWebsites() {
                         <Button asChild size="lg" className="h-16 px-10 rounded-full bg-white text-black font-bold hover:scale-105 transition-transform">
                             <Link href="/login?tab=sign-up">Get Started for Free</Link>
                         </Button>
-                        <Link href="/browse" className="text-zinc-400 hover:text-white transition-colors">Browse the library first</Link>
+                        <Link href="/categories" className="text-zinc-400 hover:text-white transition-colors">Browse the library first</Link>
                     </div>
                 </div>
             </section>

@@ -17,7 +17,9 @@ export const translations = {
       searchPlaceholder: 'Buscar categorías y etiquetas...',
       studyTogether: 'a menudo se estudian junto con',
     },
-    'pt-BR': {
+  },
+  'pt-BR': {
+    tags: {
       title: (name: string, count: number) => `${name} - Referência de Animação | ${count} Clipes`,
       description: (tag: string, count: number) =>
         `Explore ${count} clipes de animação de referência sobre ${tag}. Estude timing, espaçamento e postura de movimentos reais de ${tag}. Gratuito para animadores e desenvolvedores.`,
@@ -25,7 +27,9 @@ export const translations = {
       breadcrumbTags: 'Etiquetas',
       h1: (name: string) => `${name} - Referência de Animação`,
     },
-    'fr': {
+  },
+  fr: {
+    tags: {
       title: (name: string, count: number) => `${name} - Références d'Animation | ${count} Clips`,
       description: (tag: string, count: number) =>
         `Explorez ${count} clips de référence d'animation sur ${tag}. Étudiez le timing, l'espacement et la posture de mouvements réels de ${tag}. Gratuit pour les animateurs et développeurs.`,
@@ -33,7 +37,9 @@ export const translations = {
       breadcrumbTags: 'Étiquettes',
       h1: (name: string) => `${name} - Référence d'Animation`,
     },
-    'de': {
+  },
+  de: {
+    tags: {
       title: (name: string, count: number) => `${name} - Animations-Referenzen | ${count} Clips`,
       description: (tag: string, count: number) =>
         `Erkunden Sie ${count} Animations-Referenz-Clips zu ${tag}. Studieren Sie Timing, Abstände und Positionen echter ${tag}-Bewegungen. Kostenlos für Animatoren und Entwickler.`,
@@ -41,7 +47,9 @@ export const translations = {
       breadcrumbTags: 'Schlagwörter',
       h1: (name: string) => `${name} - Animations-Referenz`,
     },
-    'ja': {
+  },
+  ja: {
+    tags: {
       title: (name: string, count: number) => `${name} - アニメーション リファレンス | ${count}クリップ`,
       description: (tag: string, count: number) =>
         `${tag}に関する${count}個のアニメーション参照クリップを探索します。実際の${tag}の動きのタイミング、スペーシング、ポーズを学習します。アニメーターと開発者向けは無料です。`,
@@ -49,7 +57,9 @@ export const translations = {
       breadcrumbTags: 'タグ',
       h1: (name: string) => `${name} - アニメーション リファレンス`,
     },
-    'ko': {
+  },
+  ko: {
+    tags: {
       title: (name: string, count: number) => `${name} - 애니메이션 레퍼런스 | ${count}개 클립`,
       description: (tag: string, count: number) =>
         `${tag}에 대한 ${count}개의 애니메이션 레퍼런스 클립을 탐색하세요. 실제 ${tag} 동작의 타이밍, 간격 및 포즈를 학습합니다. 애니메이터 및 개발자는 무료입니다.`,
@@ -60,11 +70,11 @@ export const translations = {
   },
 };
 
-export type SupportedLocale = keyof typeof translations.es;
+export type SupportedLocale = keyof typeof translations;
 
 export function getTranslation(locale: SupportedLocale, key: string): any {
   const parts = key.split('.');
-  let current: any = translations.es[locale] || translations.es['es'];
+  let current: any = translations[locale] || translations['es'];
 
   for (const part of parts) {
     current = current?.[part];

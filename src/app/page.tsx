@@ -41,11 +41,6 @@ export const metadata: Metadata = {
     languages: {
       'en-US': BASE_URL,
       es: `${BASE_URL}/es`,
-      'pt-BR': `${BASE_URL}/pt-br`,
-      fr: `${BASE_URL}/fr`,
-      de: `${BASE_URL}/de`,
-      ja: `${BASE_URL}/ja`,
-      ko: `${BASE_URL}/ko`,
     },
   },
   openGraph: {

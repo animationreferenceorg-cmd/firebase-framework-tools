@@ -50,9 +50,8 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
         alternates: {
             canonical,
             languages: {
+                'en-US': canonical,
                 es: `${BASE_URL}/es/tags/${slug}`,
-                'es-MX': `${BASE_URL}/es-MX/tags/${slug}`,
-                pt: `${BASE_URL}/pt/tags/${slug}`,
             }
         },
         robots: {

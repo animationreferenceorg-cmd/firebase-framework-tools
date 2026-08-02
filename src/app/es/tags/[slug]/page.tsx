@@ -43,7 +43,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
         'estudio de animación',
     ];
 
-    const t = translations.es.es;
+    const t = translations.es;
 
     return {
         title: t.tags.title(name, entry.videos.length) + pageSuffix,
@@ -54,8 +54,6 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
             languages: {
                 en: `${BASE_URL}/tags/${slug}`,
                 es: `${BASE_URL}/es/tags/${slug}`,
-                'es-MX': `${BASE_URL}/es-MX/tags/${slug}`,
-                pt: `${BASE_URL}/pt/tags/${slug}`,
             }
         },
         robots: {
@@ -109,7 +107,7 @@ export default async function SpanishTagPage({ params, searchParams }: Props) {
     const relatedTags = getRelatedTags(entry.tag, 14);
     const pageUrl = page > 1 ? `${BASE_URL}/es/tags/${slug}?page=${page}` : `${BASE_URL}/es/tags/${slug}`;
 
-    const t = translations.es.es;
+    const t = translations.es;
 
     const breadcrumbSchema = {
         '@context': 'https://schema.org',

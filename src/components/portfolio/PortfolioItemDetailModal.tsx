@@ -153,7 +153,7 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
 
               {/* Theater Media Container (Images vs Videos) */}
               {isImageMedia ? (
-                <div className="relative min-h-[450px] md:min-h-[600px] w-full rounded-2xl overflow-hidden shadow-[0_0_50px_-10px_rgba(124,58,237,0.35)] bg-black/90 border border-white/10 flex items-center justify-center p-4 group">
+                <div className="relative min-h-[300px] sm:min-h-[400px] md:min-h-[600px] w-full rounded-2xl overflow-hidden shadow-[0_0_50px_-10px_rgba(124,58,237,0.35)] bg-black/90 border border-white/10 flex items-center justify-center p-4 group">
                   <div
                     className="absolute inset-0 bg-cover bg-center blur-3xl opacity-20 scale-110 pointer-events-none"
                     style={{ backgroundImage: `url(${item.mediaUrl})` }}

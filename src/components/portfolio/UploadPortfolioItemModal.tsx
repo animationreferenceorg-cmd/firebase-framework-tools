@@ -684,7 +684,7 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
                         </div>
                         {mediaFile ? (
                           <div>
-                            <p className="text-sm font-semibold text-white truncate max-w-[340px]">{mediaFile.name}</p>
+                            <p className="text-sm font-semibold text-white truncate max-w-[200px] sm:max-w-[280px] md:max-w-[340px]">{mediaFile.name}</p>
                             <p className="text-xs text-zinc-400">{(mediaFile.size / (1024 * 1024)).toFixed(2)} MB</p>
                           </div>
                         ) : (
@@ -909,7 +909,7 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
               {/* Summary Card Preview */}
               <div className="p-3 rounded-2xl bg-zinc-900/60 border border-white/10 flex items-center justify-between text-xs">
                 <div>
-                  <p className="font-semibold text-white truncate max-w-[280px]">{title || 'Untitled Post'}</p>
+                  <p className="font-semibold text-white truncate max-w-[150px] sm:max-w-[200px] md:max-w-[280px]">{title || 'Untitled Post'}</p>
                   <p className="text-zinc-400 text-[11px]">
                     {type === 'portfolio' ? '🌟 Featured Portfolio Showcase' : `📂 Works Grid (${wipStage})`}
                   </p>

@@ -279,7 +279,7 @@ export default function HomePage() {
                             </div>
                         </div>
 
-                        <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-6 leading-[1.1] max-w-6xl mx-auto drop-shadow-2xl">
+                        <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tight mb-6 leading-[1.1] max-w-6xl mx-auto drop-shadow-2xl">
                             <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/70">
                                 Discover Animation
                             </span>
@@ -293,7 +293,7 @@ export default function HomePage() {
                             Showcase your animation work, get discovered by studios, and collaborate with top animators worldwide.
                         </p>
 
-                        <Button asChild size="lg" className="h-14 px-8 rounded-2xl text-base font-bold bg-gradient-to-r from-purple-600 via-pink-500 to-rose-600 hover:from-purple-500 hover:to-rose-500 text-white shadow-xl shadow-purple-600/30 gap-2.5 cursor-pointer hover:scale-105 transition-all">
+                        <Button asChild size="lg" className="h-12 sm:h-14 px-6 sm:px-8 rounded-2xl text-sm sm:text-base font-bold bg-gradient-to-r from-purple-600 via-pink-500 to-rose-600 hover:from-purple-500 hover:to-rose-500 text-white shadow-xl shadow-purple-600/30 gap-2.5 cursor-pointer hover:scale-105 transition-all">
                             <Link href="/profile">
                                 <Upload className="h-5 w-5 text-white" />
                                 Build Your Portfolio
@@ -301,7 +301,7 @@ export default function HomePage() {
                         </Button>
 
                         {/* Animated Scrolling Portfolio Features Marquee */}
-                        <div className="w-full max-w-4xl mx-auto mt-10 overflow-hidden rounded-full bg-gradient-to-r from-purple-950/80 via-zinc-950/80 to-purple-950/80 border border-purple-500/40 py-3 px-6 backdrop-blur-2xl shadow-2xl group">
+                        <div className="w-full max-w-4xl mx-auto mt-6 sm:mt-10 overflow-hidden rounded-full bg-gradient-to-r from-purple-950/80 via-zinc-950/80 to-purple-950/80 border border-purple-500/40 py-2 sm:py-3 px-3 sm:px-6 backdrop-blur-2xl shadow-2xl group">
                             <div className="flex whitespace-nowrap animate-marquee items-center gap-8 text-xs md:text-sm font-extrabold text-purple-200">
                                 <span className="flex items-center gap-2">
                                     <Upload className="h-4 w-4 text-pink-400 animate-pulse" />
@@ -360,7 +360,7 @@ export default function HomePage() {
                             </div>
 
                             <div className="relative z-20 space-y-3 text-left my-4">
-                                <h3 className="text-3xl md:text-4xl lg:text-5xl font-black text-white leading-tight drop-shadow-md group-hover:text-purple-300 transition-colors">
+                                <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white leading-tight drop-shadow-md group-hover:text-purple-300 transition-colors">
                                     Animator Portfolios & <br className="hidden sm:inline" />
                                     <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-300 to-purple-400">
                                         WIP Showcase Hub

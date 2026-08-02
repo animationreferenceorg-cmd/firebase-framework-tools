@@ -417,16 +417,9 @@ export function VideoCard({ video, poster }: VideoCardProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 rounded-full bg-white/90 text-black hover:bg-white backdrop-blur-sm"
-                  onClick={handlePlayClick}
-                >
-                  <PlayCircle className="fill-black h-5 w-5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
                   onClick={handleLikeToggle}
                   className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+                  title="Like Video"
                 >
                   <Heart className={cn("text-white h-4 w-4", isLiked && "fill-red-500 text-red-500")} />
                 </Button>
@@ -613,9 +606,6 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           </h3>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-                <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-8 w-8 rounded-full bg-white/90 text-black hover:bg-white backdrop-blur-sm" title="Play Video">
-                  <PlayCircle className="fill-black h-5 w-5" />
-                </Button>
               <Button variant="ghost" size="icon" onClick={handleLikeToggle} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Like Video">
                 <Heart className={cn("text-white h-4 w-4", isLiked && "fill-red-500 text-red-500")} />
               </Button>

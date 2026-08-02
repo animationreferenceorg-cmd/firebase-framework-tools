@@ -85,7 +85,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     const isMoodboardPage = pathname.startsWith('/moodboard');
 
     const isCategoriesPage = pathname.startsWith('/categories');
-    const isProfilePage = pathname.startsWith('/profile') || pathname.startsWith('/u/');
+    const isProfilePage = pathname.startsWith('/profile');
 
     return (
         <UploadProvider>

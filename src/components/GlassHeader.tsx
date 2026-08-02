@@ -17,7 +17,7 @@ export function GlassHeader() {
     const searchParams = useSearchParams();
     const isMoodboardPage = pathname === '/moodboard';
     const isBoardOpen = isMoodboardPage && searchParams.get('board') !== null;
-    const isProfilePage = pathname.startsWith('/profile') || pathname.startsWith('/u/');
+    const isProfilePage = pathname.startsWith('/profile');
 
     return (
         <header className={cn(

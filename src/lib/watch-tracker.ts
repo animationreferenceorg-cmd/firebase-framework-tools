@@ -1,9 +1,9 @@
 const WATCH_COUNT_KEY = 'animref_watch_count';
-const WATCH_LIMIT_BEFORE_DONATE_POPUP = 10;
+const WATCH_LIMIT_BEFORE_DONATE_POPUP = 5;
 
 /**
  * Increments reference watch count in localStorage.
- * Returns true if user reached 10 watched references and should trigger the 12s Donate Popup.
+ * Returns true if user reached 5 watched references and should trigger the 12s Donate Popup.
  */
 export function recordReferenceView(isPremium?: boolean): boolean {
   if (isPremium) {

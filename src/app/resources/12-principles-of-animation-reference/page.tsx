@@ -10,6 +10,7 @@ export const metadata: Metadata = {
     title: 'Disney’s 12 Principles: How to Find Real-World Reference for Each One',
     description: 'Master the 12 principles of animation by studying real-world reference. Find high-quality examples of squash and stretch, anticipation, and more.',
     keywords: '12 principles of animation, animation principles reference, Disney principles, study animation reference, squash and stretch reference',
+    alternates: { canonical: 'https://animationreference.org/resources/12-principles-of-animation-reference' },
 };
 
 const PRINCIPLE_EXAMPLES: Video[] = [

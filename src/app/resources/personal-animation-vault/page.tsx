@@ -8,6 +8,7 @@ export const metadata: Metadata = {
     title: 'Why Every Professional Animator Needs a Personal Reference Vault',
     description: 'Optimize your animation workflow by building a personal reference vault. Organize, categorize, and access your inspiration instantly.',
     keywords: 'organize animation reference, reference moodboard, animation workflow, reference manager, animation productivity tools',
+    alternates: { canonical: 'https://animationreference.org/resources/personal-animation-vault' },
 };
 
 export default function VaultResource() {

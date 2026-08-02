@@ -21,6 +21,7 @@ export const metadata: Metadata = {
     title: 'The Foundations of Life: A Report on Animation Principles',
     description: 'An authoritative report on the core principles that bring characters to life. Study the 12 principles of animation with real-world reference.',
     keywords: 'foundations of life animation, animation principles report, study animation reference, professional animation foundations',
+    alternates: { canonical: 'https://animationreference.org/resources/foundations-of-life' },
 };
 
 const FOUNDATION_EXAMPLES: Video[] = [

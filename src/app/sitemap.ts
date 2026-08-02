@@ -134,7 +134,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             };
         });
 
-        // 4. Dynamic Videos — from the static snapshot, so Googlebot fetching
+        // 4a. Short films — not part of the static video snapshot, so read
+        // directly from Firestore (same pattern as categories/blog above).
+        const shortsQuery = query(
+            collection(db, 'videos'),
+            where('isShort', '==', true)
+        );
+        const shortsSnapshot = await getDocs(shortsQuery);
+        const shortsRoutes: MetadataRoute.Sitemap = shortsSnapshot.docs.map((doc) => {
+            const data = doc.data();
+            const iso = toIsoDate(data.createdAt);
+            return {
+                url: `${BASE_URL}/shorts/${doc.id}`,
+                ...(iso ? { lastModified: new Date(iso) } : {}),
+                changeFrequency: 'monthly' as const,
+                priority: 0.6,
+            };
+        });
+
+        // 4b. Dynamic Videos — from the static snapshot, so Googlebot fetching
         // the sitemap never triggers a full Firestore collection read.
         const videoRoutes: MetadataRoute.Sitemap = getAllSnapshotVideos().map((video) => {
             const iso = toIsoDate((video as { createdAt?: unknown }).createdAt);
@@ -174,7 +192,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 0.8,
         });
 
-        return [...staticRoutes, ...categoryRoutes, ...blogRoutes, ...tagRoutes, ...spanishTagRoutes, ...videoRoutes];
+        return [...staticRoutes, ...categoryRoutes, ...blogRoutes, ...tagRoutes, ...spanishTagRoutes, ...shortsRoutes, ...videoRoutes];
     } catch (error) {
         console.error('Error generating sitemap:', error);
         // Return at least static routes if Firestore fails

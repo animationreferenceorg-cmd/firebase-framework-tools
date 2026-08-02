@@ -105,7 +105,7 @@ export default async function SeoLandingPage({ params }: Props) {
                     </p>
 
                     <Button asChild className="h-16 px-10 rounded-2xl text-lg font-semibold bg-purple-600 hover:bg-purple-500 text-white transition-all shadow-lg shadow-purple-500/20">
-                        <Link href="/browse">
+                        <Link href="/categories">
                             Explore the Library
                             <ArrowRight className="ml-2 h-5 w-5" />
                         </Link>

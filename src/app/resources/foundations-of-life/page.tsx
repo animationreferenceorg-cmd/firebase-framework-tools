@@ -18,48 +18,48 @@ import {
 } from 'lucide-react';
 
 export const metadata: Metadata = {
-    title: 'The Foundations of Life: A Report on Animation Principles',
-    description: 'An authoritative report on the core principles that bring characters to life. Study the 12 principles of animation with real-world reference.',
-    keywords: 'foundations of life animation, animation principles report, study animation reference, professional animation foundations',
+    title: 'Why Real-Life Observation Is the True Foundation of Animation',
+    description: 'The 12 principles describe what good animation looks like, but real-life observation is where that motion actually comes from. Learn how to build an observation-based reference habit.',
+    keywords: 'real life reference for animation, observation animation training, live action reference, animation from real motion, animator observation skills',
     alternates: { canonical: 'https://animationreference.org/resources/foundations-of-life' },
 };
 
 const FOUNDATION_EXAMPLES: Video[] = [
     {
         id: 'squash-stretch-foundation',
-        title: 'Principle 01: Squash & Stretch',
-        description: 'Observation of volume conservation in high-impact landings.',
+        title: 'Case Study: Landing Impact',
+        description: 'A real athlete absorbing force on landing — the raw motion the "squash & stretch" principle was named to describe.',
         thumbnailUrl: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=800',
         posterUrl: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=800',
         videoUrl: 'https://vimeo.com/76979871',
         categoryIds: ['principles'],
         status: 'published',
         type: 'video',
-        tags: ['squash', 'stretch']
+        tags: ['observation', 'impact']
     },
     {
         id: 'anticipation-foundation',
-        title: 'Principle 02: Anticipation',
-        description: 'Analyzing the physical wind-up before explosive movement.',
+        title: 'Case Study: The Wind-Up',
+        description: 'Unscripted footage of a real physical wind-up before an explosive movement — no animator staged this pose.',
         thumbnailUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=800',
         posterUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=800',
         videoUrl: 'https://vimeo.com/76979871',
         categoryIds: ['principles'],
         status: 'published',
         type: 'video',
-        tags: ['anticipation']
+        tags: ['observation', 'anticipation']
     },
     {
         id: 'timing-spacing-foundation',
-        title: 'Principle 03: Timing & Spacing',
-        description: 'The mathematical distribution of frames across a distance.',
+        title: 'Case Study: Natural Rhythm',
+        description: 'Real, unposed movement showing how speed and hesitation vary naturally across a single action.',
         thumbnailUrl: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&q=80&w=800',
         posterUrl: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&q=80&w=800',
         videoUrl: 'https://vimeo.com/76979871',
         categoryIds: ['principles'],
         status: 'published',
         type: 'video',
-        tags: ['timing', 'spacing']
+        tags: ['observation', 'timing']
     }
 ];
 
@@ -75,12 +75,12 @@ export default function FoundationsOfLife() {
                     </div>
                     <h1 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tight leading-none mb-8">
                         The Foundations <br />
-                        <span className="text-blue-600 italic">of Life.</span>
+                        <span className="text-blue-600 italic">of Real Life.</span>
                     </h1>
                     <div className="flex flex-wrap gap-12 text-sm text-slate-500 font-medium border-t border-slate-100 pt-8 mt-12">
                         <div>
                             <span className="block uppercase tracking-widest text-[10px] text-slate-400 mb-1">Subject</span>
-                            Biological Motion & Principles
+                            Observation-Based Animation Training
                         </div>
                         <div>
                             <span className="block uppercase tracking-widest text-[10px] text-slate-400 mb-1">Status</span>
@@ -100,10 +100,10 @@ export default function FoundationsOfLife() {
                     <div className="md:col-span-2 space-y-8">
                         <h2 className="text-3xl font-bold text-slate-800">Executive Summary</h2>
                         <p className="text-xl text-slate-600 leading-relaxed">
-                            Animation is not just "moving drawings"—it is the scientific reconstruction of life. To create believable motion, an artist must master the <span className="font-bold text-slate-900 underline decoration-blue-500 underline-offset-4">Foundations of Life</span>: the 12 principles that govern how weight, force, and emotion manifest in the physical world.
+                            The 12 principles are a vocabulary — a way to name what good animation does. They aren't where good animation comes from. That source is <span className="font-bold text-slate-900 underline decoration-blue-500 underline-offset-4">real, unposed life</span>: the way a real body actually absorbs an impact, hesitates before a decision, or overshoots a turn.
                         </p>
                         <p className="text-lg text-slate-500 leading-relaxed">
-                            Without these foundations, characters feel like empty puppets. With them, they possess soul, weight, and purpose. Our research indicates that the most successful animators are those who spend at least 40% of their workflow studying real-world mechanics.
+                            An animator who has memorized the 12 principles but never studied real footage will produce technically correct, emotionally flat motion. Our research indicates that the animators who consistently produce believable work are the ones who build a habit of watching real life closely, before they ever open their principles checklist.
                         </p>
                     </div>
                     <div className="bg-blue-50 p-8 rounded-3xl border border-blue-100 space-y-6 self-start">
@@ -112,7 +112,7 @@ export default function FoundationsOfLife() {
                         </div>
                         <h3 className="font-bold text-slate-900">Key Finding</h3>
                         <p className="text-sm text-blue-800 leading-relaxed">
-                            Visual observation is the #1 predictor of animation quality. Mere imagination cannot substitute for the study of physical arcs and timing.
+                            Looking for a named principle in reference footage is *studying*. Watching real footage with no agenda, purely to absorb how motion actually behaves, is *training your eye* — and it's the harder, more valuable habit.
                         </p>
                     </div>
                 </div>
@@ -125,7 +125,7 @@ export default function FoundationsOfLife() {
                         <div>
                             <h2 className="text-4xl font-black tracking-tight mb-4 uppercase">Case Studies</h2>
                             <p className="text-slate-500 max-w-xl">
-                                We have isolated three primary examples of foundation principles being applied to professional shots. Analyze these using the frame-accurate player.
+                                Three clips of real, unposed motion — not animated shots demonstrating a principle, but the raw source material the principles were built to describe. Analyze these using the frame-accurate player.
                             </p>
                         </div>
                         <div className="flex gap-2">
@@ -152,25 +152,25 @@ export default function FoundationsOfLife() {
             <section className="py-32 container mx-auto px-6 max-w-4xl">
                 <div className="space-y-16">
                     <div className="text-center">
-                        <h2 className="text-4xl font-black mb-6">Why Study is Mandatory</h2>
+                        <h2 className="text-4xl font-black mb-6">Why Real Footage Beats a Checklist</h2>
                         <div className="w-20 h-1.5 bg-blue-600 mx-auto rounded-full" />
                     </div>
 
                     <div className="grid gap-12">
                         {[
-                            { 
-                                title: 'The Illusion of Life', 
-                                desc: 'Your eyes are trained to detect unnatural motion. Even slight deviations in timing or spacing will trigger a "reject" response in the viewer\'s brain.',
+                            {
+                                title: 'Principles Are Descriptions, Not Instructions',
+                                desc: 'The 12 principles were written by animators studying real motion and naming what they saw. Skipping straight to the checklist means copying the description without ever seeing the thing it describes.',
                                 icon: <Zap />
                             },
-                            { 
-                                title: 'Efficiency in Production', 
-                                desc: 'Using high-quality reference saves hours of guessing. It provides a roadmap for your keyframes, reducing the need for costly revisions.',
+                            {
+                                title: 'Real Motion Is Messier Than the Rules',
+                                desc: 'Real bodies overshoot, hesitate, and recover unevenly. That mess is where character comes from — and it rarely shows up in reference that was staged to demonstrate a single named principle.',
                                 icon: <Search />
                             },
-                            { 
-                                title: 'Emotional Resonance', 
-                                desc: 'Physical truth leads to emotional truth. When a character moves correctly, the audience stops seeing pixels and starts seeing a living being.',
+                            {
+                                title: 'Emotional Resonance',
+                                desc: 'Physical truth leads to emotional truth. When a character moves like something that actually exists, the audience stops seeing pixels and starts seeing a living being.',
                                 icon: <CheckCircle2 />
                             }
                         ].map((item, i) => (
@@ -207,7 +207,7 @@ export default function FoundationsOfLife() {
                             </p>
                             <div className="pt-4">
                                 <Button asChild size="lg" className="h-20 px-12 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-2xl shadow-2xl">
-                                    <Link href="/browse">Start Studying <ArrowRight className="ml-4 h-8 w-8" /></Link>
+                                    <Link href="/categories">Start Studying <ArrowRight className="ml-4 h-8 w-8" /></Link>
                                 </Button>
                             </div>
                         </div>

@@ -384,20 +384,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
             isHovered ? "opacity-100" : "opacity-60"
           )} />
 
-          {/* Center Play / Fullscreen Button Overlay */}
-          <div className={cn(
-            "absolute inset-0 flex items-center justify-center pointer-events-auto z-20 transition-all duration-300",
-            isHovered && !isPlayerOpen ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
-          )}>
-            <button
-              onClick={handlePlayClick}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-black/75 hover:bg-purple-600 text-white backdrop-blur-md border border-white/20 shadow-2xl transition-all hover:scale-105 active:scale-95 cursor-pointer"
-            >
-              <PlayCircle className="h-5 w-5 text-white fill-white/30" />
-              <span className="text-xs font-bold tracking-wide">Play Fullscreen</span>
-              <Maximize className="h-3.5 w-3.5 text-purple-300" />
-            </button>
-          </div>
+
 
           {/* Subtle creator badge — top-left, always visible for community videos */}
           <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} />
@@ -573,20 +560,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           />
         )}
 
-        {/* Center Play / Fullscreen Button Overlay */}
-        <div className={cn(
-          "absolute inset-0 flex items-center justify-center pointer-events-auto z-20 transition-all duration-300",
-          isHovered && !isPlayerOpen && !video.isShort && !poster ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
-        )}>
-          <button
-            onClick={handlePlayClick}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-black/75 hover:bg-purple-600 text-white backdrop-blur-md border border-white/20 shadow-2xl transition-all hover:scale-105 active:scale-95 cursor-pointer"
-          >
-            <PlayCircle className="h-5 w-5 text-white fill-white/30" />
-            <span className="text-xs font-bold tracking-wide">Play Fullscreen</span>
-            <Maximize className="h-3.5 w-3.5 text-purple-300" />
-          </button>
-        </div>
+
 
         {/* Subtle creator badge — top-left, always visible for any video with uploader/originalUrl */}
         <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} />

@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
 import LandingPage from '@/app/landing/page';
 
+export const dynamic = 'force-dynamic';
+
 const BASE_URL = 'https://animationreference.org';
 
 export const metadata: Metadata = {

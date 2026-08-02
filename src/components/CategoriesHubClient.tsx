@@ -1,18 +1,21 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { CategoriesHub } from '@/components/CategoriesHub';
+import type { Video, Category } from '@/lib/types';
 
-export function CategoriesHubClient() {
-  const [mounted, setMounted] = useState(false);
+interface CategoriesHubClientProps {
+  initialCategories: Category[];
+  initialVideos: Video[];
+  heroVideo: Video | null;
+}
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return <div className="min-h-screen bg-transparent" />;
-  }
-
-  return <CategoriesHub />;
+export function CategoriesHubClient({ initialCategories, initialVideos, heroVideo }: CategoriesHubClientProps) {
+  return (
+    <CategoriesHub
+      initialCategories={initialCategories}
+      initialVideos={initialVideos}
+      heroVideo={heroVideo}
+    />
+  );
 }

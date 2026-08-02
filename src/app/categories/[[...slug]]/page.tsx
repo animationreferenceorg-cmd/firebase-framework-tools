@@ -4,12 +4,7 @@ import { redirect } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import type { Category } from '@/lib/types';
-import dynamicImport from 'next/dynamic';
-
-const CategoriesHub = dynamicImport(
-    () => import('@/components/CategoriesHub').then((mod) => mod.CategoriesHub),
-    { ssr: false }
-);
+import { CategoriesHubClient } from '@/components/CategoriesHubClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -110,7 +105,7 @@ export default async function CategorySlugPage({ params }: Props) {
 
     // Index (/categories) → the browse directory hub.
     if (!slug || slug.length === 0) {
-        return <CategoriesHub />;
+        return <CategoriesHubClient />;
     }
 
     // A specific category now lives on its own dedicated page (/category/[slug]).

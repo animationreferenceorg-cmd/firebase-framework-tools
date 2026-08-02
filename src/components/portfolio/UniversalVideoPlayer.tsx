@@ -1,0 +1,100 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { VideoPlayer } from '@/components/VideoPlayer';
+import type { Video } from '@/lib/types';
+
+interface UniversalVideoPlayerProps {
+  url: string;
+  poster?: string;
+  autoPlay?: boolean;
+  muted?: boolean;
+  loop?: boolean;
+  controls?: boolean;
+  className?: string;
+  onEnded?: () => void;
+  onToggleTimeline?: () => void;
+  isTimelineVisible?: boolean;
+}
+
+export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
+  url,
+  poster,
+  autoPlay = false,
+  muted = true,
+  loop = false,
+  controls = true,
+  className = "",
+  onEnded,
+  onToggleTimeline,
+  isTimelineVisible = false,
+}) => {
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  if (!hasMounted) {
+    return (
+      <div className="relative aspect-video w-full bg-zinc-950 flex items-center justify-center text-zinc-500">
+        <div className="animate-pulse text-xs">Loading custom player...</div>
+      </div>
+    );
+  }
+
+  // Check if media is direct image or gif (handling query params, data URLs & storage links)
+  const isImage = (() => {
+    if (!url) return false;
+    if (url.startsWith('data:image/')) return true;
+    if (url.includes('unsplash.com') || url.includes('images.unsplash.com')) return true;
+    const cleanUrl = url.split('?')[0].split('#')[0].toLowerCase();
+    return /\.(png|jpg|jpeg|webp|gif|svg|avif|heic|bmp)$/i.test(cleanUrl);
+  })();
+
+  if (isImage) {
+    return (
+      <div className={`relative aspect-video w-full bg-black/90 flex items-center justify-center overflow-hidden p-2 group ${className}`}>
+        {/* Subtle Backdrop Blur Effect for Transparent GIFs / Images */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center blur-2xl opacity-20 scale-110 pointer-events-none" 
+          style={{ backgroundImage: `url(${url})` }}
+        />
+        <img 
+          src={url} 
+          alt="Portfolio Media" 
+          className="relative max-h-full max-w-full object-contain rounded-xl shadow-2xl transition-transform duration-300 group-hover:scale-[1.01]" 
+        />
+      </div>
+    );
+  }
+
+  // Construct Video object for custom VideoPlayer component
+  const videoObject: Video = {
+    id: url,
+    title: 'Portfolio Work',
+    description: '',
+    videoUrl: url,
+    thumbnailUrl: poster || '',
+    posterUrl: poster || '',
+    fps: 24,
+    tags: [],
+    categoryIds: [],
+  };
+
+  return (
+    <div className={`relative w-full h-full min-h-[360px] bg-black overflow-hidden group/player ${className}`}>
+      <VideoPlayer
+        key={url}
+        video={videoObject}
+        autoPlay={autoPlay}
+        startsPaused={!autoPlay}
+        muted={muted}
+        loop={loop}
+        onEnded={onEnded}
+        onToggleTimeline={onToggleTimeline}
+        isTimelineVisible={isTimelineVisible}
+      />
+    </div>
+  );
+};

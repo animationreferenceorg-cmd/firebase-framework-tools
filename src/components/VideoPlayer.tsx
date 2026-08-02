@@ -3,13 +3,17 @@
 
 import * as React from 'react';
 import type { Video } from '@/lib/types';
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Rewind, FastForward, Camera, ExternalLink, Instagram } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Rewind, FastForward, Camera, ExternalLink, Instagram, Film, Share2, Heart, Bookmark } from 'lucide-react';
 import { CreatorBadge } from '@/components/CreatorBadge';
+import { SaveToBoardModal } from '@/components/SaveToBoardModal';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import ReactPlayer from 'react-player/lazy';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { useUser } from '@/hooks/use-user';
+import { likeVideo, unlikeVideo } from '@/lib/firestore';
 
 interface VideoPlayerProps {
     video: Video;
@@ -19,6 +23,12 @@ interface VideoPlayerProps {
     muted?: boolean;
     hideFullscreenControl?: boolean;
     hidePlayControl?: boolean;
+    onEnded?: () => void;
+    autoPlay?: boolean;
+    loop?: boolean;
+    alwaysShowControls?: boolean;
+    onToggleTimeline?: () => void;
+    isTimelineVisible?: boolean;
 }
 
 // Client-side only component to wrap ReactPlayer
@@ -46,13 +56,45 @@ function Player({ playerRef, video, ...props }: any) {
 }
 
 
-export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onCapture, showCaptureButton = false, startsPaused = false, muted = true, hideFullscreenControl = false, hidePlayControl = false }, ref) => {
+export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onCapture, showCaptureButton = false, startsPaused = false, muted = true, hideFullscreenControl = false, hidePlayControl = false, onEnded, autoPlay, loop = false, alwaysShowControls = true, onToggleTimeline, isTimelineVisible = true }, ref) => {
     const playerRef = React.useRef<ReactPlayer>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
     const { toast } = useToast();
+    const { user: authUser } = useAuth();
+    const { userProfile, mutate } = useUser();
+    const [showSaveBoardModal, setShowSaveBoardModal] = React.useState(false);
 
+    const isLiked = React.useMemo(() => {
+        return userProfile?.likedVideoIds?.includes(video.id) ?? false;
+    }, [userProfile, video.id]);
 
-    const [isPlaying, setIsPlaying] = React.useState(!startsPaused);
+    const handleLikeToggle = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!authUser) {
+            toast({ variant: "destructive", title: "Please sign in to like videos" });
+            return;
+        }
+        try {
+            if (isLiked) {
+                await unlikeVideo(authUser.uid, video.id);
+                toast({ title: "Removed from Liked Videos" });
+            } else {
+                await likeVideo(authUser.uid, video.id);
+                toast({ title: "Added to Liked Videos!" });
+            }
+            mutate();
+        } catch (err) {
+            console.error("Failed to update like status", err);
+        }
+    };
+
+    const [isPlaying, setIsPlaying] = React.useState(autoPlay ?? !startsPaused);
+    
+    React.useEffect(() => {
+        if (autoPlay !== undefined) {
+            setIsPlaying(autoPlay);
+        }
+    }, [autoPlay, video.videoUrl]);
     const [isMuted, setIsMuted] = React.useState(muted);
     const [volume, setVolume] = React.useState(1);
     const [played, setPlayed] = React.useState(0);
@@ -93,13 +135,26 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
         }
     };
 
+    const [clickFeedback, setClickFeedback] = React.useState<'play' | 'pause' | null>(null);
+    const clickFeedbackTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
     const handlePlayPause = React.useCallback(() => {
-        setIsPlaying(prev => !prev);
-        // Unmute when the user manually plays
-        if (!isPlaying) {
-            setIsMuted(false);
-        }
-    }, [isPlaying]);
+        setIsPlaying(prev => {
+            const nextState = !prev;
+            setClickFeedback(nextState ? 'play' : 'pause');
+            if (clickFeedbackTimerRef.current) {
+                clearTimeout(clickFeedbackTimerRef.current);
+            }
+            clickFeedbackTimerRef.current = setTimeout(() => {
+                setClickFeedback(null);
+            }, 600);
+
+            if (nextState) {
+                setIsMuted(false);
+            }
+            return nextState;
+        });
+    }, []);
 
     React.useImperativeHandle(ref, () => ({
         handlePlayPause,
@@ -214,7 +269,17 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     };
 
-    const handleMouseMove = () => {
+    const [isNearBottom, setIsNearBottom] = React.useState(false);
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            const mouseY = e.clientY - rect.top;
+            const containerHeight = rect.height;
+            // Check if mouse cursor is within bottom 32% of video player container
+            const nearBottom = mouseY > containerHeight * 0.68;
+            setIsNearBottom(nearBottom);
+        }
         setShowControls(true);
         if (controlsTimeoutRef.current) {
             clearTimeout(controlsTimeoutRef.current);
@@ -232,29 +297,23 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
             ref={containerRef}
             className={cn(
                 "group/player relative w-full h-full flex items-center justify-center overflow-hidden bg-black select-none transition-all duration-300",
-                isFullScreen ? "rounded-none" : "rounded-lg",
-                showControls ? "z-[100]" : "z-0"
+                isFullScreen ? "rounded-none" : "rounded-lg"
             )}
             onMouseMove={handleMouseMove}
-            onMouseLeave={() => { if (isPlaying) setShowControls(false) }}
+            onMouseLeave={() => {
+                setIsNearBottom(false);
+                if (isPlaying) setShowControls(false);
+            }}
             onClick={(e) => {
-                // Ignore clicks on actual buttons/sliders if they bubble up (though most have stopPropagation)
-                if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('[role="slider"]')) {
+                // Ignore clicks on actual buttons, sliders, or select inputs
+                if (
+                    (e.target as HTMLElement).closest('button') || 
+                    (e.target as HTMLElement).closest('[role="slider"]') ||
+                    (e.target as HTMLElement).closest('select')
+                ) {
                     return;
                 }
-
-                // Toggle controls
-                setShowControls(prev => {
-                    const newState = !prev;
-                    if (newState) {
-                        // If showing, set timer to hide again
-                        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-                        controlsTimeoutRef.current = setTimeout(() => {
-                            if (isPlaying) setShowControls(false);
-                        }, isFullScreen ? 10000 : 5000); // Wait longer in fullscreen
-                    }
-                    return newState;
-                });
+                handlePlayPause();
             }}
         >
             <div className="relative w-full aspect-video max-w-full max-h-full">
@@ -270,7 +329,10 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                     onDuration={setDuration}
                     onPlay={() => { setIsPlaying(true); setVideoError(false); }}
                     onPause={() => setIsPlaying(false)}
-                    onEnded={() => setIsPlaying(false)}
+                    onEnded={() => {
+                        setIsPlaying(false);
+                        if (onEnded) onEnded();
+                    }}
                     onError={(e: any) => {
                         // HLS/CORS errors are expected for Instagram/TikTok CDN links
                         const isSocialUrl = video.originalUrl && (
@@ -283,7 +345,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                             console.warn("Video Player Error:", e);
                         }
                     }}
-                    loop
+                    loop={loop}
                     config={{
                         file: {
                             attributes: showCaptureButton ? {
@@ -354,35 +416,30 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                 </div>
             ) : null}
 
-            {/* Center Play/Pause Button (YouTube Style) */}
-            <div
-                className={cn(
-                    "absolute inset-0 flex items-center justify-center z-20 pointer-events-none transition-opacity duration-300",
-                    showControls ? "opacity-100" : "opacity-0"
-                )}
-            >
-                <div
-                    className="bg-black/60 backdrop-blur-sm rounded-full p-4 text-white hover:bg-black/80 hover:scale-110 transition-all cursor-pointer pointer-events-auto"
-                    onClick={(e) => {
-                        e.stopPropagation(); // Prevent toggling controls
-                        handlePlayPause();
-                    }}
-                >
-                    {isPlaying ? <Pause className="w-8 h-8 md:w-12 md:h-12 fill-white" /> : <Play className="w-8 h-8 md:w-12 md:h-12 fill-white ml-1" />}
+            {/* Quick Click Flash Play/Pause Animation (YouTube/Netflix Style) */}
+            {clickFeedback && (
+                <div className="absolute inset-0 flex items-center justify-center z-[140] pointer-events-none transition-all duration-200">
+                    <div className="bg-black/70 backdrop-blur-md rounded-full p-5 text-white shadow-2xl border border-white/20 animate-in fade-in zoom-in-75 duration-200">
+                        {clickFeedback === 'play' ? (
+                            <Play className="w-10 h-10 md:w-14 md:h-14 fill-white ml-1 text-white" />
+                        ) : (
+                            <Pause className="w-10 h-10 md:w-14 md:h-14 fill-white text-white" />
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
 
-            {/* Bottom Controls Container */}
+            {/* Bottom Controls Container - Only reveals when moving mouse towards bottom */}
             <div
                 className={cn(
-                    "absolute bottom-0 left-0 right-0 z-30 transition-all duration-300 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-8 pb-4 px-4 md:px-6",
-                    showControls ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+                    "absolute bottom-0 left-0 right-0 z-[150] bg-gradient-to-t from-black/95 via-black/80 to-transparent pt-10 pb-4 px-4 md:px-6 transition-all duration-300 ease-in-out",
+                    isSeeking || isNearBottom ? "translate-y-0 opacity-100 pointer-events-auto" : "translate-y-4 opacity-0 pointer-events-none"
                 )}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Progress Bar (Thin & Full Width) */}
-                <div className="flex items-center gap-3 mb-4 group/timeline">
-                    <p className="text-xs font-mono text-zinc-300 w-10 text-right mobile-hide block md:hidden">{formatTime(currentTime)}</p>
+                <div className="flex items-center gap-3 mb-4 group/timeline z-[120] relative">
+                    <p className="text-xs font-mono font-bold text-white w-12 text-right">{formatTime(currentTime)}</p>
                     <Slider
                         value={[played]}
                         onValueChange={handleSeekChange}
@@ -391,11 +448,11 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                         max={1}
                         step={0.001}
                         className="w-full py-2 cursor-pointer"
-                        trackClassName="bg-white/20 h-[2px] group-hover/timeline:h-[4px] transition-all"
-                        rangeClassName="bg-red-600"
-                        thumbClassName="h-3 w-3 group-hover/timeline:h-4 group-hover/timeline:w-4 bg-red-600 border-none transition-all scale-0 group-hover/timeline:scale-100"
+                        trackClassName="bg-white/30 h-2.5 rounded-full cursor-pointer hover:h-3.5 transition-all"
+                        rangeClassName="bg-red-600 shadow-md"
+                        thumbClassName="h-4.5 w-4.5 bg-red-600 border-2 border-white rounded-full shadow-xl scale-100 transition-transform hover:scale-125 cursor-grab active:cursor-grabbing"
                     />
-                    <p className="text-xs font-mono text-zinc-300 w-10 mobile-hide block md:hidden">{formatTime(duration)}</p>
+                    <p className="text-xs font-mono font-bold text-white w-12">{formatTime(duration)}</p>
                 </div>
 
                 {/* Bottom Row: Time | Speed (Center) | Fullscreen */}
@@ -474,17 +531,81 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                         )}
                     </div>
 
-                    {/* Right: Fullscreen */}
-                    <div className="flex items-center">
+                    {/* Right: Like, Save, Share, Timeline Toggle & Fullscreen */}
+                    <div className="flex items-center gap-1.5">
+                        {/* Like Button */}
+                        <Button
+                            type="button"
+                            onClick={handleLikeToggle}
+                            variant="ghost"
+                            size="icon"
+                            title="Like Video"
+                            className="hover:bg-white/10 text-white rounded-full h-8 w-8 transition-colors cursor-pointer"
+                        >
+                            <Heart className={cn("h-4 w-4 transition-colors", isLiked ? "fill-red-500 text-red-500" : "text-white")} />
+                        </Button>
+
+                        {/* Save to Moodboard Button */}
+                        <Button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowSaveBoardModal(true);
+                            }}
+                            variant="ghost"
+                            size="icon"
+                            title="Save to Moodboard"
+                            className="hover:bg-white/10 text-white rounded-full h-8 w-8 transition-colors cursor-pointer"
+                        >
+                            <Bookmark className="h-4 w-4 text-purple-300 fill-purple-400/20 hover:fill-purple-400" />
+                        </Button>
+
+                        {/* Share Button */}
+                        <Button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(window.location.href);
+                                toast({ title: "Link Copied!", description: "Video link copied to clipboard." });
+                            }}
+                            variant="ghost"
+                            size="icon"
+                            title="Share Video"
+                            className="hover:bg-white/10 text-white rounded-full h-8 w-8 transition-colors cursor-pointer"
+                        >
+                            <Share2 className="h-4 w-4" />
+                        </Button>
+
+                        {onToggleTimeline && (
+                            <Button
+                                type="button"
+                                onClick={onToggleTimeline}
+                                variant="ghost"
+                                size="icon"
+                                title="Toggle Reel Clips Timeline"
+                                className={cn(
+                                    "hover:bg-white/10 text-white rounded-full h-8 w-8 transition-colors",
+                                    isTimelineVisible && "bg-primary text-white"
+                                )}
+                            >
+                                <Film className="h-4 w-4" />
+                            </Button>
+                        )}
                         {!hideFullscreenControl && (
-                            <Button type="button" onClick={handleFullscreenToggle} variant="ghost" size="icon" className="hover:bg-white/10 text-white rounded-full h-8 w-8">
+                            <Button type="button" onClick={handleFullscreenToggle} variant="ghost" size="icon" title="Toggle Fullscreen" className="hover:bg-white/10 text-white rounded-full h-8 w-8">
                                 {isFullScreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
                             </Button>
                         )}
                     </div>
                 </div>
+
+                <SaveToBoardModal
+                    open={showSaveBoardModal}
+                    onOpenChange={setShowSaveBoardModal}
+                    video={video}
+                />
             </div>
-        </div >
+        </div>
     );
 });
 

@@ -12,7 +12,11 @@ export async function getResourceHubVideos(tags: string[], max = 12): Promise<Vi
     const videos = new Map<string, Video>();
     snapshots.flatMap((snapshot) => snapshot.docs).forEach((doc) => {
         const data = doc.data();
-        if (data.status !== 'draft') videos.set(doc.id, { id: doc.id, ...data } as Video);
+        if (data.status !== 'draft') {
+            const rawVideo = { id: doc.id, ...data };
+            const plainVideo = JSON.parse(JSON.stringify(rawVideo)) as Video;
+            videos.set(doc.id, plainVideo);
+        }
     });
 
     return Array.from(videos.values()).slice(0, max);

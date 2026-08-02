@@ -33,11 +33,11 @@ interface DonateDialogProps {
 }
 
 export function DonateDialog({ children, open, onOpenChange, forceTimer = false }: DonateDialogProps) {
-    const [selectedAmount, setSelectedAmount] = useState('1');
+    const [selectedAmount, setSelectedAmount] = useState('5');
     const donationOptions = [
         { amount: '1', label: '$1 / month', priceId: 'price_1SFgUc59QHehw05fROtqwkLN' },
         { amount: '2', label: '$2 / month', priceId: 'price_1SFgiV59QHehw05fc0lPRRf7' },
-        { amount: '5', label: '$5 / month', priceId: 'price_1SFgiq59QHehw05fy017h1gR' },
+        { amount: '5', label: '$5 / month (Popular)', priceId: 'price_1SFgiq59QHehw05fy017h1gR', popular: true },
     ];
 
     const { handleDonate, isCheckingOut } = useDonate();

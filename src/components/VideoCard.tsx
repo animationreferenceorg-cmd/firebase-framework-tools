@@ -4,11 +4,12 @@
 import * as React from 'react';
 import { useState, useRef, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { Heart, Maximize, Share2, PlayCircle, ArrowLeft, ExternalLink, Instagram } from 'lucide-react';
+import { Heart, Maximize, Share2, PlayCircle, ArrowLeft, ExternalLink, Instagram, Bookmark } from 'lucide-react';
 import { useInView } from 'react-intersection-observer';
 
 import { CreatorBadge } from '@/components/CreatorBadge';
 import { VideoActionsBar } from '@/components/VideoActionsBar';
+import { SaveToBoardModal } from '@/components/SaveToBoardModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
@@ -41,7 +42,14 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [showLimitDialog, setShowLimitDialog] = useState(false);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
+  const [showSaveBoardModal, setShowSaveBoardModal] = useState(false);
   const [donateForceTimer, setDonateForceTimer] = useState(false);
+
+  const handleSaveToBoard = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowSaveBoardModal(true);
+  };
   const { ref: cardRef, inView: cardInView } = useInView({ threshold: 0, triggerOnce: true });
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -328,7 +336,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
               loop
               playsInline
               className={cn(
-                "absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none z-10",
+                "absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none z-[5]",
                 isHovered && !isPlayerOpen ? "opacity-100 scale-110" : "opacity-0 scale-100"
               )}
             />
@@ -336,18 +344,16 @@ const [socialAccessible, setSocialAccessible] = useState(true);
 
           {/* Dark Overlay Gradient (always visible on hover to make text readable) */}
           <div className={cn(
-            "absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none transition-opacity duration-300",
+            "absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none transition-opacity duration-300 z-10",
             isHovered ? "opacity-100" : "opacity-60"
           )} />
-
-          {/* Bouncing link moved to bottom title bar */}
 
           {/* Subtle creator badge — top-left, always visible for community videos */}
           <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} />
 
-          {/* Bottom Actions Bar */}
+          {/* Bottom Actions Bar (High Z-Index so buttons STAY visible when video plays) */}
           <div className={cn(
-            "absolute bottom-0 left-0 right-0 p-3 transition-all duration-300",
+            "absolute bottom-0 left-0 right-0 p-3 transition-all duration-300 z-30 pointer-events-auto",
             isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
           )}>
             <div className="flex items-center gap-2 mb-2">
@@ -357,22 +363,55 @@ const [socialAccessible, setSocialAccessible] = useState(true);
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-  <Button
-    variant="ghost"
-    size="icon"
-    className="h-8 w-8 rounded-full bg-white/90 text-black hover:bg-white backdrop-blur-sm"
-    onClick={handlePlayClick}
-  >
-    <PlayCircle className="fill-black h-5 w-5" />
-  </Button>
-<Button
-  variant="ghost"
-  size="icon"
-  onClick={handleLikeToggle}
-  className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
->
-  <Heart className={cn("text-white h-4 w-4", isLiked && "fill-red-500 text-red-500")} />
-</Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full bg-white/90 text-black hover:bg-white backdrop-blur-sm"
+                  onClick={handlePlayClick}
+                >
+                  <PlayCircle className="fill-black h-5 w-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLikeToggle}
+                  className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+                >
+                  <Heart className={cn("text-white h-4 w-4", isLiked && "fill-red-500 text-red-500")} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleSaveToBoard}
+                  className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+                  title="Save to Moodboard"
+                >
+                  <Bookmark className="text-purple-300 fill-purple-400/30 hover:fill-purple-400 h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleShare}
+                  className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+                >
+                  <Share2 className="text-white h-4 w-4" />
+                </Button>
+              </div>
+
+              <SaveToBoardModal
+                open={showSaveBoardModal}
+                onOpenChange={setShowSaveBoardModal}
+                video={video}
+              />
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handlePlayClick}
+                  className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+                >
+                  <Maximize className="text-white h-4 w-4" />
+                </Button>
               </div>
             </div>
           </div>
@@ -484,7 +523,7 @@ const [socialAccessible, setSocialAccessible] = useState(true);
             loop
             playsInline
             className={cn(
-              "absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none z-10",
+              "absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none z-[5]",
               isHovered && !isPlayerOpen ? "opacity-100 scale-110" : "opacity-0 scale-100"
             )}
           />
@@ -494,14 +533,14 @@ const [socialAccessible, setSocialAccessible] = useState(true);
         <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} />
 
         <div className={cn(
-          "absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none",
+          "absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none z-10",
           isHovered ? 'opacity-100' : 'opacity-0',
           'transition-opacity duration-300'
         )} />
 
         <div className={cn(
-          "absolute bottom-0 left-0 right-0 p-3 opacity-0 transition-all duration-300",
-          !video.isShort && !poster && "group-hover/card:opacity-100"
+          "absolute bottom-0 left-0 right-0 p-3 transition-all duration-300 z-30 pointer-events-auto",
+          !video.isShort && !poster && (isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none")
         )}>
           <h3 className="text-white font-bold text-base truncate drop-shadow-md mb-2">
             {displayTitle}

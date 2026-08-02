@@ -16,6 +16,19 @@ import { FeedbackModal } from "./FeedbackModal";
 
 const RECENT_UPDATES = [
   {
+    date: 'August 1, 2026',
+    title: 'Profile UI & Username Enhancements',
+    description: 'Added username display on profile and public pages, removed "Available for Hire" badge, enabled bio editing, fixed syntax errors, and improved username claim flow with welcome emails.',
+    type: 'Feature',
+  },
+  {
+    date: 'July 31, 2026',
+    title: 'Donation Tiers & Community Promotion',
+    description: 'Implemented $5 donation tier modal with 7‑day free trial, $2 lifetime founder deal, and added bento‑box style promotion in community tab. Enabled follow/subscribe for artists.',
+    type: 'Feature',
+  },
+  {
+
     date: 'July 3, 2026',
     title: 'Frame Counter & Performance Fixes',
     description: 'We have introduced new features and resolved several bugs to improve your browsing experience. Thank you all for your continued support and feedback!\n\n• Added a precise frame counter and frame-by-frame scrubbing tools to all video players.\n• Fixed laggy or unresponsive hover-to-play video previews so they load instantly.\n• Fixed broken thumbnails on community-uploaded video posts.\n• Updated subscription billing flows to accurately reflect chosen plan tiers on upgrade.\n• Patched checkout issues to prevent duplicate plan subscriptions.',

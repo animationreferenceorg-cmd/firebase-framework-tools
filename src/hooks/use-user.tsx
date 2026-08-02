@@ -21,7 +21,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const lastFetchedUidRef = useRef<string | null>(null);
 
-  const fetchUserProfile = useCallback(async () => {
+  const fetchUserProfile = useCallback(async (force = false) => {
     if (authLoading) {
       setLoading(true);
       return;
@@ -36,7 +36,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (currentUid === lastFetchedUidRef.current) {
+    if (!force && currentUid === lastFetchedUidRef.current) {
       return;
     }
     
@@ -67,7 +67,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const mutate = useCallback(() => {
     lastFetchedUidRef.current = null;
-    fetchUserProfile();
+    fetchUserProfile(true);
   }, [fetchUserProfile]);
 
   const value = useMemo(() => ({

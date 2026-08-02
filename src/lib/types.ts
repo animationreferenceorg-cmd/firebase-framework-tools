@@ -64,6 +64,48 @@ export interface UserProfile {
   isPremium?: boolean;
   tier?: 'free' | 'tier1' | 'tier2' | 'tier5' | 'admin'; // Added tier
   stripeCustomerId?: string;
+  headline?: string;
+  username?: string;
+  bio?: string;
+  bannerUrl?: string;
+  profilePattern?: string;
+  profileBgColor?: string;
+  profileCardTint?: string;
+  profileCardBgUrl?: string;
+  avatarGlow?: string;
+  websiteUrl?: string;
+  artstationUrl?: string;
+  youtubeUrl?: string;
+  vimeoUrl?: string;
+  twitterUrl?: string;
+  instagramUrl?: string;
+  customPortfolioCategories?: string[];
+}
+
+export type WipStage = 'concept' | 'blocking' | 'splining' | 'polish' | 'cleanup' | 'completed';
+
+export interface PortfolioItem {
+  id: string;
+  userId: string;
+  authorName: string;
+  authorAvatar?: string;
+  title: string;
+  description?: string;
+  type: 'portfolio' | 'wip';
+  category?: string;
+  wipStage?: WipStage;
+  mediaType: 'video_file' | 'video_url' | 'image' | 'gif';
+  mediaUrl: string;
+  thumbnailUrl?: string;
+  tags: string[];
+  software: string[];
+  likesCount?: number;
+  viewsCount?: number;
+  likedBy?: string[];
+  sortIndex?: number;
+  isFeatured?: boolean;
+  createdAt: any;
+  updatedAt: any;
 }
 
 export interface Tag {

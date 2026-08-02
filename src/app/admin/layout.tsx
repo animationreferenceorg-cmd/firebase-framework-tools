@@ -12,6 +12,7 @@ import {
   BookCopy,
   Users,
   BookOpen,
+  Share2,
 } from 'lucide-react';
 import { useUser } from '@/hooks/use-user';
 import { useRouter } from 'next/navigation';
@@ -26,6 +27,7 @@ function AdminNav() {
     { href: '/admin', label: 'Dashboard', icon: Shield },
     { href: '/admin/users', label: 'Users & Subscriptions', icon: Users },
     { href: '/admin/videos', label: 'Videos', icon: Video },
+    { href: '/admin/social', label: 'Social Manager', icon: Share2 },
     { href: '/admin/categories', label: 'Categories', icon: LayoutGrid },
     { href: '/admin/marketplace', label: 'Marketplace', icon: BookCopy },
     { href: '/admin/shorts', label: 'Short Films', icon: Film },

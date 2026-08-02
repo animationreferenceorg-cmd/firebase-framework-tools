@@ -1,6 +1,6 @@
 
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, addDoc, collection, writeBatch, query, where, getDocs } from "firebase/firestore";
-import { db } from "./firebase";
+import { db, auth } from "./firebase";
 import type { User } from "firebase/auth";
 import type { Category, UserProfile } from "./types";
 
@@ -52,31 +52,98 @@ export async function createUserProfile(user: User): Promise<void> {
 }
 
 /**
+ * Fetches a user's profile from Firestore by username or UID slug.
+ * @param slug Username slug or UID.
+ */
+export async function getUserProfileByUsernameOrId(slug: string): Promise<UserProfile | null> {
+  if (!slug) return null;
+  const cleanSlug = slug.toLowerCase().trim();
+
+  // 1. Instant local storage lookup if available
+  try {
+    if (typeof window !== 'undefined') {
+      if (auth.currentUser) {
+        const localStr = localStorage.getItem(`user_profile_${auth.currentUser.uid}`);
+        if (localStr) {
+          const parsed = JSON.parse(localStr);
+          if (parsed.username?.toLowerCase() === cleanSlug || auth.currentUser.uid.toLowerCase() === cleanSlug) {
+            return { uid: auth.currentUser.uid, displayName: auth.currentUser.displayName, ...parsed };
+          }
+        }
+      }
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('user_profile_')) {
+          const localStr = localStorage.getItem(key);
+          if (localStr) {
+            const parsed = JSON.parse(localStr);
+            if (parsed.username?.toLowerCase() === cleanSlug || parsed.uid?.toLowerCase() === cleanSlug) {
+              return parsed;
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {}
+
+  try {
+    // 2. Query Firestore by username field with timeout
+    const usersRef = collection(db, USERS_COLLECTION);
+    const q = query(usersRef, where("username", "==", cleanSlug));
+    const timeoutPromise = new Promise<any>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2500));
+    const snapshot = await Promise.race([getDocs(q), timeoutPromise]);
+
+    if (snapshot && snapshot.docs && snapshot.docs.length > 0) {
+      const profile = snapshot.docs[0].data() as UserProfile;
+      return profile;
+    }
+  } catch (err) {
+    console.warn("[getUserProfileByUsernameOrId] Error or timeout querying by username:", err);
+  }
+
+  // 3. Fallback: try by UID directly
+  return await getUserProfile(slug);
+}
+
+/**
  * Fetches a user's profile from Firestore.
  * @param uid The user's ID.
  * @returns The user profile data, or null if not found.
  */
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const userRef = doc(db, USERS_COLLECTION, uid);
-  const docSnap = await getDoc(userRef);
-
   let profile: UserProfile | null = null;
 
-  if (docSnap.exists()) {
-    profile = docSnap.data() as UserProfile;
+  try {
+    const docSnap = await getDoc(userRef);
+    if (docSnap.exists()) {
+      profile = docSnap.data() as UserProfile;
+    }
+  } catch (err) {
+    console.warn("[getUserProfile] Could not fetch user doc:", err);
   }
 
-  // Check for active subscription in Stripe extension collection
+  // Merge local storage profile updates (e.g. bannerUrl, bio, headline)
   try {
-    const locations = [
-        collection(db, CUSTOMERS_COLLECTION, uid, 'subscriptions'),
-        collection(db, USERS_COLLECTION, uid, 'subscriptions'),
-        collection(db, 'stripe_customers', uid, 'subscriptions')
-    ];
+    const localStr = typeof window !== 'undefined' ? localStorage.getItem(`user_profile_${uid}`) : null;
+    if (localStr) {
+      const localData = JSON.parse(localStr);
+      profile = { ...(profile || { uid, email: null, displayName: null, photoURL: null, role: 'user' }), ...localData };
+    }
+  } catch (e) {}
 
-    let activeSubDoc = null;
+  // Check for active subscription in Stripe extension collection (only for the currently logged-in user)
+  if (auth.currentUser && auth.currentUser.uid === uid) {
+    try {
+      const locations = [
+          collection(db, CUSTOMERS_COLLECTION, uid, 'subscriptions'),
+          collection(db, USERS_COLLECTION, uid, 'subscriptions'),
+          collection(db, 'stripe_customers', uid, 'subscriptions')
+      ];
 
-    console.log(`[Subscription Check] Checking locations for UID: ${uid}`);
+      let activeSubDoc = null;
+
+      console.log(`[Subscription Check] Checking locations for UID: ${uid}`);
 
     for (const subRef of locations) {
         try {
@@ -149,8 +216,9 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     } else {
         console.log("[Subscription Check] No active/trialing subscription found in any location.");
     }
-  } catch (error) {
-    console.error("[Subscription Check] Error during search:", error);
+    } catch (error) {
+      console.error("[Subscription Check] Error during search:", error);
+    }
   }
 
   if (profile) {

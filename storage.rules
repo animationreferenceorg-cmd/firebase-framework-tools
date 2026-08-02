@@ -24,6 +24,9 @@ service firebase.storage {
     match /posters/{userId}/{allPaths=**} {
         allow write: if request.auth != null && request.auth.uid == userId;
     }
+    match /portfolio/{userId}/{allPaths=**} {
+        allow write: if request.auth != null && request.auth.uid == userId;
+    }
     
     
     // Required rule for user whiteboard/moodboard image uploads

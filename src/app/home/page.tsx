@@ -294,7 +294,7 @@ export default function HomePage() {
                         </p>
 
                         <Button asChild size="lg" className="h-14 px-8 rounded-2xl text-base font-bold bg-gradient-to-r from-purple-600 via-pink-500 to-rose-600 hover:from-purple-500 hover:to-rose-500 text-white shadow-xl shadow-purple-600/30 gap-2.5 cursor-pointer hover:scale-105 transition-all">
-                            <Link href="/studio">
+                            <Link href="/profile">
                                 <Upload className="h-5 w-5 text-white" />
                                 Build Your Portfolio
                             </Link>

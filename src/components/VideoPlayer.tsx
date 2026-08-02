@@ -448,9 +448,9 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                         max={1}
                         step={0.001}
                         className="w-full py-2 cursor-pointer"
-                        trackClassName="bg-white/30 h-2.5 rounded-full cursor-pointer hover:h-3.5 transition-all"
-                        rangeClassName="bg-red-600 shadow-md"
-                        thumbClassName="h-4.5 w-4.5 bg-red-600 border-2 border-white rounded-full shadow-xl scale-100 transition-transform hover:scale-125 cursor-grab active:cursor-grabbing"
+                        trackClassName="bg-white/20 h-2 rounded-full cursor-pointer hover:h-2.5 transition-all"
+                        rangeClassName="bg-gradient-to-r from-purple-500 to-pink-500 shadow-[0_0_12px_rgba(236,72,153,0.8)] rounded-full"
+                        thumbClassName="w-0 h-0 opacity-0 pointer-events-none"
                     />
                     <p className="text-xs font-mono font-bold text-white w-12">{formatTime(duration)}</p>
                 </div>
@@ -524,8 +524,8 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                                     step={0.05}
                                     className="w-full"
                                     trackClassName="bg-white/20 h-1"
-                                    rangeClassName="bg-white"
-                                    thumbClassName="h-3 w-3 bg-white"
+                                    rangeClassName="bg-purple-400"
+                                    thumbClassName="w-0 h-0 opacity-0 pointer-events-none"
                                 />
                             </div>
                         </div>
@@ -550,8 +550,8 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                                         step={0.25}
                                         className="w-full"
                                         trackClassName="bg-white/20 h-1"
-                                        rangeClassName="bg-white"
-                                        thumbClassName="h-3 w-3 bg-white hover:scale-125 transition-transform"
+                                        rangeClassName="bg-purple-400"
+                                        thumbClassName="w-0 h-0 opacity-0 pointer-events-none"
                                     />
                                 </div>
                                 <span className="text-[10px] font-mono text-zinc-200">{playbackRate}x</span>

@@ -333,8 +333,8 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
                                 step={0.1}
                                 className="w-[120px] sm:w-[200px]"
                                 trackClassName="h-1.5 sm:h-2 bg-zinc-700"
-                                rangeClassName="bg-primary"
-                                thumbClassName="h-3.5 w-3.5 sm:h-4 sm:w-4 bg-white hover:scale-125 transition-transform"
+                                rangeClassName="bg-purple-500"
+                                thumbClassName="w-0 h-0 opacity-0 pointer-events-none"
                             />
                             <span className="text-[10px] sm:text-xs font-mono text-white font-bold w-6 sm:w-8 text-right">{playbackRate}x</span>
                         </div>
@@ -352,8 +352,8 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
                             step={0.001}
                             className="flex-1 cursor-pointer"
                             trackClassName="h-1.5 bg-zinc-800"
-                            rangeClassName="bg-white"
-                            thumbClassName="h-4 w-4 bg-white hover:scale-110 transition-transform"
+                            rangeClassName="bg-gradient-to-r from-purple-500 to-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.8)]"
+                            thumbClassName="w-0 h-0 opacity-0 pointer-events-none"
                         />
                         <span className="text-[10px] text-zinc-500 font-mono w-[35px] text-right">{formatTime(duration)}</span>
                     </div>

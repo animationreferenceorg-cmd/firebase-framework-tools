@@ -206,7 +206,7 @@ export default function UsernamePublicProfilePage() {
     >
       {/* ArtStation & Recruiter Style Custom Cover Banner - Stretches from Top to Bottom of Profile Card */}
       <div
-        className="absolute top-0 inset-x-0 h-[700px] md:h-[780px] w-full overflow-hidden group pointer-events-none z-0"
+        className="absolute top-0 inset-x-0 h-[400px] sm:h-[500px] md:h-[700px] lg:h-[780px] w-full overflow-hidden group pointer-events-none z-0"
         style={{
           maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.6) 82%, rgba(0,0,0,0) 100%)',
           WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.6) 82%, rgba(0,0,0,0) 100%)',
@@ -235,7 +235,7 @@ export default function UsernamePublicProfilePage() {
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-purple-500/10 blur-[140px] pointer-events-none" />
       </div>
 
-      <div className="max-w-[1700px] mx-auto px-4 md:px-8 pt-28 md:pt-36 relative z-20">
+      <div className="max-w-[1700px] mx-auto px-3 sm:px-4 md:px-8 pt-16 sm:pt-20 md:pt-28 lg:pt-36 relative z-20">
         {/* Recruiter Profile Glassmorphism Card */}
         <div className={cn("p-6 md:p-8 rounded-3xl relative overflow-hidden space-y-6 border transition-all duration-500 group/card", activeCardTintClass)}>
           {/* Inner Gloss Sheen & Specular Highlight */}
@@ -244,7 +244,7 @@ export default function UsernamePublicProfilePage() {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
             {/* Left: Avatar & Professional Bio */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-              <Avatar className={cn("h-28 w-28 md:h-36 md:w-36 transition-all duration-300 shrink-0", activeAvatarGlowClass)}>
+              <Avatar className={cn("h-20 w-20 sm:h-28 sm:w-28 md:h-36 md:w-36 transition-all duration-300 shrink-0", activeAvatarGlowClass)}>
                 <AvatarImage src={avatarUrl || undefined} alt={displayName} />
                 <AvatarFallback className="text-3xl font-black bg-gradient-to-br from-purple-600 to-indigo-600 text-white">
                   {displayName.charAt(0).toUpperCase()}

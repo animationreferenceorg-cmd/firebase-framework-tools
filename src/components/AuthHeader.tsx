@@ -17,9 +17,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Skeleton } from './ui/skeleton';
 import { cn } from '@/lib/utils';
-import { User, Settings, Bookmark, Zap, LogOut, Edit3 } from 'lucide-react';
+import { User, Settings, Bookmark, Zap, LogOut, Edit3, Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
+import { DonateDialog } from './DonateDialog';
 import { useUser } from '@/hooks/use-user';
 
 export default function AuthHeader() {
@@ -99,6 +100,12 @@ export default function AuthHeader() {
     <div className="flex items-center gap-2 md:gap-4">
       {user ? (
         <>
+          <DonateDialog>
+            <div className="animated-gradient-border p-[2px] rounded-full">
+              <Button variant="outline" className="relative z-10 bg-background hover:bg-background/80 rounded-full h-9 px-4 text-xs font-bold">Donate</Button>
+            </div>
+          </DonateDialog>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Avatar className="h-10 w-10 cursor-pointer border border-white/20 hover:border-purple-500/80 transition-colors shadow-lg">
@@ -201,9 +208,16 @@ export default function AuthHeader() {
           </DropdownMenu>
         </>
       ) : (
-        <Button asChild className="rounded-full h-9 px-5 text-xs font-bold bg-white text-black hover:bg-white/90">
-          <Link href="/login">Sign In</Link>
-        </Button>
+        <div className="flex items-center gap-2 md:gap-4">
+          <DonateDialog>
+            <div className="animated-gradient-border p-[2px] rounded-full">
+              <Button variant="outline" className="relative z-10 bg-background hover:bg-background/80 rounded-full h-9 px-4 text-xs font-bold">Donate</Button>
+            </div>
+          </DonateDialog>
+          <Button asChild className="rounded-full h-9 px-5 text-xs font-bold bg-white text-black hover:bg-white/90">
+            <Link href="/login">Sign In</Link>
+          </Button>
+        </div>
       )}
     </div>
   );

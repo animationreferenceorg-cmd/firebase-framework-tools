@@ -339,51 +339,53 @@ export default function HomePage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                         {/* Large Hero Bento Announcement Card: Animator Portfolios */}
                         <Link
                             href="/profile"
-                            className="group relative md:col-span-2 md:row-span-2 aspect-[16/10] md:aspect-auto rounded-3xl overflow-hidden border border-purple-500/40 bg-gradient-to-br from-purple-950 via-zinc-950 to-black p-6 md:p-8 shadow-[0_0_50px_-10px_rgba(168,85,247,0.3)] transition-all duration-500 hover:scale-[1.01] hover:border-purple-400 hover:shadow-[0_0_60px_0px_rgba(168,85,247,0.5)] cursor-pointer flex flex-col justify-between min-h-[340px]"
+                            className="group relative col-span-2 lg:row-span-2 aspect-[16/10] lg:aspect-auto rounded-3xl overflow-hidden border border-purple-500/40 bg-gradient-to-br from-purple-950 via-zinc-950 to-black p-4 sm:p-6 lg:p-8 shadow-[0_0_50px_-10px_rgba(168,85,247,0.3)] transition-all duration-500 hover:scale-[1.01] hover:border-purple-400 hover:shadow-[0_0_60px_0px_rgba(168,85,247,0.5)] cursor-pointer flex flex-col justify-between min-h-[240px] sm:min-h-[280px] lg:min-h-[340px]"
                         >
                             {/* Background Glow & Ambient Sparkles */}
                             <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none group-hover:bg-purple-600/20 transition-colors" />
                             <div className="absolute bottom-0 left-0 w-80 h-80 bg-pink-600/10 rounded-full blur-3xl pointer-events-none" />
 
-                            <div className="relative z-20 flex items-center justify-between">
-                                <span className="px-3.5 py-1 rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 text-white font-extrabold text-xs shadow-lg flex items-center gap-1.5 border border-purple-400/30">
-                                    <Sparkle className="h-3.5 w-3.5 fill-white text-white animate-spin" />
-                                    🎉 NEW FEATURE ANNOUNCEMENT
+                            <div className="relative z-20 flex items-center justify-between gap-2">
+                                <span className="px-2.5 sm:px-3.5 py-0.5 sm:py-1 rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 text-white font-extrabold text-[10px] sm:text-xs shadow-lg flex items-center gap-1 sm:gap-1.5 border border-purple-400/30">
+                                    <Sparkle className="h-3 sm:h-3.5 w-3 sm:w-3.5 fill-white text-white animate-spin" />
+                                    <span className="hidden sm:inline">🎉 NEW FEATURE ANNOUNCEMENT</span>
+                                    <span className="sm:hidden">NEW</span>
                                 </span>
-                                <Badge variant="outline" className="bg-purple-950/80 text-purple-300 border-purple-700/50 text-xs font-mono font-bold px-2.5 py-0.5">
-                                    LIVE NOW
+                                <Badge variant="outline" className="bg-purple-950/80 text-purple-300 border-purple-700/50 text-[9px] sm:text-xs font-mono font-bold px-2 sm:px-2.5 py-0.5">
+                                    LIVE
                                 </Badge>
                             </div>
 
-                            <div className="relative z-20 space-y-3 text-left my-4">
-                                <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white leading-tight drop-shadow-md group-hover:text-purple-300 transition-colors">
+                            <div className="relative z-20 space-y-2 sm:space-y-3 text-left my-2 sm:my-4">
+                                <h3 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black text-white leading-tight drop-shadow-md group-hover:text-purple-300 transition-colors">
                                     Animator Portfolios & <br className="hidden sm:inline" />
                                     <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-300 to-purple-400">
-                                        WIP Showcase Hub
+                                        WIP Showcase
                                     </span>
                                 </h3>
-                                <p className="text-xs md:text-sm text-zinc-300 max-w-xl font-medium leading-relaxed">
-                                    Claim your personal handle URL (<span className="text-purple-300 font-mono font-semibold">/yourname</span>), upload blocking passes & WIPs, pick cover keyframes with our interactive frame scrubber, and share your work with studio directors worldwide.
+                                <p className="text-[11px] sm:text-xs md:text-sm text-zinc-300 max-w-xl font-medium leading-relaxed">
+                                    Claim your handle, upload WIPs, pick keyframes, and share with studios.
                                 </p>
                             </div>
 
-                            <div className="relative z-20 flex items-center gap-3 pt-2">
-                                <Button size="sm" className="rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs md:text-sm px-5 py-2.5 gap-2 shadow-xl group-hover:scale-105 transition-all">
-                                    <Sparkles className="h-4 w-4" />
-                                    ✨ Create & View Your Portfolio
+                            <div className="relative z-20 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 pt-2">
+                                <Button size="sm" className="w-full sm:w-auto rounded-lg sm:rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-[11px] sm:text-xs md:text-sm px-3 sm:px-5 py-2 sm:py-2.5 gap-1.5 sm:gap-2 shadow-xl group-hover:scale-105 transition-all">
+                                    <Sparkles className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+                                    <span className="hidden sm:inline">✨ Create & View Your Portfolio</span>
+                                    <span className="sm:hidden">✨ Create Portfolio</span>
                                 </Button>
-                                <span className="text-xs text-purple-300/80 font-medium hidden sm:inline">Free for all animators</span>
+                                <span className="text-[10px] sm:text-xs text-purple-300/80 font-medium">Free for all</span>
                             </div>
                         </Link>
 
                         {/* Block 1: My Lists & Saved References */}
                         <Link
                             href="/profile"
-                            className="group relative aspect-[16/10] md:aspect-auto rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-purple-950/60 to-zinc-950 p-5 shadow-xl transition-all hover:border-purple-500/60 hover:scale-[1.02] flex flex-col justify-between min-h-[165px]"
+                            className="group relative aspect-[16/10] sm:aspect-auto rounded-2xl sm:rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-purple-950/60 to-zinc-950 p-4 sm:p-5 shadow-xl transition-all hover:border-purple-500/60 hover:scale-[1.02] flex flex-col justify-between min-h-[140px] sm:min-h-[165px]"
                         >
                             <div className="flex items-center justify-between">
                                 <span className="px-2.5 py-0.5 rounded-full bg-purple-900/60 border border-purple-700/50 text-purple-300 font-mono text-[10px] font-bold">
@@ -404,7 +406,7 @@ export default function HomePage() {
                         {/* Block 2: Interactive Moodboards */}
                         <Link
                             href="/moodboard"
-                            className="group relative aspect-[16/10] md:aspect-auto rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-amber-950/60 to-zinc-950 p-5 shadow-xl transition-all hover:border-amber-500/60 hover:scale-[1.02] flex flex-col justify-between min-h-[165px]"
+                            className="group relative aspect-[16/10] sm:aspect-auto rounded-2xl sm:rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-amber-950/60 to-zinc-950 p-4 sm:p-5 shadow-xl transition-all hover:border-amber-500/60 hover:scale-[1.02] flex flex-col justify-between min-h-[140px] sm:min-h-[165px]"
                         >
                             <div className="flex items-center justify-between">
                                 <span className="px-2.5 py-0.5 rounded-full bg-amber-900/60 border border-amber-700/50 text-amber-300 font-mono text-[10px] font-bold">
@@ -425,7 +427,7 @@ export default function HomePage() {
                         {/* Block 3: Community Announcements */}
                         <Link
                             href="/profile"
-                            className="group relative aspect-[16/10] md:aspect-auto rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-rose-950/60 to-zinc-950 p-5 shadow-xl transition-all hover:border-rose-500/60 hover:scale-[1.02] flex flex-col justify-between min-h-[165px]"
+                            className="group relative aspect-[16/10] sm:aspect-auto rounded-2xl sm:rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-rose-950/60 to-zinc-950 p-4 sm:p-5 shadow-xl transition-all hover:border-rose-500/60 hover:scale-[1.02] flex flex-col justify-between min-h-[140px] sm:min-h-[165px]"
                         >
                             <div className="flex items-center justify-between">
                                 <span className="px-2.5 py-0.5 rounded-full bg-rose-900/60 border border-rose-700/50 text-rose-300 font-mono text-[10px] font-bold">
@@ -446,7 +448,7 @@ export default function HomePage() {
                         {/* Block 4: Categories Index (Live Count Updated) */}
                         <Link
                             href="/categories"
-                            className="group relative aspect-[16/10] md:aspect-auto rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-cyan-950/60 to-zinc-950 p-5 shadow-xl transition-all hover:border-cyan-500/60 hover:scale-[1.02] flex flex-col justify-between min-h-[165px]"
+                            className="group relative aspect-[16/10] sm:aspect-auto rounded-2xl sm:rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-cyan-950/60 to-zinc-950 p-4 sm:p-5 shadow-xl transition-all hover:border-cyan-500/60 hover:scale-[1.02] flex flex-col justify-between min-h-[140px] sm:min-h-[165px]"
                         >
                             <div className="flex items-center justify-between">
                                 <span className="px-2.5 py-0.5 rounded-full bg-cyan-900/60 border border-cyan-700/50 text-cyan-300 font-mono text-[10px] font-bold">

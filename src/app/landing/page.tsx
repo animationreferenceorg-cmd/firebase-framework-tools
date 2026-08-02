@@ -259,7 +259,7 @@ export default function LandingPage() {
                         Join thousands of professional animators building their personal reference libraries today.
                     </p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <Link href="/signup">
+                        <Link href="/home">
                             <Button size="lg" className="h-16 px-10 text-xl font-bold bg-white text-black hover:bg-white/90 shadow-xl transition-transform hover:scale-105">
                                 Get Started for Free
                             </Button>

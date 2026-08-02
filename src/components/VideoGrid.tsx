@@ -17,11 +17,11 @@ export function VideoGrid({ title, videos, columns = 5 }: VideoGridProps) {
 
   const getGridClass = () => {
     switch (columns) {
-      case 2: return 'sm:grid-cols-2';
-      case 3: return 'md:grid-cols-3';
-      case 4: return 'md:grid-cols-4';
-      case 6: return 'md:grid-cols-6';
-      default: return 'md:grid-cols-5';
+      case 2: return 'grid-cols-2 sm:grid-cols-2';
+      case 3: return 'grid-cols-2 sm:grid-cols-2 md:grid-cols-3';
+      case 4: return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4';
+      case 6: return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6';
+      default: return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-5';
     }
   };
 
@@ -29,7 +29,7 @@ export function VideoGrid({ title, videos, columns = 5 }: VideoGridProps) {
     <section>
       {title && <h2 className="text-xl md:text-2xl font-bold mb-4 text-white">{title}</h2>}
       <div className={cn(
-        "grid grid-cols-2 gap-4",
+        "grid gap-2.5 sm:gap-4",
         getGridClass()
       )}>
         {videos.map(video => (

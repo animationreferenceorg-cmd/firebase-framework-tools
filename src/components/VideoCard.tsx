@@ -210,7 +210,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   };
 
   const imageUrl = (video.isShort || poster) ? (video.posterUrl || video.thumbnailUrl) : (video.thumbnailUrl || video.posterUrl);
-  const aspectRatio = (video.isShort || poster) ? "aspect-[2/3]" : "aspect-[3/4] md:aspect-video";
+  const aspectRatio = (video.isShort || poster) ? "aspect-[9/16]" : "aspect-video";
 
   // Bypass Next.js image optimizer for external CDNs that block server-side fetches (403)
   const isExternalCdn = imageUrl?.includes('.b-cdn.net') || imageUrl?.includes('cdninstagram.com') || imageUrl?.includes('instagram.com');

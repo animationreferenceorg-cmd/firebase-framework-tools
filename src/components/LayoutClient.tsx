@@ -6,7 +6,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Clapperboard, Film, Home, LayoutGrid, List, Rss, Shield, BookCopy, Star, Camera, User, Box, ShoppingBag, CreditCard, MessageSquare, Tag as TagIcon } from 'lucide-react';
-import AuthHeader from '@/components/AuthHeader';
 import { useUser } from '@/hooks/use-user';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -192,7 +191,14 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     </SidebarLink>
                                 </SidebarMenuItem>
                             </SidebarMenu>
-                            <UserFeedbackPanel />
+                        </SidebarGroup>
+                        <SidebarGroup>
+                            <SidebarGroupLabel>Feedback</SidebarGroupLabel>
+                            <SidebarMenu>
+                                <SidebarMenuItem>
+                                    <UserFeedbackPanel />
+                                </SidebarMenuItem>
+                            </SidebarMenu>
                         </SidebarGroup>
                         {isAdmin && (
                             <>
@@ -234,8 +240,6 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                     </SidebarFooter>
                 </Sidebar>
                 <SidebarInset>
-          {/* Added AuthHeader for top navigation */}
-          <AuthHeader />
                     <div className="flex flex-col flex-1 min-h-screen relative">
                         <Suspense fallback={null}>
                             <GlassHeader />

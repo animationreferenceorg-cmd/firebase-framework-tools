@@ -21,6 +21,8 @@ interface UserFeedback {
   respondedAt?: any;
 }
 
+const LAST_SEEN_KEY = 'feedback_last_seen';
+
 export default function FeedbackPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -52,6 +54,7 @@ export default function FeedbackPage() {
         })) as UserFeedback[];
         setFeedback(data);
         setLoading(false);
+        localStorage.setItem(LAST_SEEN_KEY, Date.now().toString());
       },
       (error) => {
         console.error('Error loading feedback:', error);

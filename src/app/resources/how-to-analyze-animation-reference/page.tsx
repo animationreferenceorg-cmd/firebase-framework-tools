@@ -114,7 +114,7 @@ export default function AnalysisGuide() {
                     <p className="text-xl text-zinc-400 max-w-2xl mx-auto">Access the world's most curated library and start analyzing motion like a professional.</p>
                     <div className="pt-8">
                         <Button asChild size="lg" className="h-16 px-12 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xl group">
-                            <Link href="/signup">
+                            <Link href="/login?tab=sign-up">
                                 Get Started <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-1 transition-transform" />
                             </Link>
                         </Button>

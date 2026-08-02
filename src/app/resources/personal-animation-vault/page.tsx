@@ -29,7 +29,7 @@ export default function VaultResource() {
                         </p>
                         <div className="pt-8 flex flex-col sm:flex-row gap-4">
                             <Button asChild size="lg" className="h-16 px-10 rounded-2xl bg-zinc-900 text-white hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-200">
-                                <Link href="/signup">Create Your Free Vault</Link>
+                                <Link href="/login?tab=sign-up">Create Your Free Vault</Link>
                             </Button>
                             <Button asChild variant="ghost" size="lg" className="h-16 px-10 rounded-2xl hover:bg-zinc-100">
                                 <Link href="/browse">Browse Examples</Link>
@@ -107,7 +107,7 @@ export default function VaultResource() {
                     <p className="text-xl text-zinc-500 leading-relaxed">Start building your personal reference vault today and spend your time where it matters most: on the timeline.</p>
                     <div className="pt-8">
                         <Button asChild size="lg" className="h-20 px-12 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-all text-xl font-bold shadow-2xl shadow-blue-200">
-                            <Link href="/signup">Get Started for Free <ArrowRight className="ml-3 h-6 w-6 inline" /></Link>
+                            <Link href="/login?tab=sign-up">Get Started for Free <ArrowRight className="ml-3 h-6 w-6 inline" /></Link>
                         </Button>
                     </div>
                 </div>

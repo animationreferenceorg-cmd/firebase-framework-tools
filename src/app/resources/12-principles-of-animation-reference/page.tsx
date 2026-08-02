@@ -166,7 +166,7 @@ export default function PrinciplesGuide() {
                     <p className="text-xl text-zinc-500 leading-relaxed">Join the world's best animators and start studying the foundations of motion with the highest quality reference available.</p>
                     <div className="pt-8">
                         <Button asChild size="lg" className="h-20 px-12 rounded-full bg-amber-900 text-white hover:bg-amber-950 transition-all text-xl font-bold shadow-2xl shadow-amber-200">
-                            <Link href="/signup">Start Your Education <ArrowRight className="ml-3 h-6 w-6 inline" /></Link>
+                            <Link href="/login?tab=sign-up">Start Your Education <ArrowRight className="ml-3 h-6 w-6 inline" /></Link>
                         </Button>
                     </div>
                     <div className="flex justify-center gap-8 text-zinc-400 text-sm font-medium pt-8">

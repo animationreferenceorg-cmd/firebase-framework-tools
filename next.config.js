@@ -5,6 +5,11 @@ const nextConfig = {
     return [
       // Main Hub & References Redirects
       {
+        source: '/signup',
+        destination: '/login?tab=sign-up',
+        permanent: true,
+      },
+      {
         source: '/references',
         destination: '/categories',
         permanent: true,

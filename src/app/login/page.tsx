@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, type User } from 'firebase/auth';
 import { useFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -15,10 +15,19 @@ import { Clapperboard } from 'lucide-react';
 import { createUserProfile } from '@/lib/firestore';
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
+  );
+}
+
+function LoginPageInner() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('sign-in');
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'sign-up' ? 'sign-up' : 'sign-in');
   const router = useRouter();
   const { toast } = useToast();
   const { auth } = useFirebase();

@@ -145,7 +145,7 @@ export default async function SeoLandingPage({ params }: Props) {
                 <div className="container mx-auto px-6">
                     <h2 className="text-4xl font-bold mb-8">Master your animation timing today.</h2>
                     <Button asChild size="lg" variant="outline" className="rounded-full px-12 py-8 text-xl">
-                        <Link href="/signup">Get Started for Free</Link>
+                        <Link href="/login?tab=sign-up">Get Started for Free</Link>
                     </Button>
                 </div>
             </section>

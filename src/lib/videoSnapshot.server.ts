@@ -112,6 +112,10 @@ export function getTagBySlug(slug: string): { tag: string; videos: Video[] } | n
     return getTagIndex().bySlug.get(slug) ?? null;
 }
 
+export function getAllTags(): { slug: string; tag: string; videos: Video[] }[] {
+    return [...getTagIndex().bySlug.entries()].map(([slug, entry]) => ({ slug, ...entry }));
+}
+
 /** Tags that co-occur most often with the given tag's videos (for interlinking). */
 export function getRelatedTags(tag: string, count = 12): { tag: string; slug: string; count: number }[] {
     const entry = getTagIndex().bySlug.get(slugifyTag(tag));

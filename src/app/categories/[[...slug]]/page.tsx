@@ -4,7 +4,12 @@ import { redirect } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import type { Category } from '@/lib/types';
-import { CategoriesHub } from '@/components/CategoriesHub';
+import dynamicImport from 'next/dynamic';
+
+const CategoriesHub = dynamicImport(
+    () => import('@/components/CategoriesHub').then((mod) => mod.CategoriesHub),
+    { ssr: false }
+);
 
 export const dynamic = 'force-dynamic';
 

@@ -85,7 +85,7 @@ export function CategoriesHub() {
                         </div>
 
                         {/* Headline */}
-                        <h1 className="text-4xl md:text-7xl lg:text-8xl font-black tracking-tight mb-6 leading-[1.1] md:leading-[1.1] max-w-5xl mx-auto drop-shadow-2xl">
+                        <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tight mb-6 leading-[1.1] max-w-5xl mx-auto drop-shadow-2xl">
                             <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/70">
                                 Browse Animation
                             </span>{' '}
@@ -100,13 +100,13 @@ export function CategoriesHub() {
                         </p>
 
                         {/* Category search bar */}
-                        <div className="w-full max-w-2xl mx-auto relative group">
+                        <div className="w-full max-w-2xl mx-auto px-3 sm:px-0 relative group">
                             <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
                             <div className="relative">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-zinc-400 group-focus-within:text-purple-400 transition-colors" />
+                                <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-5 sm:h-6 w-5 sm:w-6 text-zinc-400 group-focus-within:text-purple-400 transition-colors" />
                                 <Input
                                     placeholder="Search categories & tags..."
-                                    className="pl-14 h-16 bg-black/60 backdrop-blur-xl border-white/10 text-lg md:text-xl rounded-2xl focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all placeholder:text-zinc-400 text-white shadow-2xl"
+                                    className="pl-12 sm:pl-14 h-12 sm:h-16 bg-black/60 backdrop-blur-xl border-white/10 text-sm sm:text-base md:text-lg lg:text-xl rounded-2xl focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all placeholder:text-zinc-400 text-white shadow-2xl"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />

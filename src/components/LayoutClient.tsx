@@ -232,6 +232,8 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                     </SidebarFooter>
                 </Sidebar>
                 <SidebarInset>
+          {/* Added AuthHeader for top navigation */}
+          <AuthHeader />
                     <div className="flex flex-col flex-1 min-h-screen relative">
                         <Suspense fallback={null}>
                             <GlassHeader />

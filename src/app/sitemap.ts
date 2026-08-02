@@ -146,7 +146,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             };
         });
 
-        // 5. Tag landing pages
+        // 5. Tag landing pages (English)
         const tagRoutes: MetadataRoute.Sitemap = [...getTagIndex().bySlug.keys()].map((slug) => ({
             url: `${BASE_URL}/tags/${slug}`,
             lastModified: new Date(),
@@ -160,7 +160,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 0.8,
         });
 
-        return [...staticRoutes, ...categoryRoutes, ...blogRoutes, ...tagRoutes, ...videoRoutes];
+        // 6. Spanish tag landing pages (for SEO in Spanish-speaking countries)
+        const spanishTagRoutes: MetadataRoute.Sitemap = [...getTagIndex().bySlug.keys()].map((slug) => ({
+            url: `${BASE_URL}/es/tags/${slug}`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly' as const,
+            priority: 0.7,
+        }));
+        spanishTagRoutes.unshift({
+            url: `${BASE_URL}/es/tags`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly' as const,
+            priority: 0.8,
+        });
+
+        return [...staticRoutes, ...categoryRoutes, ...blogRoutes, ...tagRoutes, ...spanishTagRoutes, ...videoRoutes];
     } catch (error) {
         console.error('Error generating sitemap:', error);
         // Return at least static routes if Firestore fails

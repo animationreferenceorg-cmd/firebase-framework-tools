@@ -1,9 +1,10 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getTagBySlug, getRelatedTags, slugifyTag } from '@/lib/videoSnapshot.server';
+import { getTagBySlug, getRelatedTags } from '@/lib/videoSnapshot.server';
 import { TagViewTracker } from '@/components/TagViewTracker';
 import { VideoCard } from '@/components/VideoCard';
+import { translations } from '@/lib/translations';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,33 +24,35 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     const { slug } = await params;
     const { page: pageParam } = await searchParams;
     const entry = getTagBySlug(slug);
-    if (!entry) return { title: 'Tag Not Found | Animation Reference', robots: { index: false } };
+    if (!entry) return { title: 'Etiqueta no encontrada | Animation Reference', robots: { index: false } };
 
     const page = Math.max(1, parseInt(pageParam || '1', 10) || 1);
     const name = titleCase(entry.tag);
-    const pageSuffix = page > 1 ? ` — Page ${page}` : '';
-    const canonical = page > 1 ? `${BASE_URL}/tags/${slug}?page=${page}` : `${BASE_URL}/tags/${slug}`;
+    const pageSuffix = page > 1 ? ` — Página ${page}` : '';
+    const canonical = page > 1 ? `${BASE_URL}/es/tags/${slug}?page=${page}` : `${BASE_URL}/es/tags/${slug}`;
 
     const keywords = [
-        `${entry.tag} animation reference`,
-        `${entry.tag} animation`,
-        `${entry.tag} animation tutorial`,
-        `${entry.tag} reference clips`,
-        `how to animate ${entry.tag}`,
+        `${entry.tag} referencia animación`,
+        `${entry.tag} animación`,
+        `${entry.tag} tutorial animación`,
+        `clips de referencia ${entry.tag}`,
+        `cómo animar ${entry.tag}`,
         `${entry.tag} motion capture`,
-        `${entry.tag} animation breakdown`,
-        'animation reference',
-        'game animation',
-        'animation study',
+        'referencia de animación',
+        'animación de juegos',
+        'estudio de animación',
     ];
 
+    const t = translations.es.es;
+
     return {
-        title: `${name} Animation Reference — ${entry.videos.length} Clips${pageSuffix}`,
-        description: `Browse ${entry.videos.length} curated ${entry.tag} animation reference clips. Study ${entry.tag} timing, spacing, posing and motion. Free frame-by-frame animation reference for animators, game developers & motion designers.`,
+        title: t.tags.title(name, entry.videos.length) + pageSuffix,
+        description: t.tags.description(entry.tag, entry.videos.length),
         keywords,
         alternates: {
             canonical,
             languages: {
+                en: `${BASE_URL}/tags/${slug}`,
                 es: `${BASE_URL}/es/tags/${slug}`,
                 'es-MX': `${BASE_URL}/es-MX/tags/${slug}`,
                 pt: `${BASE_URL}/pt/tags/${slug}`,
@@ -67,31 +70,30 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
             },
         },
         openGraph: {
-            title: `${name} Animation Reference (${entry.videos.length} clips)`,
-            description: `Curated ${entry.tag} animation reference clips. Study professional animation timing and technique.`,
+            title: `${name} - Referencia de Animación (${entry.videos.length} clips)`,
+            description: t.tags.description(entry.tag, entry.videos.length),
             url: canonical,
             siteName: 'Animation Reference',
             type: 'website',
-            locale: 'en_US',
+            locale: 'es_ES',
             images: entry.videos[0]?.thumbnailUrl ? [{
                 url: entry.videos[0].thumbnailUrl,
                 width: 1200,
                 height: 630,
-                alt: `${name} animation reference clip`,
+                alt: `${name} referencia de animación`,
                 type: 'image/jpeg',
             }] : undefined,
         },
         twitter: {
             card: 'summary_large_image',
-            title: `${name} Animation Reference`,
-            description: `${entry.videos.length} curated clips for studying ${entry.tag} animation.`,
+            title: `${name} - Referencia de Animación`,
+            description: `${entry.videos.length} clips curados para estudiar animación de ${entry.tag}.`,
             images: entry.videos[0]?.thumbnailUrl ? [entry.videos[0].thumbnailUrl] : undefined,
-            creator: '@animationref',
         },
     };
 }
 
-export default async function TagPage({ params, searchParams }: Props) {
+export default async function SpanishTagPage({ params, searchParams }: Props) {
     const { slug } = await params;
     const { page: pageParam } = await searchParams;
     const entry = getTagBySlug(slug);
@@ -101,27 +103,29 @@ export default async function TagPage({ params, searchParams }: Props) {
     const totalPages = Math.ceil(entry.videos.length / PER_PAGE);
     if (page > totalPages) notFound();
 
-    // Newest first (snapshot is oldest-first)
     const ordered = [...entry.videos].reverse();
     const videos = ordered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
     const name = titleCase(entry.tag);
     const relatedTags = getRelatedTags(entry.tag, 14);
-    const pageUrl = page > 1 ? `${BASE_URL}/tags/${slug}?page=${page}` : `${BASE_URL}/tags/${slug}`;
+    const pageUrl = page > 1 ? `${BASE_URL}/es/tags/${slug}?page=${page}` : `${BASE_URL}/es/tags/${slug}`;
+
+    const t = translations.es.es;
 
     const breadcrumbSchema = {
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
         itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Home', item: BASE_URL },
-            { '@type': 'ListItem', position: 2, name: 'Tags', item: `${BASE_URL}/tags` },
-            { '@type': 'ListItem', position: 3, name: name, item: `${BASE_URL}/tags/${slug}` },
+            { '@type': 'ListItem', position: 1, name: t.tags.breadcrumbHome, item: `${BASE_URL}/es` },
+            { '@type': 'ListItem', position: 2, name: t.tags.breadcrumbTags, item: `${BASE_URL}/es/tags` },
+            { '@type': 'ListItem', position: 3, name: name, item: `${BASE_URL}/es/tags/${slug}` },
         ],
     };
 
     const itemListSchema = {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
-        name: `${name} Animation Reference Clips`,
+        inLanguage: 'es',
+        name: `${name} - ${t.tags.description_long(entry.tag, entry.videos.length).split('.')[0]}`,
         url: pageUrl,
         mainEntity: {
             '@type': 'ItemList',
@@ -135,22 +139,18 @@ export default async function TagPage({ params, searchParams }: Props) {
         },
     };
 
-    // VideoObject schema for each video (improves Google Video search visibility)
     const videoObjectSchemas = videos.map((v) => ({
         '@context': 'https://schema.org',
         '@type': 'VideoObject',
+        inLanguage: 'es',
         name: v.title,
-        description: `${name} animation reference: ${v.title}. Study professional ${entry.tag} animation timing, spacing, and technique.`,
+        description: `Referencia de animación de ${name}: ${v.title}. Estudia timing, espaciado y técnica profesional de animación de ${entry.tag}.`,
         url: `${BASE_URL}/video/${v.id}`,
         thumbnailUrl: [v.thumbnailUrl || v.posterUrl],
         uploadDate: v.createdAt instanceof Date ? v.createdAt.toISOString() : new Date().toISOString(),
         duration: `PT${Math.floor((v.duration || 10) / 60)}M${(v.duration || 10) % 60}S`,
-        genre: ['Animation', 'Tutorial', 'Reference'],
-        keywords: [entry.tag, 'animation', 'reference', 'tutorial', 'breakdown'],
-        potentialAction: {
-            '@type': 'SeekToAction',
-            target: `${BASE_URL}/video/${v.id}?t={seek_to_second_number}`,
-        },
+        genre: ['Animación', 'Tutorial', 'Referencia'],
+        keywords: [entry.tag, 'animación', 'referencia', 'tutorial', 'desglose'],
     }));
 
     return (
@@ -158,27 +158,25 @@ export default async function TagPage({ params, searchParams }: Props) {
             <TagViewTracker tag={entry.tag} />
             {/* Breadcrumb */}
             <nav className="text-xs text-muted-foreground mb-6 flex items-center gap-1.5" aria-label="Breadcrumb">
-                <Link href="/" className="hover:text-foreground">Home</Link>
+                <Link href="/es" className="hover:text-foreground">{t.tags.breadcrumbHome}</Link>
                 <span>/</span>
-                <Link href="/tags" className="hover:text-foreground">Tags</Link>
+                <Link href="/es/tags" className="hover:text-foreground">{t.tags.breadcrumbTags}</Link>
                 <span>/</span>
                 <span className="text-foreground font-medium">{name}</span>
             </nav>
 
             <header className="mb-10 max-w-3xl">
                 <h1 className="text-3xl md:text-4xl font-black tracking-tight text-foreground mb-4">
-                    {name} Animation Reference
+                    {t.tags.h1(name)}
                 </h1>
                 <p className="text-muted-foreground leading-relaxed">
-                    {entry.videos.length} curated {entry.tag} animation reference clips for animators, game developers
-                    and motion designers. Open any clip for frame-by-frame playback to study the timing, spacing and
-                    posing of real {entry.tag} motion{relatedTags.length > 0 && (
-                        <> — often studied together with {relatedTags.slice(0, 3).map(t => t.tag).join(', ')}</>
+                    {t.tags.description_long(entry.tag, entry.videos.length)}{relatedTags.length > 0 && (
+                        <> — {t.tags.studyTogether} {relatedTags.slice(0, 3).map(t => t.tag).join(', ')}</>
                     )}.
                 </p>
             </header>
 
-            {/* Video grid — with interactive VideoCard theater player modal */}
+            {/* Video grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {videos.map(v => (
                     <VideoCard key={v.id} video={v as any} />
@@ -190,35 +188,35 @@ export default async function TagPage({ params, searchParams }: Props) {
                 <nav className="flex items-center justify-center gap-2 mt-12" aria-label="Pagination">
                     {page > 1 && (
                         <Link
-                            href={page === 2 ? `/tags/${slug}` : `/tags/${slug}?page=${page - 1}`}
+                            href={page === 2 ? `/es/tags/${slug}` : `/es/tags/${slug}?page=${page - 1}`}
                             className="px-4 py-2 rounded-lg border border-border text-sm font-semibold hover:border-primary/40"
                         >
-                            ← Previous
+                            ← {t.tags.previousPage}
                         </Link>
                     )}
                     <span className="px-4 py-2 text-sm text-muted-foreground">
-                        Page {page} of {totalPages}
+                        {t.tags.pageOf(page, totalPages)}
                     </span>
                     {page < totalPages && (
                         <Link
-                            href={`/tags/${slug}?page=${page + 1}`}
+                            href={`/es/tags/${slug}?page=${page + 1}`}
                             className="px-4 py-2 rounded-lg border border-border text-sm font-semibold hover:border-primary/40"
                         >
-                            Next →
+                            {t.tags.nextPage} →
                         </Link>
                     )}
                 </nav>
             )}
 
-            {/* Related tags — interlinking between tag landing pages */}
+            {/* Related tags */}
             {relatedTags.length > 0 && (
                 <section className="mt-14 border-t border-border pt-8">
-                    <h2 className="text-lg font-bold text-foreground mb-4">Related Animation Reference Tags</h2>
+                    <h2 className="text-lg font-bold text-foreground mb-4">{t.tags.relatedTags}</h2>
                     <div className="flex flex-wrap gap-2">
                         {relatedTags.map(t => (
                             <Link
                                 key={t.slug}
-                                href={`/tags/${t.slug}`}
+                                href={`/es/tags/${t.slug}`}
                                 className="px-3 py-1.5 rounded-full border border-border bg-card text-xs font-semibold text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
                             >
                                 #{t.tag}

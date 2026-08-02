@@ -27,11 +27,14 @@ export default function LandingPage() {
                 const categoriesQuery = query(collection(db, "categories"), where("status", "==", "published"));
 
                 const [categorySnapshot, videos] = await Promise.all([
-                    getDocs(categoriesQuery),
-                    getSnapshotVideos()
+                    getDocs(categoriesQuery).catch((err) => {
+                        console.warn("Firestore categories query fallback:", err?.message || err);
+                        return { docs: [] };
+                    }),
+                    getSnapshotVideos().catch(() => [])
                 ]);
 
-                const categories = categorySnapshot.docs.map(doc => ({
+                const categories = (categorySnapshot.docs || []).map(doc => ({
                     id: doc.id,
                     href: `/browse?category=${doc.id}`,
                     ...doc.data()
@@ -40,7 +43,7 @@ export default function LandingPage() {
                 setAllVideos(videos);
 
             } catch (error) {
-                console.error("Error fetching data:", error);
+                console.warn("Error fetching landing data:", error);
             } finally {
                 setLoading(false);
             }
@@ -87,17 +90,17 @@ export default function LandingPage() {
             {/* Hero Section */}
             {heroVideo ? (
                 <BrowseHero video={heroVideo}>
-                    <div className="w-full h-full flex flex-col justify-center items-center text-center pb-12 md:pb-20 animate-fade-in-up px-4">
+                    <div className="w-full h-full flex flex-col justify-center items-center text-center pb-20 animate-fade-in-up">
                         {/* Badge */}
-                        <div className="flex justify-center mb-4 md:mb-8 animate-fade-in">
-                            <div className="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full bg-black/40 border border-white/10 backdrop-blur-md shadow-[0_0_30px_-5px_rgba(109,40,217,0.3)] group hover:scale-105 transition-transform duration-300">
-                                <Sparkles className="h-3.5 w-3.5 md:h-4 md:w-4 text-purple-400 animate-pulse" />
-                                <span className="text-xs md:text-sm font-medium text-purple-100/90">Your Ultimate Animation Library</span>
+                        <div className="flex justify-center mb-8 animate-fade-in">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black/40 border border-white/10 backdrop-blur-md shadow-[0_0_30px_-5px_rgba(109,40,217,0.3)] group hover:scale-105 transition-transform duration-300">
+                                <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
+                                <span className="text-sm font-medium text-purple-100/90">Your Ultimate Animation Library</span>
                             </div>
                         </div>
 
                         {/* Headline */}
-                        <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-4 md:mb-8 leading-[1.15] max-w-5xl mx-auto drop-shadow-2xl">
+                        <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-8 leading-[1.1] md:leading-[1.1] max-w-5xl mx-auto drop-shadow-2xl">
                             <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/70">
                                 Master the Art of
                             </span>
@@ -108,16 +111,16 @@ export default function LandingPage() {
                         </h1>
 
                         {/* Subheadline */}
-                        <p className="text-sm sm:text-lg md:text-xl text-zinc-100 mb-8 md:mb-12 max-w-2xl mx-auto leading-relaxed drop-shadow-lg font-medium">
+                        <p className="text-lg md:text-xl text-zinc-100 mb-12 max-w-2xl mx-auto leading-relaxed drop-shadow-lg font-medium">
                             Highly customizable reference library for animators. Analyze frame-by-frame, build your collections, and discover inspiration from the world's best studios.
                         </p>
 
                         {/* CTA Button */}
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
-                            <Button asChild className="h-12 md:h-16 px-6 md:px-10 rounded-2xl text-base md:text-lg font-semibold bg-gradient-to-br from-[#7c3aed] to-[#6d28d9] hover:scale-105 shadow-[0_10px_40px_-10px_rgba(124,58,237,0.5)] border border-purple-400/20 transition-all duration-300 group text-white">
-                                <Link href="/browse">
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+                            <Button asChild className="h-16 px-10 rounded-2xl text-lg font-semibold bg-gradient-to-br from-[#7c3aed] to-[#6d28d9] hover:scale-105 shadow-[0_10px_40px_-10px_rgba(124,58,237,0.5)] border border-purple-400/20 transition-all duration-300 group text-white">
+                                <Link href="/home">
                                     Start Finding Animations Now
-                                    <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5 group-hover:translate-x-1 transition-transform" />
+                                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                                 </Link>
                             </Button>
                         </div>

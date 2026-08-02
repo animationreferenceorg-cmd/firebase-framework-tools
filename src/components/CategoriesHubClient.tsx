@@ -1,8 +1,18 @@
 'use client';
 
-import dynamic from 'next/dynamic';
+import React, { useEffect, useState } from 'react';
+import { CategoriesHub } from '@/components/CategoriesHub';
 
-export const CategoriesHubClient = dynamic(
-  () => import('@/components/CategoriesHub').then((mod) => mod.CategoriesHub),
-  { ssr: false }
-);
+export function CategoriesHubClient() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div className="min-h-screen bg-transparent" />;
+  }
+
+  return <CategoriesHub />;
+}

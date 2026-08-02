@@ -19,7 +19,7 @@ import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
-export function FeedbackModal() {
+export function FeedbackModal({ children }: { children?: React.ReactNode }) {
   const [feedback, setFeedback] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -50,13 +50,23 @@ export function FeedbackModal() {
 
     setLoading(true);
     try {
-      await addDoc(collection(db, 'feedback'), {
+      const docRef = await addDoc(collection(db, 'feedback'), {
         userId: user?.uid || 'anonymous',
         userEmail: user?.email || 'anonymous',
         content: feedback,
         createdAt: serverTimestamp(),
         status: 'new',
       });
+
+      try {
+        const localDocIds = JSON.parse(localStorage.getItem('my_feedback_doc_ids') || '[]');
+        if (!localDocIds.includes(docRef.id)) {
+          localDocIds.push(docRef.id);
+          localStorage.setItem('my_feedback_doc_ids', JSON.stringify(localDocIds));
+        }
+      } catch (e) {
+        // ignore localStorage errors
+      }
 
       localStorage.setItem('last_feedback_time', Date.now().toString());
       setSubmitted(true);
@@ -89,10 +99,14 @@ export function FeedbackModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button className="flex w-full items-center gap-3 px-3 py-2 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors group">
-          <MessageSquare className="h-4 w-4 transition-transform group-hover:scale-110" />
-          <span>Send Feedback</span>
-        </button>
+        {children ? (
+          children
+        ) : (
+          <button className="flex w-full items-center gap-3 px-3 py-2 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors group">
+            <MessageSquare className="h-4 w-4 transition-transform group-hover:scale-110" />
+            <span>Send Feedback</span>
+          </button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] bg-zinc-900 border-white/10 text-white">
         <DialogHeader>

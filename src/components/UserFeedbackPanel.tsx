@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { MessageSquare } from 'lucide-react';
@@ -9,6 +9,7 @@ import { SidebarLink } from '@/components/SidebarLink';
 
 interface UserFeedback {
   id: string;
+  response?: string;
   respondedAt?: any;
 }
 
@@ -16,15 +17,14 @@ const LAST_SEEN_KEY = 'feedback_last_seen';
 
 export function UserFeedbackPanel() {
   const { user } = useAuth();
-  const [hasUnseenReply, setHasUnseenReply] = useState(false);
+  const [unseenCount, setUnseenCount] = useState(0);
 
   useEffect(() => {
     if (!user?.uid) return;
 
     const q = query(
       collection(db, 'feedback'),
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', user.uid)
     );
 
     const unsubscribe = onSnapshot(
@@ -36,13 +36,17 @@ export function UserFeedbackPanel() {
         })) as UserFeedback[];
 
         const lastSeen = parseInt(localStorage.getItem(LAST_SEEN_KEY) || '0', 10);
-        const unseen = data.some(
-          (item) => item.respondedAt?.toDate && item.respondedAt.toDate().getTime() > lastSeen
-        );
-        setHasUnseenReply(unseen);
+        const unseenItems = data.filter((item) => {
+          if (!item.response) return false;
+          if (!item.respondedAt) return true;
+          const time = item.respondedAt.toDate ? item.respondedAt.toDate().getTime() : new Date(item.respondedAt).getTime();
+          return time > lastSeen;
+        });
+
+        setUnseenCount(unseenItems.length);
       },
       (error) => {
-        console.error('Error loading feedback:', error);
+        console.warn('Error loading feedback notification badge:', error?.message || error);
       }
     );
 
@@ -52,11 +56,13 @@ export function UserFeedbackPanel() {
   if (!user) return null;
 
   return (
-    <SidebarLink href="/feedback" icon={MessageSquare} tooltip="My Feedback">
-      <span className="flex items-center gap-2">
-        Feedback
-        {hasUnseenReply && (
-          <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+    <SidebarLink href="/feedback" icon={MessageSquare} tooltip="Feedback Threads">
+      <span className="flex items-center justify-between w-full pr-1">
+        <span>Feedback</span>
+        {unseenCount > 0 && (
+          <span className="relative flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-black text-[10px] shadow-[0_0_12px_rgba(239,68,68,0.9)] border border-white/20 animate-pulse">
+            {unseenCount}
+          </span>
         )}
       </span>
     </SidebarLink>

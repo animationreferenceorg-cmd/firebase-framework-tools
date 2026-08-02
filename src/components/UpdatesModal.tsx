@@ -2,6 +2,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import {
   Dialog,
   DialogContent,
@@ -10,9 +11,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Sparkles, History, Clock, Megaphone } from "lucide-react";
+import { Sparkles, History, Clock, Megaphone, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { FeedbackModal } from "./FeedbackModal";
+import { Button } from "@/components/ui/button";
 
 const RECENT_UPDATES = [
   {
@@ -114,17 +115,20 @@ export function UpdatesModal({ variant = 'sidebar' }: UpdatesModalProps) {
         </div>
 
         {/* Feedback CTA - prominent at top */}
-        <div className="rounded-lg bg-blue-500/10 border border-blue-500/30 p-4 mb-6 space-y-3">
+        <div className="rounded-xl bg-purple-500/10 border border-purple-500/30 p-4 mb-6 space-y-3">
           <div className="flex flex-col space-y-1">
-            <h4 className="text-sm font-semibold text-white">Share Your Feedback</h4>
+            <h4 className="text-sm font-bold text-white">Share Your Feedback</h4>
             <p className="text-xs text-zinc-400">
-              Have ideas for features or suggestions? We'd love to hear from you.
+              Have ideas for features or suggestions? Track your feedback threads and admin replies on your feedback page.
             </p>
           </div>
           <div className="flex justify-start">
-            <div className="w-32">
-              <FeedbackModal />
-            </div>
+            <Link href="/feedback">
+              <Button size="sm" className="bg-gradient-to-br from-[#7c3aed] to-[#6d28d9] hover:bg-purple-600 text-white font-bold rounded-xl text-xs gap-1.5 shadow-md">
+                <MessageSquare className="h-3.5 w-3.5" />
+                Go to Feedback Page
+              </Button>
+            </Link>
           </div>
         </div>
 

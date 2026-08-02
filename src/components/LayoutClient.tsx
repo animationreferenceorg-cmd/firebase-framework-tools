@@ -236,7 +236,6 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                     </SidebarContent>
                     <SidebarFooter className="p-4 border-t border-white/5 space-y-1">
                         <UpdatesModal />
-                        <FeedbackModal />
                     </SidebarFooter>
                 </Sidebar>
                 <SidebarInset>

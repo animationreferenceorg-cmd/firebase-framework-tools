@@ -51,9 +51,10 @@ export function VideoCard({ video, poster }: VideoCardProps) {
     setShowSaveBoardModal(true);
   };
   const { ref: cardRef, inView: cardInView } = useInView({ threshold: 0, triggerOnce: true });
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-const [socialAccessible, setSocialAccessible] = useState(true);
+  const [socialAccessible, setSocialAccessible] = useState(true);
 
   const displayTitle = video.status === 'draft' ? 'Reference' : video.title;
   const displayDescription = video.status === 'draft' ? '' : video.description;
@@ -61,7 +62,6 @@ const [socialAccessible, setSocialAccessible] = useState(true);
   const isSocialType = video.type === 'social' || (video.type as string) === 'instagram';
   const isSocialLink = video.originalUrl && (video.originalUrl.includes('instagram.com') || video.originalUrl.includes('tiktok.com'));
   const isCommunityVideo = isSocialType || isSocialLink || !!video.uploader;
-
 
   const isLiked = useMemo(() => {
     return userProfile?.likedVideoIds?.includes(video.id) ?? false;
@@ -81,11 +81,26 @@ const [socialAccessible, setSocialAccessible] = useState(true);
     }
   }, [isHovered]);
 
+  useEffect(() => {
+    if (!isHovered) return;
+    const handleTouchOutside = (e: TouchEvent | MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsHovered(false);
+      }
+    };
+    document.addEventListener('touchstart', handleTouchOutside);
+    document.addEventListener('mousedown', handleTouchOutside);
+    return () => {
+      document.removeEventListener('touchstart', handleTouchOutside);
+      document.removeEventListener('mousedown', handleTouchOutside);
+    };
+  }, [isHovered]);
+
   const handleMouseEnter = () => {
     if (video.isShort || poster) return;
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovered(true);
-    }, 200);
+    }, 150);
   };
 
   const handleMouseLeave = () => {
@@ -103,6 +118,27 @@ const [socialAccessible, setSocialAccessible] = useState(true);
       setDonateForceTimer(true);
       setShowDonateDialog(true);
     }
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('a')) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+
+    const isTouchDevice = typeof window !== 'undefined' && (
+      window.matchMedia('(pointer: coarse)').matches ||
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0
+    );
+
+    if (isTouchDevice && !isHovered) {
+      setIsHovered(true);
+      return;
+    }
+
+    openVideoPlayer();
   };
 
   const handlePlayClick = (e: React.MouseEvent) => {
@@ -271,13 +307,13 @@ const [socialAccessible, setSocialAccessible] = useState(true);
     return (
       <>
       <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
-        <div ref={cardRef}
+        <div ref={(node) => { cardRef(node); containerRef.current = node; }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          onClick={handlePlayClick}
+          onClick={handleCardClick}
           className={cn(
-            "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lg transform-gpu transition-all duration-300 ease-in-out group/card cursor-pointer",
-            isHovered && !isPlayerOpen ? "scale-105 z-[100] shadow-2xl" : "z-0",
+            "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lg transform-gpu transition-all duration-300 ease-in-out group/card cursor-pointer touch-manipulation",
+            isHovered && !isPlayerOpen ? "scale-105 z-[100] shadow-2xl ring-2 ring-purple-500/50" : "z-0",
             aspectRatio
           )}
         >
@@ -347,6 +383,21 @@ const [socialAccessible, setSocialAccessible] = useState(true);
             "absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none transition-opacity duration-300 z-10",
             isHovered ? "opacity-100" : "opacity-60"
           )} />
+
+          {/* Center Play / Fullscreen Button Overlay */}
+          <div className={cn(
+            "absolute inset-0 flex items-center justify-center pointer-events-auto z-20 transition-all duration-300",
+            isHovered && !isPlayerOpen ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
+          )}>
+            <button
+              onClick={handlePlayClick}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-black/75 hover:bg-purple-600 text-white backdrop-blur-md border border-white/20 shadow-2xl transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            >
+              <PlayCircle className="h-5 w-5 text-white fill-white/30" />
+              <span className="text-xs font-bold tracking-wide">Play Fullscreen</span>
+              <Maximize className="h-3.5 w-3.5 text-purple-300" />
+            </button>
+          </div>
 
           {/* Subtle creator badge — top-left, always visible for community videos */}
           <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} />
@@ -476,13 +527,13 @@ const [socialAccessible, setSocialAccessible] = useState(true);
     <>
     <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
       <div
-        ref={cardRef}
+        ref={(node) => { cardRef(node); containerRef.current = node; }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        onClick={handlePlayClick}
+        onClick={handleCardClick}
         className={cn(
-          "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lg transform-gpu transition-all duration-300 ease-in-out group/card cursor-pointer",
-          isHovered && !isPlayerOpen && !video.isShort && !poster ? "scale-110 z-[100] shadow-2xl" : "z-0",
+          "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lg transform-gpu transition-all duration-300 ease-in-out group/card cursor-pointer touch-manipulation",
+          isHovered && !isPlayerOpen && !video.isShort && !poster ? "scale-110 z-[100] shadow-2xl ring-2 ring-purple-500/50" : "z-0",
           aspectRatio
         )}>
         {!isImageLoaded && <Skeleton className="absolute inset-0" />}
@@ -529,6 +580,21 @@ const [socialAccessible, setSocialAccessible] = useState(true);
           />
         )}
 
+        {/* Center Play / Fullscreen Button Overlay */}
+        <div className={cn(
+          "absolute inset-0 flex items-center justify-center pointer-events-auto z-20 transition-all duration-300",
+          isHovered && !isPlayerOpen && !video.isShort && !poster ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
+        )}>
+          <button
+            onClick={handlePlayClick}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-black/75 hover:bg-purple-600 text-white backdrop-blur-md border border-white/20 shadow-2xl transition-all hover:scale-105 active:scale-95 cursor-pointer"
+          >
+            <PlayCircle className="h-5 w-5 text-white fill-white/30" />
+            <span className="text-xs font-bold tracking-wide">Play Fullscreen</span>
+            <Maximize className="h-3.5 w-3.5 text-purple-300" />
+          </button>
+        </div>
+
         {/* Subtle creator badge — top-left, always visible for any video with uploader/originalUrl */}
         <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} />
 
@@ -547,18 +613,21 @@ const [socialAccessible, setSocialAccessible] = useState(true);
           </h3>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-                <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-8 w-8 rounded-full bg-white/90 text-black hover:bg-white backdrop-blur-sm">
+                <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-8 w-8 rounded-full bg-white/90 text-black hover:bg-white backdrop-blur-sm" title="Play Video">
                   <PlayCircle className="fill-black h-5 w-5" />
                 </Button>
-              <Button variant="ghost" size="icon" onClick={handleLikeToggle} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm">
+              <Button variant="ghost" size="icon" onClick={handleLikeToggle} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Like Video">
                 <Heart className={cn("text-white h-4 w-4", isLiked && "fill-red-500 text-red-500")} />
               </Button>
-              <Button variant="ghost" size="icon" onClick={handleShare} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm">
+              <Button variant="ghost" size="icon" onClick={handleSaveToBoard} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Save to Moodboard">
+                <Bookmark className="text-purple-300 fill-purple-400/30 hover:fill-purple-400 h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={handleShare} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Share Link">
                 <Share2 className="text-white h-4 w-4" />
               </Button>
             </div>
             <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm">
+                <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Fullscreen">
                   <Maximize className="text-white h-4 w-4" />
                 </Button>
             </div>
@@ -590,7 +659,6 @@ const [socialAccessible, setSocialAccessible] = useState(true);
                 {/* Main Player Container */}
                 <div className="relative aspect-video w-full rounded-2xl overflow-hidden shadow-[0_0_50px_-10px_rgba(124,58,237,0.3)] bg-black border border-white/10">
                   <VideoPlayer video={video} muted={false} />
-                  <VideoActionsBar video={video} userProfile={userProfile} />
                 </div>
 
                 {/* Meta Info */}

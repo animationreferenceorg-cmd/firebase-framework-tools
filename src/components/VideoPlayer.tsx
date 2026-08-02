@@ -429,11 +429,11 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                 </div>
             )}
 
-            {/* Bottom Controls Container - Only reveals when moving mouse towards bottom */}
+            {/* Bottom Controls Container - Reveals on hover or tap */}
             <div
                 className={cn(
-                    "absolute bottom-0 left-0 right-0 z-[150] bg-gradient-to-t from-black/95 via-black/80 to-transparent pt-10 pb-4 px-4 md:px-6 transition-all duration-300 ease-in-out",
-                    isSeeking || isNearBottom ? "translate-y-0 opacity-100 pointer-events-auto" : "translate-y-4 opacity-0 pointer-events-none"
+                    "absolute bottom-0 left-0 right-0 z-[150] bg-gradient-to-t from-black/95 via-black/80 to-transparent pt-8 md:pt-10 pb-3 md:pb-4 px-3 md:px-6 transition-all duration-300 ease-in-out",
+                    isSeeking || isNearBottom || showControls ? "translate-y-0 opacity-100 pointer-events-auto" : "translate-y-4 opacity-0 pointer-events-none"
                 )}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -455,20 +455,48 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                     <p className="text-xs font-mono font-bold text-white w-12">{formatTime(duration)}</p>
                 </div>
 
-                {/* Bottom Row: Time | Speed (Center) | Fullscreen */}
-                <div className="flex justify-between items-center relative">
+                {/* Bottom Row: Time | Speed | Actions (Like, Save, Share, Fullscreen) */}
+                <div className="flex items-center justify-between gap-1.5 sm:gap-3 relative">
 
-                    {/* Left: Time / Volume / Frames */}
-                    <div className="flex items-center gap-3">
-                        <span className="text-xs font-medium text-zinc-300 hidden md:block">
-                            {formatTime(currentTime)} / {formatTime(duration)}
-                        </span>
+                    {/* Left: Play/Pause, Frame Steppers & Time */}
+                    <div className="flex items-center gap-1.5 md:gap-3">
+                        <Button
+                            type="button"
+                            onClick={handlePlayPause}
+                            variant="ghost"
+                            size="icon"
+                            className="hover:bg-white/20 text-white rounded-full h-8 w-8 shrink-0 bg-white/10"
+                            title={isPlaying ? "Pause" : "Play"}
+                        >
+                            {isPlaying ? <Pause className="h-4 w-4 fill-white" /> : <Play className="h-4 w-4 fill-white ml-0.5" />}
+                        </Button>
 
-                        <span className="text-xs font-mono text-zinc-400 border-l border-white/20 pl-3 hidden md:block">
+                        {/* Step Frame buttons for mobile & desktop */}
+                        <div className="flex items-center gap-0.5 bg-white/10 rounded-full px-1.5 py-0.5 border border-white/10">
+                            <button
+                                type="button"
+                                onClick={() => stepFrame('backward')}
+                                className="text-[10px] font-mono text-zinc-200 hover:text-white px-1 py-0.5 rounded hover:bg-white/10 cursor-pointer"
+                                title="Previous Frame (,)"
+                            >
+                                ◄
+                            </button>
+                            <span className="text-[9px] font-mono text-zinc-400 hidden sm:inline">FRAME</span>
+                            <button
+                                type="button"
+                                onClick={() => stepFrame('forward')}
+                                className="text-[10px] font-mono text-zinc-200 hover:text-white px-1 py-0.5 rounded hover:bg-white/10 cursor-pointer"
+                                title="Next Frame (.)"
+                            >
+                                ►
+                            </button>
+                        </div>
+
+                        <span className="text-xs font-mono text-zinc-400 border-l border-white/20 pl-2 hidden lg:block">
                             Frame {Math.floor(currentTime * fps)} / {duration ? Math.floor(duration * fps) : 0}
                         </span>
 
-                        <div className="flex items-center gap-1 border-l border-white/20 pl-3 hidden sm:flex">
+                        <div className="flex items-center gap-1 border-l border-white/20 pl-2 hidden md:flex">
                             <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mr-1">FPS</span>
                             <select
                                 value={fps}
@@ -503,17 +531,17 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                         </div>
                     </div>
 
-                    {/* Center: Speed Control */}
-                    <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-auto">
+                    {/* Center: Speed Control (Hidden on small mobile, visible on sm+) */}
+                    <div className="hidden sm:flex items-center justify-center">
                         {showCaptureButton ? (
                             <Button type="button" onClick={handleCaptureFrame} size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-none h-8 text-xs">
                                 <Camera className="mr-2 h-3 w-3" />
                                 Capture
                             </Button>
                         ) : (
-                            <div className="flex items-center gap-2 bg-black/40 rounded-full px-3 py-1 backdrop-blur-md border border-white/5">
+                            <div className="flex items-center gap-1.5 bg-black/40 rounded-full px-2.5 py-1 backdrop-blur-md border border-white/5">
                                 <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider">Speed</span>
-                                <div className="w-20">
+                                <div className="w-16 md:w-20">
                                     <Slider
                                         value={[playbackRate]}
                                         onValueChange={handlePlaybackRateChange}
@@ -526,13 +554,13 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                                         thumbClassName="h-3 w-3 bg-white hover:scale-125 transition-transform"
                                     />
                                 </div>
-                                <span className="text-[10px] font-mono w-6 text-right">{playbackRate}x</span>
+                                <span className="text-[10px] font-mono text-zinc-200">{playbackRate}x</span>
                             </div>
                         )}
                     </div>
 
                     {/* Right: Like, Save, Share, Timeline Toggle & Fullscreen */}
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                         {/* Like Button */}
                         <Button
                             type="button"
@@ -540,7 +568,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                             variant="ghost"
                             size="icon"
                             title="Like Video"
-                            className="hover:bg-white/10 text-white rounded-full h-8 w-8 transition-colors cursor-pointer"
+                            className="hover:bg-white/20 text-white rounded-full h-8 w-8 transition-colors cursor-pointer bg-white/10 sm:bg-transparent"
                         >
                             <Heart className={cn("h-4 w-4 transition-colors", isLiked ? "fill-red-500 text-red-500" : "text-white")} />
                         </Button>
@@ -555,7 +583,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                             variant="ghost"
                             size="icon"
                             title="Save to Moodboard"
-                            className="hover:bg-white/10 text-white rounded-full h-8 w-8 transition-colors cursor-pointer"
+                            className="hover:bg-white/20 text-white rounded-full h-8 w-8 transition-colors cursor-pointer bg-white/10 sm:bg-transparent"
                         >
                             <Bookmark className="h-4 w-4 text-purple-300 fill-purple-400/20 hover:fill-purple-400" />
                         </Button>
@@ -571,7 +599,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                             variant="ghost"
                             size="icon"
                             title="Share Video"
-                            className="hover:bg-white/10 text-white rounded-full h-8 w-8 transition-colors cursor-pointer"
+                            className="hover:bg-white/20 text-white rounded-full h-8 w-8 transition-colors cursor-pointer bg-white/10 sm:bg-transparent"
                         >
                             <Share2 className="h-4 w-4" />
                         </Button>
@@ -592,8 +620,8 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                             </Button>
                         )}
                         {!hideFullscreenControl && (
-                            <Button type="button" onClick={handleFullscreenToggle} variant="ghost" size="icon" title="Toggle Fullscreen" className="hover:bg-white/10 text-white rounded-full h-8 w-8">
-                                {isFullScreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+                            <Button type="button" onClick={handleFullscreenToggle} variant="ghost" size="icon" title="Toggle Fullscreen" className="hover:bg-white/20 text-white rounded-full h-8 w-8 bg-white/10 sm:bg-transparent">
+                                {isFullScreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
                             </Button>
                         )}
                     </div>

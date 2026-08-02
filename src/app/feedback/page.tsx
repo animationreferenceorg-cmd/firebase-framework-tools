@@ -37,11 +37,11 @@ export default function FeedbackPage() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (!user?.email) return;
+    if (!user?.uid) return;
 
     const q = query(
       collection(db, 'feedback'),
-      where('userEmail', '==', user.email),
+      where('userId', '==', user.uid),
       orderBy('createdAt', 'desc')
     );
 
@@ -63,7 +63,7 @@ export default function FeedbackPage() {
     );
 
     return () => unsubscribe();
-  }, [user?.email]);
+  }, [user?.uid]);
 
   if (authLoading || loading) {
     return (

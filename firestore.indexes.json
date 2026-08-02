@@ -33,7 +33,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "userEmail",
+          "fieldPath": "userId",
           "order": "ASCENDING"
         },
         {

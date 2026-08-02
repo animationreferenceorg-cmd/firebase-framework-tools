@@ -400,32 +400,33 @@ export function VideoCard({ video, poster }: VideoCardProps) {
               </h3>
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 sm:gap-1.5">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleLikeToggle}
-                  className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+                  className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm p-0"
                   title="Like Video"
                 >
-                  <Heart className={cn("text-white h-4 w-4", isLiked && "fill-red-500 text-red-500")} />
+                  <Heart className={cn("text-white h-3.5 w-3.5 sm:h-4 sm:w-4", isLiked && "fill-red-500 text-red-500")} />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleSaveToBoard}
-                  className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+                  className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm p-0"
                   title="Save to Moodboard"
                 >
-                  <Bookmark className="text-purple-300 fill-purple-400/30 hover:fill-purple-400 h-4 w-4" />
+                  <Bookmark className="text-purple-300 fill-purple-400/30 hover:fill-purple-400 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleShare}
-                  className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+                  className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm p-0"
+                  title="Share Link"
                 >
-                  <Share2 className="text-white h-4 w-4" />
+                  <Share2 className="text-white h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
               </div>
 
@@ -579,20 +580,20 @@ export function VideoCard({ video, poster }: VideoCardProps) {
             {displayTitle}
           </h3>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Button variant="ghost" size="icon" onClick={handleLikeToggle} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Like Video">
-                <Heart className={cn("text-white h-4 w-4", isLiked && "fill-red-500 text-red-500")} />
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <Button variant="ghost" size="icon" onClick={handleLikeToggle} className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm p-0" title="Like Video">
+                <Heart className={cn("text-white h-3.5 w-3.5 sm:h-4 sm:w-4", isLiked && "fill-red-500 text-red-500")} />
               </Button>
-              <Button variant="ghost" size="icon" onClick={handleSaveToBoard} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Save to Moodboard">
-                <Bookmark className="text-purple-300 fill-purple-400/30 hover:fill-purple-400 h-4 w-4" />
+              <Button variant="ghost" size="icon" onClick={handleSaveToBoard} className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm p-0" title="Save to Moodboard">
+                <Bookmark className="text-purple-300 fill-purple-400/30 hover:fill-purple-400 h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={handleShare} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Share Link">
-                <Share2 className="text-white h-4 w-4" />
+              <Button variant="ghost" size="icon" onClick={handleShare} className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm p-0" title="Share Link">
+                <Share2 className="text-white h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Button>
             </div>
             <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Fullscreen">
-                  <Maximize className="text-white h-4 w-4" />
+                <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm p-0" title="Fullscreen">
+                  <Maximize className="text-white h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
             </div>
           </div>

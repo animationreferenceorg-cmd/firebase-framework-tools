@@ -8,6 +8,7 @@ export const metadata: Metadata = {
     title: 'The Ultimate Guide to Analyzing Animation Reference (Frame-by-Frame)',
     description: 'Learn the professional workflow for studying animation reference. Deconstruct timing, spacing, and mechanics using frame-by-frame analysis.',
     keywords: 'how to analyze animation reference, study animation mechanics, frame-by-frame analysis, animation timing and spacing',
+    alternates: { canonical: 'https://animationreference.org/resources/how-to-analyze-animation-reference' },
 };
 
 export default function AnalysisGuide() {

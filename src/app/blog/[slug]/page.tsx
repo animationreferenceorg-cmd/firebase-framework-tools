@@ -41,6 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         title: post.seoTitle || post.title,
         description: post.seoDescription,
         keywords: post.keywords?.join(', '),
+        alternates: { canonical: `https://animationreference.org/blog/${slug}` },
     };
 }
 

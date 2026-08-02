@@ -8,6 +8,7 @@ export const metadata: Metadata = {
     title: '10 Best Animation Reference Websites for Professionals (2024)',
     description: 'The ultimate list of animation reference websites for professional artists. Compare libraries, players, and features to find the best reference for your next shot.',
     keywords: 'animation reference websites, best animation reference, reference library, 2d animation reference, 3d animation reference',
+    alternates: { canonical: 'https://animationreference.org/resources/best-animation-reference-websites' },
 };
 
 export default function BestReferenceWebsites() {

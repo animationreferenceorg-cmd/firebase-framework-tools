@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { doc, updateDoc } from 'firebase/firestore';
 import { FeedbackModal } from '@/components/FeedbackModal';
 import { UpdatesModal } from '@/components/UpdatesModal';
+import { UserFeedbackPanel } from '@/components/UserFeedbackPanel';
 
 export function LayoutClient({ children }: { children: React.ReactNode }) {
     const { userProfile, loading: userProfileLoading } = useUser();
@@ -191,6 +192,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     </SidebarLink>
                                 </SidebarMenuItem>
                             </SidebarMenu>
+                            <UserFeedbackPanel />
                         </SidebarGroup>
                         {isAdmin && (
                             <>

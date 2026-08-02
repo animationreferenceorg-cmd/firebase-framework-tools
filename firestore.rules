@@ -32,10 +32,11 @@ service cloud.firestore {
       allow update: if request.auth != null; // For liking items
     }
 
-    // Feedback: Authenticated users can create, only Admin can read/manage
+    // Feedback: Authenticated users can create and read their own, Admin can read/manage all
     match /feedback/{feedbackId} {
       allow create: if request.auth != null;
-      allow read, write: if isAdmin();
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
     }
 
     // Users: Users can read/write their own document and any subcollections.

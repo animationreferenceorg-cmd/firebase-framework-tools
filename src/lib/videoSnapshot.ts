@@ -13,8 +13,9 @@ export function getSnapshotVideos(): Promise<Video[]> {
         return res.json() as Promise<Video[]>;
       })
       .catch(err => {
+        console.warn('Unable to fetch /data/videos-snapshot.json, using fallback:', err);
         cache = null; // allow retry on next call
-        throw err;
+        return [] as Video[];
       });
   }
   return cache;

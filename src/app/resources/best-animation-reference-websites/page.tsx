@@ -64,7 +64,7 @@ export default function BestReferenceWebsites() {
                                     ))}
                                 </ul>
                                 <Button asChild size="lg" className="h-16 px-10 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-lg">
-                                    <Link href="/signup">Try for Free <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                                    <Link href="/login?tab=sign-up">Try for Free <ArrowRight className="ml-2 h-5 w-5" /></Link>
                                 </Button>
                             </div>
                             <div className="relative aspect-video rounded-2xl border border-white/10 bg-zinc-900 overflow-hidden shadow-2xl group">
@@ -227,7 +227,7 @@ export default function BestReferenceWebsites() {
                     <p className="text-xl text-zinc-400">Join 10,000+ artists who have streamlined their workflow with the world's best reference library.</p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
                         <Button asChild size="lg" className="h-16 px-10 rounded-full bg-white text-black font-bold hover:scale-105 transition-transform">
-                            <Link href="/signup">Get Started for Free</Link>
+                            <Link href="/login?tab=sign-up">Get Started for Free</Link>
                         </Button>
                         <Link href="/browse" className="text-zinc-400 hover:text-white transition-colors">Browse the library first</Link>
                     </div>

@@ -31,6 +31,7 @@ export default function FeedPage() {
   const [isDonateOpen, setIsDonateOpen] = useState(false);
   const [isFounderDealOpen, setIsFounderDealOpen] = useState(false);
   const { userProfile } = useUser();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const { ref: inViewRef, inView } = useInView({
     threshold: 0.1, // Trigger earlier
@@ -70,7 +71,7 @@ export default function FeedPage() {
 
 
   return (
-    <div className="relative h-[calc(100dvh-140px)] w-full snap-y snap-mandatory overflow-y-auto overflow-x-hidden bg-background scrollbar-hide">
+    <div ref={scrollContainerRef} className="relative h-[calc(100dvh-140px)] w-full snap-y snap-mandatory overflow-y-auto overflow-x-hidden bg-background scrollbar-hide">
 
 
       {/* Bento Box Style Promotion Banner */}
@@ -141,7 +142,7 @@ export default function FeedPage() {
         <>
           {videos.map((video) => (
             <section key={video.id} className="relative h-full w-full snap-start snap-always overflow-hidden bg-black">
-              <ShortsPlayer video={video} />
+              <ShortsPlayer video={video} scrollRootRef={scrollContainerRef} />
             </section>
           ))}
 

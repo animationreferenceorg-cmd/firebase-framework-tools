@@ -17,8 +17,11 @@ export function recordReferenceView(isPremium?: boolean): boolean {
     const count = raw ? parseInt(raw, 10) || 0 : 0;
     const newCount = count + 1;
 
+    console.log(`[Watch Tracker] Watched video count: ${newCount}/${WATCH_LIMIT_BEFORE_DONATE_POPUP}`);
+
     if (newCount >= WATCH_LIMIT_BEFORE_DONATE_POPUP) {
       localStorage.setItem(WATCH_COUNT_KEY, '0');
+      console.log(`[Watch Tracker] Limit reached (10/10)! Triggering 12s Donate Popup.`);
       return true;
     } else {
       localStorage.setItem(WATCH_COUNT_KEY, newCount.toString());

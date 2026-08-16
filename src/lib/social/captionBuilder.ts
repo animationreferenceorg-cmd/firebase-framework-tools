@@ -1,7 +1,5 @@
 import type { PlatformCaptionOptions, SocialPlatform } from './types';
 
-const BASE_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://animationreference.org';
-
 const DEFAULT_HASHTAGS = [
   '#animationreference',
   '#animation',
@@ -32,42 +30,48 @@ function formatHashtags(tags?: string[], limit: number = 6): string {
 
 /**
  * Smart Caption Generator for Social Platforms
+ *
+ * Artist-first framing (à la 80 Level): lead with crediting the creator,
+ * keep the site mention short and plain rather than salesy "link in bio"
+ * copy, and don't bury the credit under hashtags.
  */
 export function generateCaption(platform: SocialPlatform, opts: PlatformCaptionOptions): string {
-  const { title, description, authorName, tags, pageUrl } = opts;
-  const targetUrl = pageUrl || BASE_SITE_URL;
-  const creditText = authorName ? `\n\nAnimation by: @${authorName.replace(/\s+/g, '')}` : '';
+  const { title, description, authorName, tags } = opts;
+  const handle = authorName ? `@${authorName.replace(/\s+/g, '')}` : null;
+  const hook = handle ? `Incredible animation work by ${handle} 🎬` : `🎬 ${title}`;
   const hashtags = formatHashtags(tags, 8);
 
   switch (platform) {
     case 'instagram':
     case 'facebook': {
       const descSnippet = description ? `\n\n${description.slice(0, 200)}${description.length > 200 ? '...' : ''}` : '';
-      return `${title}${descSnippet}${creditText}\n\n👇 Watch in HD & search 1,000+ reference clips:\nLink in Bio 🔗 (${targetUrl})\n\n${hashtags}`;
+      const titleLine = handle ? `\n\n${title}` : '';
+      return `${hook}${titleLine}${descSnippet}\n\nCheck out more animations at animationreference.org\n\n${hashtags}`;
     }
 
     case 'twitter': {
       // Twitter 280 character limit handling
       const hashtagsTwitter = formatHashtags(tags, 3);
-      const urlText = `\n🔗 ${targetUrl}`;
-      const creditTwitter = authorName ? `\nBy: @${authorName.replace(/\s+/g, '')}` : '';
-      
-      const fixedLength = urlText.length + creditTwitter.length + hashtagsTwitter.length + 5;
+      const ctaText = `\nCheck out more animations at animationreference.org`;
+      const creditTwitter = handle ? `\nBy ${handle}` : '';
+
+      const fixedLength = ctaText.length + creditTwitter.length + hashtagsTwitter.length + 5;
       const maxTitleLen = Math.max(20, 280 - fixedLength);
-      
+
       const trimmedTitle = title.length > maxTitleLen ? `${title.slice(0, maxTitleLen - 3)}...` : title;
 
-      return `${trimmedTitle}${creditTwitter}${urlText}\n\n${hashtagsTwitter}`;
+      return `${trimmedTitle}${creditTwitter}${ctaText}\n\n${hashtagsTwitter}`;
     }
 
     case 'linkedin': {
       const descSnippet = description ? `\n\n${description.slice(0, 300)}${description.length > 300 ? '...' : ''}` : '';
       const linkedinTags = formatHashtags(tags, 6);
-      return `🎬 Animation Reference Spotlight: ${title}${descSnippet}${creditText}\n\nExplore full high-framerate playback and frame-by-frame analysis at Animation Reference:\n${targetUrl}\n\n${linkedinTags}`;
+      const titleLine = handle ? `\n\n${title}` : '';
+      return `${hook}${titleLine}${descSnippet}\n\nCheck out more animations at animationreference.org\n\n${linkedinTags}`;
     }
 
     default:
-      return `${title}\n\n${targetUrl}`;
+      return `${title}\n\nCheck out more animations at animationreference.org`;
   }
 }
 

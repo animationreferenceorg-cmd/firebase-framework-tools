@@ -13,4 +13,16 @@ runConfig:
   env:
     - variable: STRIPE_SECRET_KEY
     - variable: STRIPE_WEBHOOK_SECRET
+    # Social auto-poster (see /admin/social) — set these via Secret Manager
+    # once you have credentials for each platform. Missing ones just show
+    # "Needs Env Setup" in the admin UI and are skipped by the daily bot.
+    - variable: CRON_SECRET
+    - variable: INSTAGRAM_ACCOUNT_ID
+    - variable: META_PAGE_ACCESS_TOKEN
+    - variable: X_API_KEY
+    - variable: X_API_KEY_SECRET
+    - variable: X_ACCESS_TOKEN
+    - variable: X_ACCESS_TOKEN_SECRET
+    - variable: LINKEDIN_ACCESS_TOKEN
+    - variable: LINKEDIN_ORGANIZATION_URN
 

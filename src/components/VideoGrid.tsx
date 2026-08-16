@@ -10,7 +10,7 @@ interface VideoGridProps {
   columns?: number;
 }
 
-export function VideoGrid({ title, videos, columns = 5 }: VideoGridProps) {
+export function VideoGrid({ title, videos, columns = 4 }: VideoGridProps) {
   if (!videos || videos.length === 0) {
     return null;
   }

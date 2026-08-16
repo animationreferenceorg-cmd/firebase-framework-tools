@@ -488,6 +488,8 @@ export function BrowseDirectory({ categories, videos, query: controlledQuery, on
     );
 }
 
+import { useWatchTracker } from '@/hooks/use-watch-tracker';
+
 // ArtStation Style Square Category / Channel Card
 function BrowseCard({
     href,
@@ -505,11 +507,13 @@ function BrowseCard({
     onClick?: (e: React.MouseEvent) => void;
 }) {
     const [hasError, setHasError] = useState(false);
+    const { recordWatch } = useWatchTracker();
 
     return (
         <Link
             href={href}
             onClick={onClick}
+            onMouseEnter={() => recordWatch()}
             className="group/card relative aspect-square rounded-xl overflow-hidden border border-white/10 bg-black shadow-lg transition-all duration-300 text-left hover:-translate-y-1 hover:border-purple-500/80 hover:shadow-[0_0_30px_-5px_rgba(168,85,247,0.5)] cursor-pointer block w-full"
         >
             {coverUrl && !hasError ? (

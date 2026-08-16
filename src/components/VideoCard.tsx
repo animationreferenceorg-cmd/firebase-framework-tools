@@ -26,6 +26,28 @@ import { VideoPlayer } from './VideoPlayer';
 import Link from 'next/link';
 import type { Video } from '@/lib/types';
 
+function getPreviewUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  if (url.includes('playlist.m3u8')) {
+    return url.replace('playlist.m3u8', 'play_480p.mp4');
+  }
+  if (url.startsWith('<iframe')) {
+    const match = url.match(/src=["']([^"']+)["']/);
+    return match ? match[1] : undefined;
+  }
+  return url;
+}
+
+function isPlayableVideoUrl(url?: string): boolean {
+  if (!url) return false;
+  if (url.includes('.mp4') || url.includes('.webm') || url.includes('firebasestorage.googleapis.com')) return true;
+  // If it's a social link (instagram, tiktok), it's not directly playable in a <video> tag
+  if (url.includes('instagram.com') || url.includes('tiktok.com')) return false;
+  return true; // assume playable otherwise
+}
+
+import { useWatchTracker } from '@/hooks/use-watch-tracker';
+
 interface VideoCardProps {
   video: Video;
   poster?: boolean;
@@ -34,6 +56,7 @@ interface VideoCardProps {
 export function VideoCard({ video, poster }: VideoCardProps) {
   const { user: authUser } = useAuth();
   const { userProfile, mutate } = useUser();
+  const { recordWatch } = useWatchTracker();
   const { toast } = useToast();
 
   const [isHovered, setIsHovered] = useState(false);
@@ -68,10 +91,12 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   }, [userProfile, video.id]);
 
   useEffect(() => {
-    if (isHovered && videoRef.current) {
-      const playPromise = videoRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {});
+    if (isHovered) {
+      if (videoRef.current) {
+        const playPromise = videoRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {});
+        }
       }
     } else if (!isHovered && videoRef.current) {
       videoRef.current.pause();
@@ -97,6 +122,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   }, [isHovered]);
 
   const handleMouseEnter = () => {
+    recordWatch();
     if (video.isShort || poster) return;
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovered(true);
@@ -113,11 +139,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
 
   const openVideoPlayer = () => {
     setIsPlayerOpen(true);
-    const triggerPopup = recordReferenceView(userProfile?.isPremium);
-    if (triggerPopup) {
-      setDonateForceTimer(true);
-      setShowDonateDialog(true);
-    }
+    recordWatch();
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -150,11 +172,7 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   const handleOpenPlayerChange = (open: boolean) => {
     setIsPlayerOpen(open);
     if (open) {
-      const triggerPopup = recordReferenceView(userProfile?.isPremium);
-      if (triggerPopup) {
-        setDonateForceTimer(true);
-        setShowDonateDialog(true);
-      }
+      recordWatch();
     }
   };
 
@@ -218,15 +236,17 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   // Source for the lightweight native <video> fallback (only used when a card
   // has no thumbnail image). The grid no longer mounts hls.js players on hover —
   // full playback happens in the click-to-open VideoPlayer dialog instead.
-  const videoUrlForPreview = video.videoUrl;
+  const videoUrlForPreview = getPreviewUrl(video.videoUrl);
 
   // Universal: show link badge on ANY video that has an uploader or originalUrl
   const linkUrl = video.originalUrl || (video.uploader ? video.videoUrl : null);
 
   if (video.isShort || poster) {
     return (
+      <>
       <Link href={`/shorts/${video.id}`} className="w-full cursor-pointer group/card block">
         <div ref={cardRef} onMouseEnter={() => {
+            recordWatch();
             setIsHovered(true);
             if (videoRef.current) {
               videoRef.current.play().catch(() => {});
@@ -293,6 +313,23 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} size="sm" />
         </div>
       </Link>
+
+      <LimitReachedDialog
+        open={showLimitDialog}
+        onOpenChange={setShowLimitDialog}
+        feature="likes"
+        onDonateClick={() => setShowDonateDialog(true)}
+      />
+
+      <DonateDialog
+        open={showDonateDialog}
+        forceTimer={donateForceTimer}
+        onOpenChange={(val) => {
+          setShowDonateDialog(val);
+          if (!val) setDonateForceTimer(false);
+        }}
+      />
+      </>
     )
   }
 
@@ -342,7 +379,6 @@ export function VideoCard({ video, poster }: VideoCardProps) {
             </>
           ) : video.videoUrl ? (
             <video
-              ref={videoRef}
               src={cardInView ? `${videoUrlForPreview}#t=0.1` : undefined}
               preload="metadata"
               muted
@@ -363,10 +399,10 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           )}
 
           {/* Native video hover preview */}
-          {video.videoUrl && (
+          {video.videoUrl && isPlayableVideoUrl(video.videoUrl) && (
             <video
               ref={videoRef}
-              src={cardInView ? video.videoUrl : undefined}
+              src={cardInView ? getPreviewUrl(video.videoUrl) : undefined}
               preload="metadata"
               muted
               loop
@@ -543,10 +579,10 @@ export function VideoCard({ video, poster }: VideoCardProps) {
           )}
         
         {/* Native video hover preview for standard cards */}
-        {video.videoUrl && !video.isShort && !poster && (
+        {video.videoUrl && !video.isShort && !poster && isPlayableVideoUrl(video.videoUrl) && (
           <video
             ref={videoRef}
-            src={cardInView ? video.videoUrl : undefined}
+            src={cardInView ? getPreviewUrl(video.videoUrl) : undefined}
             preload="metadata"
             muted
             loop

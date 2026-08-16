@@ -52,6 +52,7 @@ export function DonateDialog({ children, open, onOpenChange, forceTimer = false 
     const [canClose, setCanClose] = useState(!forceTimer);
 
     useEffect(() => {
+        console.log(`[DonateDialog] Rendered with open=${open}, forceTimer=${forceTimer}`);
         if (!open || !forceTimer) {
             setSeconds(TIMER_DURATION);
             setCanClose(!forceTimer);
@@ -131,7 +132,7 @@ export function DonateDialog({ children, open, onOpenChange, forceTimer = false 
                     if (forceTimer && !canClose) e.preventDefault();
                 }}
                 className={cn(
-                    "max-w-5xl w-[95vw] max-h-[85vh] p-0 bg-[#050505] border-white/10 text-white flex flex-col",
+                    "max-w-5xl w-[95vw] max-h-[85vh] p-0 bg-[#050505] border-white/10 text-white flex flex-col z-[9999]",
                     forceTimer && !canClose && "[&>button]:hidden"
                 )}
             >

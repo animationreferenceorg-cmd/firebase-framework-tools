@@ -12,30 +12,24 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, ExternalLink, Instagram } from 'lucide-react';
 import Link from 'next/link';
 
-import { DonateDialog } from '@/components/DonateDialog';
-import { recordReferenceView } from '@/lib/watch-tracker';
-
 interface VideoDetailClientProps {
     id: string;
     initialData?: Video | null;
 }
 
+import { useWatchTracker } from '@/hooks/use-watch-tracker';
+
 export function VideoDetailClient({ id, initialData }: VideoDetailClientProps) {
     const [video, setVideo] = useState<Video | null>(initialData || null);
     const [loading, setLoading] = useState(!initialData);
-    const [showDonateDialog, setShowDonateDialog] = useState(false);
-    const [donateForceTimer, setDonateForceTimer] = useState(false);
     const { userProfile } = useUser();
+    const { recordWatch } = useWatchTracker();
 
     useEffect(() => {
         if (video) {
-            const triggerPopup = recordReferenceView(userProfile?.isPremium);
-            if (triggerPopup) {
-                setDonateForceTimer(true);
-                setShowDonateDialog(true);
-            }
+            recordWatch();
         }
-    }, [video?.id, userProfile?.isPremium]);
+    }, [video?.id, recordWatch]);
 
     useEffect(() => {
         const fetchVideo = async () => {
@@ -129,15 +123,6 @@ export function VideoDetailClient({ id, initialData }: VideoDetailClientProps) {
                     </div>
                 </div>
             </main>
-
-            <DonateDialog
-                open={showDonateDialog}
-                forceTimer={donateForceTimer}
-                onOpenChange={(val) => {
-                    setShowDonateDialog(val);
-                    if (!val) setDonateForceTimer(false);
-                }}
-            />
         </div>
     );
 }

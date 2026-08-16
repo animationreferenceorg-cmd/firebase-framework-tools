@@ -99,7 +99,7 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
         const dim = searchParams.get('dimension');
         return dim === '2d' ? '2D' : dim === '3d' ? '3D' : 'all';
     });
-    const [columns, setColumns] = useState<number>(2);
+    const [columns, setColumns] = useState<number>(4);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(() => {
         if (initialCategoryId) return initialCategoryId;
         return searchParams.get('category');

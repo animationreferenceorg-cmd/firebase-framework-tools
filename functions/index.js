@@ -8,3 +8,5 @@ const handle = app.getRequestHandler();
 exports.nextServer = https.onRequest((req, res) => {
   return app.prepare().then(() => handle(req, res));
 });
+
+exports.dailySocialPost = require('./dailySocialPost').dailySocialPost;

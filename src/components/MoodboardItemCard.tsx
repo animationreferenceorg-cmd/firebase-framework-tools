@@ -35,11 +35,14 @@ function Player({ playerRef, ...props }: any) {
     )
 }
 
+import { useWatchTracker } from '@/hooks/use-watch-tracker';
+
 export function MoodboardItemCard({ video, className, onMaximize, playbackSpeed = 1.0, hoverDelay = 0 }: MoodboardItemCardProps) {
     const [isHovered, setIsHovered] = useState(false);
     const [isImageLoaded, setIsImageLoaded] = useState(false);
     const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const { recordWatch } = useWatchTracker();
 
     useEffect(() => {
         if (isHovered && videoRef.current) {
@@ -56,6 +59,7 @@ export function MoodboardItemCard({ video, className, onMaximize, playbackSpeed 
     }, [isHovered]);
 
     const handleMouseEnter = () => {
+        recordWatch();
         if (hoverDelay === 0) {
             setIsHovered(true);
             return;

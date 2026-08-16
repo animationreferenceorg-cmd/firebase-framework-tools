@@ -16,6 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import { likeCategory, unlikeCategory } from '@/lib/firestore';
 import ReactPlayer from 'react-player/lazy';
 
+import { useWatchTracker } from '@/hooks/use-watch-tracker';
+
 export function CategoryCard({ title, description, tags, href, imageUrl, videoUrl, hint, hideLikeButton }: Category & { hideLikeButton?: boolean }) {
   const [isHovered, setIsHovered] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
@@ -24,6 +26,7 @@ export function CategoryCard({ title, description, tags, href, imageUrl, videoUr
 
   const { user: authUser } = useAuth();
   const { userProfile, mutate } = useUser();
+  const { recordWatch } = useWatchTracker();
   const { toast } = useToast();
 
   const isLiked = useMemo(() => {
@@ -45,6 +48,7 @@ export function CategoryCard({ title, description, tags, href, imageUrl, videoUr
   }, [isHovered]);
 
   const handleMouseEnter = () => {
+    recordWatch();
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovered(true);
     }, 200);

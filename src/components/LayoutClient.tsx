@@ -5,7 +5,7 @@ import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarTrigger, 
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Clapperboard, Film, Home, LayoutGrid, List, Rss, Shield, BookCopy, Star, Camera, User, Box, ShoppingBag, CreditCard, MessageSquare } from 'lucide-react';
+import { Clapperboard, Film, Home, LayoutGrid, List, Rss, Shield, BookCopy, Star, Camera, User, Box, ShoppingBag, CreditCard, MessageSquare, Tag as TagIcon } from 'lucide-react';
 import { useUser } from '@/hooks/use-user';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -25,6 +25,8 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { FeedbackModal } from '@/components/FeedbackModal';
 import { UpdatesModal } from '@/components/UpdatesModal';
 import { UserFeedbackPanel } from '@/components/UserFeedbackPanel';
+
+import { WatchTrackerProvider } from '@/hooks/use-watch-tracker';
 
 export function LayoutClient({ children }: { children: React.ReactNode }) {
     const { userProfile, loading: userProfileLoading } = useUser();
@@ -68,15 +70,18 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
 
     if (isAdminPage || isComingSoon) {
         return (
-            <UploadProvider>
-                {children}
-                <UploadProgressManager />
-            </UploadProvider>
+            <WatchTrackerProvider>
+                <UploadProvider>
+                    {children}
+                    <UploadProgressManager />
+                </UploadProvider>
+            </WatchTrackerProvider>
         );
     }
 
     // This prevents hydration errors by ensuring the server and client render the same initial skeleton.
     if (!isClient) {
+        return null;
     }
 
     const isAdmin = userProfile?.role === 'admin';
@@ -85,20 +90,13 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     const isMoodboardPage = pathname.startsWith('/moodboard');
 
     const isCategoriesPage = pathname.startsWith('/categories');
-    const isProfilePage = pathname.startsWith('/profile');
+    const isProfilePage = pathname.startsWith('/profile') || pathname.startsWith('/u/');
 
     return (
-        <UploadProvider>
+        <WatchTrackerProvider>
+            <UploadProvider>
             {isMoodboardPage && (
-                <style dangerouslySetInnerHTML={{ __html: `
-                    /* Completely hide collapsed sidebar on moodboard workspace */
-                    [data-state="collapsed"] {
-                        --sidebar-width-icon: 0px !important;
-                        width: 0px !important;
-                        border-right-width: 0px !important;
-                        overflow: hidden !important;
-                    }
-                ` }} />
+                <style dangerouslySetInnerHTML={{ __html: '/* Completely hide collapsed sidebar on moodboard workspace */ [data-state="collapsed"] { --sidebar-width-icon: 0px !important; width: 0px !important; border-right-width: 0px !important; overflow: hidden !important; }' }} />
             )}
             <SidebarProvider>
                 <Sidebar>
@@ -254,30 +252,31 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                         )}>
                             {children}
                         </main>
-                        
-                        {!isMoodboardPage && (
-                            <footer className="mt-auto py-8 px-4 border-t border-white/5 flex flex-col items-center gap-4 text-center">
-                                <div className="max-w-md space-y-2">
-                                    <h3 className="text-sm font-semibold text-white/90">Have thoughts on the platform?</h3>
-                                    <p className="text-xs text-white/50">Your feedback helps us build the best reference tool for animators.</p>
-                                </div>
-                                <div className="w-48">
-                                    <FeedbackModal />
-                                </div>
-                                <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/40 mt-2">
-                                    <Link href="/blog" className="hover:text-white/70 transition-colors">Blog</Link>
-                                    <Link href="/resources/12-principles-of-animation-reference" className="hover:text-white/70 transition-colors">12 Principles of Animation</Link>
-                                    <Link href="/resources/combat-animation-reference" className="hover:text-white/70 transition-colors">Combat Reference</Link>
-                                    <Link href="/resources/locomotion-animation-reference" className="hover:text-white/70 transition-colors">Locomotion Reference</Link>
-                                </nav>
-                                <p className="text-[10px] text-white/20 mt-4">© 2026 Animation Reference. Built for the community.</p>
-                            </footer>
-                        )}
-                    </div>
-                    <UploadProgressManager />
-                </SidebarInset>
-            </SidebarProvider>
-        </UploadProvider>
+                            
+                            {!isMoodboardPage && (
+                                <footer className="mt-auto py-8 px-4 border-t border-white/5 flex flex-col items-center gap-4 text-center">
+                                    <div className="max-w-md space-y-2">
+                                        <h3 className="text-sm font-semibold text-white/90">Have thoughts on the platform?</h3>
+                                        <p className="text-xs text-white/50">Your feedback helps us build the best reference tool for animators.</p>
+                                    </div>
+                                    <div className="w-48">
+                                        <FeedbackModal />
+                                    </div>
+                                    <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/40 mt-2">
+                                        <Link href="/blog" className="hover:text-white/70 transition-colors">Blog</Link>
+                                        <Link href="/resources/12-principles-of-animation-reference" className="hover:text-white/70 transition-colors">12 Principles of Animation</Link>
+                                        <Link href="/resources/combat-animation-reference" className="hover:text-white/70 transition-colors">Combat Reference</Link>
+                                        <Link href="/resources/locomotion-animation-reference" className="hover:text-white/70 transition-colors">Locomotion Reference</Link>
+                                    </nav>
+                                    <p className="text-[10px] text-white/20 mt-4">© 2026 Animation Reference. Built for the community.</p>
+                                </footer>
+                            )}
+                        </div>
+                        <UploadProgressManager />
+                    </SidebarInset>
+                </SidebarProvider>
+            </UploadProvider>
+        </WatchTrackerProvider>
     )
 }
 

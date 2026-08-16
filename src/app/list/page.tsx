@@ -360,7 +360,7 @@ export default function CreativeCMSListPage() {
                                     </p>
                                 </div>
                             ) : (
-                                <VideoGrid title="" videos={filteredVideos} columns={5} />
+                                <VideoGrid title="" videos={filteredVideos} columns={4} />
                             )}
                         </div>
                     )}

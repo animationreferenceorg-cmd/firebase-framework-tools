@@ -21,6 +21,7 @@ interface ShortsPlayerProps {
     onCapture?: (dataUrl: string) => void;
     startsPaused?: boolean;
     muted?: boolean;
+    scrollRootRef?: React.RefObject<HTMLElement | null>;
 }
 
 // Client-side only component to wrap ReactPlayer
@@ -48,15 +49,20 @@ function Player({ playerRef, video, ...props }: any) {
     )
 }
 
-export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, startsPaused = false, muted = true }, ref) => {
+import { useWatchTracker } from '@/hooks/use-watch-tracker';
+
+export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, startsPaused = false, muted = true, scrollRootRef }, ref) => {
     const playerRef = React.useRef<ReactPlayer>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
 
     const { user: authUser } = useAuth();
     const { userProfile, mutate } = useUser();
+    const { recordWatch } = useWatchTracker();
     const { toast } = useToast();
 
-    const [isPlaying, setIsPlaying] = React.useState(!startsPaused);
+    // Always mount paused; the IntersectionObserver below is the sole source of
+    // truth for whether this player is actually visible and should play.
+    const [isPlaying, setIsPlaying] = React.useState(false);
     const [isMuted, setIsMuted] = React.useState(muted);
     const [played, setPlayed] = React.useState(0);
     const [duration, setDuration] = React.useState(0);
@@ -67,15 +73,14 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
     const [isSeeking, setIsSeeking] = React.useState(false);
     const [playbackRate, setPlaybackRate] = React.useState(1);
 
+    const hasRecordedWatchRef = React.useRef<string | null>(null);
+
     React.useEffect(() => {
-        if (isPlaying && video?.id) {
-            const triggerPopup = recordReferenceView(userProfile?.isPremium);
-            if (triggerPopup) {
-                setDonateForceTimer(true);
-                setShowDonateDialog(true);
-            }
+        if (isPlaying && video?.id && hasRecordedWatchRef.current !== video.id) {
+            hasRecordedWatchRef.current = video.id;
+            recordWatch();
         }
-    }, [isPlaying, video?.id, userProfile?.isPremium]);
+    }, [isPlaying, video?.id, recordWatch]);
 
     React.useEffect(() => {
         const observer = new IntersectionObserver(
@@ -85,7 +90,7 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
                     setShowUI(false);
                 }
             },
-            { threshold: 0.2 }
+            { root: scrollRootRef?.current ?? null, threshold: 0.6 }
         );
 
         if (containerRef.current) {
@@ -95,7 +100,7 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
         return () => {
             observer.disconnect();
         };
-    }, []);
+    }, [scrollRootRef]);
 
     const isLiked = React.useMemo(() => {
         if (!userProfile || !video) return false;

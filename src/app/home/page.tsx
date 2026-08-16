@@ -112,7 +112,7 @@ export default function HomePage() {
     // Filter State
     const [activeTab, setActiveTab] = useState<TabOption>('featured');
     const [activeType, setActiveType] = useState<TypeOption>('all');
-    const [columns, setColumns] = useState<number>(6);
+    const [columns, setColumns] = useState<number>(4);
 
     // Liked Data
     const [likedVideos, setLikedVideos] = useState<Video[]>([]);

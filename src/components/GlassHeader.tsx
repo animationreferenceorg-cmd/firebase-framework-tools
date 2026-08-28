@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import AuthHeader from '@/components/AuthHeader';
-import { Film, Sparkles, Plus, PlayCircle, Layers, Clapperboard } from 'lucide-react';
+import { Film, Sparkles, Plus, PlayCircle, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { UpdatesModal } from '@/components/UpdatesModal';
@@ -54,7 +54,6 @@ export function GlassHeader() {
                     {[
                         { label: 'Discover Library', href: '/home', icon: Film },
                         { label: 'Community & Crews', href: '/feed', icon: Sparkles },
-                        { label: 'Production Studio', href: '/studio/projects', icon: Clapperboard, isPro: true },
                     ].map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname === item.href || (item.href !== '/home' && pathname.startsWith(item.href));

@@ -45,7 +45,7 @@ import {
   Layers, 
   Globe, 
   Youtube, 
-  Video, 
+  Video as VideoIcon, 
   Twitter, 
   Instagram, 
   Briefcase, 
@@ -61,7 +61,8 @@ import {
   Eye,
   MapPin,
   Camera,
-  Users
+  Users,
+  GraduationCap
 } from 'lucide-react';
 
 const PATTERN_CLASSES: Record<string, string> = {
@@ -98,6 +99,13 @@ export default function ProfilePage() {
   const { toast } = useToast();
 
   const isStudioMaster = userProfile?.isPremium && userProfile?.tier === 'tier5';
+  const isSjsuStudent = Boolean(
+    userProfile?.isStudent || 
+    userProfile?.tier === 'student_unlimited' || 
+    userProfile?.school?.includes('SJSU') || 
+    userProfile?.unlimitedAccess || 
+    (userProfile?.studentEmail && userProfile.studentEmail.endsWith('@sjsu.edu'))
+  );
   const activePatternClass = PATTERN_CLASSES[userProfile?.profilePattern || 'obsidian_grid'] || PATTERN_CLASSES.obsidian_grid;
   const activeCardTintClass = CARD_TINT_CLASSES[userProfile?.profileCardTint || 'glass_purple'] || CARD_TINT_CLASSES.glass_purple;
   const activeAvatarGlowClass = AVATAR_GLOW_CLASSES[userProfile?.avatarGlow || 'none'] || AVATAR_GLOW_CLASSES.none;
@@ -504,7 +512,7 @@ export default function ProfilePage() {
                   )}
                   {userProfile?.vimeoUrl && (
                     <a href={userProfile.vimeoUrl} target="_blank" rel="noreferrer" className="px-3 py-1 rounded-full bg-white/5 border border-white/10 hover:border-sky-400/50 text-xs font-medium text-zinc-300 hover:text-white transition-all cursor-pointer flex items-center gap-1.5">
-                      <Video className="h-3.5 w-3.5 text-sky-400" /> Vimeo
+                      <VideoIcon className="h-3.5 w-3.5 text-sky-400" /> Vimeo
                     </a>
                   )}
                   {userProfile?.twitterUrl && (
@@ -922,31 +930,80 @@ export default function ProfilePage() {
                 <CardContent className="space-y-6">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-5 rounded-2xl bg-zinc-950/80 border border-purple-500/30">
                     <div>
-                      <p className="font-bold text-white text-base">
-                        Current Status: <span className={userProfile?.isPremium ? "text-purple-400 font-black" : "text-emerald-400 font-bold"}>
-                          {userProfile?.isPremium ? (
-                            userProfile?.tier === 'tier5' ? 'Anim.works Pro ($5/mo)' :
-                            `Supporter (${userProfile?.tier})`
-                          ) : 'Free Artist Account ($0/mo)'}
-                        </span>
-                      </p>
-                      <p className="text-zinc-400 text-xs mt-1">
-                        {!userProfile?.isPremium ? 'All portfolio posting & WIP tracking features are unlocked for free.' : 'Thank you for supporting the platform!'}
+                      <div className="font-bold text-white text-base flex flex-wrap items-center gap-2">
+                        <span>Current Status:</span>
+                        {isSjsuStudent ? (
+                          <span className="text-[#E5A823] font-black inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0055A2]/60 border border-[#E5A823]/70 text-xs shadow-md">
+                            <GraduationCap className="h-4 w-4 text-[#E5A823]" />
+                            SJSU Student Unlimited VIP Pass ($0.00 / Free)
+                          </span>
+                        ) : (
+                          <span className={userProfile?.isPremium ? "text-purple-400 font-black" : "text-emerald-400 font-bold"}>
+                            {userProfile?.isPremium ? (
+                              userProfile?.tier === 'tier5' ? 'Anim.works Pro ($5/mo)' :
+                              `Supporter (${userProfile?.tier})`
+                            ) : 'Free Artist Account ($0/mo)'}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-zinc-400 text-xs mt-1 font-medium">
+                        {isSjsuStudent
+                          ? `San José State University Verified Student Perk linked to ${userProfile?.studentEmail || userProfile?.school || 'Verified SJSU Account'}`
+                          : !userProfile?.isPremium ? 'All portfolio posting & WIP tracking features are unlocked for free.' : 'Thank you for supporting the platform!'}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button variant="default" onClick={() => setShowDonateDialog(true)} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold">
                         <CreditCard className="mr-2 h-4 w-4" />
-                        {userProfile?.isPremium ? 'Manage Pro Plan' : 'Upgrade to Pro ($5/mo)'}
+                        {isSjsuStudent ? 'SJSU Partner Access Active' : userProfile?.isPremium ? 'Manage Pro Plan' : 'Upgrade to Pro ($5/mo)'}
                       </Button>
                       
-                      {userProfile?.isPremium && (
+                      {userProfile?.isPremium && !isSjsuStudent && (
                         <Button variant="secondary" onClick={handlePortal} disabled={isPortalLoading} className="bg-white/10 hover:bg-white/20 text-white border-0">
                           {isPortalLoading ? 'Loading...' : 'Stripe Portal'}
                         </Button>
                       )}
                     </div>
                   </div>
+
+                  {/* Dedicated SJSU Student Unlimited Perk Banner */}
+                  {isSjsuStudent && (
+                    <div className="p-5 rounded-2xl bg-gradient-to-r from-[#0055A2]/40 via-purple-950/50 to-[#E5A823]/20 border border-[#E5A823]/70 shadow-2xl space-y-3 relative overflow-hidden">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-11 h-11 rounded-2xl bg-[#0055A2] border border-[#E5A823] p-1 flex items-center justify-center text-[#E5A823] shadow-lg shrink-0">
+                            <GraduationCap className="h-6 w-6 text-[#E5A823]" />
+                          </div>
+                          <div>
+                            <h4 className="font-extrabold text-white text-base flex items-center gap-2">
+                              <span>SJSU Spartan Unlimited VIP Pass</span>
+                              <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#E5A823]/20 text-[#E5A823] border border-[#E5A823]/50 uppercase font-bold">
+                                100% Free VIP Access
+                              </span>
+                            </h4>
+                            <p className="text-xs text-zinc-300 font-medium">
+                              San José State University Student Verification • Linked to <span className="text-amber-300 font-mono font-bold">{userProfile?.studentEmail || userProfile?.school || 'Verified SJSU Account'}</span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs font-mono text-amber-200/90 pt-2 border-t border-white/10">
+                        <div className="flex items-center gap-2 bg-black/40 p-2.5 rounded-xl border border-[#E5A823]/40">
+                          <CheckCircle2 className="h-4 w-4 text-amber-400 shrink-0" />
+                          <span>Unlimited Reference Vault</span>
+                        </div>
+                        <div className="flex items-center gap-2 bg-black/40 p-2.5 rounded-xl border border-[#E5A823]/40">
+                          <CheckCircle2 className="h-4 w-4 text-amber-400 shrink-0" />
+                          <span>Paint Studio & Timeline Tools</span>
+                        </div>
+                        <div className="flex items-center gap-2 bg-black/40 p-2.5 rounded-xl border border-[#E5A823]/40">
+                          <CheckCircle2 className="h-4 w-4 text-amber-400 shrink-0" />
+                          <span>Lifetime Student Pass ($0.00)</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Plan Feature Comparison Table (ArtStation Style) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

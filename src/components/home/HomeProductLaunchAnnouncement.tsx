@@ -1,8 +1,15 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, LayoutGrid, Paintbrush, Scissors, Sparkles, UserPlus } from 'lucide-react';
+import { 
+  PAINT_WORKSPACE_DATA_URI, 
+  REFERENCE_VAULT_DATA_URI, 
+  PORTFOLIO_PAGE_DATA_URI, 
+  UPDATED_BOARDS_DATA_URI 
+} from './announcementLogosData';
 
 const launches = [
   {
@@ -11,7 +18,8 @@ const launches = [
     eyebrow: 'Draw, time, and compare',
     description: 'Sketch with layers and custom brushes, build timed panels, use onion skinning, bring in references, and export your work.',
     href: '/paint',
-    image: '/announcements/paint-workspace.png',
+    image: PAINT_WORKSPACE_DATA_URI,
+    fallbackImage: '/announcements/paint-workspace.png',
     icon: Paintbrush,
     accent: 'from-fuchsia-500/25 to-purple-500/5',
   },
@@ -20,7 +28,8 @@ const launches = [
     eyebrow: 'Find and save the exact moment',
     description: 'Clip precise timestamps from the web or upload your own media, then search and organize motion references in one shared vault.',
     href: '/references',
-    image: '/announcements/reference-vault.png',
+    image: REFERENCE_VAULT_DATA_URI,
+    fallbackImage: '/announcements/reference-vault.png',
     icon: Scissors,
     accent: 'from-violet-500/30 to-fuchsia-500/5',
   },
@@ -29,7 +38,8 @@ const launches = [
     eyebrow: 'Show your work at no cost',
     description: 'Create a free animator profile, submit portfolio work and reels, and get discovered by studios and the community.',
     href: '/profile?tab=portfolio',
-    image: '/announcements/portfolio-page.png',
+    image: PORTFOLIO_PAGE_DATA_URI,
+    fallbackImage: '/announcements/portfolio-page.png',
     icon: UserPlus,
     accent: 'from-pink-500/25 to-purple-500/5',
   },
@@ -38,11 +48,40 @@ const launches = [
     eyebrow: 'Organize references visually',
     description: 'Create focused boards, file saved clips, search your collection, and arrange references on a dedicated canvas.',
     href: '/moodboard',
-    image: '/announcements/updated-boards.png',
+    image: UPDATED_BOARDS_DATA_URI,
+    fallbackImage: '/announcements/updated-boards.png',
     icon: LayoutGrid,
     accent: 'from-amber-500/20 to-violet-500/5',
   },
 ];
+
+function LaunchCardImage({ launch }: { launch: typeof launches[number] }) {
+  const [srcIndex, setSrcIndex] = useState(0);
+  const Icon = launch.icon;
+  const sources = [launch.image, launch.fallbackImage];
+
+  if (srcIndex >= sources.length) {
+    return (
+      <div className={`h-full w-full flex items-center justify-center bg-gradient-to-tr ${launch.accent} bg-zinc-900`}>
+        <div className="flex flex-col items-center gap-2 p-4 text-center">
+          <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300">
+            <Icon className="h-5 w-5" />
+          </div>
+          <span className="text-xs font-bold text-zinc-300">{launch.title} Preview</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={sources[srcIndex]}
+      alt={`${launch.title} workspace preview`}
+      className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
+      onError={() => setSrcIndex((prev) => prev + 1)}
+    />
+  );
+}
 
 export function HomeProductLaunchAnnouncement() {
   return (
@@ -82,15 +121,8 @@ export function HomeProductLaunchAnnouncement() {
               className="group overflow-hidden rounded-2xl border border-white/10 bg-black/35 transition-all duration-300 hover:-translate-y-1 hover:border-purple-400/40 hover:shadow-[0_18px_50px_rgba(88,28,135,0.22)]"
             >
               <div className="relative aspect-[16/9] overflow-hidden bg-zinc-950">
-                <Image
-                  src={launch.image}
-                  alt={`${launch.title} workspace preview`}
-                  fill
-                  unoptimized
-                  sizes="(min-width: 1024px) 33vw, 100vw"
-                  className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
-                />
-                <div className={`absolute inset-0 bg-gradient-to-t ${launch.accent} via-transparent to-transparent`} />
+                <LaunchCardImage launch={launch} />
+                <div className={`absolute inset-0 bg-gradient-to-t ${launch.accent} via-transparent to-transparent pointer-events-none`} />
               </div>
               <div className="space-y-3 p-5">
                 <div className="flex items-center justify-between gap-3">

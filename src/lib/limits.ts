@@ -1,6 +1,6 @@
 import { UserProfile } from "./types";
 
-export type UserTier = 'free' | 'tier1' | 'tier2' | 'tier5' | 'admin';
+export type UserTier = 'free' | 'tier1' | 'tier2' | 'tier5' | 'admin' | 'student_unlimited';
 
 export interface TierLimits {
     maxMoodboards: number;
@@ -24,6 +24,10 @@ export const TIER_LIMITS: Record<UserTier, TierLimits> = {
         maxMoodboards: Infinity,
         maxLikes: Infinity
     },
+    'student_unlimited': { // SJSU Student VIP
+        maxMoodboards: Infinity,
+        maxLikes: Infinity
+    },
     'admin': {
         maxMoodboards: Infinity,
         maxLikes: Infinity
@@ -33,8 +37,8 @@ export const TIER_LIMITS: Record<UserTier, TierLimits> = {
 export function getUserTier(user: UserProfile | null): UserTier {
     if (!user) return 'free';
 
-    // Explicit tier (e.g. for Admin testing) takes precedence if it's a valid tier
-    if (user.tier && ['free', 'tier1', 'tier2', 'tier5'].includes(user.tier)) {
+    // Explicit tier takes precedence if it's a valid tier
+    if (user.tier && ['free', 'tier1', 'tier2', 'tier5', 'student_unlimited'].includes(user.tier)) {
         return user.tier as UserTier;
     }
 

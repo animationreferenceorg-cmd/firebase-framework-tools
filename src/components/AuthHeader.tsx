@@ -31,10 +31,25 @@ export default function AuthHeader() {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const isPremium = userProfile?.isPremium;
+  const isSjsuStudent = Boolean(
+    userProfile?.isStudent || 
+    userProfile?.tier === 'student_unlimited' || 
+    userProfile?.school?.includes('SJSU') || 
+    userProfile?.unlimitedAccess || 
+    (userProfile?.studentEmail && userProfile.studentEmail.endsWith('@sjsu.edu'))
+  );
   const likedCount = userProfile?.likedVideoIds?.length || 0;
   const savedCategoriesCount = userProfile?.likedCategoryIds?.length || 0;
 
   const tierInfo = (() => {
+    if (isSjsuStudent) {
+      return {
+        badge: 'SJSU VIP',
+        title: 'SJSU Unlimited Pass',
+        price: '$0/mo (Free)',
+        description: 'Unlimited SJSU Spartan VIP Partner Access.'
+      };
+    }
     if (!isPremium) {
       return {
         badge: 'BASIC',
@@ -44,6 +59,13 @@ export default function AuthHeader() {
       };
     }
     switch (userProfile?.tier) {
+      case 'student_unlimited':
+        return {
+          badge: 'SJSU VIP',
+          title: 'SJSU Unlimited Pass',
+          price: '$0/mo (Free)',
+          description: 'Unlimited SJSU Spartan VIP Partner Access.'
+        };
       case 'tier5':
         return {
           badge: 'PRO',

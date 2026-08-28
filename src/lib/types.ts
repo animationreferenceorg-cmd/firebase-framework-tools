@@ -64,7 +64,13 @@ export interface UserProfile {
   savedVideoIds?: string[];
   recentlyViewedShortIds?: string[];
   isPremium?: boolean;
-  tier?: 'free' | 'tier1' | 'tier2' | 'tier5' | 'admin'; // Added tier
+  tier?: 'free' | 'tier1' | 'tier2' | 'tier5' | 'admin' | 'student_unlimited'; // Added tier
+  isStudent?: boolean;
+  isVIP?: boolean;
+  unlimitedAccess?: boolean;
+  school?: string;
+  studentEmail?: string;
+  grantedAt?: string;
   stripeCustomerId?: string;
   headline?: string;
   username?: string;

@@ -30,11 +30,6 @@ import {
 } from 'lucide-react';
 import { createUserProfile, grantSjsuStudentAccess } from '@/lib/firestore';
 import Link from 'next/link';
-import { 
-  ANIMATION_REF_LOGO_DATA_URI, 
-  ANIMATION_REF_SIDEBAR_DATA_URI, 
-  SJSU_LOGO_DATA_URI 
-} from './logoData';
 
 // Expanded Default Animation Reference Video Pool
 const DEFAULT_ANIMATION_VIDEOS = [
@@ -49,13 +44,11 @@ const DEFAULT_ANIMATION_VIDEOS = [
   'https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
 ];
 
-// Robust Animation Reference Logo Component with Base64 Data URI & Multi-Tier Fallbacks
+// Use the current site mark instead of the legacy embedded logo data.
 function AnimationRefLogo({ className = "w-full h-full object-contain", dynamicUrl }: { className?: string; dynamicUrl?: string }) {
   const [srcIndex, setSrcIndex] = useState(0);
   const sources = [
     ...(dynamicUrl ? [dynamicUrl] : []),
-    ANIMATION_REF_LOGO_DATA_URI,
-    ANIMATION_REF_SIDEBAR_DATA_URI,
     '/site_icon_transparent.png',
     '/logo_transparent.png',
     '/site-icon.png',
@@ -80,14 +73,12 @@ function AnimationRefLogo({ className = "w-full h-full object-contain", dynamicU
   );
 }
 
-// Robust SJSU Spartan Logo Component with Base64 Data URI & Multi-Tier Fallbacks
-function SjsuSpartanLogo({ className = "w-full h-full object-contain", dynamicUrl }: { className?: string; dynamicUrl?: string }) {
+// Use SJSU's official university primary mark for this academic partnership.
+function SjsuPrimaryLogo({ className = "w-full h-full object-contain", dynamicUrl }: { className?: string; dynamicUrl?: string }) {
   const [srcIndex, setSrcIndex] = useState(0);
   const sources = [
     ...(dynamicUrl ? [dynamicUrl] : []),
-    SJSU_LOGO_DATA_URI,
-    '/sjsu_logo.png',
-    '/sjsu_logo_transparent.png',
+    '/sjsu_primary_mark.png',
   ];
 
   if (srcIndex >= sources.length) {
@@ -102,7 +93,7 @@ function SjsuSpartanLogo({ className = "w-full h-full object-contain", dynamicUr
   return (
     <img
       src={sources[srcIndex]}
-      alt="SJSU Spartan Logo"
+      alt="San José State University"
       className={className}
       onError={() => setSrcIndex((prev) => prev + 1)}
     />
@@ -368,8 +359,8 @@ export default function SjsuStudentPage() {
             <span>Unlisted SJSU Partner Pass</span>
           </div>
 
-          {/* Prominent Dual Brand Logos (Animation Reference x SJSU Spartans) */}
-          <div className="flex items-center gap-4 p-3.5 px-6 rounded-3xl bg-[#0c1424]/95 border border-[#E5A823]/50 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-2xl">
+          {/* Prominent dual-brand partnership lockup */}
+          <div className="flex items-center gap-3 p-3.5 px-4 rounded-3xl bg-[#0c1424]/95 border border-[#E5A823]/50 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-2xl">
             {/* 1. Animation Reference Logo */}
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-950/90 to-[#18132e] border border-purple-500/50 p-2 flex items-center justify-center shadow-lg shadow-purple-600/40 shrink-0 overflow-hidden">
               <AnimationRefLogo className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(168,85,247,0.5)]" />
@@ -377,9 +368,9 @@ export default function SjsuStudentPage() {
 
             <span className="text-amber-400/80 font-black text-base px-1">✕</span>
 
-            {/* 2. Official SJSU Spartan Helmet Logo */}
-            <div className="w-14 h-14 rounded-2xl bg-[#0055A2] border border-[#E5A823]/80 p-1.5 flex items-center justify-center shadow-lg shadow-blue-600/50 shrink-0 overflow-hidden">
-              <SjsuSpartanLogo className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]" />
+            {/* 2. Official SJSU university primary mark */}
+            <div className="w-32 h-14 rounded-xl bg-white border border-white/80 px-2 py-1.5 flex items-center justify-center shrink-0 overflow-hidden">
+              <SjsuPrimaryLogo className="w-full h-full object-contain" />
             </div>
 
             <div className="text-left ml-1">
@@ -546,4 +537,3 @@ export default function SjsuStudentPage() {
     </div>
   );
 }
-

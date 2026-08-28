@@ -7,7 +7,7 @@ import {
   signInWithEmailAndPassword, 
   type User 
 } from 'firebase/auth';
-import { collection, getDocs, limit, query } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, query } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,11 @@ import {
 } from 'lucide-react';
 import { createUserProfile, grantSjsuStudentAccess } from '@/lib/firestore';
 import Link from 'next/link';
+import { 
+  ANIMATION_REF_LOGO_DATA_URI, 
+  ANIMATION_REF_SIDEBAR_DATA_URI, 
+  SJSU_LOGO_DATA_URI 
+} from './logoData';
 
 // Expanded Default Animation Reference Video Pool
 const DEFAULT_ANIMATION_VIDEOS = [
@@ -44,10 +49,13 @@ const DEFAULT_ANIMATION_VIDEOS = [
   'https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
 ];
 
-// Robust Animation Reference Logo Component with Image Chaining & SVG Fallback
-function AnimationRefLogo({ className = "w-full h-full object-contain" }: { className?: string }) {
+// Robust Animation Reference Logo Component with Base64 Data URI & Multi-Tier Fallbacks
+function AnimationRefLogo({ className = "w-full h-full object-contain", dynamicUrl }: { className?: string; dynamicUrl?: string }) {
   const [srcIndex, setSrcIndex] = useState(0);
   const sources = [
+    ...(dynamicUrl ? [dynamicUrl] : []),
+    ANIMATION_REF_LOGO_DATA_URI,
+    ANIMATION_REF_SIDEBAR_DATA_URI,
     '/site_icon_transparent.png',
     '/logo_transparent.png',
     '/site-icon.png',
@@ -72,10 +80,12 @@ function AnimationRefLogo({ className = "w-full h-full object-contain" }: { clas
   );
 }
 
-// Robust SJSU Spartan Logo Component with Image Chaining & Vector Badge Fallback
-function SjsuSpartanLogo({ className = "w-full h-full object-contain" }: { className?: string }) {
+// Robust SJSU Spartan Logo Component with Base64 Data URI & Multi-Tier Fallbacks
+function SjsuSpartanLogo({ className = "w-full h-full object-contain", dynamicUrl }: { className?: string; dynamicUrl?: string }) {
   const [srcIndex, setSrcIndex] = useState(0);
   const sources = [
+    ...(dynamicUrl ? [dynamicUrl] : []),
+    SJSU_LOGO_DATA_URI,
     '/sjsu_logo.png',
     '/sjsu_logo_transparent.png',
   ];

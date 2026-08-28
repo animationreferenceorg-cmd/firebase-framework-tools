@@ -479,7 +479,8 @@ export async function getPublicPortfolioItems(options?: {
 
     const q = query(collectionRef, ...constraints);
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as PortfolioItem));
+    const items = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as PortfolioItem));
+    return items.filter(item => item && item.id && item.title);
   } catch (error) {
     console.error("Error fetching public portfolio items:", error);
     return [];

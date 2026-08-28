@@ -61,15 +61,8 @@ export default function CommunityFeedPage() {
       setLoading(true);
       try {
         const data = await getPublicPortfolioItems({ limitCount: 200 });
-        
-        if (data.length === 0) {
-          const { MOCK_PORTFOLIO_ITEMS } = await import('@/lib/mock-portfolio-data');
-          setPortfolioItems(MOCK_PORTFOLIO_ITEMS.slice(0, 3));
-          setIsMockPreview(true);
-        } else {
-          setPortfolioItems(data);
-          setIsMockPreview(false);
-        }
+        setPortfolioItems(data || []);
+        setIsMockPreview(false);
       } catch (e) {
         console.error('Failed to load community portfolio items', e);
       } finally {

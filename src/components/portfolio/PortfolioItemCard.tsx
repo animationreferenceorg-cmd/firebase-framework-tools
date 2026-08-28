@@ -67,7 +67,9 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
     } else if (!isHovered && videoRef.current) {
       videoRef.current.pause();
       try {
-        videoRef.current.currentTime = 0;
+        // Seeking a fraction past zero makes browsers paint the first frame
+        // instead of briefly showing the video's black loading surface.
+        videoRef.current.currentTime = 0.1;
       } catch {}
     }
   }, [isHovered]);
@@ -144,34 +146,37 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
 
       {/* Background Video Media / Thumbnail Image */}
       <div className="absolute inset-0 w-full h-full bg-black">
-        {computedThumbnail ? (
+        {computedThumbnail && !isDirectVideoFile ? (
           <img
             src={computedThumbnail}
             alt={item.title}
-            className={cn(
-              "h-full w-full object-cover transition-all duration-500",
-              isHovered && isDirectVideoFile ? "opacity-0" : "opacity-100 group-hover:scale-105"
-            )}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
           />
-        ) : (
+        ) : !isDirectVideoFile ? (
           <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-purple-950 via-zinc-950 to-black">
             <Play className="h-12 w-12 text-primary/70" />
           </div>
-        )}
+        ) : null}
 
-        {/* Hover-to-Play Native Silent Video Layer for Direct Files only */}
+        {/* Keep the first frame visible; hover only controls playback. */}
         {isDirectVideoFile && (
           <video
             ref={videoRef}
             src={item.mediaUrl}
+            poster={computedThumbnail || undefined}
             preload="metadata"
             muted
             loop
             playsInline
+            onLoadedMetadata={(event) => {
+              try {
+                event.currentTarget.currentTime = 0.1;
+              } catch {}
+            }}
             className={cn(
-              "absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none z-0",
-              isHovered ? "opacity-100 scale-105" : "opacity-0 scale-100"
+              "absolute inset-0 w-full h-full object-cover transition-transform duration-500 pointer-events-none z-0",
+              isHovered ? "scale-105" : "scale-100"
             )}
           />
         )}

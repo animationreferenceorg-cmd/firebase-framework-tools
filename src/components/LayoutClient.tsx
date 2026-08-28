@@ -65,8 +65,9 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     const isComingSoon = pathname === '/';
     const isPaintPage = pathname.startsWith('/paint');
     const isStudioPage = pathname.startsWith('/studio');
+    const isSjsuPage = pathname.startsWith('/sjsu');
 
-    if (isAdminPage || isComingSoon || isPaintPage || isStudioPage) {
+    if (isAdminPage || isComingSoon || isPaintPage || isStudioPage || isSjsuPage) {
         return (
             <WatchTrackerProvider>
                 <UploadProvider>
@@ -166,7 +167,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <SidebarLink href="/marketplace" icon={ShoppingBag} tooltip="Marketplace">
+                                    <SidebarLink href="https://anim.works/" icon={ShoppingBag} tooltip="Marketplace (anim.works)">
                                         Marketplace
                                     </SidebarLink>
                                 </SidebarMenuItem>

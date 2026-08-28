@@ -14,7 +14,8 @@ import {
   Download,
   Send,
   SkipBack,
-  SkipForward
+  SkipForward,
+  FolderOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -34,6 +35,7 @@ interface ProcreateHeaderProps {
   isTimelineOpen: boolean;
   onOpenAdjustments: () => void;
   onNewProject: () => void;
+  onOpenProjectFile?: (file: File) => void;
   onOpenExport?: () => void;
   workspaceMode?: 'animation' | 'storyboard';
   onToggleWorkspaceMode?: () => void;
@@ -64,13 +66,6 @@ export function ProcreateHeader({
   currentBoardLabel = 'Panel 1.1',
 }: ProcreateHeaderProps) {
   const { toast } = useToast();
-
-  const handleSubmitReview = () => {
-    toast({
-      title: "Asset Sent to Review",
-      description: "This drawing has been submitted to the Studio Review inbox.",
-    });
-  };
 
   return (
     <div 
@@ -244,16 +239,6 @@ export function ProcreateHeader({
         >
           <LayersIcon className="h-4 w-4" />
           <span>Layers</span>
-        </button>
-
-        {/* Submit to Review Trigger */}
-        <button
-          onClick={handleSubmitReview}
-          className="h-9 px-3.5 rounded-2xl font-bold text-xs flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white border border-orange-400/50 shadow-lg shadow-orange-500/30 transition-all cursor-pointer"
-          title="Submit for Daily Review in Studio"
-        >
-          <Send className="h-4 w-4" />
-          <span>Submit to Review</span>
         </button>
 
         {/* Export Modal Trigger */}

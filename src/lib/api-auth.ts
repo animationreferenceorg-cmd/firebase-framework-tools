@@ -26,7 +26,7 @@ export async function getTrustedProfile(uid: string) {
 }
 
 export function profileHasPro(profile: FirebaseFirestore.DocumentData) {
-  return profile.role === 'admin' || (profile.isPremium === true && profile.tier === 'tier5');
+  return profile.role === 'admin' || profile.isVIP === true || profile.unlimitedAccess === true || profile.tier === 'student_unlimited' || (profile.isPremium === true && profile.tier === 'tier5');
 }
 
 export function apiErrorResponse(error: unknown) {

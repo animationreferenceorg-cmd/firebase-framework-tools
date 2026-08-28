@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import { getSnapshotVideos } from '@/lib/videoSnapshot';
 import { useUser } from '@/hooks/use-user';
+import { VideoCard } from '@/components/VideoCard';
 import type { Video } from '@/lib/types';
 
 export interface ReferenceVideoItem {
@@ -89,9 +90,9 @@ export function ReferenceVideoModal({ onSelectVideo, onClose }: ReferenceVideoMo
           ...JSON.parse(localStorage.getItem('anim_bookmarks') || '[]'),
         ]);
 
-        const formattedSnap: ReferenceVideoItem[] = snapVideos.map((v) => ({
+        const formattedSnap: ReferenceVideoItem[] = snapVideos.map((v: any) => ({
           id: v.id,
-          title: v.title,
+          title: v.title || 'Animation Reference',
           category: (v.category || 'COMMUNITY').toUpperCase(),
           videoUrl: v.videoUrl || v.video_url || '',
           thumbnailUrl: v.thumbnailUrl || v.thumbnail_url || '',
@@ -211,70 +212,40 @@ export function ReferenceVideoModal({ onSelectVideo, onClose }: ReferenceVideoMo
         </div>
 
         {/* Home-Screen Style Video Cards Grid */}
-        <div className="flex-1 overflow-y-auto pr-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 scrollbar-none pb-4">
-          {filteredVideos.map((video) => (
-            <div
-              key={video.id}
-              onClick={() => {
-                onSelectVideo(video);
-                onClose();
-              }}
-              className="group relative rounded-3xl border border-white/10 bg-[#161622]/90 hover:bg-[#1a1a29] hover:border-purple-500/50 p-4 transition-all cursor-pointer flex flex-col gap-3.5 overflow-hidden shadow-2xl hover:scale-[1.02] duration-200"
-            >
-              {/* Video Thumbnail Display with Hover Video Play */}
-              <div className="relative aspect-video rounded-2xl bg-zinc-900 overflow-hidden shrink-0 border border-white/10 flex items-center justify-center">
-                {video.thumbnailUrl ? (
-                  <img 
-                    src={video.thumbnailUrl} 
-                    alt={video.title} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                  />
-                ) : (
-                  <Film className="h-10 w-10 text-zinc-600" />
-                )}
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 scrollbar-none">
+          {filteredVideos.map((video) => {
+            const videoObj: Video = {
+              id: video.id,
+              title: video.title,
+              description: '',
+              videoUrl: video.videoUrl,
+              thumbnailUrl: video.thumbnailUrl || '',
+              posterUrl: video.thumbnailUrl || '',
+              tags: [],
+              likeCount: video.isLiked ? 1 : 0,
+              type: 'video',
+            };
 
-                {/* Gradient Shadow Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                {/* Big Hover Play Button */}
-                <div className="absolute inset-0 bg-purple-950/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs">
-                  <div className="w-14 h-14 rounded-full bg-purple-600/90 text-white flex items-center justify-center shadow-2xl border border-white/30 scale-90 group-hover:scale-100 transition-transform">
-                    <Play className="h-6 w-6 fill-white ml-0.5" />
-                  </div>
-                </div>
-
-                {/* Category Badge Pill */}
-                {video.category && (
-                  <span className="absolute top-3 left-3 text-[10px] font-mono font-bold text-purple-200 bg-purple-950/90 backdrop-blur-md px-2.5 py-1 rounded-full border border-purple-500/40 shadow-md">
-                    {video.category}
-                  </span>
-                )}
-
-                {/* Liked Heart Icon Badge */}
-                <div className="absolute top-3 right-3 p-1.5 rounded-full bg-purple-600 text-white shadow-lg shadow-purple-600/50 border border-white/20">
-                  <Heart className="h-3.5 w-3.5 fill-white" />
-                </div>
+            return (
+              <div
+                key={video.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectVideo(video);
+                  onClose();
+                }}
+                className="cursor-pointer group hover:scale-[1.02] transition-transform duration-200"
+              >
+                <VideoCard 
+                  video={videoObj} 
+                  onSelect={() => {
+                    onSelectVideo(video);
+                    onClose();
+                  }}
+                />
               </div>
-
-              {/* Title & Action Info */}
-              <div className="flex items-start justify-between gap-2 px-1">
-                <div className="flex flex-col gap-1 min-w-0">
-                  <h3 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors line-clamp-1">
-                    {video.title}
-                  </h3>
-                  <span className="text-[11px] font-medium text-zinc-400 flex items-center gap-1">
-                    <Sparkles className="h-3 w-3 text-purple-400" />
-                    <span>Click to open in Tracing Player</span>
-                  </span>
-                </div>
-
-                <div className="w-8 h-8 rounded-xl bg-white/5 group-hover:bg-purple-600 text-zinc-400 group-hover:text-white flex items-center justify-center transition-colors shrink-0">
-                  <PlayCircle className="h-4 w-4" />
-                </div>
-              </div>
-
-            </div>
-          ))}
+            );
+          })}
         </div>
 
       </div>

@@ -1,137 +1,83 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { ProductCard } from '@/components/ProductCard';
-import { getProducts } from '@/lib/firestore-marketplace';
-import type { Product } from '@/lib/marketplace-types';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Box, Layers, Cuboid, Wrench, Construction } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { ShoppingBag, ExternalLink, Sparkles, ArrowRight, Layers, ShieldCheck, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function MarketplacePage() {
-    const [products, setProducts] = useState<Product[]>([]);
-    const [loading, setLoading] = useState(true);
-
+    // Open anim.works in a new tab so user's Animation Reference tab stays open
     useEffect(() => {
-        async function loadProducts() {
-            try {
-                const data = await getProducts();
-                setProducts(data);
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setLoading(false);
-            }
-        }
-        loadProducts();
+        const timer = setTimeout(() => {
+            window.open('https://anim.works/', '_blank', 'noopener,noreferrer');
+        }, 500);
+
+        return () => clearTimeout(timer);
     }, []);
 
-    const rigs = products.filter(p => p.category === 'Rigs');
-    const sets = products.filter(p => p.category === 'Sets');
-    const plugins = products.filter(p => p.category === 'Plugins');
-
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-transparent flex items-center justify-center">
-                <p className="text-white animate-pulse">Loading Marketplace...</p>
-            </div>
-        );
-    }
-
     return (
-        <div className="min-h-screen bg-transparent text-white selection:bg-purple-500/30">
+        <div className="min-h-screen w-full bg-[#070b14] text-white flex flex-col items-center justify-center p-6 relative overflow-hidden select-none">
+            {/* Background Glow */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-600/15 blur-[160px] rounded-full pointer-events-none" />
 
-            <main className="container mx-auto px-4 pt-32 pb-20">
+            <div className="max-w-md w-full rounded-[32px] bg-[#0d1424]/90 border border-purple-500/30 p-8 shadow-[0_25px_60px_rgba(0,0,0,0.8)] backdrop-blur-2xl text-center space-y-6 relative z-10 animate-in zoom-in-95 duration-200">
+                
+                {/* Store Icon Badge */}
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 p-0.5 mx-auto shadow-xl shadow-purple-600/40 flex items-center justify-center">
+                    <div className="w-full h-full rounded-[14px] bg-[#0c1424] flex items-center justify-center">
+                        <ShoppingBag className="h-8 w-8 text-purple-400" />
+                    </div>
+                </div>
 
-                {/* Marketplace Hero */}
-                <div className="text-center space-y-4 mb-10 md:mb-16">
-                    <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-purple-200 to-white px-2">
-                        Creator Marketplace
+                <div className="space-y-2">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-400/40 text-purple-300 text-[11px] font-mono font-bold uppercase tracking-wider">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        <span>Official Partner Store</span>
+                    </div>
+
+                    <h1 className="text-2xl font-black text-white tracking-wide">
+                        Anim.works Marketplace
                     </h1>
-                    <p className="text-zinc-400 max-w-2xl mx-auto text-sm sm:text-base md:text-lg px-6 leading-relaxed">
-                        Premium assets for your animation workflow. Discover top-tier rigs, environments, and plugins curated for professionals.
+                    <p className="text-xs text-zinc-300 max-w-sm mx-auto leading-relaxed">
+                        Explore premium 3D animation rigs, courses, workshops, and production assets on Anim.works.
                     </p>
                 </div>
 
-                {products.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 animate-fade-in">
-                        <div className="bg-white/5 p-6 rounded-full mb-6">
-                            <Construction className="h-12 w-12 text-purple-400/80" />
-                        </div>
-                        <h2 className="text-2xl font-semibold text-white mb-2">Coming Soon</h2>
-                        <p className="text-zinc-400 max-w-md text-center">
-                            We are currently curating the best assets for you. Check back later for high-quality rigs, sets, and tools!
-                        </p>
+                {/* Feature Highlights */}
+                <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-white/5 border border-white/10 text-center">
+                    <div className="space-y-1">
+                        <Layers className="h-4 w-4 text-purple-400 mx-auto" />
+                        <span className="text-[10px] font-bold text-zinc-300 block">Pro Rigs</span>
                     </div>
-                ) : (
-                    <Tabs defaultValue="all" className="w-full">
-                        <div className="flex justify-start md:justify-center mb-12 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 scroll-smooth">
-                            <TabsList className="bg-white/5 border border-white/10 p-1 rounded-full whitespace-nowrap min-w-max flex h-11 items-center">
-                                <TabsTrigger value="all" className="rounded-full px-6 data-[state=active]:bg-purple-600 data-[state=active]:text-white h-9 transition-all">All Assets</TabsTrigger>
-                                <TabsTrigger value="rigs" className="rounded-full px-6 data-[state=active]:bg-purple-600 data-[state=active]:text-white h-9 transition-all"><Box className="mr-2 h-4 w-4" /> Rigs</TabsTrigger>
-                                <TabsTrigger value="sets" className="rounded-full px-6 data-[state=active]:bg-purple-600 data-[state=active]:text-white h-9 transition-all"><Layers className="mr-2 h-4 w-4" /> Sets</TabsTrigger>
-                                <TabsTrigger value="plugins" className="rounded-full px-6 data-[state=active]:bg-purple-600 data-[state=active]:text-white h-9 transition-all"><Wrench className="mr-2 h-4 w-4" /> Plugins</TabsTrigger>
-                            </TabsList>
-                        </div>
+                    <div className="space-y-1">
+                        <ShieldCheck className="h-4 w-4 text-amber-400 mx-auto" />
+                        <span className="text-[10px] font-bold text-zinc-300 block">Verified Assets</span>
+                    </div>
+                    <div className="space-y-1">
+                        <Zap className="h-4 w-4 text-blue-400 mx-auto" />
+                        <span className="text-[10px] font-bold text-zinc-300 block">Instant Access</span>
+                    </div>
+                </div>
 
-                        <TabsContent value="all" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                {products.map(product => (
-                                    <ProductCard key={product.id} product={product} />
-                                ))}
-                            </div>
-                        </TabsContent>
+                {/* Action Launcher Button */}
+                <div className="space-y-3 pt-2">
+                    <a
+                        href="https://anim.works/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full block"
+                    >
+                        <Button className="w-full h-12 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-sm gap-2 shadow-xl shadow-purple-600/40 cursor-pointer">
+                            <span>Launch Anim.works Marketplace</span>
+                            <ExternalLink className="h-4 w-4" />
+                        </Button>
+                    </a>
 
-                        <TabsContent value="rigs" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                {rigs.map(product => (
-                                    <ProductCard key={product.id} product={product} />
-                                ))}
-                            </div>
-                        </TabsContent>
+                    <p className="text-[10px] text-zinc-500 font-mono">
+                        Opening Anim.works in a new tab…
+                    </p>
+                </div>
 
-                        <TabsContent value="sets" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            {sets.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-20 animate-fade-in">
-                                    <div className="bg-white/5 p-6 rounded-full mb-6">
-                                        <Layers className="h-12 w-12 text-purple-400/80" />
-                                    </div>
-                                    <h2 className="text-2xl font-semibold text-white mb-2">Sets Coming Soon</h2>
-                                    <p className="text-zinc-400 max-w-md text-center">
-                                        We are currently curating the best environment sets for you. Check back later!
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                    {sets.map(product => (
-                                        <ProductCard key={product.id} product={product} />
-                                    ))}
-                                </div>
-                            )}
-                        </TabsContent>
-
-                        <TabsContent value="plugins" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            {plugins.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-20 animate-fade-in">
-                                    <div className="bg-white/5 p-6 rounded-full mb-6">
-                                        <Wrench className="h-12 w-12 text-purple-400/80" />
-                                    </div>
-                                    <h2 className="text-2xl font-semibold text-white mb-2">Plugins Coming Soon</h2>
-                                    <p className="text-zinc-400 max-w-md text-center">
-                                        We are currently curating the best plugins and tools for you. Check back later!
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                    {plugins.map(product => (
-                                        <ProductCard key={product.id} product={product} />
-                                    ))}
-                                </div>
-                            )}
-                        </TabsContent>
-                    </Tabs>
-                )}
-
-            </main>
+            </div>
         </div>
     );
 }

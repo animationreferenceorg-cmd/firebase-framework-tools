@@ -441,3 +441,38 @@ export async function deleteCategory(categoryId: string, isShort: boolean): Prom
   const categoryRef = doc(db, collectionName, categoryId);
   await deleteDoc(categoryRef);
 }
+
+/**
+ * Grants unlimited student VIP access to an SJSU student account.
+ */
+export async function grantSjsuStudentAccess(uid: string, sjsuEmail: string, accountEmail: string): Promise<void> {
+  const userRef = doc(db, USERS_COLLECTION, uid);
+  await setDoc(
+    userRef,
+    {
+      isStudent: true,
+      isVIP: true,
+      isPremium: true,
+      school: 'San José State University (SJSU)',
+      studentEmail: sjsuEmail.trim().toLowerCase(),
+      tier: 'student_unlimited',
+      unlimitedAccess: true,
+      grantedAt: new Date().toISOString(),
+    },
+    { merge: true }
+  );
+
+  try {
+    const auditRef = doc(db, 'sjsu_verifications', uid);
+    await setDoc(auditRef, {
+      uid,
+      accountEmail: accountEmail.trim().toLowerCase(),
+      sjsuEmail: sjsuEmail.trim().toLowerCase(),
+      school: 'San José State University (SJSU)',
+      grantedAt: new Date().toISOString(),
+      status: 'verified_active',
+    });
+  } catch (err) {
+    console.warn('[SJSU Verification] Warning creating verification document:', err);
+  }
+}

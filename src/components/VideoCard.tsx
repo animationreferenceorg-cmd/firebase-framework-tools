@@ -50,9 +50,10 @@ import { useWatchTracker } from '@/hooks/use-watch-tracker';
 interface VideoCardProps {
   video: Video;
   poster?: boolean;
+  onSelect?: (video: Video) => void;
 }
 
-export function VideoCard({ video, poster }: VideoCardProps) {
+export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
   const { user: authUser } = useAuth();
   const { userProfile, mutate } = useUser();
   const { recordWatch } = useWatchTracker();
@@ -153,6 +154,11 @@ export function VideoCard({ video, poster }: VideoCardProps) {
     }
     e.preventDefault();
     e.stopPropagation();
+
+    if (onSelect) {
+      onSelect(video);
+      return;
+    }
 
     const isTouchDevice = typeof window !== 'undefined' && (
       window.matchMedia('(pointer: coarse)').matches ||

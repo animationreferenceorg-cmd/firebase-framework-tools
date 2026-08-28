@@ -1,4 +1,4 @@
-import type { BrushSettings, Point, Layer } from './types';
+import type { BrushSettings, Point, Layer, Selection } from './types';
 import { rgbToHsv, hsvToRgb } from './color';
 
 /** Blend factor between the brush's minimum and full pressure response. */
@@ -169,8 +169,16 @@ export function hexToRgba(hex: string, alpha: number): string {
  * Flood fill starting at (x, y) with the given color, using a simple
  * tolerance-based scanline-ish stack fill over ImageData.
  */
-export function floodFill(ctx: CanvasRenderingContext2D, startX: number, startY: number, fillColor: string, tolerance: number = 32) {
-  const canvas = ctx.canvas;
+export function floodFill(
+  target: CanvasRenderingContext2D | HTMLCanvasElement,
+  startX: number,
+  startY: number,
+  fillColor: string,
+  tolerance: number = 32
+) {
+  const canvas = target instanceof HTMLCanvasElement ? target : target.canvas;
+  const ctx = target instanceof HTMLCanvasElement ? target.getContext('2d') : target;
+  if (!ctx || !canvas) return;
   const w = canvas.width;
   const h = canvas.height;
   if (startX < 0 || startY < 0 || startX >= w || startY >= h) return;
@@ -420,8 +428,10 @@ export function magicWandSelectionMask(source: HTMLCanvasElement, startX: number
 
 /** Combines a freshly-drawn selection mask with whatever was already
  * selected — Shift+drag adds, Alt+drag subtracts, matching Photoshop. */
-export function combineSelectionMask(existing: HTMLCanvasElement | null, next: HTMLCanvasElement, mode: 'new' | 'add' | 'subtract'): HTMLCanvasElement {
-  if (mode === 'new' || !existing) return next;
+export type SelectionCombineMode = 'new' | 'replace' | 'add' | 'subtract';
+
+export function combineSelectionMask(existing: HTMLCanvasElement | null, next: HTMLCanvasElement, mode: SelectionCombineMode): HTMLCanvasElement {
+  if (mode === 'new' || mode === 'replace' || !existing) return next;
   const combined = cloneCanvas(existing);
   const ctx = combined.getContext('2d')!;
   ctx.globalCompositeOperation = mode === 'add' ? 'source-over' : 'destination-out';
@@ -451,12 +461,245 @@ export function maskBounds(mask: HTMLCanvasElement): { x: number; y: number; w: 
 /** Fills the whole canvas with a linear gradient between two colors along
  * the dragged axis — the composited result is clipped by the caller the
  * same way brush strokes are (selection / alpha-lock), so this just paints. */
-export function paintLinearGradient(ctx: CanvasRenderingContext2D, from: Point, to: Point, colorFrom: string, colorTo: string, width: number, height: number) {
-  const gradient = ctx.createLinearGradient(from.x, from.y, to.x, to.y);
+/** Paints a linear or radial gradient across the whole context.
+ * The caller is responsible for any selection clipping (see withSelectionClip). */
+export function paintGradient(
+  ctx: CanvasRenderingContext2D,
+  from: Point,
+  to: Point,
+  colorFrom: string,
+  colorTo: string,
+  type: 'linear' | 'radial',
+  width: number,
+  height: number
+) {
+  let gradient: CanvasGradient;
+  if (type === 'radial') {
+    const radius = Math.max(1, Math.hypot(to.x - from.x, to.y - from.y));
+    gradient = ctx.createRadialGradient(from.x, from.y, 0, from.x, from.y, radius);
+  } else {
+    gradient = ctx.createLinearGradient(from.x, from.y, to.x, to.y);
+  }
   gradient.addColorStop(0, colorFrom);
   gradient.addColorStop(1, colorTo);
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+}
+
+/** Back-compat wrapper — prefer paintGradient. */
+export function paintLinearGradient(ctx: CanvasRenderingContext2D, from: Point, to: Point, colorFrom: string, colorTo: string, width: number, height: number) {
+  paintGradient(ctx, from, to, colorFrom, colorTo, 'linear', width, height);
+}
+
+/** Turns a raw selection mask canvas into the {x,y,w,h,mask} Selection the UI
+ * uses, or null when the mask ended up empty (e.g. a stray click that matched
+ * nothing) so callers can clear the selection instead of holding a zero-size box. */
+export function maskToSelection(mask: HTMLCanvasElement): Selection | null {
+  const bounds = maskBounds(mask);
+  if (bounds.w <= 0 || bounds.h <= 0) return null;
+  return { ...bounds, mask };
+}
+
+/** Runs `paint` against a scratch canvas the same size as `target`, then
+ * composites the result back into `target` — clipped to the selection mask and
+ * to the target's existing alpha when alpha-lock is on.
+ *
+ * Doing it through a scratch layer (rather than ctx.clip()) is what lets
+ * destination-out erasing, smudging and gradients all respect a selection with
+ * the same code path: the clip is applied to the *result*, not to the drawing. */
+export function withSelectionClip(
+  target: HTMLCanvasElement,
+  selectionMask: HTMLCanvasElement | null,
+  alphaLocked: boolean,
+  paint: (ctx: CanvasRenderingContext2D) => void
+) {
+  const targetCtx = target.getContext('2d')!;
+
+  // Nothing to constrain — paint straight onto the layer (the fast path).
+  if (!selectionMask && !alphaLocked) {
+    paint(targetCtx);
+    return;
+  }
+
+  const before = cloneCanvas(target);
+  paint(targetCtx);
+
+  // `target` now holds the unconstrained result.
+  let painted = cloneCanvas(target);
+
+  // Alpha lock: keep the original alpha channel, take only the new colour.
+  // source-atop draws the new pixels solely where the old ones were opaque,
+  // which is exactly Photoshop's "lock transparent pixels".
+  if (alphaLocked) {
+    const locked = cloneCanvas(before);
+    const lCtx = locked.getContext('2d')!;
+    lCtx.globalCompositeOperation = 'source-atop';
+    lCtx.drawImage(painted, 0, 0);
+    painted = locked;
+  }
+
+  targetCtx.save();
+  targetCtx.globalCompositeOperation = 'copy';
+  targetCtx.drawImage(before, 0, 0);
+
+  if (selectionMask) {
+    // Split into two disjoint regions and recombine, rather than laying the
+    // result over the original — source-over can only add coverage, so an
+    // eraser stroke inside a selection would otherwise do nothing at all.
+    targetCtx.globalCompositeOperation = 'destination-out';
+    targetCtx.drawImage(selectionMask, 0, 0); // keep only what's OUTSIDE the selection
+
+    const inside = cloneCanvas(painted);
+    const iCtx = inside.getContext('2d')!;
+    iCtx.globalCompositeOperation = 'destination-in';
+    iCtx.drawImage(selectionMask, 0, 0); // keep only what's INSIDE the selection
+
+    targetCtx.globalCompositeOperation = 'source-over';
+    targetCtx.drawImage(inside, 0, 0);
+  } else {
+    targetCtx.globalCompositeOperation = 'copy';
+    targetCtx.drawImage(painted, 0, 0);
+  }
+
+  targetCtx.restore();
+}
+
+/** Softens a selection edge by the given radius, in pixels. */
+export function featherMask(mask: HTMLCanvasElement, radius: number): HTMLCanvasElement {
+  if (radius <= 0) return mask;
+  const out = createLayerCanvas(mask.width, mask.height);
+  const ctx = out.getContext('2d')!;
+  ctx.filter = `blur(${radius}px)`;
+  ctx.drawImage(mask, 0, 0);
+  ctx.filter = 'none';
+  return out;
+}
+
+/** Inverts a selection mask across the full canvas. */
+export function invertMask(mask: HTMLCanvasElement): HTMLCanvasElement {
+  const out = createLayerCanvas(mask.width, mask.height);
+  const ctx = out.getContext('2d')!;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, out.width, out.height);
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.drawImage(mask, 0, 0);
+  return out;
+}
+
+/** Convolution-free blur dab: samples the region under the brush through the
+ * canvas filter pipeline, which is hardware-accelerated and far faster than a
+ * hand-rolled kernel at brush sizes. */
+export function blurSegment(ctx: CanvasRenderingContext2D, from: Point, to: Point, size: number, strength: number) {
+  const source = ctx.canvas;
+  const radius = Math.max(1, size / 2);
+  const blurPx = Math.max(0.5, radius * 0.35 * Math.max(0.05, strength));
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const steps = Math.max(1, Math.floor(Math.hypot(dx, dy) / Math.max(1, radius * 0.4)));
+
+  // One blurred copy per segment, reused for every dab along it.
+  const blurred = createLayerCanvas(source.width, source.height);
+  const bCtx = blurred.getContext('2d')!;
+  bCtx.filter = `blur(${blurPx}px)`;
+  bCtx.drawImage(source, 0, 0);
+  bCtx.filter = 'none';
+
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    const x = from.x + dx * t;
+    const y = from.y + dy * t;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.globalAlpha = Math.max(0, Math.min(1, strength));
+    ctx.drawImage(blurred, 0, 0);
+    ctx.restore();
+  }
+}
+
+/** Unsharp-mask style sharpen: adds back the difference between the original
+ * and a blurred copy, restricted to the brush dab. */
+export function sharpenSegment(ctx: CanvasRenderingContext2D, from: Point, to: Point, size: number, strength: number) {
+  const source = ctx.canvas;
+  const radius = Math.max(1, size / 2);
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const steps = Math.max(1, Math.floor(Math.hypot(dx, dy) / Math.max(1, radius * 0.4)));
+
+  const blurred = createLayerCanvas(source.width, source.height);
+  const bCtx = blurred.getContext('2d')!;
+  bCtx.filter = `blur(${Math.max(0.5, radius * 0.25)}px)`;
+  bCtx.drawImage(source, 0, 0);
+  bCtx.filter = 'none';
+
+  // difference = original - blurred, kept only where the original has alpha
+  const detail = cloneCanvas(source);
+  const dCtx = detail.getContext('2d')!;
+  dCtx.globalCompositeOperation = 'difference';
+  dCtx.drawImage(blurred, 0, 0);
+  dCtx.globalCompositeOperation = 'destination-in';
+  dCtx.drawImage(source, 0, 0);
+
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    const x = from.x + dx * t;
+    const y = from.y + dy * t;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = Math.max(0, Math.min(1, strength)) * 0.8;
+    ctx.drawImage(detail, 0, 0);
+    ctx.restore();
+  }
+}
+
+/** Dodge (lighten) and burn (darken), painted as soft dabs along the segment.
+ * Clipped to existing alpha so it can't lighten empty canvas into a grey haze. */
+export function dodgeBurnSegment(
+  ctx: CanvasRenderingContext2D,
+  from: Point,
+  to: Point,
+  size: number,
+  exposure: number,
+  mode: 'dodge' | 'burn'
+) {
+  const source = ctx.canvas;
+  const radius = Math.max(1, size / 2);
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const steps = Math.max(1, Math.floor(Math.hypot(dx, dy) / Math.max(1, radius * 0.3)));
+  const amount = Math.max(0, Math.min(1, exposure)) * 0.25;
+
+  const dab = createLayerCanvas(source.width, source.height);
+  const dCtx = dab.getContext('2d')!;
+  dCtx.fillStyle = mode === 'dodge' ? '#ffffff' : '#000000';
+
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    const x = from.x + dx * t;
+    const y = from.y + dy * t;
+    const grad = dCtx.createRadialGradient(x, y, 0, x, y, radius);
+    const rgb = mode === 'dodge' ? '255,255,255' : '0,0,0';
+    grad.addColorStop(0, `rgba(${rgb},${amount})`);
+    grad.addColorStop(1, `rgba(${rgb},0)`);
+    dCtx.fillStyle = grad;
+    dCtx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  }
+
+  // Keep the effect inside painted pixels only.
+  dCtx.globalCompositeOperation = 'destination-in';
+  dCtx.drawImage(source, 0, 0);
+
+  ctx.save();
+  ctx.globalCompositeOperation = mode === 'dodge' ? 'color-dodge' : 'color-burn';
+  ctx.drawImage(dab, 0, 0);
+  ctx.restore();
 }
 
 /** Brightness/contrast adjustment, applied in place. brightness/contrast

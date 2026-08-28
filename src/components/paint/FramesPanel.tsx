@@ -135,7 +135,7 @@ export function FramesPanel({
 
   // Update loopEnd when frame count expands
   useEffect(() => {
-    setLoopEnd((prev) => Math.min(frames.length - 1, Math.max(prev, frames.length - 1)));
+    setLoopEnd(Math.max(0, frames.length - 1));
   }, [frames.length]);
 
   // Multi-Track Timeline Support
@@ -226,11 +226,13 @@ export function FramesPanel({
   const scrubToPosition = useCallback((clientX: number) => {
     if (scrubRafRef.current) cancelAnimationFrame(scrubRafRef.current);
     scrubRafRef.current = requestAnimationFrame(() => {
-      if (!rulerTrackRef.current) return;
-      const rect = rulerTrackRef.current.getBoundingClientRect();
-      const x = clientX - (rect.left + 170); // Offset left header width (170px)
-      if (x < 0) return;
-      const targetIdx = Math.max(0, Math.min(frames.length - 1, Math.floor(x / cellWidth)));
+      const container = stageContainerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      // Account for track label header width (176px / pl-44) and stage container scroll position
+      const trackOffsetLeft = 176;
+      const scrollX = (clientX - rect.left - trackOffsetLeft) + container.scrollLeft;
+      const targetIdx = Math.max(0, Math.min(frames.length - 1, Math.floor(scrollX / cellWidth)));
       if (targetIdx !== activeFrameIndex) {
         onSelectFrame(targetIdx);
       }
@@ -238,6 +240,10 @@ export function FramesPanel({
   }, [activeFrameIndex, cellWidth, frames.length, onSelectFrame]);
 
   const handleRulerPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
     setIsScrubbing(true);
     scrubToPosition(e.clientX);
   };
@@ -558,17 +564,57 @@ export function FramesPanel({
 
       </div>
 
-      {/* ──────────────── DEDICATED PRO HORIZONTAL TIMELINE SLIDER TRACK ──────────────── */}
-      <div className="px-6 py-1.5 bg-[#0b0b10] border-b border-white/10 flex items-center justify-between gap-4 shrink-0">
-        <div className="flex items-center gap-2 text-[10px] font-mono font-bold text-zinc-400">
-          <Sliders className="h-3 w-3 text-purple-400" />
-          <span>TIMELINE SLIDER:</span>
+      {/* ──────────────── DEDICATED PRO HORIZONTAL TIMELINE NAV & ZOOM BAR ──────────────── */}
+      <div className="px-6 py-2 bg-[#0b0b10] border-b border-white/10 flex items-center justify-between gap-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-[10px] font-mono font-bold text-zinc-400">
+            <Sliders className="h-3.5 w-3.5 text-purple-400" />
+            <span>NAVIGATE & ZOOM:</span>
+          </div>
+
+          {/* Interactive Zoom Controls & Range Slider */}
+          <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-2.5 py-1 rounded-xl shadow-inner text-xs font-mono">
+            <button
+              onClick={() => setTimelineZoom((z) => Math.max(0.4, Math.round((z - 0.2) * 10) / 10))}
+              className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-zinc-300 hover:text-white font-bold cursor-pointer"
+              title="Zoom Out Cel Tracks (-)"
+            >
+              <ZoomOut className="h-3.5 w-3.5" />
+            </button>
+
+            <input
+              type="range"
+              min="0.4"
+              max="3.0"
+              step="0.1"
+              value={timelineZoom}
+              onChange={(e) => setTimelineZoom(parseFloat(e.target.value))}
+              className="w-20 h-1.5 accent-purple-500 cursor-pointer"
+              title="Slide to zoom timeline cel track resolution (Ctrl + Wheel on track to zoom)"
+            />
+
+            <button
+              onClick={() => setTimelineZoom((z) => Math.min(3.0, Math.round((z + 0.2) * 10) / 10))}
+              className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-zinc-300 hover:text-white font-bold cursor-pointer"
+              title="Zoom In Cel Tracks (+)"
+            >
+              <ZoomIn className="h-3.5 w-3.5" />
+            </button>
+
+            <button
+              onClick={() => setTimelineZoom(1.0)}
+              className="text-[10px] text-purple-300 hover:text-white font-bold px-1 text-center cursor-pointer"
+              title="Reset Zoom to 100%"
+            >
+              {Math.round(timelineZoom * 100)}%
+            </button>
+          </div>
         </div>
 
         {/* Custom Studio Timeline Scroll Track */}
         <div 
           onPointerDown={handleSliderPointerDown}
-          className="flex-1 h-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full cursor-pointer relative overflow-hidden touch-none"
+          className="flex-1 h-3.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full cursor-pointer relative overflow-hidden touch-none"
           title="Drag slider or click anywhere to scroll timeline horizontally"
         >
           {/* Active Viewport Drag Handle */}
@@ -586,7 +632,7 @@ export function FramesPanel({
           />
         </div>
 
-        <span className="text-[10px] font-mono font-bold text-purple-300">
+        <span className="text-[10px] font-mono font-bold text-purple-300 shrink-0">
           {frames.length} CELS
         </span>
       </div>
@@ -655,6 +701,13 @@ export function FramesPanel({
       <div 
         ref={stageContainerRef}
         onScroll={handleStageScroll}
+        onWheel={(e) => {
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            const delta = e.deltaY < 0 ? 0.15 : -0.15;
+            setTimelineZoom((z) => Math.max(0.4, Math.min(3.0, Math.round((z + delta) * 100) / 100)));
+          }
+        }}
         className={cn(
           "p-3 overflow-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden bg-[#09090e] flex flex-col gap-2 relative select-none transition-all duration-200",
           isExpandedTimeline ? "h-80" : "max-h-64 min-h-[130px]"

@@ -6,6 +6,7 @@ import { LayersPanel } from '@/components/paint/LayersPanel';
 import { FramesPanel } from '@/components/paint/FramesPanel';
 import { ProcreateHeader } from '@/components/paint/ProcreateHeader';
 import { ProcreateSliderDock } from '@/components/paint/ProcreateSliderDock';
+import { ToolOptionsBar } from '@/components/paint/ToolOptionsBar';
 import { ProcreateBrushStudio } from '@/components/paint/ProcreateBrushStudio';
 import { BrushContextMenu } from '@/components/paint/BrushContextMenu';
 import { CanvasSettingsDialog } from '@/components/paint/CanvasSettingsDialog';
@@ -14,7 +15,7 @@ import { ReferenceComparisonModal } from '@/components/paint/ReferenceComparison
 import { ReferenceOverlay } from '@/components/paint/ReferenceOverlay';
 import { NewProjectModal } from '@/components/paint/NewProjectModal';
 import { HistoryManager, type LayerSnapshot } from '@/lib/paint/history';
-import { createLayerCanvas, processBrushTextureImage, applyBrightnessContrast, applyHueSaturation, cloneCanvas, flattenLayers, tintSilhouette } from '@/lib/paint/engine';
+import { createLayerCanvas, processBrushTextureImage, applyBrightnessContrast, applyHueSaturation, cloneCanvas, flattenLayers, tintSilhouette, invertMask, maskToSelection } from '@/lib/paint/engine';
 import { createBuiltinBrushLibrary } from '@/lib/paint/builtinBrushes';
 import { ExportModal } from '@/components/paint/ExportModal';
 import { AdjustmentsDialog } from '@/components/paint/AdjustmentsDialog';
@@ -31,8 +32,10 @@ import {
 import type { Layer, ToolType, BrushSettings, BlendMode, CustomBrushTexture, Selection, SymmetryMode, Frame } from '@/lib/paint/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Clapperboard, Pin, PinOff, Film, Eye, Split } from 'lucide-react';
+import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Clapperboard, Pin, PinOff, Film, Eye, Split, X } from 'lucide-react';
 import { nanoid } from 'nanoid';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 const DEFAULT_CANVAS_SIZE = { width: 1920, height: 1080 };
 
@@ -48,9 +51,10 @@ function createLayer(name: string, size: { width: number; height: number }): Lay
 }
 
 export default function PaintPage() {
+  const { toast } = useToast();
   // Layers hold real <canvas> elements, which only exist client-side —
   // start empty and create the first layer after mount to avoid SSR errors.
-  const [workspaceMode, setWorkspaceMode] = useState<'animation' | 'storyboard'>('storyboard');
+  const [workspaceMode, setWorkspaceMode] = useState<'animation' | 'storyboard'>('animation');
   const [layers, setLayers] = useState<Layer[]>([]);
   const [activeLayerId, setActiveLayerId] = useState<string>('');
   const [tool, setTool] = useState<ToolType>('brush');
@@ -63,9 +67,25 @@ export default function PaintPage() {
     pressureOpacity: false,
     minPressureFactor: 0.35,
     smoothing: 0.3,
+    tolerance: 32,
+    smudgeStrength: 0.6,
+    secondaryColor: '#ffffff',
+    gradientType: 'linear',
+    exposure: 0.4,
+    fontFamily: 'Inter, system-ui, sans-serif',
+    fontWeight: 400,
+    fontItalic: false,
+    lineHeight: 1.2,
+    textAlign: 'left',
   });
   const [zoom, setZoom] = useState(0.6);
   const [selection, setSelection] = useState<Selection | null>(null);
+  // Bumping this tells PaintCanvas to forget its clone-stamp source point.
+  const [cloneSourceResetToken, setCloneSourceResetToken] = useState(0);
+
+  const handleInvertSelection = useCallback(() => {
+    setSelection((prev) => (prev ? maskToSelection(invertMask(prev.mask)) : prev));
+  }, []);
   const [, forceRender] = useState(0);
   const [customTextures, setCustomTextures] = useState<CustomBrushTexture[]>([]);
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
@@ -353,9 +373,15 @@ export default function PaintPage() {
 
   // Keyboard shortcuts — mirrors Photoshop's paint-tool conventions.
   useEffect(() => {
+    // Photoshop letter assignments. Shift+key cycles to the second tool in a
+    // group, the way Photoshop's own tool groups do.
     const shortcuts: Record<string, ToolType> = {
       b: 'brush', e: 'eraser', g: 'fill', i: 'eyedropper',
-      l: 'line', r: 'rectangle', o: 'ellipse', t: 'text', s: 'select', v: 'move',
+      r: 'smudge', o: 'dodge', m: 'select', l: 'lasso', w: 'magicWand',
+      s: 'cloneStamp', u: 'rectangle', t: 'text', v: 'move',
+    };
+    const shiftShortcuts: Record<string, ToolType> = {
+      r: 'blur', o: 'burn', l: 'polyLasso', u: 'ellipse', g: 'gradient',
     };
     const onKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -364,6 +390,18 @@ export default function PaintPage() {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         if (e.shiftKey) handleRedo(); else handleUndo();
+        return;
+      }
+
+      // Selection shortcuts, matching Photoshop.
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        setSelection(null);
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'i') {
+        e.preventDefault();
+        handleInvertSelection();
         return;
       }
 
@@ -440,7 +478,8 @@ export default function PaintPage() {
         return;
       }
 
-      const mapped = shortcuts[e.key.toLowerCase()];
+      const key = e.key.toLowerCase();
+      const mapped = e.shiftKey ? shiftShortcuts[key] : shortcuts[key];
       if (mapped) setTool(mapped);
     };
     const onKeyUp = (e: KeyboardEvent) => {
@@ -608,11 +647,15 @@ export default function PaintPage() {
   // target — those are working-state for whatever frame you're on, not
   // meaningful once you've moved to a different drawing.
   const scrollPosRef = useRef({ left: 0, top: 0 });
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
 
   useLayoutEffect(() => {
-    if (panContainerRef.current) {
-      panContainerRef.current.scrollLeft = scrollPosRef.current.left;
-      panContainerRef.current.scrollTop = scrollPosRef.current.top;
+    if (panContainerRef.current && !isPlayingRef.current && !isPanningRef.current) {
+      if (scrollPosRef.current.left !== 0 || scrollPosRef.current.top !== 0) {
+        panContainerRef.current.scrollLeft = scrollPosRef.current.left;
+        panContainerRef.current.scrollTop = scrollPosRef.current.top;
+      }
     }
   }, [activeFrameIndex]);
 
@@ -730,27 +773,6 @@ export default function PaintPage() {
     enterFrame(Math.min(activeFrameIndex, updated.length - 1), updated);
   };
 
-  // Playback reads everything through refs (not React state) so the
-  // interval callback never closes over a stale frame index or layer set —
-  // it only needs [isPlaying, fps] to know when to (re)start the timer.
-  useEffect(() => {
-    if (!isPlaying) return;
-    const interval = setInterval(() => {
-      const len = framesRef.current.length;
-      if (len <= 1) return;
-      const curIdx = activeFrameIndexRef.current;
-      const nextIdx = (curIdx + 1) % len;
-      const updated = framesRef.current.map((f, i) =>
-        i === curIdx ? { ...f, layers: layersRef.current, activeLayerId: activeLayerIdRef.current } : f
-      );
-      const target = updated[nextIdx];
-      setFrames(updated);
-      setLayers(target.layers);
-      setActiveLayerId(target.activeLayerId);
-      setActiveFrameIndex(nextIdx);
-    }, 1000 / fps);
-    return () => clearInterval(interval);
-  }, [isPlaying, fps]);
 
   // Tinted, background-excluded silhouettes of the neighboring frames for
   // the onion-skin ghost overlay (see flattenLayers/tintSilhouette).
@@ -839,12 +861,18 @@ export default function PaintPage() {
   const canvasBgVideoRef = useRef<HTMLVideoElement>(null);
 
   // Initialize a fresh clean transparent animation project
-  const handleCreateNewProject = (settings: { name: string; canvasSize: CanvasSize; fps: number }) => {
+  const handleCreateNewProject = (settings: { name: string; canvasSize: { width: number; height: number }; fps: number }) => {
     setCanvasSize(settings.canvasSize);
     setFps(settings.fps);
-    
-    // Create 1 clean transparent cel layer
+
+    // 1. Create a fresh clean white paper layer
     const initialLayer = createLayer('Layer 1', settings.canvasSize);
+    const ctx = initialLayer.canvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, settings.canvasSize.width, settings.canvasSize.height);
+    }
+
     const initialFrame: Frame = {
       id: nanoid(),
       name: 'Frame 1',
@@ -852,17 +880,36 @@ export default function PaintPage() {
       activeLayerId: initialLayer.id,
     };
 
+    // 2. Update state and refs synchronously to prevent autosave race conditions
+    layersRef.current = [initialLayer];
+    activeLayerIdRef.current = initialLayer.id;
+    framesRef.current = [initialFrame];
+    activeFrameIndexRef.current = 0;
+
     setFrames([initialFrame]);
     setActiveFrameIndex(0);
     setLayers([initialLayer]);
     setActiveLayerId(initialLayer.id);
     setActiveReferenceVideo(null);
     setIsPinnedToCanvas(false);
-    
-    historyRef.current.clear();
-    refreshHistoryButtons();
+    setAudioBuffer(null);
+    setAudioFileName(null);
     setSelection(null);
     setMaskTargetLayerId(null);
+
+    // 3. Reset undo/redo history and seed with new clean state
+    historyRef.current.clear();
+    historyRef.current.snapshot([initialLayer]);
+    refreshHistoryButtons();
+
+    // 4. Overwrite autosave with fresh new project
+    const cleanProject = serializeProject([initialFrame], settings.canvasSize, 0);
+    autosaveProject(cleanProject).catch(() => {});
+
+    toast({
+      title: "New File Created 🎨",
+      description: `Created fresh ${settings.name} (${settings.canvasSize.width}x${settings.canvasSize.height} @ ${settings.fps} FPS)`,
+    });
   };
 
   // Auto-generate animation timeline keyframes to match the reference video length
@@ -912,14 +959,32 @@ export default function PaintPage() {
       if (elapsed >= frameInterval) {
         lastFrameTimeRef.current = now - (elapsed % frameInterval);
 
-        const total = frames.length;
-        const start = Math.max(0, Math.min(loopStartRef.current, total - 1));
-        const end = Math.max(start, Math.min(loopEndRef.current > 0 ? loopEndRef.current : total - 1, total - 1));
+        const total = framesRef.current.length;
+        if (total > 1) {
+          const curIdx = activeFrameIndexRef.current;
+          const start = Math.max(0, Math.min(loopStartRef.current, total - 1));
+          const end = Math.max(start, Math.min(loopEndRef.current > 0 ? loopEndRef.current : total - 1, total - 1));
 
-        setActiveFrameIndex((prev) => {
-          if (prev < start || prev >= end) return start;
-          return prev + 1;
-        });
+          let nextIdx = curIdx + 1;
+          if (nextIdx < start || nextIdx > end) {
+            nextIdx = start;
+          }
+
+          const updated = framesRef.current.map((f, i) =>
+            i === curIdx ? { ...f, layers: layersRef.current, activeLayerId: activeLayerIdRef.current } : f
+          );
+          const target = updated[nextIdx] || updated[0];
+
+          framesRef.current = updated;
+          layersRef.current = target.layers;
+          activeLayerIdRef.current = target.activeLayerId;
+          activeFrameIndexRef.current = nextIdx;
+
+          setFrames(updated);
+          setLayers(target.layers);
+          setActiveLayerId(target.activeLayerId);
+          setActiveFrameIndex(nextIdx);
+        }
       }
       playheadRafRef.current = requestAnimationFrame(loop);
     };
@@ -988,6 +1053,42 @@ export default function PaintPage() {
     return cvs;
   }, [onionSkinEnabled, activeFrameIndex, frames, canvasSize]);
 
+  const handleLoadProjectFile = async (file: File) => {
+    try {
+      const raw = await readProjectFile(file);
+      const restored = await deserializeProject(raw);
+      
+      setCanvasSize(restored.canvasSize);
+      if (restored.fps) setFps(restored.fps);
+      setFrames(restored.frames);
+      setActiveFrameIndex(restored.activeFrameIndex);
+
+      const activeFrame = restored.frames[restored.activeFrameIndex] || restored.frames[0];
+      if (activeFrame) {
+        setLayers(activeFrame.layers);
+        setActiveLayerId(activeFrame.activeLayerId);
+      }
+
+      framesRef.current = restored.frames;
+      layersRef.current = activeFrame ? activeFrame.layers : [];
+      activeLayerIdRef.current = activeFrame ? activeFrame.activeLayerId : '';
+      activeFrameIndexRef.current = restored.activeFrameIndex;
+
+      historyRef.current.clear();
+      if (activeFrame) historyRef.current.snapshot(activeFrame.layers);
+      refreshHistoryButtons();
+      setSelection(null);
+      setMaskTargetLayerId(null);
+
+      toast({
+        title: "Project File Loaded 🎬",
+        description: `Loaded ${file.name} (${restored.frames.length} cels @ ${restored.canvasSize.width}x${restored.canvasSize.height})`,
+      });
+    } catch (err) {
+      window.alert('Could not open that file — please select a valid .animref or .json project file.');
+    }
+  };
+
   if (layers.length === 0 || !activeLayerId) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-[#0d0d12] text-zinc-500 text-sm font-semibold">
@@ -1014,6 +1115,7 @@ export default function PaintPage() {
         isTimelineOpen={isTimelineOpen}
         onOpenAdjustments={() => setShowAdjustments(true)}
         onNewProject={() => setShowNewProjectModal(true)}
+        onOpenProjectFile={handleLoadProjectFile}
         onOpenExport={() => setShowExportModal(true)}
         workspaceMode={workspaceMode}
         onToggleWorkspaceMode={() => setWorkspaceMode(workspaceMode === 'storyboard' ? 'animation' : 'storyboard')}
@@ -1070,16 +1172,6 @@ export default function PaintPage() {
               <span>Change</span>
             </button>
 
-            {/* Split Screen Dual Reference Comparison Button */}
-            <button
-              onClick={() => setShowComparisonModal(true)}
-              className="px-2.5 py-1.5 rounded-xl bg-indigo-600/40 hover:bg-indigo-600 border border-indigo-400/50 text-indigo-200 hover:text-white transition-all cursor-pointer text-xs font-bold flex items-center gap-1.5 shadow"
-              title="Open Split-Screen Dual Video Reference Comparison Player"
-            >
-              <Split className="h-3.5 w-3.5" />
-              <span>Compare</span>
-            </button>
-
             {/* Unpin Button */}
             <button
               onClick={() => setIsPinnedToCanvas(false)}
@@ -1088,6 +1180,19 @@ export default function PaintPage() {
             >
               <PinOff className="h-3.5 w-3.5" />
               <span>Unpin</span>
+            </button>
+
+            {/* Remove / Clear Reference Video Button */}
+            <button
+              onClick={() => {
+                setActiveReferenceVideo(null);
+                setIsPinnedToCanvas(false);
+              }}
+              className="px-2.5 py-1.5 rounded-xl bg-red-600/20 hover:bg-red-600 border border-red-500/30 text-red-300 hover:text-white transition-all cursor-pointer text-xs font-bold flex items-center gap-1 shadow"
+              title="Remove reference video from project"
+            >
+              <X className="h-3.5 w-3.5" />
+              <span>Remove</span>
             </button>
 
           </div>
@@ -1104,6 +1209,16 @@ export default function PaintPage() {
           canUndo={canUndo}
           canRedo={canRedo}
           onOpenReferenceModal={() => setShowReferenceModal(true)}
+        />
+
+        <ToolOptionsBar
+          tool={tool}
+          brush={brush}
+          onBrushChange={setBrush}
+          selection={selection}
+          onDeselect={() => setSelection(null)}
+          onInvertSelection={handleInvertSelection}
+          onResetCloneSource={() => setCloneSourceResetToken((t) => t + 1)}
         />
 
         {/* FLOATING PROCREATE BRUSH STUDIO POP-OVER */}
@@ -1252,6 +1367,7 @@ export default function PaintPage() {
                   isSpaceHeld={isSpaceHeld}
                   maskTargetLayerId={maskTargetLayerId}
                   symmetry={symmetry}
+                  cloneSourceResetToken={cloneSourceResetToken}
                   onionSkinPrev={onionSkinPrevCanvas}
                   onionSkinNext={onionSkinNextCanvas}
                   onionSkinOpacity={onionSkinOpacity}
@@ -1470,7 +1586,6 @@ export default function PaintPage() {
       <AdjustmentsDialog
         open={showAdjustments}
         onOpenChange={setShowAdjustments}
-        activeLayer={layers.find((l) => l.id === activeLayerId)}
         onApply={handleApplyAdjustment}
       />
 

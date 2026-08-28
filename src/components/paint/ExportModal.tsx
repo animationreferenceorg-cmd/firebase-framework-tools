@@ -15,6 +15,8 @@ import {
 import { cn } from '@/lib/utils';
 import type { Frame, CanvasSize } from '@/lib/paint/types';
 import { createLayerCanvas } from '@/lib/paint/engine';
+import { serializeProject, downloadProject } from '@/lib/paint/persistence';
+import { Layers } from 'lucide-react';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -31,7 +33,7 @@ export function ExportModal({
   canvasSize,
   fps,
 }: ExportModalProps) {
-  const [exportType, setExportType] = useState<'mp4' | 'webm' | 'spritesheet' | 'png'>('mp4');
+  const [exportType, setExportType] = useState<'mp4' | 'webm' | 'spritesheet' | 'png' | 'project'>('mp4');
   const [columns, setColumns] = useState<number>(4);
   const [includeBackground, setIncludeBackground] = useState<boolean>(true);
   const [backgroundColor, setBackgroundColor] = useState<string>('#ffffff');
@@ -292,11 +294,21 @@ export function ExportModal({
     }, 'image/png');
   };
 
+  // Handle Export .animref Native Project File (Preserves all cels, layers, blend modes, masks & timing data)
+  const handleExportProjectFile = () => {
+    setIsExporting(true);
+    try {
+      const project = serializeProject(frames, canvasSize, 0, fps);
+      downloadProject(project, 'animation-project.animref');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
       <div 
         className="w-full max-w-2xl bg-[#12121a] border border-white/15 rounded-3xl shadow-[0_30px_90px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header Bar */}
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#161622]">
@@ -306,7 +318,7 @@ export function ExportModal({
             </div>
             <div>
               <h2 className="text-base font-bold text-white tracking-wide">Animation Export Suite</h2>
-              <p className="text-xs text-zinc-400 font-mono">Export MP4 Videos, WebM, Spritesheets & PNG Sequences</p>
+              <p className="text-xs text-zinc-400 font-mono">Export MP4 Videos, WebM, Spritesheets, PNG & Native .animref Project Files</p>
             </div>
           </div>
           <button
@@ -326,57 +338,70 @@ export function ExportModal({
             {/* Format Selector Tabs */}
             <div>
               <label className="block text-xs font-mono font-bold text-zinc-400 mb-2">EXPORT FORMAT</label>
-              <div className="grid grid-cols-4 gap-1.5 p-1 bg-white/5 border border-white/10 rounded-2xl">
+              <div className="grid grid-cols-5 gap-1 p-1 bg-white/5 border border-white/10 rounded-2xl">
                 <button
                   onClick={() => setExportType('mp4')}
                   className={cn(
-                    "py-2 px-2 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer",
+                    "py-2 px-1 rounded-xl text-[10px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer",
                     exportType === 'mp4'
                       ? "bg-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)] border border-purple-400"
                       : "text-zinc-400 hover:text-white hover:bg-white/5"
                   )}
                 >
-                  <Video className="h-4 w-4 text-purple-300" />
-                  <span>MP4 Video</span>
+                  <Video className="h-3.5 w-3.5 text-purple-300" />
+                  <span>MP4</span>
                 </button>
 
                 <button
                   onClick={() => setExportType('webm')}
                   className={cn(
-                    "py-2 px-2 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer",
+                    "py-2 px-1 rounded-xl text-[10px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer",
                     exportType === 'webm'
                       ? "bg-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)] border border-purple-400"
                       : "text-zinc-400 hover:text-white hover:bg-white/5"
                   )}
                 >
-                  <Film className="h-4 w-4 text-purple-300" />
-                  <span>WebM Video</span>
+                  <Film className="h-3.5 w-3.5 text-purple-300" />
+                  <span>WebM</span>
                 </button>
 
                 <button
                   onClick={() => setExportType('spritesheet')}
                   className={cn(
-                    "py-2 px-2 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer",
+                    "py-2 px-1 rounded-xl text-[10px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer",
                     exportType === 'spritesheet'
                       ? "bg-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)] border border-purple-400"
                       : "text-zinc-400 hover:text-white hover:bg-white/5"
                   )}
                 >
-                  <Grid className="h-4 w-4 text-purple-300" />
-                  <span>Spritesheet</span>
+                  <Grid className="h-3.5 w-3.5 text-purple-300" />
+                  <span>Sheet</span>
                 </button>
 
                 <button
                   onClick={() => setExportType('png')}
                   className={cn(
-                    "py-2 px-2 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer",
+                    "py-2 px-1 rounded-xl text-[10px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer",
                     exportType === 'png'
                       ? "bg-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)] border border-purple-400"
                       : "text-zinc-400 hover:text-white hover:bg-white/5"
                   )}
                 >
-                  <ImageIcon className="h-4 w-4 text-purple-300" />
-                  <span>PNG Frame</span>
+                  <ImageIcon className="h-3.5 w-3.5 text-purple-300" />
+                  <span>PNG</span>
+                </button>
+
+                <button
+                  onClick={() => setExportType('project')}
+                  className={cn(
+                    "py-2 px-1 rounded-xl text-[10px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer",
+                    exportType === 'project'
+                      ? "bg-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)] border border-purple-400"
+                      : "text-zinc-400 hover:text-white hover:bg-white/5"
+                  )}
+                >
+                  <Layers className="h-3.5 w-3.5 text-purple-300" />
+                  <span>.animref</span>
                 </button>
               </div>
             </div>
@@ -456,7 +481,8 @@ export function ExportModal({
             {/* Action Export Button */}
             <button
               onClick={() => {
-                if (exportType === 'mp4') handleExportVideo('mp4');
+                if (exportType === 'project') handleExportProjectFile();
+                else if (exportType === 'mp4') handleExportVideo('mp4');
                 else if (exportType === 'webm') handleExportVideo('webm');
                 else if (exportType === 'spritesheet') handleExportSpritesheet();
                 else handleExportPNG();
@@ -465,11 +491,11 @@ export function ExportModal({
               className="mt-2 w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-[0_0_25px_rgba(168,85,247,0.5)] border border-purple-300/40 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
             >
               {isExporting ? (
-                <span>Generating Video ({exportProgress}%)...</span>
+                <span>Exporting ({exportProgress}%)...</span>
               ) : (
                 <>
                   <Download className="h-4 w-4" />
-                  <span>Download {exportType.toUpperCase()} Video / File</span>
+                  <span>Download {exportType === 'project' ? '.animref Project File' : `${exportType.toUpperCase()} File`}</span>
                 </>
               )}
             </button>

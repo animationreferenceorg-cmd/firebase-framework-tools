@@ -19,6 +19,13 @@ interface SerializedFrame {
   name: string;
   activeLayerId: string;
   layers: SerializedLayer[];
+  storyboardScript?: {
+    dialogue: string;
+    action: string;
+    camera: string;
+    duration: number;
+  };
+  poseType?: 'key' | 'extreme' | 'breakdown' | 'inbetween';
 }
 
 // v1 was a single layer stack with no frames — kept here only so
@@ -35,6 +42,7 @@ interface SerializedProjectV1 {
 export interface SerializedProject {
   version: 2;
   canvasSize: CanvasSize;
+  fps?: number;
   frames: SerializedFrame[];
   activeFrameIndex: number;
   savedAt: number;
@@ -90,10 +98,11 @@ async function deserializeLayer(s: SerializedLayer, canvasSize: CanvasSize): Pro
   };
 }
 
-export function serializeProject(frames: Frame[], canvasSize: CanvasSize, activeFrameIndex: number): SerializedProject {
+export function serializeProject(frames: Frame[], canvasSize: CanvasSize, activeFrameIndex: number, fps?: number): SerializedProject {
   return {
     version: 2,
     canvasSize,
+    fps,
     activeFrameIndex,
     savedAt: Date.now(),
     frames: frames.map((f) => ({
@@ -101,12 +110,15 @@ export function serializeProject(frames: Frame[], canvasSize: CanvasSize, active
       name: f.name,
       activeLayerId: f.activeLayerId,
       layers: f.layers.map(serializeLayer),
+      storyboardScript: f.storyboardScript,
+      poseType: f.poseType,
     })),
   };
 }
 
-export async function deserializeProject(project: AnySerializedProject): Promise<{ frames: Frame[]; canvasSize: CanvasSize; activeFrameIndex: number }> {
+export async function deserializeProject(project: AnySerializedProject): Promise<{ frames: Frame[]; canvasSize: CanvasSize; activeFrameIndex: number; fps?: number }> {
   const canvasSize = project.canvasSize;
+  const fps = project.version === 2 ? project.fps : undefined;
 
   const serializedFrames: SerializedFrame[] =
     project.version === 2
@@ -120,21 +132,26 @@ export async function deserializeProject(project: AnySerializedProject): Promise
       name: sf.name,
       layers,
       activeLayerId: layers.find((l) => l.id === sf.activeLayerId) ? sf.activeLayerId : layers[layers.length - 1]?.id ?? '',
+      storyboardScript: sf.storyboardScript,
+      poseType: sf.poseType,
     };
     return frame;
   }));
 
   const activeFrameIndex = project.version === 2 ? Math.min(Math.max(0, project.activeFrameIndex), frames.length - 1) : 0;
 
-  return { frames, canvasSize, activeFrameIndex };
+  return { frames, canvasSize, activeFrameIndex, fps };
 }
 
-export function downloadProject(project: SerializedProject, filename: string = 'animation-reference-project.json') {
+export function downloadProject(project: SerializedProject, filename: string = 'animation-project.animref') {
+  const cleanFilename = filename.endsWith('.animref') || filename.endsWith('.json') || filename.endsWith('.paint')
+    ? filename
+    : `${filename}.animref`;
   const blob = new Blob([JSON.stringify(project)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = filename;
+  link.download = cleanFilename;
   link.click();
   URL.revokeObjectURL(url);
 }

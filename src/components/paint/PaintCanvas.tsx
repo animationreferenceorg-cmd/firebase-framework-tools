@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import type { Layer, ToolType, BrushSettings, CanvasSize, Point, CustomBrushTexture, Selection, SymmetryMode } from '@/lib/paint/types';
-import { normalizedPressure } from '@/lib/paint/types';
+import { normalizedPressure, STROKE_TOOLS } from '@/lib/paint/types';
 import {
   strokeSegment,
   stampBrush,
@@ -16,9 +16,13 @@ import {
   rectSelectionMask,
   polygonSelectionMask,
   magicWandSelectionMask,
-  maskBounds,
   combineSelectionMask,
-  paintLinearGradient,
+  maskToSelection,
+  withSelectionClip,
+  paintGradient,
+  blurSegment,
+  sharpenSegment,
+  dodgeBurnSegment,
 } from '@/lib/paint/engine';
 
 interface PaintCanvasProps {
@@ -42,6 +46,8 @@ interface PaintCanvasProps {
   onionSkinNext?: HTMLCanvasElement | null;
   onionSkinOpacity?: number;
   hasBackgroundVideo?: boolean;
+  /** Increment to clear the clone-stamp source point from outside. */
+  cloneSourceResetToken?: number;
 }
 
 export function PaintCanvas({
@@ -65,6 +71,7 @@ export function PaintCanvas({
   onionSkinNext,
   onionSkinOpacity = 0.35,
   hasBackgroundVideo = false,
+  cloneSourceResetToken = 0,
 }: PaintCanvasProps) {
   const displayRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
@@ -76,13 +83,88 @@ export function PaintCanvas({
   const gradientStartRef = useRef<Point | null>(null);
   const shapeStartRef = useRef<Point | null>(null);
   const cloneSourceRef = useRef<Point | null>(null);
+  const cloneOffsetRef = useRef<{ dx: number; dy: number } | null>(null);
+  // Frozen copy of the layer taken when a clone stroke starts. Sampling the
+  // live canvas instead would feed the tool its own output and smear.
+  const cloneSampleRef = useRef<HTMLCanvasElement | null>(null);
+  // The clone source marker is drawn from a ref, so it needs an explicit nudge
+  // to re-render when the source moves (refs don't trigger React updates).
+  const [cloneSourceTick, setCloneSourceTick] = useState(0);
   const [textEditor, setTextEditor] = useState<{ x: number; y: number } | null>(null);
   const [textValue, setTextValue] = useState('');
+
+  /** Combines a freshly-built mask with the current selection and pushes the
+   * result up as a proper Selection object. Shift adds, Alt subtracts. */
+  const applySelectionMask = useCallback(
+    (mask: HTMLCanvasElement, e: { shiftKey: boolean; altKey: boolean }) => {
+      const mode = e.shiftKey ? 'add' : e.altKey ? 'subtract' : 'replace';
+      const combined = combineSelectionMask(selection?.mask ?? null, mask, mode);
+      onSelectionChange(maskToSelection(combined));
+    },
+    [selection, onSelectionChange]
+  );
+
+  const clearOverlay = useCallback(() => {
+    const overlay = overlayRef.current;
+    const oCtx = overlay?.getContext('2d');
+    if (overlay && oCtx) oCtx.clearRect(0, 0, overlay.width, overlay.height);
+  }, []);
+
+  /** Marching-ants preview for both the freehand and polygonal lasso. */
+  const drawLassoPreview = useCallback((cursor?: Point) => {
+    const overlay = overlayRef.current;
+    const oCtx = overlay?.getContext('2d');
+    if (!overlay || !oCtx) return;
+    const pts = lassoPointsRef.current;
+    oCtx.clearRect(0, 0, overlay.width, overlay.height);
+    if (pts.length === 0) return;
+    oCtx.save();
+    oCtx.strokeStyle = '#3b82f6';
+    oCtx.lineWidth = 2;
+    oCtx.setLineDash([4, 4]);
+    oCtx.beginPath();
+    oCtx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) oCtx.lineTo(pts[i].x, pts[i].y);
+    if (cursor) oCtx.lineTo(cursor.x, cursor.y);
+    oCtx.stroke();
+    oCtx.restore();
+  }, []);
+
+  const commitLassoSelection = useCallback(
+    (e: { shiftKey: boolean; altKey: boolean }) => {
+      const pts = lassoPointsRef.current;
+      if (pts.length > 2) {
+        const mask = polygonSelectionMask(canvasSize.width, canvasSize.height, pts);
+        applySelectionMask(mask, e);
+      }
+      lassoPointsRef.current = [];
+      clearOverlay();
+    },
+    [canvasSize, applySelectionMask, clearOverlay]
+  );
+
+  // Enter closes an in-progress polygonal lasso; Escape abandons it.
+  useEffect(() => {
+    if (tool !== 'polyLasso') return;
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === 'Enter') commitLassoSelection({ shiftKey: ev.shiftKey, altKey: ev.altKey });
+      else if (ev.key === 'Escape') { lassoPointsRef.current = []; clearOverlay(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [tool, commitLassoSelection, clearOverlay]);
 
   // Keep activeLayerRef in sync
   useEffect(() => {
     activeLayerRef.current = layers.find((l) => l.id === activeLayerId) || null;
   }, [layers, activeLayerId]);
+
+  useEffect(() => {
+    if (cloneSourceResetToken === 0) return;
+    cloneSourceRef.current = null;
+    cloneOffsetRef.current = null;
+    setCloneSourceTick((t) => t + 1);
+  }, [cloneSourceResetToken]);
 
   // Combine layers onto display canvas (preserving transparent drawing cels!)
   const redrawCombinedCanvas = useCallback(() => {
@@ -238,6 +320,20 @@ export function PaintCanvas({
       return;
     }
 
+    // Handled before the history snapshot below — the polygonal lasso takes one
+    // click per point and doesn't touch pixels, so snapshotting each click would
+    // fill the undo stack with identical entries.
+    if (tool === 'polyLasso') {
+      if (e.detail >= 2 && lassoPointsRef.current.length > 2) {
+        commitLassoSelection(e);
+      } else {
+        lassoPointsRef.current.push(pt);
+        drawLassoPreview(pt);
+      }
+      isDrawingRef.current = false;
+      return;
+    }
+
     const targetCanvas = activeTargetCanvas();
     if (!targetCanvas) return;
     if (activeLayerRef.current?.locked || activeLayerRef.current?.visible === false) return;
@@ -252,8 +348,7 @@ export function PaintCanvas({
         Math.round(pt.x),
         Math.round(pt.y),
         brush.color,
-        brush.tolerance,
-        selection
+        32
       );
       redrawCombinedCanvas();
       onAfterStroke();
@@ -291,49 +386,55 @@ export function PaintCanvas({
     if (tool === 'magicWand') {
       const sampleCanvas = targetCanvas || displayRef.current;
       if (!sampleCanvas) return;
-      const mode: 'replace' | 'add' | 'subtract' = e.shiftKey ? 'add' : e.altKey ? 'subtract' : 'replace';
       const mask = magicWandSelectionMask(sampleCanvas, Math.round(pt.x), Math.round(pt.y), brush.tolerance);
-      const newSel = combineSelectionMask(selection, mask, mode);
-      onSelectionChange(newSel);
+      applySelectionMask(mask, e);
       isDrawingRef.current = false;
       onAfterStroke();
       return;
     }
 
-    if (tool === 'cloneStamp' && !cloneSourceRef.current) {
+    // Alt+click sets the clone source (matching the tooltip and Photoshop).
+    // Without a source set, a plain click also sets it rather than painting
+    // solid colour, which is what the old fall-through did.
+    if (tool === 'cloneStamp' && (e.altKey || !cloneSourceRef.current)) {
       cloneSourceRef.current = pt;
+      cloneOffsetRef.current = null;
+      setCloneSourceTick((t) => t + 1);
       isDrawingRef.current = false;
       onAfterStroke();
       return;
     }
 
-    // Direct Painting (Brush, Eraser, Smudge)
-    const activeTexture = brush.textureId
-      ? customTextures.find((t) => t.id === brush.textureId)?.canvas
-      : undefined;
-
-    const ctx = targetCanvas.getContext('2d')!;
-    ctx.save();
-    if (tool === 'eraser') {
-      ctx.globalCompositeOperation = 'destination-out';
-    } else {
-      ctx.globalCompositeOperation = 'source-over';
+    // Lock the source→destination offset at the moment the stroke starts, so
+    // the clone source travels with the brush the way Photoshop's aligned mode does.
+    if (tool === 'cloneStamp' && cloneSourceRef.current) {
+      cloneOffsetRef.current = {
+        dx: pt.x - cloneSourceRef.current.x,
+        dy: pt.y - cloneSourceRef.current.y,
+      };
+      cloneSampleRef.current = cloneCanvas(targetCanvas);
     }
 
-    if (tool === 'smudge') {
-      const display = displayRef.current;
-      if (display) {
-        smudgeSegment(targetCanvas, display, pt, pt, brush, selMask);
-      }
-    } else if (tool === 'cloneStamp' && cloneSourceRef.current) {
-      const display = displayRef.current;
-      if (display) {
-        cloneStampSegment(targetCanvas, display, cloneSourceRef.current, pt, pt, brush, selMask);
-      }
-    } else {
-      stampBrush(ctx, pt, brush, activeTexture);
+
+    // Lay down the initial dab. Only the brush and eraser deposit anything on
+    // press — smudge, clone, blur, sharpen and dodge/burn are all segment-based
+    // and need a second point before they have anything to act on. Stamping for
+    // them (as this used to) painted a blob of the active colour instead.
+    if (tool === 'brush' || tool === 'eraser') {
+      const activeTexture = brush.textureId
+        ? customTextures.find((t) => t.id === brush.textureId)?.canvas
+        : undefined;
+
+      const paintingMask = !!maskTargetLayerId && maskTargetLayerId === activeLayerRef.current?.id;
+      const alphaLocked = !paintingMask && !!activeLayerRef.current?.alphaLocked;
+
+      withSelectionClip(targetCanvas, selection?.mask ?? null, alphaLocked, (ctx) => {
+        ctx.save();
+        ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
+        stampBrush(ctx, pt, brush, activeTexture);
+        ctx.restore();
+      });
     }
-    ctx.restore();
 
     redrawCombinedCanvas();
   };
@@ -349,6 +450,13 @@ export function PaintCanvas({
       // scale visually with the page zoom! We just need to set the width to brush.size.
       cursorDotRef.current.style.width = `${Math.max(4, brush.size)}px`;
       cursorDotRef.current.style.height = `${Math.max(4, brush.size)}px`;
+    }
+
+    // The polygonal lasso rubber-bands from the last committed point to the
+    // cursor between clicks, so it has to paint the overlay with no button down.
+    if (tool === 'polyLasso' && lassoPointsRef.current.length > 0) {
+      drawLassoPreview(pt);
+      return;
     }
 
     if (!isDrawingRef.current) return;
@@ -378,50 +486,60 @@ export function PaintCanvas({
     const smoothedPt = smoothPoint(prevPt, constrainedPt, brush.smoothing);
     path.push(smoothedPt);
 
-    const selMask = selection ? selection.maskCanvas : undefined;
     const activeTexture = brush.textureId
       ? customTextures.find((t) => t.id === brush.textureId)?.canvas
       : undefined;
 
-    const ctx = targetCanvas.getContext('2d')!;
-    ctx.save();
-    if (tool === 'eraser') {
-      ctx.globalCompositeOperation = 'destination-out';
-    } else {
-      ctx.globalCompositeOperation = 'source-over';
-    }
+    // Alpha lock only makes sense when painting the artwork itself — a layer
+    // mask is meant to be paintable from empty.
+    const paintingMask = !!maskTargetLayerId && maskTargetLayerId === activeLayerRef.current?.id;
+    const alphaLocked = !paintingMask && !!activeLayerRef.current?.alphaLocked;
 
-    if (tool === 'brush' || tool === 'eraser') {
-      if (symmetry === 'none') {
-        strokeSegment(ctx, prevPt, smoothedPt, brush, activeTexture);
-      } else {
-        const w = targetCanvas.width;
-        const h = targetCanvas.height;
-
-        strokeSegment(ctx, prevPt, smoothedPt, brush, activeTexture);
-
-        if (symmetry === 'vertical' || symmetry === 'both') {
-          const symPrev = { ...prevPt, x: w - prevPt.x };
-          const symCurr = { ...smoothedPt, x: w - smoothedPt.x };
-          strokeSegment(ctx, symPrev, symCurr, brush, activeTexture);
-        }
-
-        if (symmetry === 'horizontal' || symmetry === 'both') {
-          const symPrev = { ...prevPt, y: h - prevPt.y };
-          const symCurr = { ...smoothedPt, y: h - smoothedPt.y };
-          strokeSegment(ctx, symPrev, symCurr, brush, activeTexture);
-        }
-
-        if (symmetry === 'both') {
-          const symPrev = { x: w - prevPt.x, y: h - prevPt.y, pressure: prevPt.pressure };
-          const symCurr = { x: w - smoothedPt.x, y: h - smoothedPt.y, pressure: smoothedPt.pressure };
-          strokeSegment(ctx, symPrev, symCurr, brush, activeTexture);
-        }
-      }
-    } else if (tool === 'lasso') {
+    if (tool === 'lasso') {
       lassoPointsRef.current.push(pt);
+    } else if (STROKE_TOOLS.includes(tool)) {
+      withSelectionClip(targetCanvas, selection?.mask ?? null, alphaLocked, (ctx) => {
+        ctx.save();
+        ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
+
+        if (tool === 'brush' || tool === 'eraser') {
+          const w = targetCanvas.width;
+          const h = targetCanvas.height;
+          strokeSegment(ctx, prevPt, smoothedPt, brush, activeTexture);
+
+          if (symmetry === 'vertical' || symmetry === 'both') {
+            strokeSegment(ctx, { ...prevPt, x: w - prevPt.x }, { ...smoothedPt, x: w - smoothedPt.x }, brush, activeTexture);
+          }
+          if (symmetry === 'horizontal' || symmetry === 'both') {
+            strokeSegment(ctx, { ...prevPt, y: h - prevPt.y }, { ...smoothedPt, y: h - smoothedPt.y }, brush, activeTexture);
+          }
+          if (symmetry === 'both') {
+            strokeSegment(
+              ctx,
+              { x: w - prevPt.x, y: h - prevPt.y, pressure: prevPt.pressure },
+              { x: w - smoothedPt.x, y: h - smoothedPt.y, pressure: smoothedPt.pressure },
+              brush,
+              activeTexture
+            );
+          }
+        } else if (tool === 'smudge') {
+          smudgeSegment(ctx, prevPt, smoothedPt, brush.size, brush.smudgeStrength);
+        } else if (tool === 'cloneStamp') {
+          const offset = cloneOffsetRef.current;
+          if (offset) {
+            cloneStampSegment(ctx, cloneSampleRef.current ?? ctx.canvas, prevPt, smoothedPt, offset, brush);
+          }
+        } else if (tool === 'blur') {
+          blurSegment(ctx, prevPt, smoothedPt, brush.size, brush.opacity);
+        } else if (tool === 'sharpen') {
+          sharpenSegment(ctx, prevPt, smoothedPt, brush.size, brush.opacity);
+        } else if (tool === 'dodge' || tool === 'burn') {
+          dodgeBurnSegment(ctx, prevPt, smoothedPt, brush.size, brush.exposure, tool);
+        }
+
+        ctx.restore();
+      });
     }
-    ctx.restore();
 
     const overlay = overlayRef.current;
     if (overlay) {
@@ -483,11 +601,29 @@ export function PaintCanvas({
     const path = strokePathRef.current;
     const endPt = path[path.length - 1];
 
-    const mode: 'replace' | 'add' | 'subtract' = e.shiftKey ? 'add' : e.altKey ? 'subtract' : 'replace';
-
     if (targetCanvas && endPt) {
       if (tool === 'gradient' && gradientStartRef.current) {
-        paintLinearGradient(targetCanvas, gradientStartRef.current, endPt, brush.color, brush.color, targetCanvas.width, targetCanvas.height);
+        // Was passing the canvas where a 2D context belongs (which threw), and
+        // the same colour for both stops (which is a flat fill even when it
+        // doesn't throw). Now uses the real second colour and honours selection.
+        const paintingMask = !!maskTargetLayerId && maskTargetLayerId === activeLayerRef.current?.id;
+        const alphaLocked = !paintingMask && !!activeLayerRef.current?.alphaLocked;
+        const start = gradientStartRef.current;
+        withSelectionClip(targetCanvas, selection?.mask ?? null, alphaLocked, (ctx) => {
+          ctx.save();
+          ctx.globalAlpha = brush.opacity;
+          paintGradient(
+            ctx,
+            start,
+            endPt,
+            brush.color,
+            brush.secondaryColor,
+            brush.gradientType,
+            targetCanvas.width,
+            targetCanvas.height
+          );
+          ctx.restore();
+        });
       } else if (shapeStartRef.current && (tool === 'line' || tool === 'rectangle' || tool === 'ellipse')) {
         const tempCvs = createLayerCanvas(targetCanvas.width, targetCanvas.height);
         const tCtx = tempCvs.getContext('2d')!;
@@ -505,19 +641,20 @@ export function PaintCanvas({
         const h = Math.abs(endPt.y - shapeStartRef.current.y);
         if (w > 2 && h > 2) {
           const mask = rectSelectionMask(targetCanvas.width, targetCanvas.height, x, y, w, h);
-          const newSel = combineSelectionMask(selection, mask, mode);
-          onSelectionChange(newSel);
+          applySelectionMask(mask, e);
         }
       } else if (tool === 'lasso' && lassoPointsRef.current.length > 2) {
         const mask = polygonSelectionMask(targetCanvas.width, targetCanvas.height, lassoPointsRef.current);
-        const newSel = combineSelectionMask(selection, mask, mode);
-        onSelectionChange(newSel);
+        applySelectionMask(mask, e);
       }
     }
 
     gradientStartRef.current = null;
     shapeStartRef.current = null;
-    lassoPointsRef.current = [];
+    // The polygonal lasso accumulates across clicks — only the freehand lasso
+    // finishes on pointer-up.
+    if (tool !== 'polyLasso') lassoPointsRef.current = [];
+    cloneSampleRef.current = null;
     strokePathRef.current = [];
 
     redrawCombinedCanvas();
@@ -533,14 +670,27 @@ export function PaintCanvas({
     const targetCanvas = activeTargetCanvas();
     if (targetCanvas) {
       onBeforeStroke();
-      const ctx = targetCanvas.getContext('2d')!;
-      ctx.save();
-      ctx.fillStyle = brush.color;
-      ctx.globalAlpha = brush.opacity;
-      ctx.font = `${Math.max(10, brush.size * 2)}px sans-serif`;
-      ctx.textBaseline = 'top';
-      ctx.fillText(textValue, textEditor.x, textEditor.y);
-      ctx.restore();
+      const fontSize = Math.max(10, brush.size * 2);
+      const lineStep = fontSize * brush.lineHeight;
+      // fillText draws a single run and ignores "\n" entirely, so a multi-line
+      // textarea used to collapse into one line. Draw each line explicitly.
+      const lines = textValue.replace(/\r\n/g, '\n').split('\n');
+
+      const paintingMask = !!maskTargetLayerId && maskTargetLayerId === activeLayerRef.current?.id;
+      const alphaLocked = !paintingMask && !!activeLayerRef.current?.alphaLocked;
+
+      withSelectionClip(targetCanvas, selection?.mask ?? null, alphaLocked, (ctx) => {
+        ctx.save();
+        ctx.fillStyle = brush.color;
+        ctx.globalAlpha = brush.opacity;
+        ctx.font = `${brush.fontItalic ? 'italic ' : ''}${brush.fontWeight} ${fontSize}px ${brush.fontFamily}`;
+        ctx.textBaseline = 'top';
+        ctx.textAlign = brush.textAlign;
+        lines.forEach((line, i) => {
+          ctx.fillText(line, textEditor.x, textEditor.y + i * lineStep);
+        });
+        ctx.restore();
+      });
       redrawCombinedCanvas();
       onAfterStroke();
     }
@@ -552,7 +702,11 @@ export function PaintCanvas({
     tool === 'brush' ||
     tool === 'eraser' ||
     tool === 'smudge' ||
-    tool === 'cloneStamp';
+    tool === 'cloneStamp' ||
+    tool === 'blur' ||
+    tool === 'sharpen' ||
+    tool === 'dodge' ||
+    tool === 'burn';
 
   return (
     <div
@@ -580,7 +734,7 @@ export function PaintCanvas({
             ? 'none'
             : tool === 'eyedropper'
             ? 'crosshair'
-            : tool === 'lasso' || tool === 'magicWand' || tool === 'select'
+            : tool === 'lasso' || tool === 'polyLasso' || tool === 'magicWand' || tool === 'select' || tool === 'gradient'
             ? 'crosshair'
             : 'default',
         }}
@@ -641,6 +795,7 @@ export function PaintCanvas({
       )}
       {tool === 'cloneStamp' && cloneSourceRef.current && (
         <div
+          key={cloneSourceTick}
           className="absolute rounded-full border-2 border-pink-400 pointer-events-none"
           style={{
             left: cloneSourceRef.current.x * zoom - 8,
@@ -665,7 +820,12 @@ export function PaintCanvas({
             top: textEditor.y * zoom,
             fontSize: Math.max(10, brush.size * 2) * zoom,
             color: brush.color,
-            lineHeight: 1.2,
+            // Mirror the committed render so the editor is WYSIWYG.
+            fontFamily: brush.fontFamily,
+            fontWeight: brush.fontWeight,
+            fontStyle: brush.fontItalic ? 'italic' : 'normal',
+            lineHeight: brush.lineHeight,
+            textAlign: brush.textAlign,
           }}
           className="bg-transparent border border-dashed border-blue-500 outline-none resize p-0 min-w-[100px] min-h-[1.5em]"
         />

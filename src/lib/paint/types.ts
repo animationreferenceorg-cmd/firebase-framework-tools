@@ -42,11 +42,22 @@ export type ToolType =
   | 'text'
   | 'select'
   | 'lasso'
+  | 'polyLasso'
   | 'magicWand'
   | 'move'
   | 'smudge'
   | 'gradient'
-  | 'cloneStamp';
+  | 'cloneStamp'
+  | 'blur'
+  | 'sharpen'
+  | 'dodge'
+  | 'burn';
+
+/** Tools that paint into the active layer via a dragged stroke. Used to decide
+ * whether a selection clip and alpha-lock need to be set up for the stroke. */
+export const STROKE_TOOLS: ToolType[] = [
+  'brush', 'eraser', 'smudge', 'cloneStamp', 'blur', 'sharpen', 'dodge', 'burn',
+];
 
 export interface Layer {
   id: string;
@@ -57,6 +68,7 @@ export interface Layer {
   blendMode: BlendMode;
   thumbnail?: string; // data URL, refreshed periodically
   alphaLocked?: boolean; // painting only affects pixels that already have alpha > 0
+  locked?: boolean; // fully locked — no painting, no transform
   mask?: HTMLCanvasElement; // layer mask — alpha channel is visibility (255 = shown, 0 = hidden)
   maskEnabled?: boolean; // lets the mask be toggled off without deleting it
 }
@@ -82,7 +94,33 @@ export interface BrushSettings {
   minPressureFactor: number; // 0-1, how thin/faint the stroke gets at zero pressure
   smoothing: number; // 0-1, how much input jitter is filtered out
   textureId?: string; // uploaded custom brush tip, falls back to the round brush if unset
+  /** Magic-wand / fill colour distance threshold, 0-255. */
+  tolerance: number;
+  /** How much pigment the smudge tool drags along the stroke, 0-1. */
+  smudgeStrength: number;
+  /** Second colour stop for the gradient tool. */
+  secondaryColor: string;
+  /** Gradient tool shape. */
+  gradientType: 'linear' | 'radial';
+  /** Dodge/burn exposure per dab, 0-1. */
+  exposure: number;
+  /** Text tool settings — only read by the text tool. */
+  fontFamily: string;
+  fontWeight: number;
+  fontItalic: boolean;
+  lineHeight: number; // multiplier of font size
+  textAlign: 'left' | 'center' | 'right';
 }
+
+export const FONT_FAMILIES: { value: string; label: string }[] = [
+  { value: 'Inter, system-ui, sans-serif', label: 'Inter' },
+  { value: 'Georgia, serif', label: 'Georgia' },
+  { value: '"Times New Roman", serif', label: 'Times' },
+  { value: '"Courier New", monospace', label: 'Courier' },
+  { value: 'Impact, sans-serif', label: 'Impact' },
+  { value: '"Comic Sans MS", cursive', label: 'Comic Sans' },
+  { value: '"Trebuchet MS", sans-serif', label: 'Trebuchet' },
+];
 
 export interface CustomBrushTexture {
   id: string;
@@ -168,6 +206,8 @@ export interface Frame {
   layers: Layer[];
   activeLayerId: string;
   poseType?: 'key' | 'extreme' | 'breakdown' | 'inbetween';
+  /** Flattened preview of the frame, used by the storyboard timeline panels. */
+  thumbnail?: string;
   storyboardScript?: {
     dialogue: string;
     action: string;

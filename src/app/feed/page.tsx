@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import type { PortfolioItem, WipStage } from '@/lib/types';
 import { getPublicPortfolioItems, toggleLikePortfolioItem } from '@/lib/portfolio-service';
 import { saveVideo, unsaveVideo } from '@/lib/firestore';
@@ -8,7 +8,6 @@ import { PortfolioItemCard } from '@/components/portfolio/PortfolioItemCard';
 import { PortfolioItemDetailModal } from '@/components/portfolio/PortfolioItemDetailModal';
 import { UploadPortfolioItemModal } from '@/components/portfolio/UploadPortfolioItemModal';
 import { FilterBar, TabOption, TypeOption, PillOption } from '@/components/FilterBar';
-import { useInView } from 'react-intersection-observer';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
@@ -97,11 +96,7 @@ export default function CommunityFeedPage() {
   const [activeType, setActiveType] = useState<TypeOption>('all');
   const [activePill, setActivePill] = useState<PillOption>('all');
   const [columns, setColumns] = useState<number>(4);
-
-  const { ref: inViewRef, inView } = useInView({
-    threshold: 0,
-    rootMargin: '200px',
-  });
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const loadItems = async () => {
@@ -173,14 +168,27 @@ export default function CommunityFeedPage() {
     setVisibleCount(ITEMS_PER_PAGE);
   }, [activeTab, activeType, activePill]);
 
-  useEffect(() => {
-    if (inView && visibleCount < filteredItems.length) {
-      setVisibleCount(prev => prev + 24);
-    }
-  }, [inView, visibleCount, filteredItems.length]);
-
   const visibleItems = useMemo(() => filteredItems.slice(0, visibleCount), [filteredItems, visibleCount]);
   const hasMore = visibleCount < filteredItems.length;
+
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    if (!sentinel || !hasMore) return;
+
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisibleCount(filteredItems.length);
+      return;
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisibleCount(prev => Math.min(prev + ITEMS_PER_PAGE, filteredItems.length));
+      }
+    }, { rootMargin: '200px' });
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, filteredItems.length]);
 
   return (
     <div className="min-h-screen text-foreground space-y-10 pb-20 pt-2 text-left">
@@ -346,7 +354,7 @@ export default function CommunityFeedPage() {
 
         {/* Infinite Scroll Loading */}
         {hasMore && (
-          <div ref={inViewRef} className="flex justify-center py-8">
+          <div ref={loadMoreRef} className="flex justify-center py-8">
             <div className="flex items-center gap-2 text-zinc-400 text-sm font-semibold">
               <Sparkles className="h-5 w-5 animate-spin text-purple-500" />
               <span>Loading more community showcases...</span>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { collection, getDocs, query, limit, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getSnapshotVideos } from '@/lib/videoSnapshot';
@@ -40,7 +40,6 @@ import { CuratedCategoryPillsShelf } from '@/components/home/CuratedCategoryPill
 import { ScrollingBentoShelf } from '@/components/home/ScrollingBentoShelf';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
-import { useInView } from 'react-intersection-observer';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import Link from 'next/link';
@@ -63,11 +62,7 @@ export default function HomePage() {
   const [activeType, setActiveType] = useState<TypeOption>('all');
   const [activePill, setActivePill] = useState<PillOption>('all');
   const [columns, setColumns] = useState<number>(4);
-
-  const { ref: inViewRef, inView } = useInView({
-    threshold: 0,
-    rootMargin: '200px',
-  });
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -240,15 +235,28 @@ export default function HomePage() {
     setVisibleCount(VIDEOS_PER_PAGE);
   }, [activeTab, activeType, activePill, searchQuery]);
 
-  // Infinite Scroll
-  useEffect(() => {
-    if (inView && visibleCount < filteredVideos.length) {
-      setVisibleCount(prev => prev + 24);
-    }
-  }, [inView, visibleCount, filteredVideos.length]);
-
   const visibleVideos = useMemo(() => filteredVideos.slice(0, visibleCount), [filteredVideos, visibleCount]);
   const hasMore = visibleCount < filteredVideos.length;
+
+  // Load one bounded batch whenever the bottom sentinel enters the viewport.
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    if (!sentinel || !hasMore) return;
+
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisibleCount(filteredVideos.length);
+      return;
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisibleCount(prev => Math.min(prev + 24, filteredVideos.length));
+      }
+    }, { rootMargin: '200px' });
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, filteredVideos.length]);
 
   const heroVideo = useMemo(
     () => {
@@ -465,7 +473,7 @@ export default function HomePage() {
 
         {/* Infinite Scroll Indicator */}
         {hasMore && (
-          <div ref={inViewRef} className="flex justify-center py-8">
+          <div ref={loadMoreRef} className="flex justify-center py-8">
             <div className="flex items-center gap-2 text-zinc-400 text-sm font-semibold">
               <Sparkles className="h-5 w-5 animate-spin text-purple-500" />
               <span>Loading more reference inspiration...</span>

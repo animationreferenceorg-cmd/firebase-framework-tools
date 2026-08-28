@@ -5,7 +5,6 @@ import * as React from 'react';
 import { useState, useRef, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { Heart, Maximize, Share2, PlayCircle, Play, ArrowLeft, ExternalLink, Instagram, Bookmark } from 'lucide-react';
-import { useInView } from 'react-intersection-observer';
 
 import { CreatorBadge } from '@/components/CreatorBadge';
 import { VideoActionsBar } from '@/components/VideoActionsBar';
@@ -71,20 +70,30 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
   const [showDonateDialog, setShowDonateDialog] = useState(false);
   const [donateForceTimer, setDonateForceTimer] = useState(false);
 
-  const { ref: cardRef, inView: cardInView } = useInView({ threshold: 0, triggerOnce: true });
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const [cardInView, setCardInView] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [socialAccessible, setSocialAccessible] = useState(true);
 
-  const cardRefRef = useRef(cardRef);
-  cardRefRef.current = cardRef;
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
 
-  const setCombinedRef = React.useCallback((node: HTMLDivElement | null) => {
-    containerRef.current = node;
-    if (cardRefRef.current) {
-      cardRefRef.current(node);
+    if (typeof IntersectionObserver === 'undefined') {
+      setCardInView(true);
+      return;
     }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setCardInView(true);
+        observer.disconnect();
+      }
+    });
+
+    observer.observe(node);
+    return () => observer.disconnect();
   }, []);
 
   const displayTitle = video.status === 'draft' ? 'Reference' : video.title;
@@ -312,7 +321,7 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
     return (
       <>
       <Link href={`/shorts/${video.id}`} className="w-full cursor-pointer group/card block">
-        <div ref={cardRef} onMouseEnter={() => {
+        <div ref={containerRef} onMouseEnter={() => {
             recordWatch();
             setIsHovered(true);
             if (videoRef.current) {
@@ -411,7 +420,7 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
     return (
       <>
       <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
-        <div ref={setCombinedRef}
+        <div ref={containerRef}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           onClick={handleCardClick}
@@ -604,7 +613,7 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
     <>
     <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
       <div
-        ref={setCombinedRef}
+        ref={containerRef}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onClick={handleCardClick}

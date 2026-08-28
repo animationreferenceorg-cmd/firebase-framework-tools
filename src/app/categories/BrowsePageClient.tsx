@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { collection, getDocs, query, limit, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -27,7 +27,6 @@ import {
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useInView } from 'react-intersection-observer';
 import { trackCategoryView } from '@/lib/recent-categories';
 
 const VIDEOS_PER_PAGE = 24;
@@ -76,16 +75,10 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
     const [allVideos, setAllVideos] = useState<Video[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
 
     // Pagination State (client-side over the static snapshot)
     const [visibleCount, setVisibleCount] = useState(VIDEOS_PER_PAGE);
-
-    // Infinite Scroll Ref
-    const { ref, inView } = useInView({
-        threshold: 0,
-        rootMargin: '200px', // Trigger 200px before bottom
-    });
+    const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
     // Filter State
     // Filter State
@@ -206,30 +199,20 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
     };
 
     // Data Fetching Function
-    const fetchVideos = useCallback(async (reset = false) => {
-        if (reset) {
-            setLoading(true);
-            setAllVideos([]);
-            setVisibleCount(VIDEOS_PER_PAGE);
-        } else {
-            setLoadingMore(true);
-        }
+    const fetchVideos = useCallback(async () => {
+        setLoading(true);
+        setAllVideos([]);
+        setVisibleCount(VIDEOS_PER_PAGE);
 
         try {
-            if (reset) {
-                // The whole published library comes from the free static snapshot,
-                // so filters and search below cover every video, not just loaded pages.
-                const videos = await getSnapshotVideos();
-                setAllVideos(videos.filter(v => !v.isShort));
-            } else {
-                // "Load more" is just revealing more of the already-loaded list
-                setVisibleCount(prev => prev + VIDEOS_PER_PAGE);
-            }
+            // The whole published library comes from the free static snapshot,
+            // so filters and search below cover every video, not just loaded pages.
+            const videos = await getSnapshotVideos();
+            setAllVideos(videos.filter(v => !v.isShort));
         } catch (error) {
             console.error("Error fetching videos:", error);
         } finally {
             setLoading(false);
-            setLoadingMore(false);
         }
     }, []);
 
@@ -264,8 +247,8 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
         };
 
         fetchCategories();
-        fetchVideos(true);
-    }, []); // Run once on mount
+        fetchVideos();
+    }, [fetchVideos]);
 
     // Filter Logic (Client-Side filtering on the loaded page)
     const filteredVideos = useMemo(() => {
@@ -410,12 +393,25 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
         setVisibleCount(VIDEOS_PER_PAGE);
     }, [searchQuery, selectedCategory, selectedTag, activeType, activeTab]);
 
-    // Trigger Infinite Scroll
+    // Load one bounded batch whenever the bottom sentinel enters the viewport.
     useEffect(() => {
-        if (inView && hasMore && !loadingMore && !loading) {
-            fetchVideos(false);
+        const sentinel = loadMoreRef.current;
+        if (!sentinel || !hasMore || loading) return;
+
+        if (typeof IntersectionObserver === 'undefined') {
+            setVisibleCount(filteredVideos.length);
+            return;
         }
-    }, [inView, hasMore, loadingMore, loading, fetchVideos]);
+
+        const observer = new IntersectionObserver(([entry]) => {
+            if (entry.isIntersecting) {
+                setVisibleCount(prev => Math.min(prev + VIDEOS_PER_PAGE, filteredVideos.length));
+            }
+        }, { rootMargin: '200px' });
+
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [hasMore, loading, filteredVideos.length]);
 
     const scrollToResults = () => {
         setTimeout(() => {
@@ -651,15 +647,11 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
 
                     {/* Infinite Scroll Sentinel */}
                     {hasMore && (
-                        <div ref={ref} className="flex justify-center mt-12 mb-20 py-8">
-                            {loadingMore ? (
-                                <div className="flex items-center gap-2 text-zinc-400">
-                                    <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
-                                    <span>Loading more inspiration...</span>
-                                </div>
-                            ) : (
-                                <div className="h-8" /> // Invisible spacer to catch scroll
-                            )}
+                        <div ref={loadMoreRef} className="flex justify-center mt-12 mb-20 py-8">
+                            <div className="flex items-center gap-2 text-zinc-400">
+                                <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
+                                <span>Loading more inspiration...</span>
+                            </div>
                         </div>
                     )}
                 </div>

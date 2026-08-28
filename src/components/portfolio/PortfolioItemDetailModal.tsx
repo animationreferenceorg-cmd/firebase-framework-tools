@@ -56,14 +56,23 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
   const isOwner = currentUserId && currentUserId === item.userId;
   const stageInfo = item.wipStage ? STAGE_CONFIG[item.wipStage] : null;
 
-  const isImageMedia =
+  const isVideoEmbed = Boolean(
+    item.mediaUrl && (
+      item.mediaUrl.includes('vimeo.com') ||
+      item.mediaUrl.includes('youtube.com') ||
+      item.mediaUrl.includes('youtu.be')
+    )
+  );
+
+  const isImageMedia = !isVideoEmbed && (
     item.mediaType === 'image' ||
     item.mediaType === 'gif' ||
     (item.mediaUrl && (
       item.mediaUrl.startsWith('data:image/') ||
       item.mediaUrl.includes('unsplash.com') ||
       /\.(png|jpg|jpeg|webp|gif|svg|avif|heic|bmp)($|\?)/i.test(item.mediaUrl.split('#')[0])
-    ));
+    ))
+  );
 
   const handleLike = async () => {
     if (!currentUserId) {

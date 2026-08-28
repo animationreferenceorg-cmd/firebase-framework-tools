@@ -70,6 +70,40 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
     );
   }
 
+  const vimeoMatch = url ? url.trim().match(/(?:vimeo\.com\/(?:video\/|channels\/\w+\/|groups\/\w+\/videos\/)?|player\.vimeo\.com\/video\/)(\d+)/i) : null;
+  const vimeoId = vimeoMatch?.[1];
+
+  const ytMatch = url ? url.trim().match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]{11})/i) : null;
+  const ytId = ytMatch?.[1];
+
+  if (vimeoId) {
+    return (
+      <div className={`relative aspect-video w-full h-full min-h-[360px] bg-black overflow-hidden ${className}`}>
+        <iframe
+          src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&autopause=0&dnt=1`}
+          className="absolute inset-0 w-full h-full border-0"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+          title="Vimeo Video Player"
+        />
+      </div>
+    );
+  }
+
+  if (ytId) {
+    return (
+      <div className={`relative aspect-video w-full h-full min-h-[360px] bg-black overflow-hidden ${className}`}>
+        <iframe
+          src={`https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`}
+          className="absolute inset-0 w-full h-full border-0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          title="YouTube Video Player"
+        />
+      </div>
+    );
+  }
+
   const isYouTubeOrVimeo = Boolean(
     url && (
       url.includes('youtube.com') ||

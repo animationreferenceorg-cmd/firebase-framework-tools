@@ -24,19 +24,107 @@ import {
   CheckCircle2, 
   Award,
   BookOpen,
-  Palette
+  Palette,
+  Film,
+  Shuffle
 } from 'lucide-react';
 import { createUserProfile, grantSjsuStudentAccess } from '@/lib/firestore';
 import Link from 'next/link';
 
-// Default Animation Reference Video Fallbacks
+// Expanded Default Animation Reference Video Pool
 const DEFAULT_ANIMATION_VIDEOS = [
   'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
   'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
   'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
   'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
   'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+  'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+  'https://storage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+  'https://storage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnTheGrid.mp4',
+  'https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
 ];
+
+// Robust Animation Reference Logo Component with Image Chaining & SVG Fallback
+function AnimationRefLogo({ className = "w-full h-full object-contain" }: { className?: string }) {
+  const [srcIndex, setSrcIndex] = useState(0);
+  const sources = [
+    '/site_icon_transparent.png',
+    '/logo_transparent.png',
+    '/site-icon.png',
+    '/logo.png',
+  ];
+
+  if (srcIndex >= sources.length) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-tr from-purple-600 to-indigo-600 rounded-xl text-white shadow-inner">
+        <Sparkles className="w-3/5 h-3/5 text-purple-100 animate-pulse" />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={sources[srcIndex]}
+      alt="Animation Reference Logo"
+      className={className}
+      onError={() => setSrcIndex((prev) => prev + 1)}
+    />
+  );
+}
+
+// Robust SJSU Spartan Logo Component with Image Chaining & Vector Badge Fallback
+function SjsuSpartanLogo({ className = "w-full h-full object-contain" }: { className?: string }) {
+  const [srcIndex, setSrcIndex] = useState(0);
+  const sources = [
+    '/sjsu_logo.png',
+    '/sjsu_logo_transparent.png',
+  ];
+
+  if (srcIndex >= sources.length) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-[#0055A2] rounded-xl text-[#E5A823] font-black border border-[#E5A823]/60 shadow-inner p-1">
+        <GraduationCap className="w-3/5 h-3/5 text-[#E5A823]" />
+        <span className="text-[9px] tracking-tighter leading-none mt-0.5 font-mono text-[#E5A823]">SJSU</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={sources[srcIndex]}
+      alt="SJSU Spartan Logo"
+      className={className}
+      onError={() => setSrcIndex((prev) => prev + 1)}
+    />
+  );
+}
+
+// Helper to select a random video index guaranteed to differ from previous session
+function getRandomDifferentIndex(length: number): number {
+  if (length <= 1) return 0;
+  let lastIdx: number | null = null;
+  try {
+    const stored = sessionStorage.getItem('sjsu_last_video_idx');
+    if (stored !== null) {
+      lastIdx = parseInt(stored, 10);
+    }
+  } catch (e) {
+    // Ignore SSR/Storage errors
+  }
+
+  let newIdx = Math.floor(Math.random() * length);
+  if (lastIdx !== null && !isNaN(lastIdx) && newIdx === lastIdx) {
+    newIdx = (newIdx + 1) % length;
+  }
+
+  try {
+    sessionStorage.setItem('sjsu_last_video_idx', newIdx.toString());
+  } catch (e) {
+    // Ignore SSR/Storage errors
+  }
+
+  return newIdx;
+}
 
 export default function SjsuStudentPage() {
   const [sjsuEmail, setSjsuEmail] = useState('');
@@ -55,8 +143,12 @@ export default function SjsuStudentPage() {
   const { toast } = useToast();
   const { auth } = useFirebase();
 
-  // Load Real Animation Reference Videos from Database & Ensure Playback
+  // Load Real Animation Reference Videos from Database & Ensure Random Selection on Load
   useEffect(() => {
+    // Select initial random video on page load guaranteed to differ from previous load
+    const initialIdx = getRandomDifferentIndex(DEFAULT_ANIMATION_VIDEOS.length);
+    setCurrentVideoIdx(initialIdx);
+
     async function loadDatabaseVideos() {
       try {
         const q = query(collection(db, 'videos'), limit(25));
@@ -69,7 +161,11 @@ export default function SjsuStudentPage() {
           }
         });
         if (fetchedUrls.length > 0) {
-          setBgVideos(fetchedUrls);
+          // Shuffle videos array for unpredictability
+          const shuffled = [...fetchedUrls].sort(() => Math.random() - 0.5);
+          setBgVideos(shuffled);
+          const randIdx = getRandomDifferentIndex(shuffled.length);
+          setCurrentVideoIdx(randIdx);
         }
       } catch (err) {
         console.warn('[SJSU] Using default reference videos:', err);
@@ -95,7 +191,7 @@ export default function SjsuStudentPage() {
   }, [currentVideoIdx]);
 
   const handleNextVideo = () => {
-    setCurrentVideoIdx((prev) => (prev + 1) % bgVideos.length);
+    setCurrentVideoIdx((prev) => getRandomDifferentIndex(bgVideos.length));
   };
 
   const handleSjsuQualification = async (e: React.FormEvent) => {
@@ -222,23 +318,27 @@ export default function SjsuStudentPage() {
       <div className="fixed top-0 left-0 right-0 z-30 px-6 py-4 flex items-center justify-between bg-[#050811]/75 backdrop-blur-xl border-b border-white/10">
         <Link href="/home" className="flex items-center gap-3 group">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-950 to-[#18132e] border border-purple-400/50 p-1 flex items-center justify-center shadow-lg shadow-purple-600/40">
-            <img 
-              src="/site_icon_transparent.png" 
-              alt="Animation Reference Logo" 
-              className="w-full h-full object-contain filter drop-shadow-[0_2px_6px_rgba(168,85,247,0.5)]"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = '/logo_transparent.png';
-              }}
-            />
+            <AnimationRefLogo className="w-full h-full object-contain filter drop-shadow-[0_2px_6px_rgba(168,85,247,0.5)]" />
           </div>
           <span className="text-sm font-black text-white tracking-wider group-hover:text-purple-300 transition-colors">
             ANIMATION REFERENCE
           </span>
         </Link>
 
-        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0055A2]/60 border border-[#E5A823]/60 text-xs font-mono font-bold text-[#E5A823] shadow-lg">
-          <GraduationCap className="h-4 w-4 text-[#E5A823]" />
-          <span>SJSU Partner Access</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleNextVideo}
+            title="Switch background animation"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-medium text-zinc-300 hover:text-white transition-all cursor-pointer shadow-md"
+          >
+            <Shuffle className="h-3.5 w-3.5 text-purple-400" />
+            <span className="hidden sm:inline">Shuffle Animation</span>
+          </button>
+
+          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0055A2]/60 border border-[#E5A823]/60 text-xs font-mono font-bold text-[#E5A823] shadow-lg">
+            <GraduationCap className="h-4 w-4 text-[#E5A823]" />
+            <span>SJSU Partner Access</span>
+          </div>
         </div>
       </div>
 
@@ -261,26 +361,15 @@ export default function SjsuStudentPage() {
           {/* Prominent Dual Brand Logos (Animation Reference x SJSU Spartans) */}
           <div className="flex items-center gap-4 p-3.5 px-6 rounded-3xl bg-[#0c1424]/95 border border-[#E5A823]/50 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-2xl">
             {/* 1. Animation Reference Logo */}
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-950/90 to-[#18132e] border border-purple-500/50 p-2 flex items-center justify-center shadow-lg shadow-purple-600/40 shrink-0">
-              <img 
-                src="/site_icon_transparent.png" 
-                alt="Animation Reference Logo" 
-                className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(168,85,247,0.5)]"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/logo_transparent.png';
-                }}
-              />
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-950/90 to-[#18132e] border border-purple-500/50 p-2 flex items-center justify-center shadow-lg shadow-purple-600/40 shrink-0 overflow-hidden">
+              <AnimationRefLogo className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(168,85,247,0.5)]" />
             </div>
 
             <span className="text-amber-400/80 font-black text-base px-1">✕</span>
 
             {/* 2. Official SJSU Spartan Helmet Logo */}
-            <div className="w-14 h-14 rounded-2xl bg-[#0055A2] border border-[#E5A823]/80 p-1.5 flex items-center justify-center shadow-lg shadow-blue-600/50 shrink-0">
-              <img 
-                src="/sjsu_logo.png" 
-                alt="SJSU Spartan Logo" 
-                className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]"
-              />
+            <div className="w-14 h-14 rounded-2xl bg-[#0055A2] border border-[#E5A823]/80 p-1.5 flex items-center justify-center shadow-lg shadow-blue-600/50 shrink-0 overflow-hidden">
+              <SjsuSpartanLogo className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]" />
             </div>
 
             <div className="text-left ml-1">
@@ -447,3 +536,4 @@ export default function SjsuStudentPage() {
     </div>
   );
 }
+

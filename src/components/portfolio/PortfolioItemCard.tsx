@@ -67,6 +67,26 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
     }
   }, [isHovered]);
 
+  const computedThumbnail = (() => {
+    if (item.thumbnailUrl) return item.thumbnailUrl;
+    if (!item.mediaUrl) return null;
+    const url = item.mediaUrl.trim();
+    const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]{11})/i);
+    if (ytMatch && ytMatch[1]) return `https://i.ytimg.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+    const vimeoMatch = url.match(/(?:vimeo\.com\/(?:video\/|channels\/\w+\/)?|player\.vimeo\.com\/video\/)(\d+)/i);
+    if (vimeoMatch && vimeoMatch[1]) return `https://vumbnail.com/${vimeoMatch[1]}.jpg`;
+    if (/\.(png|jpg|jpeg|webp|gif)($|\?)/i.test(url) || url.startsWith('data:image/')) return url;
+    return null;
+  })();
+
+  const isDirectVideoFile = Boolean(
+    item.mediaUrl &&
+    item.mediaType === 'video_file' &&
+    !item.mediaUrl.includes('youtube.com') &&
+    !item.mediaUrl.includes('youtu.be') &&
+    !item.mediaUrl.includes('vimeo.com')
+  );
+
   return (
     <div
       onMouseEnter={() => setIsHovered(true)}
@@ -119,24 +139,24 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
 
       {/* Background Video Media / Thumbnail Image */}
       <div className="absolute inset-0 w-full h-full bg-black">
-        {item.thumbnailUrl || item.mediaUrl ? (
+        {computedThumbnail ? (
           <img
-            src={item.thumbnailUrl || item.mediaUrl}
+            src={computedThumbnail}
             alt={item.title}
             className={cn(
-              "h-full w-full object-cover transition-opacity duration-500",
-              isHovered && item.mediaUrl && item.mediaType !== 'image' && item.mediaType !== 'gif' ? "opacity-0" : "opacity-100"
+              "h-full w-full object-cover transition-all duration-500",
+              isHovered && isDirectVideoFile ? "opacity-0" : "opacity-100 group-hover:scale-105"
             )}
             loading="lazy"
           />
         ) : (
-          <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-900 to-zinc-950">
+          <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-purple-950 via-zinc-950 to-black">
             <Play className="h-12 w-12 text-primary/70" />
           </div>
         )}
 
-        {/* Hover-to-Play Native Silent Video Layer */}
-        {item.mediaUrl && item.mediaType !== 'image' && item.mediaType !== 'gif' && (
+        {/* Hover-to-Play Native Silent Video Layer for Direct Files only */}
+        {isDirectVideoFile && (
           <video
             ref={videoRef}
             src={item.mediaUrl}

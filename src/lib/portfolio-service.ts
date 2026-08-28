@@ -100,9 +100,14 @@ export async function generateAutoThumbnail(
   if (typeof fileOrUrl === 'string') {
     const url = fileOrUrl.trim();
     // YouTube auto thumbnail
-    const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]{11})/i);
     if (ytMatch && ytMatch[1]) {
-      return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+      return `https://i.ytimg.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+    }
+    // Vimeo auto thumbnail
+    const vimeoMatch = url.match(/(?:vimeo\.com\/(?:video\/|channels\/\w+\/)?|player\.vimeo\.com\/video\/)(\d+)/i);
+    if (vimeoMatch && vimeoMatch[1]) {
+      return `https://vumbnail.com/${vimeoMatch[1]}.jpg`;
     }
     // Direct image URL
     if (/\.(png|jpg|jpeg|webp|gif)($|\?)/i.test(url)) {

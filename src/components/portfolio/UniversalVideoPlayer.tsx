@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import ReactPlayer from 'react-player/lazy';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import type { Video } from '@/lib/types';
 
@@ -21,7 +22,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
   url,
   poster,
   autoPlay = false,
-  muted = true,
+  muted = false,
   loop = false,
   controls = true,
   className = "",
@@ -38,7 +39,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
   if (!hasMounted) {
     return (
       <div className="relative aspect-video w-full bg-zinc-950 flex items-center justify-center text-zinc-500">
-        <div className="animate-pulse text-xs">Loading custom player...</div>
+        <div className="animate-pulse text-xs">Loading player...</div>
       </div>
     );
   }
@@ -64,6 +65,39 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
           src={url} 
           alt="Portfolio Media" 
           className="relative max-h-full max-w-full object-contain rounded-xl shadow-2xl transition-transform duration-300 group-hover:scale-[1.01]" 
+        />
+      </div>
+    );
+  }
+
+  const isYouTubeOrVimeo = Boolean(
+    url && (
+      url.includes('youtube.com') ||
+      url.includes('youtu.be') ||
+      url.includes('vimeo.com')
+    )
+  );
+
+  if (isYouTubeOrVimeo) {
+    return (
+      <div className={`relative aspect-video w-full bg-black overflow-hidden ${className}`}>
+        <ReactPlayer
+          url={url}
+          width="100%"
+          height="100%"
+          controls={true}
+          playing={autoPlay}
+          muted={muted}
+          loop={loop}
+          onEnded={onEnded}
+          config={{
+            youtube: {
+              playerVars: { showinfo: 1, rel: 0, modestbranding: 1 }
+            },
+            vimeo: {
+              playerOptions: { responsive: true, autoplay: autoPlay }
+            }
+          }}
         />
       </div>
     );

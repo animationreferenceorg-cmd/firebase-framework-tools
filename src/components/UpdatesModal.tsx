@@ -17,6 +17,14 @@ import { Button } from "@/components/ui/button";
 
 const RECENT_UPDATES = [
   {
+    date: 'August 27, 2026',
+    title: 'Paint Beta, Reference Clips, Free Portfolios & Updated Boards',
+    description: 'Try the new Paint workspace in beta, collect exact motion moments in Reference Clips, submit your animation portfolio for free, and organize saved inspiration with redesigned Boards.',
+    type: 'New',
+    href: '/references',
+    cta: 'Explore the new tools',
+  },
+  {
     date: 'August 1, 2026',
     title: 'Profile UI & Username Enhancements',
     description: 'Added username display on profile and public pages, removed "Available for Hire" badge, enabled bio editing, fixed syntax errors, and improved username claim flow with welcome emails.',
@@ -149,6 +157,14 @@ export function UpdatesModal({ variant = 'sidebar' }: UpdatesModalProps) {
               <p className="text-sm text-zinc-400 leading-relaxed whitespace-pre-wrap">
                 {update.description}
               </p>
+              {'href' in update && update.href && (
+                <Link
+                  href={update.href}
+                  className="mt-2 inline-flex items-center text-xs font-bold text-purple-300 transition-colors hover:text-purple-200"
+                >
+                  {update.cta} →
+                </Link>
+              )}
             </div>
           ))}
         </div>

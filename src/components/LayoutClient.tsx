@@ -1,15 +1,12 @@
-
 'use client';
 
-import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarTrigger, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarSeparator } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuItem, SidebarFooter, SidebarSeparator } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Clapperboard, Film, Home, LayoutGrid, List, Rss, Shield, BookCopy, Star, Camera, User, Box, ShoppingBag, CreditCard, MessageSquare, Tag as TagIcon } from 'lucide-react';
+import { Film, Home, LayoutGrid, List, Rss, Shield, BookCopy, Camera, User, Box, ShoppingBag, CreditCard, MessageSquare, Paintbrush, Scissors } from 'lucide-react';
 import { useUser } from '@/hooks/use-user';
 import { useAuth } from '@/hooks/use-auth';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Skeleton } from './ui/skeleton';
 import { Suspense, useEffect, useState } from 'react';
 import { UploadProvider } from '@/hooks/use-upload';
 import { UploadProgressManager } from './UploadProgressManager';
@@ -25,6 +22,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { FeedbackModal } from '@/components/FeedbackModal';
 import { UpdatesModal } from '@/components/UpdatesModal';
 import { UserFeedbackPanel } from '@/components/UserFeedbackPanel';
+import { MobileInstallDialog } from '@/components/reference/MobileInstallDialog';
 
 import { WatchTrackerProvider } from '@/hooks/use-watch-tracker';
 
@@ -48,7 +46,6 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
         try {
             setUploading(true);
             const storageRef = ref(storage, `avatars/${user.uid}`);
-            // Force content type to avoid potential download issues, usually auto-detected
             await uploadBytes(storageRef, file);
             const url = await getDownloadURL(storageRef);
             await updateProfile(user, { photoURL: url });
@@ -65,10 +62,11 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     const loading = authLoading || userProfileLoading;
 
     const isAdminPage = pathname.startsWith('/admin');
-    // Home Page uses 'Coming Soon' / Landing style (no sidebar)
     const isComingSoon = pathname === '/';
+    const isPaintPage = pathname.startsWith('/paint');
+    const isStudioPage = pathname.startsWith('/studio');
 
-    if (isAdminPage || isComingSoon) {
+    if (isAdminPage || isComingSoon || isPaintPage || isStudioPage) {
         return (
             <WatchTrackerProvider>
                 <UploadProvider>
@@ -79,16 +77,13 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
         );
     }
 
-    // This prevents hydration errors by ensuring the server and client render the same initial skeleton.
     if (!isClient) {
         return null;
     }
 
     const isAdmin = userProfile?.role === 'admin';
 
-    const isFeedPage = pathname === '/feed';
     const isMoodboardPage = pathname.startsWith('/moodboard');
-
     const isCategoriesPage = pathname.startsWith('/categories');
     const isProfilePage = pathname.startsWith('/profile') || pathname.startsWith('/u/');
 
@@ -100,11 +95,9 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
             )}
             <SidebarProvider>
                 <Sidebar>
-                    {/* ... sidebar content ... */}
                     <SidebarHeader>
                         <div className="px-6 pt-6">
                         </div>
-                        {/* ... header content ... */}
                         <div className="flex items-center justify-center w-full py-6">
                             <div className={cn(
                                 "relative h-24 w-24 overflow-hidden group cursor-pointer rounded-full border-2 border-white/10 hover:border-primary transition-colors bg-black/20",
@@ -156,6 +149,11 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                         Categories
                                     </SidebarLink>
                                 </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarLink href="/references" icon={Scissors} tooltip="Reference Clips">
+                                        Reference Clips
+                                    </SidebarLink>
+                                </SidebarMenuItem>
 
                                 <SidebarMenuItem>
                                     <SidebarLink href="/shorts" icon={Film} tooltip="Short Films">
@@ -163,8 +161,8 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <SidebarLink href="/feed" icon={Rss} tooltip="Feed">
-                                        Feed
+                                    <SidebarLink href="/feed" icon={Rss} tooltip="Community">
+                                        Community
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
@@ -189,8 +187,13 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <SidebarLink href="/moodboard" icon={Box} tooltip="Moodboards">
-                                        Moodboards
+                                    <SidebarLink href="/moodboard" icon={Box} tooltip="Boards">
+                                        Boards
+                                    </SidebarLink>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarLink href="/paint" icon={Paintbrush} tooltip="Paint (Beta)">
+                                        Paint <span className="ml-auto text-[9px] font-black uppercase tracking-wider text-fuchsia-300">Beta</span>
                                     </SidebarLink>
                                 </SidebarMenuItem>
                             </SidebarMenu>
@@ -221,7 +224,6 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                         </SidebarMenuItem>
                                     </SidebarMenu>
 
-                                    {/* Donation Testing (Admin Only) */}
                                     <div className="px-4 py-2 mt-2">
                                         <h4 className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                                             <CreditCard className="w-3 h-3" /> Simulate Tier
@@ -248,38 +250,59 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                         </Suspense>
                         <main className={cn(
                             "flex-1 transition-all duration-300 ease-in-out",
-                            (!isMoodboardPage && !isFeedPage && !isProfilePage && !isCategoriesPage) && "px-4 md:px-8 pb-8"
+                            (!isMoodboardPage && !isProfilePage && !isCategoriesPage) && "px-4 md:px-8 pb-8"
                         )}>
                             {children}
                         </main>
                             
-                            {!isMoodboardPage && (
-                                <footer className="mt-auto py-8 px-4 border-t border-white/5 flex flex-col items-center gap-4 text-center">
-                                    <div className="max-w-md space-y-2">
-                                        <h3 className="text-sm font-semibold text-white/90">Have thoughts on the platform?</h3>
-                                        <p className="text-xs text-white/50">Your feedback helps us build the best reference tool for animators.</p>
-                                    </div>
-                                    <div className="w-48">
-                                        <FeedbackModal />
-                                    </div>
-                                    <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/40 mt-2">
-                                        <Link href="/blog" className="hover:text-white/70 transition-colors">Blog</Link>
-                                        <Link href="/resources/12-principles-of-animation-reference" className="hover:text-white/70 transition-colors">12 Principles of Animation</Link>
-                                        <Link href="/resources/combat-animation-reference" className="hover:text-white/70 transition-colors">Combat Reference</Link>
-                                        <Link href="/resources/locomotion-animation-reference" className="hover:text-white/70 transition-colors">Locomotion Reference</Link>
-                                    </nav>
-                                    <p className="text-[10px] text-white/20 mt-4">© 2026 Animation Reference. Built for the community.</p>
-                                </footer>
-                            )}
-                        </div>
-                        <UploadProgressManager />
-                    </SidebarInset>
-                </SidebarProvider>
+                        {!isMoodboardPage && (
+                            <footer className="mt-auto py-8 px-4 border-t border-white/5 flex flex-col items-center gap-4 text-center">
+                                <div className="max-w-md space-y-2">
+                                    <h3 className="text-sm font-semibold text-white/90">Have thoughts on the platform?</h3>
+                                    <p className="text-xs text-white/50">Your feedback helps us build the best reference tool for animators.</p>
+                                </div>
+                                <div className="w-48">
+                                    <FeedbackModal />
+                                </div>
+                                <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/40 mt-2">
+                                    <Link href="/blog" className="hover:text-white/70 transition-colors">Blog</Link>
+                                    <Link href="/resources/12-principles-of-animation-reference" className="hover:text-white/70 transition-colors">12 Principles of Animation</Link>
+                                    <Link href="/resources/combat-animation-reference" className="hover:text-white/70 transition-colors">Combat Reference</Link>
+                                    <Link href="/resources/locomotion-animation-reference" className="hover:text-white/70 transition-colors">Locomotion Reference</Link>
+                                    <Link href="/terms" className="hover:text-white/70 transition-colors">Terms</Link>
+                                    <Link href="/dmca" className="hover:text-white/70 transition-colors">DMCA / Copyright</Link>
+                                </nav>
+                                <p className="text-[10px] text-white/20 mt-4">© 2026 Animation Reference. Built for the community.</p>
+                            </footer>
+                        )}
+                    </div>
+                    <UploadProgressManager />
+                    <MobileInstallAfterLogin />
+                </SidebarInset>
+            </SidebarProvider>
             </UploadProvider>
         </WatchTrackerProvider>
     )
 }
 
+function MobileInstallAfterLogin() {
+    const [showPrompt, setShowPrompt] = useState(false);
+
+    useEffect(() => {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {
+                // The install instructions remain available if registration fails.
+            });
+        }
+        const shouldPrompt = sessionStorage.getItem('showMobileInstallPrompt') === '1';
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const isInstalled = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+        if (shouldPrompt) sessionStorage.removeItem('showMobileInstallPrompt');
+        if (shouldPrompt && isMobile && !isInstalled) setShowPrompt(true);
+    }, []);
+
+    return showPrompt ? <MobileInstallDialog defaultOpen /> : null;
+}
 
 function SimulateTierButton({ tier, label, fullWidth }: { tier: string, label: string, fullWidth?: boolean }) {
     const { user } = useAuth();
@@ -300,7 +323,7 @@ function SimulateTierButton({ tier, label, fullWidth }: { tier: string, label: s
                 title: tier === 'reset' ? "Restored Admin Privileges" : `Tier set to ${label}`,
                 description: tier === 'reset' ? "You now have unlimited access." : "Limits updated."
             });
-            window.location.reload(); // Reload to ensure context updates immediately
+            window.location.reload();
         } catch (error) {
             console.error("Error setting tier:", error);
             toast({ variant: "destructive", title: "Error", description: "Could not update tier." });

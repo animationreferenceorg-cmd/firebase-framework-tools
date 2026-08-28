@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { ArrowDown, ArrowUp, Eye, Heart, GripVertical, Layers, Play, Sparkles, Trash2, Pencil } from 'lucide-react';
+import { ArrowDown, ArrowUp, Eye, Heart, GripVertical, Layers, Play, Sparkles, Trash2, Pencil, MessageCircle } from 'lucide-react';
 import type { PortfolioItem, WipStage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 interface PortfolioItemCardProps {
   item: PortfolioItem;
   onClick?: () => void;
+  onComment?: () => void;
   onLike?: (e: React.MouseEvent) => void;
   onEdit?: (e: React.MouseEvent) => void;
   onDelete?: (e: React.MouseEvent) => void;
@@ -34,6 +35,7 @@ const STAGE_CONFIG: Record<WipStage, { label: string; color: string; bg: string 
 export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
   item,
   onClick,
+  onComment,
   onLike,
   onEdit,
   onDelete,
@@ -244,6 +246,15 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
             >
               <Heart className={cn("h-3.5 w-3.5", isLiked && "fill-rose-500 text-rose-500")} />
               <span>{item.likesCount || 0}</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); (onComment || onClick)?.(); }}
+              className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-zinc-400 transition-colors hover:text-purple-300"
+              aria-label={`Open comments for ${item.title}`}
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              <span>Comment</span>
             </button>
           </div>
         </div>

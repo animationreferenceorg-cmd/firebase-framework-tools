@@ -1,0 +1,367 @@
+openapi: 3.1.0
+info:
+  title: Animation Reference Partner API
+  version: "1.0.0"
+  description: |
+    Read-only access to the Animation Reference library, plus the handoff
+    exchange used when a user sends a clip from animationreference.org into a
+    partner tool.
+
+    All endpoints require an API key in the `X-API-Key` header. Keys are
+    server-side credentials: do not ship them to a browser.
+  contact:
+    email: michaelfred124@gmail.com
+  termsOfService: https://animationreference.org/terms
+
+servers:
+  - url: https://animationreference.org/api/v1
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /status:
+    get:
+      operationId: getStatus
+      summary: Verify the key and report its scopes and rate limit
+      responses:
+        "200":
+          description: Key details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Status" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /videos:
+    get:
+      operationId: listVideos
+      summary: List published reference clips
+      parameters:
+        - name: q
+          in: query
+          description: Free text over title, description and tags
+          schema: { type: string }
+        - name: tag
+          in: query
+          description: Tag name or slug
+          schema: { type: string }
+        - name: category
+          in: query
+          description: Category id or slug
+          schema: { type: string }
+        - name: minDuration
+          in: query
+          schema: { type: number }
+        - name: maxDuration
+          in: query
+          schema: { type: number }
+        - name: sort
+          in: query
+          description: "`relevance` only sorts meaningfully alongside `q`"
+          schema:
+            type: string
+            enum: [newest, oldest, relevance]
+            default: newest
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 24 }
+        - name: cursor
+          in: query
+          description: Opaque. Pass back `pagination.nextCursor` unchanged.
+          schema: { type: string }
+      responses:
+        "200":
+          description: One page of clips
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Video" }
+                  pagination: { $ref: "#/components/schemas/Pagination" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /videos/{id}:
+    get:
+      operationId: getVideo
+      summary: One clip plus similar ones
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: related
+          in: query
+          schema: { type: integer, minimum: 0, maximum: 24, default: 6 }
+      responses:
+        "200":
+          description: The clip and its related clips
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Video" }
+                  related:
+                    type: array
+                    items: { $ref: "#/components/schemas/Video" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /categories:
+    get:
+      operationId: listCategories
+      summary: All published categories
+      responses:
+        "200":
+          description: Categories with clip counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Category" }
+                  pagination:
+                    type: object
+                    properties:
+                      total: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /tags:
+    get:
+      operationId: listTags
+      summary: Tags ordered by clip count
+      parameters:
+        - name: q
+          in: query
+          description: Substring filter on the tag name
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+        - name: cursor
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: One page of tags
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/TagSummary" }
+                  pagination: { $ref: "#/components/schemas/Pagination" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /handoff/exchange:
+    post:
+      operationId: redeemHandoff
+      summary: Redeem a one-time handoff token for the clip a user sent
+      description: |
+        When a user clicks the partner button on animationreference.org, their
+        browser arrives at your import URL carrying `?token=`. Exchange it here,
+        server side, exactly once.
+
+        Tokens are single use, expire after five minutes, and are redeemable
+        only by the key they were minted for. `video.streamUrl` is present only
+        if your key holds the `media:stream` scope.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string, maxLength: 256 }
+      responses:
+        "200":
+          description: The clip the user sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Handoff" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404":
+          description: Token not found, or minted for a different partner
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "410":
+          description: Token expired, already redeemed, or the clip is gone
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    Video:
+      type: object
+      required: [id, title, description, url, thumbnailUrl, posterUrl, tags, categoryIds, credit, publishedAt]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description:
+          type: string
+          description: May be empty, or a raw import dump. Design for both.
+        url:
+          type: string
+          format: uri
+          description: Canonical page on animationreference.org. Link here for attribution.
+        thumbnailUrl: { type: string, format: uri }
+        posterUrl: { type: string, format: uri }
+        tags:
+          type: array
+          items: { $ref: "#/components/schemas/Tag" }
+        categoryIds:
+          type: array
+          items: { type: string }
+          description: Often empty. Tags are the reliable taxonomy.
+        durationSeconds: { type: number, description: Seconds, not milliseconds }
+        fps: { type: number }
+        width: { type: integer }
+        height: { type: integer }
+        credit:
+          type: object
+          properties:
+            name:
+              type: [string, "null"]
+              description: Original creator. Display when non-null.
+            sourceUrl:
+              type: [string, "null"]
+              description: The creator's own post.
+        publishedAt: { type: [string, "null"], format: date-time }
+        streamUrl:
+          type: string
+          format: uri
+          description: |
+            Direct media file. Present only for keys with the `media:stream`
+            scope. Short-lived: resolve on demand, never store or re-serve.
+
+    Tag:
+      type: object
+      properties:
+        name: { type: string }
+        slug: { type: string }
+        url: { type: string, format: uri }
+
+    TagSummary:
+      type: object
+      properties:
+        name: { type: string }
+        slug: { type: string }
+        videoCount: { type: integer }
+        url: { type: string, format: uri }
+
+    Category:
+      type: object
+      properties:
+        id: { type: string }
+        slug: { type: string }
+        title: { type: string }
+        description: { type: string }
+        url: { type: string, format: uri }
+        imageUrl:
+          type: string
+          description: May be an empty string. Fall back to a placeholder.
+        videoCount: { type: integer }
+
+    Pagination:
+      type: object
+      properties:
+        limit: { type: integer }
+        total: { type: integer }
+        nextCursor:
+          type: [string, "null"]
+          description: Opaque. Pass back unchanged; never parse or construct one.
+
+    Status:
+      type: object
+      properties:
+        apiVersion: { type: string }
+        partner: { type: string }
+        keyId: { type: string }
+        scopes:
+          type: array
+          items: { type: string, enum: [catalog:read, media:stream] }
+        rateLimit:
+          type: object
+          properties:
+            limit: { type: integer }
+            remaining: { type: integer }
+            resetAt: { type: string, format: date-time }
+        library:
+          type: object
+          properties:
+            videoCount: { type: integer }
+
+    Handoff:
+      type: object
+      properties:
+        video: { $ref: "#/components/schemas/Video" }
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              description: |
+                Stable pseudonym for this user, scoped to your key. The same
+                person always yields the same id. Not an email or a name.
+        createdAt: { type: [string, "null"], format: date-time }
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            retryAfter: { type: integer, description: Seconds; on 429 only }
+
+  responses:
+    BadRequest:
+      description: Malformed request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: Missing, invalid, revoked or expired key
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: No such published item
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }

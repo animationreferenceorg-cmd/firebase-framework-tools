@@ -20,6 +20,18 @@ import { SlidersHorizontal, Settings2 } from 'lucide-react'; // Import Icon
 
 export type TabOption = 'featured' | 'community' | 'trending' | 'latest';
 export type TypeOption = 'all' | '2D' | '3D';
+export type PillOption = 'all' | 'locomotion' | 'combat' | 'acting' | 'creature' | 'mechanics' | 'vfx' | 'shorts';
+
+export const QUICK_FILTER_PILLS: { id: PillOption; label: string; icon?: string }[] = [
+    { id: 'all', label: '🔥 All Shots' },
+    { id: 'locomotion', label: '🏃 Locomotion' },
+    { id: 'combat', label: '⚔️ Combat & Action' },
+    { id: 'acting', label: '🎭 Acting & Facial' },
+    { id: 'creature', label: '🐾 Creature' },
+    { id: 'mechanics', label: '✨ Body Mechanics' },
+    { id: 'vfx', label: '💥 VFX & Physics' },
+    { id: 'shorts', label: '🎬 Short Films' },
+];
 
 interface FilterBarProps {
     activeTab: TabOption;
@@ -28,11 +40,38 @@ interface FilterBarProps {
     setActiveType: (type: TypeOption) => void;
     columns?: number;
     setColumns?: (cols: number) => void;
+    activePill?: PillOption;
+    setActivePill?: (pill: PillOption) => void;
 }
 
-export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, columns, setColumns }: FilterBarProps) {
+export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, columns, setColumns, activePill = 'all', setActivePill }: FilterBarProps) {
     return (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-6">
+        <div className="space-y-4 py-4">
+            {/* Top Row: Dribbble-style Quick Filter Pills */}
+            {setActivePill && (
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none no-scrollbar snap-x">
+                    {QUICK_FILTER_PILLS.map((pill) => {
+                        const isSelected = activePill === pill.id;
+                        return (
+                            <button
+                                key={pill.id}
+                                onClick={() => setActivePill(pill.id)}
+                                className={cn(
+                                    "px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 snap-start border cursor-pointer flex items-center gap-1.5 select-none",
+                                    isSelected
+                                        ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white border-purple-400/40 shadow-md shadow-purple-900/30 scale-[1.02]"
+                                        : "bg-white/[0.04] text-zinc-400 border-white/5 hover:bg-white/[0.08] hover:text-white hover:border-white/10"
+                                )}
+                            >
+                                <span>{pill.label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* Sub Row: Tabs and Controls */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2">
             {/* Left Tabs */}
             <div className="flex items-center gap-8">
                 <button
@@ -151,6 +190,7 @@ export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, 
                         <DropdownMenuItem className="focus:bg-zinc-800 focus:text-white cursor-pointer">Image</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
+            </div>
             </div>
         </div>
     );

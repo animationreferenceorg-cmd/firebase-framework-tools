@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 interface User {
   id: string;
@@ -35,6 +36,7 @@ export default function UsersAdminPage() {
   const [loading, setLoading] = useState(true);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user: authUser } = useAuth();
 
   useEffect(() => {
     async function fetchUsers() {
@@ -68,9 +70,10 @@ export default function UsersAdminPage() {
     if (!userId || !email) return;
     setSyncingId(userId);
     try {
+      const idToken = await authUser?.getIdToken();
       const response = await fetch('/api/sync-stripe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({ userId, email })
       });
       const data = await response.json();

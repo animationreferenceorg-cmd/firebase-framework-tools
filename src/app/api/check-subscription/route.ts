@@ -1,12 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { getAdminApp } from '@/lib/firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
 import Stripe from 'stripe';
+import { apiErrorResponse, requireFirebaseUser } from '@/lib/api-auth';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
     try {
-        const { email, userId } = await req.json();
+        const identity = await requireFirebaseUser(req);
+        const email = identity.email;
+        const userId = identity.uid;
 
         if (!email) {
             return NextResponse.json({ error: 'Email is required' }, { status: 400 });
@@ -78,6 +81,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ hasActiveSubscription: false });
 
     } catch (error: any) {
+        if (error?.status) return apiErrorResponse(error);
         console.error('Error checking subscription:', error);
         return NextResponse.json(
             { error: error.message || 'Internal Server Error' },

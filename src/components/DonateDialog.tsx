@@ -87,12 +87,13 @@ export function DonateDialog({ children, open, onOpenChange, forceTimer = false 
             if (isPortalLoading) return;
             setIsPortalLoading(true);
             try {
+                const idToken = await user?.getIdToken();
                 const url = new URL(window.location.href);
                 url.searchParams.set('sync', 'true');
                 
                 const response = await fetch('/api/portal', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
                     body: JSON.stringify({ userId: user?.uid, returnUrl: url.toString() }),
                 });
                 const data = await response.json();

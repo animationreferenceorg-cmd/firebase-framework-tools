@@ -1,508 +1,411 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { collection, getDocs, query, limit, where, documentId } from 'firebase/firestore';
+import React, { useState, useEffect, useMemo } from 'react';
+import { collection, getDocs, query, limit, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getSnapshotVideos } from '@/lib/videoSnapshot';
 import type { Video, Category } from '@/lib/types';
 import { findCategoryThumbnailMatch } from '@/lib/category-utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  ArrowRight,
-  Sparkles,
-  Film,
-  LogIn,
-  Clock, 
-  Flame, 
-  Trophy, 
-  Upload, 
-  ChevronLeft, 
-  ChevronRight, 
+import { Input } from '@/components/ui/input';
+import { 
+  Sparkles, 
+  Search, 
   Play, 
-  Users, 
-  Compass, 
-  TrendingUp, 
-  Sparkle,
+  Flame, 
+  Sword, 
+  PawPrint, 
+  Smile, 
+  Zap, 
+  ArrowRight, 
+  ChevronRight, 
+  Film,
   Layers,
-  Wand2,
+  Heart,
   Bookmark,
-  Bell,
-  Megaphone
+  Trophy,
+  Clapperboard,
+  Users
 } from 'lucide-react';
-import { BrowseHero } from '@/components/BrowseHero';
-import { Skeleton } from '@/components/ui/skeleton';
-import { FilterBar, TabOption, TypeOption } from '@/components/FilterBar';
+import { FilterBar, TabOption, TypeOption, PillOption } from '@/components/FilterBar';
 import { VideoGrid } from '@/components/VideoGrid';
-import { LikedVideoRow, LikedCategoryRow } from '@/components/RecentlyViewed';
-
-import Link from 'next/link';
+import { VideoCard } from '@/components/VideoCard';
 import { DonateDialog } from '@/components/DonateDialog';
+import { HomeHeroBanner } from '@/components/home/HomeHeroBanner';
+import { HomeProductLaunchAnnouncement } from '@/components/home/HomeProductLaunchAnnouncement';
+import { ArtistStoriesRail } from '@/components/home/ArtistStoriesRail';
+import { CommunityFeedShelf } from '@/components/home/CommunityFeedShelf';
+import { CuratedCategoryPillsShelf } from '@/components/home/CuratedCategoryPillsShelf';
+import { ScrollingBentoShelf } from '@/components/home/ScrollingBentoShelf';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
-import { getRecentCategoryIds } from '@/lib/recent-categories';
 import { useInView } from 'react-intersection-observer';
-import { cn } from '@/lib/utils';
+import { VideoPlayer } from '@/components/VideoPlayer';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import Link from 'next/link';
 
 const VIDEOS_PER_PAGE = 30;
 
-// Top Quick Jump & Spotlight Banner Cards
-const COMMUNITY_SPOTLIGHTS = [
-  {
-    id: 'spotlight-1',
-    badge: 'LIKED VIDEOS',
-    title: 'My Liked Reference Clips',
-    description: 'Jump straight to your favorited video reference clips for quick studying.',
-    cta: 'View Liked Clips',
-    href: '/profile',
-    coverUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1200&auto=format&fit=crop&q=80',
-    accent: 'purple',
-  },
-  {
-    id: 'spotlight-2',
-    badge: 'LIKED CATEGORIES',
-    title: 'My Favorite Categories',
-    description: 'Explore your saved animation categories and specialized topic indexes.',
-    cta: 'View Categories',
-    href: '/categories',
-    coverUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=1200&auto=format&fit=crop&q=80',
-    accent: 'cyan',
-  },
-  {
-    id: 'spotlight-3',
-    badge: 'MOODBOARDS',
-    title: 'My Custom Moodboards',
-    description: 'Organize, layout, and analyze reference clips on interactive canvas boards.',
-    cta: 'Open Moodboards',
-    href: '/moodboard',
-    coverUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80',
-    accent: 'amber',
-  },
-  {
-    id: 'spotlight-4',
-    badge: 'MY PROFILE',
-    title: 'My Artist Portfolio & Studio',
-    description: 'Manage your uploaded clips, profile settings, and studio portfolio.',
-    cta: 'Open Profile',
-    href: '/profile',
-    coverUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1200&auto=format&fit=crop&q=80',
-    accent: 'emerald',
-  },
-];
-
-
 export default function HomePage() {
-    const { user } = useAuth();
-    const { userProfile } = useUser();
-    const [allVideos, setAllVideos] = useState<Video[]>([]);
-    const [categories, setCategories] = useState<Category[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [showDonateDialog, setShowDonateDialog] = useState(false);
+  const { user } = useAuth();
+  const { userProfile } = useUser();
+  const [allVideos, setAllVideos] = useState<Video[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showDonateDialog, setShowDonateDialog] = useState(false);
+  const [selectedPickVideo, setSelectedPickVideo] = useState<Video | null>(null);
 
-    const spotlightScrollRef = useRef<HTMLDivElement>(null);
+  // Pagination & Filters
+  const [visibleCount, setVisibleCount] = useState(VIDEOS_PER_PAGE);
+  const [activeTab, setActiveTab] = useState<TabOption>('featured');
+  const [activeType, setActiveType] = useState<TypeOption>('all');
+  const [activePill, setActivePill] = useState<PillOption>('all');
+  const [columns, setColumns] = useState<number>(4);
 
-    // Pagination State
-    const [visibleCount, setVisibleCount] = useState(VIDEOS_PER_PAGE);
+  const { ref: inViewRef, inView } = useInView({
+    threshold: 0,
+    rootMargin: '200px',
+  });
 
-    const { ref: inViewRef, inView } = useInView({
-        threshold: 0,
-        rootMargin: '200px',
-    });
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const categoriesQuery = query(collection(db, "categories"), where("status", "==", "published"), limit(100));
+        const [videos, categorySnapshot] = await Promise.all([
+          getSnapshotVideos(),
+          getDocs(categoriesQuery)
+        ]);
 
-    // Filter State
-    const [activeTab, setActiveTab] = useState<TabOption>('featured');
-    const [activeType, setActiveType] = useState<TypeOption>('all');
-    const [columns, setColumns] = useState<number>(4);
+        const fetchedCategories = categorySnapshot.docs.map(doc => ({
+          id: doc.id,
+          href: `/categories?category=${doc.id}`,
+          ...doc.data()
+        } as Category));
 
-    // Liked Data
-    const [likedVideos, setLikedVideos] = useState<Video[]>([]);
-    const [likedCategories, setLikedCategories] = useState<Category[]>([]);
-    const [recentCategories, setRecentCategories] = useState<Category[]>([]);
+        fetchedCategories.forEach(cat => {
+          if (!cat.imageUrl || cat.imageUrl.includes('placehold.co')) {
+            const match = findCategoryThumbnailMatch(cat, videos);
+            if (match) cat.imageUrl = match.thumbnailUrl || match.posterUrl;
+          }
+        });
 
-    // Fetch Data
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                const categoriesQuery = query(collection(db, "categories"), where("status", "==", "published"), limit(100));
-                const [videos, categorySnapshot] = await Promise.all([
-                    getSnapshotVideos(),
-                    getDocs(categoriesQuery)
-                ]);
-
-                const fetchedCategories = categorySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    href: `/categories?category=${doc.id}`,
-                    ...doc.data()
-                } as Category));
-
-                fetchedCategories.forEach(cat => {
-                    if (!cat.imageUrl || cat.imageUrl.includes('placehold.co')) {
-                        const match = findCategoryThumbnailMatch(cat, videos);
-                        if (match) cat.imageUrl = match.thumbnailUrl || match.posterUrl;
-                    }
-                });
-
-                setAllVideos(videos);
-                setCategories(fetchedCategories);
-            } catch (error) {
-                console.error("Error fetching data:", error);
-            } finally {
-                setLoading(false);
-            }
-        }
-        fetchData();
-    }, []);
-
-    // Liked Videos
-    const likedVideoIdsStr = (userProfile?.likedVideoIds || []).join(',');
-    useEffect(() => {
-        const fetchLikedVideos = async () => {
-            const ids = userProfile?.likedVideoIds || [];
-            if (ids.length === 0) { setLikedVideos([]); return; }
-            try {
-                const chunks: Video[] = [];
-                for (let i = 0; i < ids.length; i += 30) {
-                    const slice = ids.slice(i, i + 30);
-                    const q = query(collection(db, 'videos'), where(documentId(), 'in', slice));
-                    const snap = await getDocs(q);
-                    snap.docs.forEach(d => chunks.push({ id: d.id, ...d.data() } as Video));
-                }
-                setLikedVideos(chunks);
-            } catch (e) {
-                console.error('Failed to fetch liked videos', e);
-            }
-        };
-        fetchLikedVideos();
-    }, [likedVideoIdsStr]);
-
-    // Liked & Recent Categories
-    useEffect(() => {
-        const likedCatIds: string[] = userProfile?.likedCategoryIds || [];
-        if (likedCatIds.length === 0) { setLikedCategories([]); return; }
-        setLikedCategories(categories.filter(c => likedCatIds.includes(c.id)));
-    }, [(userProfile?.likedCategoryIds || []).join(','), categories]);
-
-    useEffect(() => {
-        const recentIds = getRecentCategoryIds();
-        if (recentIds.length === 0 || categories.length === 0) { setRecentCategories([]); return; }
-        const map = new Map(categories.map(c => [c.id, c]));
-        setRecentCategories(recentIds.map((id: string) => map.get(id)).filter(Boolean) as Category[]);
-    }, [categories]);
-
-    // Filter Logic
-    const filteredVideos = useMemo(() => {
-        let result = allVideos.filter(v => !v.isShort);
-
-        if (activeTab === 'community') {
-            result = result.filter(v =>
-                v.type === 'social' ||
-                (v.type as string) === 'instagram' ||
-                !!v.uploader
-            );
-        }
-
-        if (activeType !== 'all') {
-            const typeLower = activeType.toLowerCase();
-            result = result.filter(v => {
-                const tags = v.tags?.map(t => t.toLowerCase()) || [];
-                const searchCategories = (v.categoryIds || []).concat(v.categories || []).map(c => c.toLowerCase());
-                const combinedText = (v.title + v.description).toLowerCase();
-                return tags.some(t => t.includes(typeLower)) || searchCategories.some(c => c.includes(typeLower)) || combinedText.includes(typeLower);
-            });
-        }
-
-        if (activeTab === 'featured') {
-            result = [...result].sort(() => 0.5 - Math.random());
-        } else if (activeTab === 'latest') {
-            result = [...result].reverse();
-        } else if (activeTab === 'trending') {
-            result = [...result].sort(() => 0.5 - Math.random());
-        }
-
-        return result;
-    }, [allVideos, activeType, activeTab]);
-
-    useEffect(() => {
-        setVisibleCount(VIDEOS_PER_PAGE);
-    }, [activeTab, activeType]);
-
-    const visibleVideos = useMemo(() => filteredVideos.slice(0, visibleCount), [filteredVideos, visibleCount]);
-    const hasMore = visibleCount < filteredVideos.length;
-
-    useEffect(() => {
-        if (inView && hasMore) {
-            setVisibleCount(prev => prev + VIDEOS_PER_PAGE);
-        }
-    }, [inView, hasMore]);
-
-    const heroVideo = useMemo(() => {
-        if (allVideos.length === 0) return null;
-        const candidates = allVideos.filter(v => !v.isShort);
-        if (candidates.length === 0) return allVideos[0];
-        return candidates[Math.floor(Math.random() * candidates.length)];
-    }, [allVideos]);
-
-    // Bento Spotlight Card Video
-    const bentoSpotlightVideo = useMemo(() => {
-        return allVideos.find(v => v.uploader || v.thumbnailUrl) || heroVideo;
-    }, [allVideos, heroVideo]);
-
-    const scrollSpotlight = (direction: 'left' | 'right') => {
-        if (spotlightScrollRef.current) {
-            const amount = direction === 'left' ? -400 : 400;
-            spotlightScrollRef.current.scrollBy({ left: amount, behavior: 'smooth' });
-        }
+        setAllVideos(videos);
+        setCategories(fetchedCategories);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
     };
+    fetchData();
+  }, []);
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-transparent p-8 space-y-8">
-                <div className="h-[400px] w-full bg-zinc-900/50 rounded-3xl animate-pulse" />
-                <div className="grid grid-cols-6 gap-4">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(i => <div key={i} className="aspect-square bg-zinc-900/50 rounded-2xl animate-pulse" />)}
-                </div>
-            </div>
-        )
+  // Filtered Videos
+  const filteredVideos = useMemo(() => {
+    let result = allVideos.filter(v => activePill === 'shorts' ? v.isShort : !v.isShort);
+
+    // Search Query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(v => 
+        v.title.toLowerCase().includes(q) ||
+        (v.description || '').toLowerCase().includes(q) ||
+        (v.tags || []).some(t => t.toLowerCase().includes(q))
+      );
     }
 
-    return (
-        <div className="min-h-screen bg-transparent text-white overflow-x-hidden font-sans pb-24 -mt-32 pt-32">
-            {/* 1. Hero Showcase Section */}
-            {heroVideo && (
-                <BrowseHero video={heroVideo}>
-                    <div className="w-full h-full flex flex-col justify-center items-center text-center pb-16 animate-fade-in-up">
-                        <div className="flex justify-center mb-6 animate-fade-in">
-                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black/50 border border-white/15 backdrop-blur-md shadow-2xl">
-                                <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
-                                <span className="text-sm font-bold text-purple-200">The Creator Reference & Discovery Hub</span>
-                            </div>
-                        </div>
+    // Tab Filter
+    if (activeTab === 'community') {
+      result = result.filter(v => v.type === 'social' || (v.type as string) === 'instagram' || !!v.uploader);
+    }
 
-                        <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tight mb-6 leading-[1.1] max-w-6xl mx-auto drop-shadow-2xl">
-                            <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/70">
-                                Discover Animation
-                            </span>
-                            <br />
-                            <span className="inline-block bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 animate-gradient-x transition-all duration-500">
-                                Your Professional Portfolio
-                            </span>
-                        </h1>
+    // 2D / 3D
+    if (activeType !== 'all') {
+      const typeLower = activeType.toLowerCase();
+      result = result.filter(v => {
+        const tags = v.tags?.map(t => t.toLowerCase()) || [];
+        const cats = (v.categoryIds || []).concat(v.categories || []).map(c => c.toLowerCase());
+        return tags.some(t => t.includes(typeLower)) || cats.some(c => c.includes(typeLower));
+      });
+    }
 
-                        <p className="text-lg md:text-xl text-zinc-100 mb-10 max-w-3xl mx-auto leading-relaxed drop-shadow-lg font-medium">
-                            Showcase your animation work, get discovered by studios, and collaborate with top animators worldwide.
-                        </p>
+    // Quick Pill Filter
+    if (activePill !== 'all' && activePill !== 'shorts') {
+      const pillKeywords: Record<string, string[]> = {
+        locomotion: ['locomotion', 'walk', 'run', 'jump', 'parkour', 'sprint', 'crawl', 'stagger'],
+        combat: ['combat', 'fight', 'sword', 'punch', 'kick', 'action', 'martial', 'attack'],
+        acting: ['acting', 'facial', 'lip sync', 'dialogue', 'expression', 'gesture', 'emotion'],
+        creature: ['creature', 'animal', 'quadruped', 'monster', 'dragon', 'dog', 'bird', 'horse'],
+        mechanics: ['mechanic', 'body mechanic', 'weight', 'physics', 'push', 'pull', 'lift', 'fall'],
+        vfx: ['vfx', 'fx', 'fire', 'water', 'smoke', 'explosion', 'magic', 'energy'],
+      };
+      const keywords = pillKeywords[activePill] || [];
+      result = result.filter(v => {
+        const tags = v.tags?.map(t => t.toLowerCase()) || [];
+        const cats = (v.categoryIds || []).concat(v.categories || []).map(c => c.toLowerCase());
+        const fullText = (v.title + ' ' + (v.description || '')).toLowerCase();
+        return keywords.some(kw => tags.some(t => t.includes(kw)) || cats.some(c => c.includes(kw)) || fullText.includes(kw));
+      });
+    }
 
-                        <Button asChild size="lg" className="h-12 sm:h-14 px-6 sm:px-8 rounded-2xl text-sm sm:text-base font-bold bg-gradient-to-r from-purple-600 via-pink-500 to-rose-600 hover:from-purple-500 hover:to-rose-500 text-white shadow-xl shadow-purple-600/30 gap-2.5 cursor-pointer hover:scale-105 transition-all">
-                            <Link href="/profile">
-                                <Upload className="h-5 w-5 text-white" />
-                                Build Your Portfolio
-                            </Link>
-                        </Button>
+    if (activeTab === 'latest') return [...result].reverse();
+    return result;
+  }, [allVideos, activeTab, activeType, activePill, searchQuery]);
 
-                        {/* Animated Scrolling Portfolio Features Marquee */}
-                        <div className="w-full max-w-4xl mx-auto mt-6 sm:mt-10 overflow-hidden rounded-full bg-gradient-to-r from-purple-950/80 via-zinc-950/80 to-purple-950/80 border border-purple-500/40 py-2 sm:py-3 px-3 sm:px-6 backdrop-blur-2xl shadow-2xl group">
-                            <div className="flex whitespace-nowrap animate-marquee items-center gap-8 text-xs md:text-sm font-extrabold text-purple-200">
-                                <span className="flex items-center gap-2">
-                                    <Upload className="h-4 w-4 text-pink-400 animate-pulse" />
-                                    Upload your best animation work
-                                </span>
-                                <span className="text-purple-500 font-bold">•</span>
-                                <span className="flex items-center gap-2">
-                                    <Sparkles className="h-4 w-4 text-purple-400" />
-                                    Get discovered by industry studios
-                                </span>
-                                <span className="text-purple-500 font-bold">•</span>
-                                <span className="flex items-center gap-2">
-                                    <Upload className="h-4 w-4 text-pink-400 animate-pulse" />
-                                    Collaborate with top animators
-                                </span>
-                                <span className="text-purple-500 font-bold">•</span>
-                                <span className="flex items-center gap-2">
-                                    <Sparkles className="h-4 w-4 text-purple-400" />
-                                    Build your professional portfolio
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </BrowseHero>
-            )}
+  useEffect(() => {
+    setVisibleCount(VIDEOS_PER_PAGE);
+  }, [activeTab, activeType, activePill, searchQuery]);
 
-            <div className="w-full px-3 md:px-6 lg:px-8 space-y-12 mt-6" id="content">
+  // Infinite Scroll
+  useEffect(() => {
+    if (inView && visibleCount < filteredVideos.length) {
+      setVisibleCount(prev => prev + 24);
+    }
+  }, [inView, visibleCount, filteredVideos.length]);
 
-                {/* 2. Higgsfield Bento Box Spotlight Grid (FIRST ON TOP) */}
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Trophy className="h-5 w-5 text-purple-400" />
-                            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">Creator Community Bento Spotlights</h2>
-                        </div>
-                    </div>
+  const visibleVideos = useMemo(() => filteredVideos.slice(0, visibleCount), [filteredVideos, visibleCount]);
+  const hasMore = visibleCount < filteredVideos.length;
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                        {/* Large Hero Bento Announcement Card: Animator Portfolios */}
-                        <Link
-                            href="/profile"
-                            className="group relative col-span-1 sm:col-span-2 lg:row-span-2 rounded-2xl sm:rounded-3xl overflow-hidden border border-purple-500/40 bg-gradient-to-br from-purple-950 via-zinc-950 to-black p-4 sm:p-6 lg:p-8 shadow-[0_0_50px_-10px_rgba(168,85,247,0.3)] transition-all duration-500 hover:scale-[1.01] hover:border-purple-400 hover:shadow-[0_0_60px_0px_rgba(168,85,247,0.5)] cursor-pointer flex flex-col justify-between min-h-[220px] sm:min-h-[280px] lg:min-h-[340px]"
-                        >
-                            {/* Background Glow & Ambient Sparkles */}
-                            <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none group-hover:bg-purple-600/20 transition-colors" />
-                            <div className="absolute bottom-0 left-0 w-80 h-80 bg-pink-600/10 rounded-full blur-3xl pointer-events-none" />
+  const heroVideo = useMemo(
+    () => {
+      const playableReferences = allVideos.filter((video) => {
+        const url = video.videoUrl?.toLowerCase() || '';
+        return !video.isShort && (url.includes('.mp4') || url.includes('.webm'));
+      });
+      if (playableReferences.length === 0) return null;
+      return playableReferences[Math.floor(Math.random() * playableReferences.length)];
+    },
+    [allVideos]
+  );
 
-                            <div className="relative z-20 flex items-center justify-between gap-2">
-                                <span className="px-2.5 sm:px-3.5 py-0.5 sm:py-1 rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 text-white font-extrabold text-[10px] sm:text-xs shadow-lg flex items-center gap-1 sm:gap-1.5 border border-purple-400/30">
-                                    <Sparkle className="h-3 sm:h-3.5 w-3 sm:w-3.5 fill-white text-white animate-spin" />
-                                    <span>🎉 NEW FEATURE ANNOUNCEMENT</span>
-                                </span>
-                                <Badge variant="outline" className="bg-purple-950/80 text-purple-300 border-purple-700/50 text-[9px] sm:text-xs font-mono font-bold px-2 sm:px-2.5 py-0.5">
-                                    LIVE NOW
-                                </Badge>
-                            </div>
+  // Generate daily random top community animation picks (seeded by current date)
+  const dailyCommunityPicks = useMemo(() => {
+    if (!allVideos || allVideos.length === 0) return [];
 
-                            <div className="relative z-20 space-y-2 sm:space-y-3 text-left my-3 sm:my-4">
-                                <h3 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black text-white leading-tight drop-shadow-md group-hover:text-purple-300 transition-colors">
-                                    Animator Portfolios & <br className="hidden sm:inline" />
-                                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-300 to-purple-400">
-                                        WIP Showcase Hub
-                                    </span>
-                                </h3>
-                                <p className="text-xs sm:text-sm text-zinc-300 max-w-xl font-medium leading-relaxed">
-                                    Claim your handle, upload WIPs & keyframes, and share your work with studio directors worldwide.
-                                </p>
-                            </div>
-
-                            <div className="relative z-20 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 pt-2">
-                                <Button size="sm" className="w-full sm:w-auto rounded-lg sm:rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs sm:text-sm px-4 sm:px-5 py-2 sm:py-2.5 gap-1.5 sm:gap-2 shadow-xl group-hover:scale-105 transition-all">
-                                    <Sparkles className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
-                                    <span>✨ Create & View Your Portfolio</span>
-                                </Button>
-                                <span className="text-[10px] sm:text-xs text-purple-300/80 font-medium">Free for all animators</span>
-                            </div>
-                        </Link>
-
-                        {/* Block 1: My Lists & Saved References */}
-                        <Link
-                            href="/profile"
-                            className="group relative rounded-2xl sm:rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-purple-950/60 to-zinc-950 p-4 sm:p-5 shadow-xl transition-all hover:border-purple-500/60 hover:scale-[1.02] flex flex-col justify-between min-h-[125px] sm:min-h-[165px] h-full"
-                        >
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="px-2 py-0.5 rounded-full bg-purple-900/60 border border-purple-700/50 text-purple-300 font-mono text-[9px] sm:text-[10px] font-bold">
-                                    MY LISTS
-                                </span>
-                                <Bookmark className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-purple-400 group-hover:scale-110 transition-transform" />
-                            </div>
-                            <div className="text-left space-y-1">
-                                <h4 className="text-base sm:text-lg font-black text-white group-hover:text-purple-300 transition-colors">
-                                    My Saved References
-                                </h4>
-                                <p className="text-[11px] sm:text-xs text-zinc-400 font-medium line-clamp-2">
-                                    Organize favorited animation reference clips into custom playlists & study lists.
-                                </p>
-                            </div>
-                        </Link>
-
-                        {/* Block 2: Interactive Moodboards */}
-                        <Link
-                            href="/moodboard"
-                            className="group relative rounded-2xl sm:rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-amber-950/60 to-zinc-950 p-4 sm:p-5 shadow-xl transition-all hover:border-amber-500/60 hover:scale-[1.02] flex flex-col justify-between min-h-[125px] sm:min-h-[165px] h-full"
-                        >
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="px-2 py-0.5 rounded-full bg-amber-900/60 border border-amber-700/50 text-amber-300 font-mono text-[9px] sm:text-[10px] font-bold">
-                                    MOODBOARDS
-                                </span>
-                                <Wand2 className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-amber-400 group-hover:scale-110 transition-transform" />
-                            </div>
-                            <div className="text-left space-y-1">
-                                <h4 className="text-base sm:text-lg font-black text-white group-hover:text-amber-300 transition-colors">
-                                    Studio Moodboards
-                                </h4>
-                                <p className="text-[11px] sm:text-xs text-zinc-400 font-medium line-clamp-2">
-                                    Layout and analyze reference videos side-by-side on infinite studio canvases.
-                                </p>
-                            </div>
-                        </Link>
-
-                        {/* Block 3: Community Announcements */}
-                        <Link
-                            href="/profile"
-                            className="group relative rounded-2xl sm:rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-rose-950/60 to-zinc-950 p-4 sm:p-5 shadow-xl transition-all hover:border-rose-500/60 hover:scale-[1.02] flex flex-col justify-between min-h-[125px] sm:min-h-[165px] h-full"
-                        >
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="px-2 py-0.5 rounded-full bg-rose-900/60 border border-rose-700/50 text-rose-300 font-mono text-[9px] sm:text-[10px] font-bold">
-                                    ANNOUNCEMENTS
-                                </span>
-                                <Megaphone className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-rose-400 group-hover:scale-110 transition-transform" />
-                            </div>
-                            <div className="text-left space-y-1">
-                                <h4 className="text-base sm:text-lg font-black text-white group-hover:text-rose-300 transition-colors">
-                                    Platform News & Updates
-                                </h4>
-                                <p className="text-[11px] sm:text-xs text-zinc-400 font-medium line-clamp-2">
-                                    Stay updated on feature drops, reel studio upgrades, & community showcases.
-                                </p>
-                            </div>
-                        </Link>
-
-                        {/* Block 4: Categories Index (Live Count Updated) */}
-                        <Link
-                            href="/categories"
-                            className="group relative rounded-2xl sm:rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-cyan-950/60 to-zinc-950 p-4 sm:p-5 shadow-xl transition-all hover:border-cyan-500/60 hover:scale-[1.02] flex flex-col justify-between min-h-[125px] sm:min-h-[165px] h-full"
-                        >
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="px-2 py-0.5 rounded-full bg-cyan-900/60 border border-cyan-700/50 text-cyan-300 font-mono text-[9px] sm:text-[10px] font-bold">
-                                    {categories.length > 0 ? `${categories.length}+ CATEGORIES` : '120+ CATEGORIES'}
-                                </span>
-                                <Layers className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-cyan-400 group-hover:scale-110 transition-transform" />
-                            </div>
-                            <div className="text-left space-y-1">
-                                <h4 className="text-base sm:text-lg font-black text-white group-hover:text-cyan-300 transition-colors">
-                                    Animation Categories
-                                </h4>
-                                <p className="text-[11px] sm:text-xs text-zinc-400 font-medium line-clamp-2">
-                                    Browse body mechanics, acting, quadrupeds, lip sync, combat, & elemental VFX.
-                                </p>
-                            </div>
-                        </Link>
-                    </div>
-                </div>
-
-                {/* 3. Higgsfield Style Filter Bar & Multi-Column Discovery Grid */}
-                <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-2">
-                            <Compass className="h-5 w-5 text-purple-400" />
-                            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">Discover Animation References</h2>
-                            <Badge variant="outline" className="bg-purple-950/60 text-purple-300 border-purple-800/40 text-xs font-bold">
-                                {filteredVideos.length} Clips
-                            </Badge>
-                        </div>
-                    </div>
-
-                    <FilterBar
-                        activeTab={activeTab}
-                        setActiveTab={setActiveTab}
-                        activeType={activeType}
-                        setActiveType={setActiveType}
-                        columns={columns}
-                        setColumns={setColumns}
-                    />
-
-                    {/* Video Grid */}
-                    <VideoGrid title="" videos={visibleVideos} columns={columns} />
-
-                    {/* Infinite Scroll Sentinel */}
-                    {hasMore && (
-                        <div ref={inViewRef} className="flex justify-center py-8">
-                            <div className="flex items-center gap-2 text-zinc-400 text-sm font-semibold">
-                                <Sparkles className="h-5 w-5 animate-spin text-purple-500" />
-                                <span>Loading more animation inspiration...</span>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            <DonateDialog open={showDonateDialog} onOpenChange={setShowDonateDialog} />
-        </div>
+    const candidates = allVideos.filter(v => 
+      !v.isShort && (v.thumbnailUrl || v.posterUrl)
     );
+
+    if (candidates.length === 0) return [];
+
+    const communityCandidates = candidates.filter(
+      v => v.type === 'social' || (v.type as string) === 'instagram' || !!v.uploader || (v.tags && v.tags.length > 0)
+    );
+    const pool = [...(communityCandidates.length >= 3 ? communityCandidates : candidates)];
+
+    // Seed hash from date (YYYY-MM-DD)
+    const todayStr = new Date().toISOString().slice(0, 10);
+    let seed = 0;
+    for (let i = 0; i < todayStr.length; i++) {
+      seed = ((seed << 5) - seed) + todayStr.charCodeAt(i);
+      seed |= 0;
+    }
+
+    const picks: Array<{
+      video: Video;
+      bgGradient: string;
+      tag: string;
+      creator: string;
+    }> = [];
+
+    const gradients = [
+      'from-[#0284c7] via-[#0369a1] to-[#024368]', // Sky Blue
+      'from-[#ea580c] via-[#c2410c] to-[#7c2d12]', // Coral Orange
+      'from-[#d97706] via-[#b45309] to-[#78350f]', // Cyber Gold
+    ];
+
+    for (let i = 0; i < Math.min(3, pool.length); i++) {
+      const idx = Math.abs((seed + (i * 997)) % pool.length);
+      const chosenVideo = pool[idx];
+      pool.splice(idx, 1);
+
+      const tag = (chosenVideo.tags?.[0] || chosenVideo.categories?.[0] || 'COMMUNITY').toUpperCase();
+      const creator = chosenVideo.uploader ? `by ${chosenVideo.uploader}` : chosenVideo.author_name ? `by ${chosenVideo.author_name}` : 'Community Artist';
+
+      picks.push({
+        video: chosenVideo,
+        bgGradient: gradients[i % gradients.length],
+        tag,
+        creator,
+      });
+    }
+
+    return picks;
+  }, [allVideos]);
+
+  return (
+    <div className="min-h-screen text-foreground space-y-12 pb-20 pt-2 text-left">
+      {/* 1. Header Section (Clean, Breathable Title & Search) */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 px-1">
+        <div className="space-y-1.5 max-w-2xl">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
+            Discover References
+          </h1>
+          <p className="text-xs sm:text-sm text-zinc-400 font-medium leading-relaxed">
+            High-speed curated motion & animation references for artists and studios.
+          </p>
+        </div>
+
+        {/* Search Bar & Fast Actions */}
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:w-80">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search 10,000+ references, tags, shots..."
+              className="pl-10 pr-4 h-11 bg-white/[0.04] border-white/10 hover:border-white/20 focus:border-purple-500 rounded-2xl text-xs text-white placeholder:text-zinc-500 shadow-inner"
+            />
+          </div>
+
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => setShowDonateDialog(true)}
+            className="h-11 w-11 rounded-2xl bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-zinc-300 hover:text-white shrink-0"
+            title="Supporter Tier"
+          >
+            <Heart className="w-4 h-4 text-pink-400 fill-pink-500/30" />
+          </Button>
+        </div>
+      </div>
+
+      {/* 2. Full-Page Creator Discovery Hero Banner */}
+      {!searchQuery && (
+        <HomeHeroBanner video={heroVideo} />
+      )}
+
+      {/* New product launch announcement */}
+      {!searchQuery && (
+        <HomeProductLaunchAnnouncement />
+      )}
+
+      {/* 3. SHELF: Community Portfolio Feed */}
+      {!searchQuery && (
+        <CommunityFeedShelf />
+      )}
+
+      {/* 4. SHELF: Browse Reference Specialties (Interactive Category Cards) */}
+      {!searchQuery && (
+        <CuratedCategoryPillsShelf 
+          onSelectPill={(pill) => setActivePill(pill as PillOption)} 
+          categories={categories}
+          videos={allVideos}
+        />
+      )}
+
+      {/* 5. SHELF: "Our Picks" Daily Community Highlights */}
+      {!searchQuery && dailyCommunityPicks.length > 0 && (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-lg md:text-xl font-black text-white tracking-tight flex items-center gap-2">
+              Our Picks
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {dailyCommunityPicks.map((pick) => (
+              <div
+                key={pick.video.id}
+                onClick={() => setSelectedPickVideo(pick.video)}
+                className={`group relative rounded-3xl overflow-hidden bg-gradient-to-br ${pick.bgGradient} p-6 shadow-2xl transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col justify-between min-h-[220px] cursor-pointer`}
+              >
+                <div className="absolute inset-0 opacity-50 group-hover:opacity-65 transition-opacity mix-blend-luminosity">
+                  <img
+                    src={pick.video.thumbnailUrl || pick.video.posterUrl}
+                    alt={pick.video.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent pointer-events-none" />
+
+                <div className="relative z-10 flex items-center justify-between">
+                  <span className="px-2.5 py-1 rounded-xl bg-black/45 backdrop-blur-md text-[10px] font-black uppercase tracking-wider text-white border border-white/10 shadow-sm">
+                    {pick.tag}
+                  </span>
+                  <div className="p-2 rounded-xl bg-black/40 text-white backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
+                  </div>
+                </div>
+
+                <div className="relative z-10 text-left space-y-1 mt-auto">
+                  <h4 className="text-xl md:text-2xl font-black text-white drop-shadow-md leading-tight line-clamp-2">
+                    {pick.video.title}
+                  </h4>
+                  <p className="text-xs text-white/80 font-semibold drop-shadow-sm truncate">
+                    {pick.creator}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 6. SHELF: Full Reference Discovery Catalog */}
+      <section className="space-y-4 pt-4">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <Film className="w-4 h-4 text-purple-400" />
+            <h2 className="text-lg md:text-xl font-black text-white tracking-tight">
+              All Reference Clips
+            </h2>
+            <Badge variant="outline" className="bg-purple-950/60 text-purple-300 border-purple-800/40 text-xs font-bold">
+              {filteredVideos.length} Clips
+            </Badge>
+          </div>
+        </div>
+
+        {/* Filter Bar with Quick Pills */}
+        <FilterBar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          activeType={activeType}
+          setActiveType={setActiveType}
+          columns={columns}
+          setColumns={setColumns}
+          activePill={activePill}
+          setActivePill={setActivePill}
+        />
+
+        {/* Video Grid */}
+        {loading && allVideos.length === 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-8">
+            {Array.from({ length: 12 }).map((_, idx) => (
+              <div key={idx} className="aspect-[3/4] md:aspect-video rounded-2xl bg-white/5 animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <VideoGrid title="" videos={visibleVideos} columns={columns} />
+        )}
+
+        {/* Infinite Scroll Indicator */}
+        {hasMore && (
+          <div ref={inViewRef} className="flex justify-center py-8">
+            <div className="flex items-center gap-2 text-zinc-400 text-sm font-semibold">
+              <Sparkles className="h-5 w-5 animate-spin text-purple-500" />
+              <span>Loading more reference inspiration...</span>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Video Modal Player for Our Picks */}
+      {selectedPickVideo && (
+        <Dialog open={!!selectedPickVideo} onOpenChange={(open) => !open && setSelectedPickVideo(null)}>
+          <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/95 border border-white/10 rounded-2xl text-white">
+            <DialogTitle className="sr-only">{selectedPickVideo.title}</DialogTitle>
+            <div className="aspect-video w-full">
+              <VideoPlayer video={selectedPickVideo} startsPaused={false} muted={false} />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      <DonateDialog open={showDonateDialog} onOpenChange={setShowDonateDialog} />
+    </div>
+  );
 }

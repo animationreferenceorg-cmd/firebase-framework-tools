@@ -4,38 +4,33 @@
 
 @layer base {
   :root {
-    --background: 250 100% 4%;
+    --background: 252 24% 9%; /* Deep Muted Violet #13111c */
     --foreground: 0 0% 100%;
-    --card: 250 40% 8%;
+    --card: 248 30% 13%; /* Console Card #1a182e */
     --card-foreground: 0 0% 100%;
-    --popover: 250 100% 4%;
+    --popover: 252 24% 9%;
     --popover-foreground: 0 0% 100%;
-    --primary: 262 83% 58%;
+    --primary: 263 90% 66%; /* Vibrant Neon Purple #8b5cf6 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 250 35% 13%;
+    --secondary: 248 25% 18%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 250 35% 13%;
-    --muted-foreground: 250 20% 65%;
-    --accent: 262 83% 58%;
+    --muted: 248 20% 15%;
+    --muted-foreground: 245 15% 70%;
+    --accent: 263 90% 66%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 250 30% 15%;
-    --input: 250 30% 15%;
-    --ring: 262 83% 58%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 250 40% 6%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 262 83% 58%;
+    --border: 248 20% 18%;
+    --input: 248 20% 18%;
+    --ring: 263 90% 66%;
+    --sidebar-background: 248 28% 12%; /* Console Sidebar #171529 */
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 263 90% 66%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 250 35% 13%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 250 30% 15%;
-    --sidebar-ring: 262 83% 58%;
+    --sidebar-accent: 248 25% 18%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 248 20% 18%;
+    --sidebar-ring: 263 90% 66%;
   }
 
   .dark {
@@ -184,5 +179,14 @@
 
   .animate-marquee:hover {
     animation-play-state: paused;
+  }
+
+  /* Hide scrollbar for horizontal scroll containers */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }

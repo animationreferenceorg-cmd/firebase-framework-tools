@@ -7,12 +7,14 @@ import path from 'path';
 import os from 'os';
 import { v4 as uuidv4 } from 'uuid';
 import https from 'https';
+import { bunnyMp4Url, bunnyStreamConfig, waitForBunnyVideo } from '@/lib/bunny-stream';
 
 // --- Helpers ---
 
 function runCommand(command: string, args: string[], options: any = {}): Promise<string> {
     return new Promise((resolve, reject) => {
-        const finalOptions = { shell: true, ...options };
+        // Arguments include user-supplied source URLs; never pass them through a shell.
+        const finalOptions = { shell: false, ...options };
         const proc = spawn(command, args, finalOptions);
         let stdout = '';
         let stderr = '';
@@ -85,11 +87,13 @@ function downloadFile(url: string, dest: string): Promise<void> {
 /**
  * Downloads a file from a URL using curl, to bypass bot protection blocks.
  */
-function downloadFileWithCurl(url: string, dest: string): Promise<void> {
+function downloadFileWithCurl(url: string, dest: string, referer?: string): Promise<void> {
     return new Promise((resolve, reject) => {
         const curlCmd = process.platform === 'win32' ? 'curl.exe' : 'curl';
-        const args = ['-s', '-L', '-H', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', '-o', dest, url];
-        const proc = spawn(curlCmd, args, { shell: true });
+        const args = ['--fail-with-body', '-s', '-L', '-H', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'];
+        if (referer) args.push('-e', referer);
+        args.push('-o', dest, url);
+        const proc = spawn(curlCmd, args, { shell: false });
         
         proc.on('close', (code) => {
             if (code !== 0) {
@@ -108,7 +112,7 @@ function fetchJsonWithCurl(url: string): Promise<any> {
     return new Promise((resolve, reject) => {
         const curlCmd = process.platform === 'win32' ? 'curl.exe' : 'curl';
         const args = ['-s', '-L', '-H', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', url];
-        const proc = spawn(curlCmd, args, { shell: true });
+        const proc = spawn(curlCmd, args, { shell: false });
         let stdout = '';
         let stderr = '';
         
@@ -138,27 +142,21 @@ async function getYtDlpExecutor(): Promise<{ command: string; baseArgs: string[]
     const isWindows = process.platform === 'win32';
 
     if (isWindows) {
-        let pythonPath = process.env.PYTHON_PATH;
+        const pythonPath = process.env.PYTHON_PATH;
         const localDevPath = String.raw`C:\Users\micha\AppData\Local\Programs\Python\Python314\python.exe`;
-        
-        if (pythonPath && pythonPath !== 'python') {
-            console.log(`[Downloader] Windows mode: using custom PYTHON_PATH at ${pythonPath}`);
-            return { command: pythonPath, baseArgs: ['-m', 'yt_dlp'] };
-        } else if (fs.existsSync(localDevPath)) {
-            console.log(`[Downloader] Windows mode: using Python at ${localDevPath}`);
-            return { command: localDevPath, baseArgs: ['-m', 'yt_dlp'] };
-        }
 
-        // Test if system python is real and has yt-dlp
-        const hasRealPython = await new Promise<boolean>((resolve) => {
-            exec('python --version', (error, stdout) => {
-                resolve(Boolean(!error && stdout && stdout.toLowerCase().includes('python')));
-            });
-        });
-
-        if (hasRealPython) {
-            console.log(`[Downloader] Windows mode: using system python`);
-            return { command: 'python', baseArgs: ['-m', 'yt_dlp'] };
+        // Verify the module, not just Python itself. A Python installation
+        // without yt-dlp was causing every extension capture to fail.
+        const pythonCandidates = [pythonPath, fs.existsSync(localDevPath) ? localDevPath : null, 'python']
+            .filter((candidate, index, items): candidate is string => Boolean(candidate) && items.indexOf(candidate) === index);
+        for (const candidate of pythonCandidates) {
+            try {
+                await runCommand(candidate, ['-m', 'yt_dlp', '--version']);
+                console.log(`[Downloader] Windows mode: using yt-dlp from ${candidate}`);
+                return { command: candidate, baseArgs: ['-m', 'yt_dlp'] };
+            } catch {
+                console.warn(`[Downloader] yt-dlp is not available through ${candidate}; trying another option.`);
+            }
         }
 
         // Fallback to standalone Windows binary
@@ -247,7 +245,12 @@ async function getCookieFile(platform: string): Promise<string | null> {
 
 // --- Main Export ---
 
-export async function downloadSocialVideo(url: string, saveToFirestore: boolean = true) {
+export async function downloadSocialVideo(
+    url: string,
+    saveToFirestore: boolean = true,
+    capturedMediaUrl?: string,
+    onProgress?: (value: number, stage: string) => void | Promise<void>,
+) {
     if (!isValidUrl(url)) {
         console.error(`[Downloader] Invalid or blocked URL: ${url}`);
         return { success: false, error: "Invalid URL. Please provide a valid public URL." };
@@ -261,6 +264,7 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
 
     try {
         const platform = detectPlatform(url);
+        await onProgress?.(15, 'Downloading source video');
 
         if (platform === 'sakugabooru') {
             try {
@@ -436,64 +440,38 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
             }
         }
 
-        // 1. Get yt-dlp executor (downloads binary on first call in production)
-        const { command, baseArgs } = await getYtDlpExecutor();
-
-        // 2. Determine format based on ffmpeg availability
-        const hasFfmpeg = await isFfmpegAvailable();
-        const formatString = hasFfmpeg
-            ? 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
-            : 'best[ext=mp4]/best';
-        console.log(`[Downloader] Ffmpeg: ${hasFfmpeg}. Format: ${formatString}`);
-
-        // 3. Build args
-        const dlArgs = [
-            ...baseArgs,
-            '-f', formatString,
-            '-o', tempFilePath,
-            '--no-warnings',
-            '--print-json',
-            url
-        ];
-
-        if (hasFfmpeg) {
-            // Insert merge format after baseArgs
-            const insertIdx = baseArgs.length;
-            dlArgs.splice(insertIdx, 0, '--merge-output-format', 'mp4');
-        }
-
-        // Inject cookies if available for this platform
-        let cookieFilePath: string | null = null;
-        if (platform) {
-            cookieFilePath = await getCookieFile(platform);
-            if (cookieFilePath) {
-                // Insert --cookies before the URL (last arg)
-                dlArgs.splice(dlArgs.length - 1, 0, '--cookies', cookieFilePath);
-                console.log(`[Downloader] Using ${platform} cookies`);
-            }
-        }
-
-        // 4. Execute
-        console.log(`[Downloader] Executing: ${command} ${dlArgs.join(' ')}`);
-        let stdout: string;
-        try {
-            stdout = await runCommand(command, dlArgs);
-        } finally {
-            // Clean up cookie temp file
-            if (cookieFilePath && fs.existsSync(cookieFilePath)) {
-                fs.unlinkSync(cookieFilePath);
-            }
-        }
-        console.log('[Downloader] Download command completed.');
-
-        // 5. Parse metadata
         let info: any = {};
-        try {
-            info = JSON.parse(stdout);
-            console.log('[Downloader] Metadata parsed successfully.');
-        } catch (e) {
-            console.error('[Downloader] Could not parse JSON metadata.');
-            console.warn('[Downloader] Using defaults.');
+        if (capturedMediaUrl) {
+            // For signed-in social pages, the extension can see the exact CDN
+            // video URL. This is the closest match to Pinterest's capture flow
+            // and avoids re-scraping Instagram from a logged-out server.
+            console.log('[Downloader] Downloading the media URL captured by the extension.');
+            await downloadFileWithCurl(capturedMediaUrl, tempFilePath, url);
+        } else {
+            const { command, baseArgs } = await getYtDlpExecutor();
+            const hasFfmpeg = await isFfmpegAvailable();
+            const formatString = hasFfmpeg
+                ? 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+                : 'best[ext=mp4]/best';
+            const dlArgs = [...baseArgs, '-f', formatString, '-o', tempFilePath, '--no-warnings', '--print-json', url];
+            if (hasFfmpeg) dlArgs.splice(baseArgs.length, 0, '--merge-output-format', 'mp4');
+
+            let cookieFilePath: string | null = null;
+            if (platform) {
+                cookieFilePath = await getCookieFile(platform);
+                if (cookieFilePath) dlArgs.splice(dlArgs.length - 1, 0, '--cookies', cookieFilePath);
+            }
+            let stdout: string;
+            try {
+                stdout = await runCommand(command, dlArgs);
+            } finally {
+                if (cookieFilePath && fs.existsSync(cookieFilePath)) fs.unlinkSync(cookieFilePath);
+            }
+            try {
+                info = JSON.parse(stdout);
+            } catch {
+                console.warn('[Downloader] Could not parse download metadata; using extension details.');
+            }
         }
 
         const title = info.title || 'Downloaded Video';
@@ -521,33 +499,76 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
 
         const stats = fs.statSync(tempFilePath);
         console.log(`[Downloader] File size: ${stats.size} bytes.`);
+        const header = Buffer.alloc(16);
+        const descriptor = fs.openSync(tempFilePath, 'r');
+        fs.readSync(descriptor, header, 0, header.length, 0);
+        fs.closeSync(descriptor);
+        const isMp4 = header.toString('ascii', 4, 8) === 'ftyp';
+        const isWebM = header[0] === 0x1a && header[1] === 0x45 && header[2] === 0xdf && header[3] === 0xa3;
+        if (stats.size < 1024 || (!isMp4 && !isWebM)) {
+            throw new Error('The source returned a webpage or error response instead of a playable video.');
+        }
+        await onProgress?.(48, 'Preparing upload');
 
-        // 7. Upload to Firebase Storage
-        const storage = getFirebaseStorage();
-        const bucket = storage.bucket();
-        const destination = `videos/${uniqueId}.mp4`;
+        // 7. Copy the bytes into storage controlled by Animation Reference.
+        // Bunny is preferred for streaming, with Firebase as the fallback.
+        const { apiKey: bunnyApiKey, libraryId: bunnyLibraryId, host: bunnyHost } = bunnyStreamConfig();
+        let storedVideoUrl = '';
+        let storedThumbnailUrl = info.thumbnail || '';
+        let storagePath = '';
+        let externalBunnyId: string | null = null;
 
-        console.log(`[Downloader] Uploading to ${destination}...`);
-        await bucket.upload(tempFilePath, {
-            destination,
-            metadata: {
-                contentType: 'video/mp4',
-                metadata: { originalUrl: url, uploader, title }
-            }
-        });
+        if (bunnyApiKey && bunnyLibraryId) {
+            await onProgress?.(55, 'Uploading video');
+            const createRes = await fetch(`https://video.bunnycdn.com/library/${bunnyLibraryId}/videos`, {
+                method: 'POST',
+                headers: { AccessKey: bunnyApiKey, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: title || `Reference ${uniqueId}` }),
+            });
+            if (!createRes.ok) throw new Error(`Could not create the Bunny Stream video (${createRes.status}).`);
+            const created = await createRes.json() as { guid?: string };
+            if (!created.guid) throw new Error('Bunny Stream did not return a video id.');
+            externalBunnyId = created.guid;
 
-        console.log('[Downloader] Upload complete. Generating signed URL...');
-        const [signedUrl] = await bucket.file(destination).getSignedUrl({
-            action: 'read',
-            expires: '03-01-2500'
-        });
+            const uploadRes = await fetch(`https://video.bunnycdn.com/library/${bunnyLibraryId}/videos/${externalBunnyId}`, {
+                method: 'PUT',
+                headers: { AccessKey: bunnyApiKey, 'Content-Type': 'application/octet-stream' },
+                body: fs.readFileSync(tempFilePath),
+            });
+            if (!uploadRes.ok) throw new Error(`Could not upload the video to Bunny Stream (${uploadRes.status}).`);
+
+            await onProgress?.(76, 'Processing playback');
+            const encoded = await waitForBunnyVideo(externalBunnyId);
+            storedVideoUrl = bunnyMp4Url(externalBunnyId, encoded.availableResolutions);
+            storedThumbnailUrl = `https://${bunnyHost}/${externalBunnyId}/thumbnail.jpg`;
+            storagePath = `bunny/${bunnyLibraryId}/${externalBunnyId}`;
+            await onProgress?.(94, 'Finalizing reference');
+        } else {
+            const storage = getFirebaseStorage();
+            const bucket = storage.bucket();
+            storagePath = `reference-imports/${uniqueId}.mp4`;
+            console.log(`[Downloader] Uploading to ${storagePath}...`);
+            await bucket.upload(tempFilePath, {
+                destination: storagePath,
+                metadata: {
+                    contentType: 'video/mp4',
+                    metadata: { originalUrl: url, uploader, title }
+                }
+            });
+            const [signedUrl] = await bucket.file(storagePath).getSignedUrl({
+                action: 'read',
+                expires: '03-01-2500'
+            });
+            storedVideoUrl = signedUrl;
+            await onProgress?.(94, 'Finalizing reference');
+        }
 
         // 8. Build video data
         const videoData = {
             title: title || 'Untitled',
             description: description || '',
-            videoUrl: signedUrl,
-            thumbnailUrl: info.thumbnail || '',
+            videoUrl: storedVideoUrl,
+            thumbnailUrl: storedThumbnailUrl,
             tags,
             type: 'social',
             originalUrl: url,
@@ -558,7 +579,9 @@ export async function downloadSocialVideo(url: string, saveToFirestore: boolean 
             width,
             height,
             status: 'draft',
-            folderId: null
+            folderId: null,
+            storagePath,
+            externalBunnyId,
         };
 
         if (info.thumbnail) {

@@ -3,6 +3,7 @@ import * as admin from 'firebase-admin';
 import type { App } from 'firebase-admin/app';
 import { getStorage, type Storage } from 'firebase-admin/storage';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { getAuth, type Auth } from 'firebase-admin/auth';
 import { config } from 'dotenv';
 
 // Load environment variables from .env file
@@ -11,6 +12,7 @@ config();
 let adminApp: App | null = null;
 let adminStorage: Storage | null = null;
 let adminDb: Firestore | null = null;
+let adminAuth: Auth | null = null;
 
 function initializeAdminApp(): App {
   if (admin.apps.length > 0 && admin.apps[0]) {
@@ -72,4 +74,10 @@ function getFirestoreDB(): Firestore {
     return adminDb;
 }
 
-export { getAdminApp, getFirebaseStorage, getFirestoreDB as getFirestore };
+function getFirebaseAuth(): Auth {
+    getAdminApp();
+    if (!adminAuth) adminAuth = getAuth();
+    return adminAuth;
+}
+
+export { getAdminApp, getFirebaseStorage, getFirestoreDB as getFirestore, getFirebaseAuth };

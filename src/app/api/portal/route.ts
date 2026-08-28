@@ -1,12 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAdminApp } from '@/lib/firebase-admin';
+import { apiErrorResponse, requireFirebaseUser } from '@/lib/api-auth';
 
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
     try {
-        const { userId, returnUrl } = await req.json();
+        const identity = await requireFirebaseUser(req);
+        const { returnUrl } = await req.json();
+        const userId = identity.uid;
 
         if (!userId) {
             return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -54,14 +57,17 @@ export async function POST(req: Request) {
 
         // Create a Billing Portal session
         const stripe = getStripe();
+        const origin = req.nextUrl.origin;
+        const safeReturnUrl = typeof returnUrl === 'string' && new URL(returnUrl, origin).origin === origin ? new URL(returnUrl, origin).toString() : `${origin}/profile`;
         const session = await stripe.billingPortal.sessions.create({
             customer: stripeCustomerId,
-            return_url: returnUrl || req.headers.get('origin') || 'http://localhost:3000',
+            return_url: safeReturnUrl,
         });
 
         return NextResponse.json({ url: session.url });
 
     } catch (error: any) {
+        if (error?.status) return apiErrorResponse(error);
         console.error('Error creating portal session:', error);
         return NextResponse.json(
             { error: error.message || 'Internal Server Error' },

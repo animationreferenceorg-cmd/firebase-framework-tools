@@ -24,6 +24,7 @@ export interface Video {
   createdAt?: any;
   updatedAt?: any;
   author_name?: string;
+  likeCount?: number;
 }
 
 export interface Folder {
@@ -60,6 +61,7 @@ export interface UserProfile {
   likedCategoryTitles?: string[];
   likedCategoryIds?: string[];
   savedShortIds?: string[];
+  savedVideoIds?: string[];
   recentlyViewedShortIds?: string[];
   isPremium?: boolean;
   tier?: 'free' | 'tier1' | 'tier2' | 'tier5' | 'admin'; // Added tier
@@ -80,6 +82,102 @@ export interface UserProfile {
   twitterUrl?: string;
   instagramUrl?: string;
   customPortfolioCategories?: string[];
+}
+
+export type ClipSourcePlatform = 'youtube' | 'vimeo' | 'x' | 'tiktok' | 'instagram' | 'web' | 'upload' | 'library';
+
+export interface ReferenceClip {
+  id: string;
+  creatorId: string;
+  creatorName: string;
+  creatorUsername?: string;
+  creatorAvatar?: string;
+  sourceUrl: string;
+  sourcePlatform: ClipSourcePlatform;
+  sourceVideoId?: string;
+  sourceAuthorName?: string;
+  sourceAuthorUrl?: string;
+  sourceAuthorAvatar?: string;
+  sourceDescription?: string;
+  uploadedMediaUrl?: string;
+  storagePath?: string;
+  mediaType?: 'video' | 'image' | 'gif';
+  mimeType?: string;
+  thumbnailUrl?: string;
+  captureStatus?: 'queued' | 'processing' | 'ready' | 'failed';
+  captureStage?: string;
+  captureProgress?: number;
+  syncError?: string;
+  bunnySyncStatus?: 'pending' | 'ready' | 'failed';
+  externalBunnyId?: string;
+  startTime: number;
+  endTime: number;
+  title: string;
+  category: string;
+  tags: string[];
+  visualTags?: string[];
+  palette?: string[];
+  paletteBuckets?: string[];
+  isPrivate: boolean;
+  /** Explicit opt-in for the Community feed. Personal captures default to false. */
+  communityVisible?: boolean;
+  /** Set when a creator removes a clip from their library; the record is retained. */
+  removedFromCreatorAt?: any;
+  primaryBoardId?: string;
+  saveCount: number;
+  createdAt: any;
+  updatedAt: any;
+}
+
+export interface ReferenceBoard {
+  id: string;
+  ownerId: string;
+  ownerName: string;
+  ownerUsername?: string;
+  ownerAvatar?: string;
+  title: string;
+  slug: string;
+  description?: string;
+  coverUrl?: string;
+  isPrivate: boolean;
+  clipCount: number;
+  followerCount: number;
+  duplicatedFromId?: string;
+  createdAt: any;
+  updatedAt: any;
+}
+
+export interface BoardSave {
+  id: string;
+  boardId: string;
+  clipId: string;
+  ownerId: string;
+  createdAt: any;
+}
+
+export interface BoardFollow {
+  id: string;
+  boardId: string;
+  userId: string;
+  createdAt: any;
+}
+
+export interface ShotBreakdown {
+  id: string;
+  ownerId: string;
+  ownerName: string;
+  ownerUsername?: string;
+  ownerAvatar?: string;
+  slug: string;
+  title: string;
+  description?: string;
+  referenceClipId: string;
+  finishedMediaUrl: string;
+  finishedMediaType: 'video' | 'image';
+  notes: string;
+  isPublic: boolean;
+  createdAt: any;
+  updatedAt: any;
 }
 
 export type WipStage = 'concept' | 'blocking' | 'splining' | 'polish' | 'cleanup' | 'completed';
@@ -152,7 +250,161 @@ export interface Moodboard {
   name: string;
   items: MoodboardItem[];
   thumbnailUrl?: string; // Cover image for the moodboard
+  description?: string;
+  itemCount?: number;
+  isPrivate?: boolean;
+  createdAt?: any;
   updatedAt: any;
+}
+
+export type ProjectPhase = 'development' | 'pre_production' | 'in_production' | 'post_production' | 'completed';
+export type ShotStatus = 'concept' | 'storyboard' | 'layout' | 'blocking' | 'splining' | 'polish' | 'rendered' | 'approved';
+
+// Curated film + game industry role taxonomy — used as suggestions (not
+// enforced) for open-role titles and crew member roles, so a project's
+// roster reads like a real production rather than freeform text.
+export const PRODUCTION_ROLES = [
+  'Director', 'Producer', 'Writer', 'Storyboard Artist', '2D Animator', '3D Animator',
+  'Character Rigger', 'Modeler', 'Texture Artist', 'Lighting Artist', 'Compositor',
+  'VFX Artist', 'Editor', 'Sound Designer', 'Composer', 'Voice Actor',
+  'Game Designer', 'Level Designer', 'Gameplay Programmer', 'Tools Programmer',
+  'Technical Artist', 'UI/UX Artist', 'Concept Artist', 'QA Tester', 'Community Manager', 'Other',
+] as const;
+
+export const DEFAULT_ONBOARDING_STEPS = [
+  'Read the project brief',
+  'Review the style/reference guide',
+  'Join the crew chat',
+  'Set up your pipeline software',
+];
+
+export interface AnimationProject {
+  id: string;
+  ownerId: string;
+  ownerName: string;
+  ownerAvatar?: string;
+  title: string;
+  slug: string;
+  logline: string;
+  description?: string;
+  genre: string[];
+  format: 'short_film' | 'series' | 'game_cinematic' | 'commercial' | 'game' | 'demo_reel';
+  phase: ProjectPhase;
+  coverImageUrl?: string;
+  bannerUrl?: string;
+  fps: number;
+  isPublic: boolean; // visible on /productions and to non-crew viewers at all
+  isRecruiting: boolean; // shows on the public showcase with open roles
+  openRoles: Array<{ id: string; title: string; description?: string; filled: boolean }>;
+  teamMemberIds: string[]; // flattened uids for `array-contains` "my crew projects" queries
+  onboardingSteps: Array<{ id: string; text: string }>; // owner-defined checklist template
+  departments: Department[];
+  createdAt: any;
+  updatedAt: any;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  color: string; // hex, used for the tag on task cards/rows and crew roster
+}
+
+/** Sensible starting departments by production format — editable afterward,
+ * this just saves a blank-page problem when setting up a new production. */
+export const DEFAULT_DEPARTMENTS: Record<'film' | 'game', Omit<Department, 'id'>[]> = {
+  film: [
+    { name: 'Story', color: '#f472b6' },
+    { name: 'Art & Design', color: '#fb923c' },
+    { name: 'Animation', color: '#a855f7' },
+    { name: 'Lighting & Render', color: '#38bdf8' },
+    { name: 'Sound', color: '#4ade80' },
+    { name: 'Production', color: '#facc15' },
+  ],
+  game: [
+    { name: 'Design', color: '#f472b6' },
+    { name: 'Art', color: '#fb923c' },
+    { name: 'Programming', color: '#a855f7' },
+    { name: 'Sound', color: '#4ade80' },
+    { name: 'QA', color: '#38bdf8' },
+    { name: 'Production', color: '#facc15' },
+  ],
+};
+
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type TaskReviewStatus = 'in_progress' | 'submitted' | 'approved' | 'changes_requested';
+
+export const SHOT_STATUS_ORDER: ShotStatus[] = ['concept', 'storyboard', 'layout', 'blocking', 'splining', 'polish', 'rendered', 'approved'];
+
+export interface ProductionTask {
+  id: string;
+  projectId: string;
+  title: string;
+  description?: string;
+  status: ShotStatus;
+  priority: TaskPriority;
+  reviewStatus: TaskReviewStatus;
+  departmentId?: string;
+  assigneeId?: string;
+  assigneeName?: string;
+  assigneeAvatar?: string;
+  dueDate?: string;
+  submissionNote?: string;
+  createdAt: any;
+  updatedAt: any;
+}
+
+export interface TaskComment {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar?: string;
+  text: string;
+  createdAt: any;
+}
+
+export interface CrewMember {
+  userId: string;
+  name: string;
+  avatar?: string;
+  role: string;
+  departmentId?: string;
+  joinedAt: any;
+  completedSteps: string[];
+  status: 'active' | 'removed';
+}
+
+export interface CrewApplication {
+  id: string;
+  projectId: string;
+  projectTitle: string;
+  projectCoverImageUrl?: string;
+  applicantId: string;
+  applicantName: string;
+  applicantAvatar?: string;
+  roleId?: string;
+  roleTitle?: string;
+  message: string;
+  portfolioUrl?: string;
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: any;
+  respondedAt?: any;
+}
+
+export const MESSAGE_REACTION_EMOJIS = ['👍', '❤️', '😂', '🎉', '👀', '🤔'];
+
+export interface ProjectMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar?: string;
+  text: string;
+  createdAt: any;
+  parentMessageId?: string; // set when this message is a threaded reply
+  reactions?: Record<string, string[]>; // emoji -> userIds who reacted
+  linkedTaskId?: string; // set when "Create Task" was used on this message
+  linkedTaskTitle?: string;
+  resolved?: boolean; // top-level messages only — marks a thread/discussion settled
+  resolvedByName?: string;
 }
 
 export interface BlogPost {

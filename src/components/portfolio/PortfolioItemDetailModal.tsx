@@ -17,6 +17,7 @@ import { isArtistFollowed, toggleFollowArtist } from '@/lib/following-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { UniversalVideoPlayer } from './UniversalVideoPlayer';
+import { PortfolioCommentsPanel } from './PortfolioCommentsPanel';
 
 interface PortfolioItemDetailModalProps {
   item: PortfolioItem | null;
@@ -341,6 +342,8 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
                   </div>
                 </div>
               </div>
+
+              <PortfolioCommentsPanel itemId={item.id} />
 
             </div>
           </main>

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Clip & Save</title>
+  <link rel="stylesheet" href="popup.css" />
+  <link rel="stylesheet" href="popup-embedded.css" />
+</head>
+<body>
+  <main>
+    <header>
+      <span class="mark">AR</span>
+      <div>
+        <strong>Clip & Save</strong>
+        <small>Animation Reference · v0.3.23</small>
+      </div>
+      <span id="statusDot"></span>
+    </header>
+
+    <section id="connect" hidden>
+      <h1>Save any public reference.</h1>
+      <p>Sign in to your account to save references to Animation Reference.</p>
+      <button id="connectButton" class="primary">Sign in to account</button>
+    </section>
+
+    <form id="clipForm" hidden>
+      <!-- Step 1: Paste URL & Fetch Button -->
+      <label>
+        1. Paste a public post URL
+        <div class="url-input-group">
+          <input id="sourceUrlInput" type="url" placeholder="Paste YouTube, Instagram, TikTok link..." required />
+          <button id="fetchMetaBtn" type="button" class="secondary-btn">Check post</button>
+        </div>
+      </label>
+
+      <!-- Step 2: Auto-captured Preview Card -->
+      <div class="source" id="metaPreviewCard">
+        <div class="meta-row">
+          <img id="metaThumbnail" src="" alt="Video thumbnail" hidden class="thumb" />
+          <div class="meta-info">
+            <span id="sourceHost">Source URL</span>
+            <strong id="sourceTitle">Paste a link to capture its details</strong>
+            <div class="creator-badge-row">
+              <img id="creatorAvatar" src="" alt="Creator profile picture" referrerpolicy="no-referrer" hidden class="creator-avatar" />
+              <small id="creatorLabel" class="creator-badge" hidden></small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Filled Details & Save -->
+      <label>
+        2. Title (Auto-captured)
+        <input id="title" maxlength="120" required placeholder="Video Title" readonly />
+      </label>
+
+      <div>
+        <label>
+          Board
+          <select id="board">
+            <option value="">Save without a board</option>
+          </select>
+        </label>
+      </div>
+
+      <label>
+        Description & Notes
+        <textarea id="descriptionInput" rows="2" placeholder="Video description or animator notes..." readonly></textarea>
+      </label>
+
+      <label>
+        Tags
+        <input id="tags" placeholder="acting, combat, weight shift" />
+      </label>
+
+      <label class="private-row">
+        <span>
+          <strong>Private clip</strong>
+          <small>Pro · Keep this out of public search</small>
+        </span>
+        <input id="isPrivate" type="checkbox" disabled />
+      </label>
+
+      <div id="uploadProgress" class="upload-progress" hidden aria-live="polite">
+        <div class="progress-copy"><strong id="progressLabel">Preparing reference…</strong><span id="progressPercent">0%</span></div>
+        <div class="progress-track" role="progressbar" aria-label="Reference upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span id="progressBar"></span>
+        </div>
+        <small id="progressDetail">Keep this window open while the video is copied.</small>
+      </div>
+      <p id="message" role="status"></p>
+      <button class="primary" id="saveButton" type="submit">Save to Animation Reference</button>
+    </form>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>

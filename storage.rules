@@ -2,43 +2,52 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow anyone to read files. This is necessary for others
-    // to view the video thumbnails and play the videos.
-    match /{allPaths=**} {
-      allow read;
+    // Private/NDA reference uploads are never publicly readable. They are
+    // streamed through an authenticated server route after ownership checks.
+    match /private-reference/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
     // Allow uploads (write) only for authenticated users.
     match /uploads/{userId}/{allPaths=**} {
+        allow read;
         allow write: if request.auth != null && request.auth.uid == userId;
     }
     match /shorts/{userId}/{allPaths=**} {
+        allow read;
         allow write: if request.auth != null && request.auth.uid == userId;
     }
     match /videos/{userId}/{allPaths=**} {
+        allow read;
         allow write: if request.auth != null && request.auth.uid == userId;
     }
     match /thumbnails/{userId}/{allPaths=**} {
+        allow read;
         allow write: if request.auth != null && request.auth.uid == userId;
     }
     match /posters/{userId}/{allPaths=**} {
+        allow read;
         allow write: if request.auth != null && request.auth.uid == userId;
     }
     match /portfolio/{userId}/{allPaths=**} {
+        allow read;
         allow write: if request.auth != null && request.auth.uid == userId;
     }
     
     
     // Required rule for user whiteboard/moodboard image uploads
     match /users/{userId}/{allPaths=**} {
+        allow read;
         allow write: if request.auth != null && request.auth.uid == userId;
     }
     
     // Required rule for user avatar uploads
     match /avatars/{userId} {
+        allow read;
         allow write: if request.auth != null && request.auth.uid == userId;
     }
     match /avatars/{userId}/{allPaths=**} {
+        allow read;
         allow write: if request.auth != null && request.auth.uid == userId;
     }
   }

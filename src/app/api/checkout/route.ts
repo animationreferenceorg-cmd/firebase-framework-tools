@@ -1,49 +1,36 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
+import { apiErrorResponse, requireFirebaseUser } from '@/lib/api-auth';
 
 
-export async function POST(req: Request) {
+const PLANS: Record<string, string> = {
+    tier1: 'price_1SFgUc59QHehw05fc0lPRRf7',
+    tier2: 'price_1SFgiV59QHehw05fc0lPRRf7',
+    tier5: 'price_1SFgiq59QHehw05fy017h1gR',
+};
+
+export async function POST(req: NextRequest) {
     try {
         const stripe = getStripe();
-
-        const { amount, returnUrl, userId } = await req.json();
-
-        if (!amount) {
-            return NextResponse.json({ error: 'Amount is required' }, { status: 400 });
-        }
-
-        // Define price data dynamically based on the amount
-        // Note: In a production app with fixed plans, using Price IDs from the dashboard is better for analytics,
-        // but this "ad-hoc" approach is the easiest setup as requested.
-        const centAmount = parseFloat(amount) * 100;
+        const identity = await requireFirebaseUser(req);
+        const { plan } = await req.json();
+        const price = PLANS[plan];
+        if (!price) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+        const origin = req.nextUrl.origin;
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
-            client_reference_id: userId,
-            metadata: { userId },
-            line_items: [
-                {
-                    price_data: {
-                        currency: 'usd',
-                        product_data: {
-                            name: `Animation Reference Support ($${amount})`,
-                            description: `Monthly support for Animation Reference`,
-                        },
-                        unit_amount: centAmount,
-                        recurring: {
-                            interval: 'month',
-                        },
-                    },
-                    quantity: 1,
-                },
-            ],
+            client_reference_id: identity.uid,
+            metadata: { userId: identity.uid },
+            line_items: [{ price, quantity: 1 }],
             mode: 'subscription',
-            success_url: `${returnUrl || req.headers.get('origin')}/?success=true`,
-            cancel_url: `${returnUrl || req.headers.get('origin')}/?canceled=true`,
+            success_url: `${origin}/profile?success=true`,
+            cancel_url: `${origin}/profile?canceled=true`,
         });
 
         return NextResponse.json({ url: session.url });
     } catch (err: any) {
+        if (err?.status) return apiErrorResponse(err);
         console.error('Stripe Checkout Error:', err);
         return NextResponse.json(
             { error: err.message || 'Internal Server Error' },

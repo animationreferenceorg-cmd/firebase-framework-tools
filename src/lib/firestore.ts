@@ -1,5 +1,5 @@
 
-import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, addDoc, collection, writeBatch, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, addDoc, collection, writeBatch, query, where, getDocs, increment } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import type { User } from "firebase/auth";
 import type { Category, UserProfile } from "./types";
@@ -8,6 +8,7 @@ import type { Category, UserProfile } from "./types";
 const USERS_COLLECTION = "users";
 const CUSTOMERS_COLLECTION = "customers";
 const CATEGORIES_COLLECTION = "categories";
+const VIDEOS_COLLECTION = "videos";
 
 /**
  * Creates a new user profile document in Firestore if it doesn't already exist.
@@ -190,11 +191,11 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
           profile.isPremium = true;
           profile.tier = detectedTier;
           if (profile.email) {
-            fetch('/api/sync-stripe', {
+            auth.currentUser.getIdToken().then((idToken) => fetch('/api/sync-stripe', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
               body: JSON.stringify({ userId: uid, email: profile.email }),
-            }).catch((e) => console.error('[Subscription Check] Failed to trigger server-side sync:', e));
+            })).catch((e) => console.error('[Subscription Check] Failed to trigger server-side sync:', e));
           }
         }
       } else {
@@ -253,6 +254,10 @@ export async function likeVideo(uid: string, videoId: string): Promise<void> {
     };
     await setDoc(userRef, newUserProfile, { merge: true });
   }
+
+  await updateDoc(doc(db, VIDEOS_COLLECTION, videoId), {
+    likeCount: increment(1),
+  }).catch(() => {});
 }
 
 /**
@@ -264,6 +269,45 @@ export async function unlikeVideo(uid: string, videoId: string): Promise<void> {
   const userRef = doc(db, USERS_COLLECTION, uid);
   await updateDoc(userRef, {
     likedVideoIds: arrayRemove(videoId),
+  });
+
+  await updateDoc(doc(db, VIDEOS_COLLECTION, videoId), {
+    likeCount: increment(-1),
+  }).catch(() => {});
+}
+
+/**
+ * Adds a video ID to the user's saved-for-later list (bookmark).
+ * Distinct from likes/moodboards — a lightweight "watch later" list.
+ * @param uid The user's ID.
+ * @param videoId The ID of the video to save.
+ */
+export async function saveVideo(uid: string, videoId: string): Promise<void> {
+  const userRef = doc(db, USERS_COLLECTION, uid);
+  const docSnap = await getDoc(userRef);
+
+  if (docSnap.exists()) {
+    await updateDoc(userRef, {
+      savedVideoIds: arrayUnion(videoId),
+    });
+  } else {
+    const newUserProfile: Partial<UserProfile> = {
+      uid: uid,
+      savedVideoIds: [videoId],
+    };
+    await setDoc(userRef, newUserProfile, { merge: true });
+  }
+}
+
+/**
+ * Removes a video ID from the user's saved-for-later list.
+ * @param uid The user's ID.
+ * @param videoId The ID of the video to unsave.
+ */
+export async function unsaveVideo(uid: string, videoId: string): Promise<void> {
+  const userRef = doc(db, USERS_COLLECTION, uid);
+  await updateDoc(userRef, {
+    savedVideoIds: arrayRemove(videoId),
   });
 }
 

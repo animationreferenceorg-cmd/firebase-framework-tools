@@ -1,7 +1,7 @@
 import { db, storage } from './firebase';
-import { doc, setDoc, getDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, collection, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, collection, getDocs, QueryDocumentSnapshot, DocumentData, runTransaction } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { MoodboardItem, Moodboard } from './types';
+import { MoodboardItem, Moodboard, Video } from './types';
 
 export class MoodboardService {
 
@@ -25,6 +25,8 @@ export class MoodboardService {
             userId,
             name,
             items: [],
+            itemCount: 0,
+            isPrivate: true,
             thumbnailUrl: '', // Initialize empty
             updatedAt: new Date(),
             createdAt: new Date()
@@ -49,6 +51,7 @@ export class MoodboardService {
 
         const updateData: any = {
             items: cleanItems,
+            itemCount: cleanItems.length,
             updatedAt: new Date()
         };
 
@@ -75,6 +78,40 @@ export class MoodboardService {
     static async updateMoodboardName(userId: string, moodboardId: string, name: string) {
         const docRef = doc(db, 'users', userId, 'moodboards', moodboardId);
         await updateDoc(docRef, { name, updatedAt: new Date() });
+    }
+
+    // File a saved reference into an inspiration and place it on that folder's canvas.
+    static async addReferenceToMoodboard(userId: string, moodboardId: string, video: Video): Promise<MoodboardItem | null> {
+        const docRef = doc(db, 'users', userId, 'moodboards', moodboardId);
+        return runTransaction(db, async transaction => {
+            const snapshot = await transaction.get(docRef);
+            if (!snapshot.exists()) throw new Error('Moodboard not found');
+
+            const items = (snapshot.data().items || []) as MoodboardItem[];
+            const alreadySaved = items.some(item => item.videoId === video.id || item.videoData?.id === video.id);
+            if (alreadySaved) return null;
+
+            const mediaCount = items.filter(item => item.type === 'video' || item.type === 'image').length;
+            const item: MoodboardItem = {
+                id: `reference-${video.id}-${Date.now()}`,
+                type: 'video',
+                videoId: video.id,
+                videoData: JSON.parse(JSON.stringify(video)),
+                x: 120 + (mediaCount % 4) * 280,
+                y: 120 + Math.floor(mediaCount / 4) * 190,
+                width: 256,
+                height: 144,
+                zIndex: items.length + 1,
+            };
+
+            const nextItems = [...items, item];
+            transaction.update(docRef, {
+                items: nextItems,
+                itemCount: nextItems.length,
+                updatedAt: new Date(),
+            });
+            return item;
+        });
     }
 
     // Delete moodboard

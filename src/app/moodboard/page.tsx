@@ -28,6 +28,7 @@ import { DraggableSidebarItem } from './components/DraggableSidebarItem';
 import { useMoodboardInteraction } from './hooks/useMoodboardInteraction';
 import { PropertyToolbar } from './components/PropertyToolbar';
 import { ConnectionLine } from './components/ConnectionLine';
+import { MoodboardDashboard } from './components/MoodboardDashboard';
 import { toPng } from 'html-to-image';
 import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
@@ -1620,8 +1621,67 @@ function MoodboardContent() {
                 )}
             </div>
 
-            {/* Dashboard View */}
+            {/* Savee-style dashboard. The spatial canvas below remains unchanged. */}
             {!currentBoardId && (
+                <div className="absolute inset-0 z-10 overflow-y-auto bg-[#f7f6f2] pt-16">
+                    <MoodboardDashboard
+                        moodboards={moodboards}
+                        savedReferences={likedVideos}
+                        onCreateBoard={async () => {
+                            if (!userProfile?.uid) return;
+                            const limitCheck = checkLimit(userProfile, 'moodboards', moodboards.length);
+                            if (!limitCheck.allowed) {
+                                setShowLimitDialog(true);
+                                return;
+                            }
+                            const name = `Board ${moodboards.length + 1}`;
+                            const newId = await MoodboardService.createMoodboard(userProfile.uid, name);
+                            const now = new Date();
+                            setMoodboards(prev => [...prev, {
+                                id: newId,
+                                userId: userProfile.uid,
+                                name,
+                                items: [],
+                                itemCount: 0,
+                                isPrivate: true,
+                                createdAt: now,
+                                updatedAt: now,
+                            }]);
+                            return newId;
+                        }}
+                        onOpenBoard={(boardId) => router.push(`/moodboard?board=${boardId}`)}
+                        onRenameBoard={async (boardId, name) => {
+                            if (!userProfile?.uid) return;
+                            await MoodboardService.updateMoodboardName(userProfile.uid, boardId, name);
+                            setMoodboards(prev => prev.map(board => board.id === boardId ? { ...board, name } : board));
+                        }}
+                        onDeleteBoard={async (boardId) => {
+                            if (!userProfile?.uid || !confirm('Delete this moodboard? This cannot be undone.')) return;
+                            await MoodboardService.deleteMoodboard(userProfile.uid, boardId);
+                            setMoodboards(prev => prev.filter(board => board.id !== boardId));
+                        }}
+                        onOpenReference={(video) => setExpandedVideo(video)}
+                        onAddReferenceToBoard={async (boardId, video) => {
+                            if (!userProfile?.uid) return;
+                            const item = await MoodboardService.addReferenceToMoodboard(userProfile.uid, boardId, video);
+                            if (!item) {
+                                toast({ title: 'Already on this board', description: `${video.title || 'This reference'} is already saved there.` });
+                                return;
+                            }
+                            setMoodboards(prev => prev.map(board => board.id === boardId ? {
+                                ...board,
+                                items: [...(board.items || []), item],
+                                itemCount: (board.items?.length || 0) + 1,
+                                updatedAt: new Date(),
+                            } : board));
+                            toast({ title: 'Added to board', description: `${video.title || 'Reference'} is now in the board gallery and on its canvas.` });
+                        }}
+                    />
+                </div>
+            )}
+
+            {/* Previous dashboard retained temporarily for safe rollback during the UI migration. */}
+            {false && !currentBoardId && (
                 <div className="absolute inset-0 z-10 px-12 pb-12 pt-24 overflow-y-auto bg-white">
                     <div className="max-w-7xl mx-auto space-y-8">
                         <div className="space-y-2">

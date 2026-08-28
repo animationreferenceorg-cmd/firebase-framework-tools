@@ -73,8 +73,10 @@ export default function AuthHeader() {
     if (isCheckingOut) return;
     setIsCheckingOut(true);
     try {
+      const idToken = await user?.getIdToken();
       const response = await fetch('/api/portal', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({ userId: user?.uid, returnUrl: window.location.href }),
       });
       const data = await response.json();

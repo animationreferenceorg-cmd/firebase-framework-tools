@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "Animation Reference — Clip & Save",
+  "version": "0.3.23",
+  "description": "Capture precise video moments from the web into your Animation Reference boards.",
+  "permissions": ["activeTab", "scripting", "storage", "tabs"],
+  "host_permissions": [
+    "http://localhost/*",
+    "http://localhost:3000/*",
+    "http://127.0.0.1/*",
+    "http://127.0.0.1:3000/*",
+    "https://animationreference.org/*",
+    "https://securetoken.googleapis.com/*",
+    "http://*/*",
+    "https://*/*",
+    "https://*.youtube.com/*",
+    "https://vimeo.com/*",
+    "https://player.vimeo.com/*",
+    "https://x.com/*",
+    "https://twitter.com/*",
+    "https://www.tiktok.com/*",
+    "https://www.instagram.com/*",
+    "https://*.facebook.com/*",
+    "https://fb.watch/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["floating-widget.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["popup.html", "popup.css", "popup-embedded.css", "popup.js", "site-icon.png"],
+      "matches": ["http://*/*", "https://*/*"]
+    }
+  ],
+  "background": { "service_worker": "service-worker.js", "type": "module" },
+  "icons": { "16": "site-icon.png", "32": "site-icon.png", "48": "site-icon.png", "128": "site-icon.png" },
+  "action": { "default_title": "Open Clip & Save" },
+  "externally_connectable": {
+    "matches": [
+      "http://localhost/*",
+      "http://localhost:3000/*",
+      "http://127.0.0.1/*",
+      "http://127.0.0.1:3000/*",
+      "https://animationreference.org/*"
+    ]
+  }
+}

@@ -1,11 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { getAdminApp } from '@/lib/firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
+import { apiErrorResponse, requireFirebaseUser } from '@/lib/api-auth';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
     try {
-        const { userId, email } = await req.json();
+        const identity = await requireFirebaseUser(req);
+        const body = await req.json().catch(() => ({}));
+        const adminApp = getAdminApp();
+        const db = getFirestore(adminApp);
+        const requester = await db.collection('users').doc(identity.uid).get();
+        const requestedUserId = typeof body.userId === 'string' ? body.userId : identity.uid;
+        const userId = requestedUserId !== identity.uid && requester.data()?.role === 'admin' ? requestedUserId : identity.uid;
+        const target = await db.collection('users').doc(userId).get();
+        const email = target.data()?.email || identity.email;
 
         if (!userId || !email) {
             return NextResponse.json({ error: 'Missing userId or email' }, { status: 400 });
@@ -14,8 +23,6 @@ export async function POST(req: Request) {
         console.log(`[Sync Stripe API] Syncing for user: ${userId}, email: ${email}`);
 
         const stripe = getStripe();
-        const adminApp = getAdminApp();
-        const db = getFirestore(adminApp);
         
         let customerIdsToTry = new Set<string>();
 
@@ -135,6 +142,7 @@ export async function POST(req: Request) {
             tier 
         });
     } catch (err: any) {
+        if (err?.status) return apiErrorResponse(err);
         console.error('Sync Stripe Error:', err);
         return NextResponse.json({ 
             error: err.message || 'Internal Server Error' 

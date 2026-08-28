@@ -35,11 +35,12 @@ export function useDonate() {
         toast({ title: 'Checking subscription status...', description: 'Verifying with Stripe...' });
 
         try {
+            const idToken = await user.getIdToken();
             // Check for duplicate subscription first
             if (user.email) {
                 const checkRes = await fetch('/api/check-subscription', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
                     body: JSON.stringify({ email: user.email, userId: user.uid })
                 });
                 const checkData = await checkRes.json();
@@ -52,7 +53,7 @@ export function useDonate() {
                     // Redirect to Billing Portal
                     const portalRes = await fetch('/api/portal', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
                         body: JSON.stringify({ userId: user.uid }),
                     });
                     const portalData = await portalRes.json();

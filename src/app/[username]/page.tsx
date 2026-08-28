@@ -16,6 +16,7 @@ import { PortfolioItemCard } from '@/components/portfolio/PortfolioItemCard';
 import { PortfolioHeroBanner } from '@/components/portfolio/PortfolioHeroBanner';
 import { PortfolioItemDetailModal } from '@/components/portfolio/PortfolioItemDetailModal';
 import { EditPortfolioItemModal } from '@/components/portfolio/EditPortfolioItemModal';
+import { PublicBoardsRail } from '@/components/reference/PublicBoardsRail';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Globe, 
@@ -347,6 +348,7 @@ export default function UsernamePublicProfilePage() {
 
         {/* Portfolio / WIP Showcase Navigation */}
         <div className="mt-8 space-y-6">
+          <PublicBoardsRail userId={profile?.uid || rawUsername} />
           <PortfolioHeroBanner
             items={items}
             isOwner={false}

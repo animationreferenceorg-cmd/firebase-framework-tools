@@ -5,7 +5,6 @@ import * as React from 'react';
 import type { Video } from '@/lib/types';
 import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Rewind, FastForward, Camera, ExternalLink, Instagram, Film, Share2, Heart, Bookmark } from 'lucide-react';
 import { CreatorBadge } from '@/components/CreatorBadge';
-import { SaveToBoardModal } from '@/components/SaveToBoardModal';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
@@ -13,7 +12,7 @@ import ReactPlayer from 'react-player/lazy';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
-import { likeVideo, unlikeVideo } from '@/lib/firestore';
+import { likeVideo, unlikeVideo, saveVideo, unsaveVideo } from '@/lib/firestore';
 
 interface VideoPlayerProps {
     video: Video;
@@ -29,6 +28,7 @@ interface VideoPlayerProps {
     alwaysShowControls?: boolean;
     onToggleTimeline?: () => void;
     isTimelineVisible?: boolean;
+    hideLibraryActions?: boolean;
 }
 
 // Client-side only component to wrap ReactPlayer
@@ -56,16 +56,18 @@ function Player({ playerRef, video, ...props }: any) {
 }
 
 
-export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onCapture, showCaptureButton = false, startsPaused = false, muted = true, hideFullscreenControl = false, hidePlayControl = false, onEnded, autoPlay, loop = false, alwaysShowControls = true, onToggleTimeline, isTimelineVisible = true }, ref) => {
+export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onCapture, showCaptureButton = false, startsPaused = false, muted = true, hideFullscreenControl = false, hidePlayControl = false, onEnded, autoPlay, loop = false, alwaysShowControls = true, onToggleTimeline, isTimelineVisible = true, hideLibraryActions = false }, ref) => {
     const playerRef = React.useRef<ReactPlayer>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
     const { toast } = useToast();
     const { user: authUser } = useAuth();
     const { userProfile, mutate } = useUser();
-    const [showSaveBoardModal, setShowSaveBoardModal] = React.useState(false);
-
     const isLiked = React.useMemo(() => {
         return userProfile?.likedVideoIds?.includes(video.id) ?? false;
+    }, [userProfile, video.id]);
+
+    const isSaved = React.useMemo(() => {
+        return userProfile?.savedVideoIds?.includes(video.id) ?? false;
     }, [userProfile, video.id]);
 
     const handleLikeToggle = async (e: React.MouseEvent) => {
@@ -85,6 +87,26 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
             mutate();
         } catch (err) {
             console.error("Failed to update like status", err);
+        }
+    };
+
+    const handleBookmarkToggle = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!authUser) {
+            toast({ variant: "destructive", title: "Please sign in to save videos" });
+            return;
+        }
+        try {
+            if (isSaved) {
+                await unsaveVideo(authUser.uid, video.id);
+                toast({ title: "Removed from Saved" });
+            } else {
+                await saveVideo(authUser.uid, video.id);
+                toast({ title: "Saved!" });
+            }
+            mutate();
+        } catch (err) {
+            console.error("Failed to update saved status", err);
         }
     };
 
@@ -335,9 +357,9 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                     }}
                     onError={(e: any) => {
                         // HLS/CORS errors are expected for Instagram/TikTok CDN links
-                        const isSocialUrl = video.originalUrl && (
-                            video.originalUrl.includes('instagram.com') ||
-                            video.originalUrl.includes('tiktok.com')
+                        const isSocialUrl = video.videoUrl && (
+                            video.videoUrl.includes('instagram.com') ||
+                            video.videoUrl.includes('tiktok.com')
                         );
                         if (isSocialUrl) {
                             setVideoError(true); // Show friendly fallback
@@ -561,32 +583,30 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
 
                     {/* Right: Like, Save, Share, Timeline Toggle & Fullscreen */}
                     <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-                        {/* Like Button */}
-                        <Button
+                        {/* Reference clips use their own Save to Board action outside the player. */}
+                        {!hideLibraryActions && <Button
                             type="button"
                             onClick={handleLikeToggle}
                             variant="ghost"
                             size="icon"
                             title="Like Video"
-                            className="hover:bg-white/20 text-white rounded-full h-8 w-8 transition-colors cursor-pointer bg-white/10 sm:bg-transparent"
+                            className="hover:bg-white/20 text-white rounded-full h-8 px-2 w-auto gap-1 transition-colors cursor-pointer bg-white/10 sm:bg-transparent"
                         >
                             <Heart className={cn("h-4 w-4 transition-colors", isLiked ? "fill-red-500 text-red-500" : "text-white")} />
-                        </Button>
+                            <span className="text-xs font-semibold">{video.likeCount ?? 0}</span>
+                        </Button>}
 
-                        {/* Save to Moodboard Button */}
-                        <Button
+                        {/* Save Button */}
+                        {!hideLibraryActions && <Button
                             type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setShowSaveBoardModal(true);
-                            }}
+                            onClick={handleBookmarkToggle}
                             variant="ghost"
                             size="icon"
-                            title="Save to Moodboard"
+                            title="Save Video"
                             className="hover:bg-white/20 text-white rounded-full h-8 w-8 transition-colors cursor-pointer bg-white/10 sm:bg-transparent"
                         >
-                            <Bookmark className="h-4 w-4 text-purple-300 fill-purple-400/20 hover:fill-purple-400" />
-                        </Button>
+                            <Bookmark className={cn("h-4 w-4", isSaved ? "fill-purple-400 text-purple-400" : "text-purple-300 fill-purple-400/20 hover:fill-purple-400")} />
+                        </Button>}
 
                         {/* Share Button */}
                         <Button
@@ -626,12 +646,6 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                         )}
                     </div>
                 </div>
-
-                <SaveToBoardModal
-                    open={showSaveBoardModal}
-                    onOpenChange={setShowSaveBoardModal}
-                    video={video}
-                />
             </div>
         </div>
     );

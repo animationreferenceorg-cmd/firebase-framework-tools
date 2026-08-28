@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
-import { likeVideo, unlikeVideo } from '@/lib/firestore';
+import { likeVideo, unlikeVideo, saveVideo, unsaveVideo } from '@/lib/firestore';
 import type { Video, UserProfile } from '@/lib/types';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
@@ -26,10 +26,14 @@ export function VideoActionsBar({ video, userProfile }: VideoActionsBarProps) {
 
   const [showLimitDialog, setShowLimitDialog] = useState(false);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
-  const [showSaveBoardModal, setShowSaveBoardModal] = useState(false);
+  const [showSaveToBoard, setShowSaveToBoard] = useState(false);
 
   const isLiked = useMemo(() => {
     return userProfile?.likedVideoIds?.includes(video.id) ?? false;
+  }, [userProfile, video.id]);
+
+  const isSaved = useMemo(() => {
+    return userProfile?.savedVideoIds?.includes(video.id) ?? false;
   }, [userProfile, video.id]);
 
   const handleLikeToggle = async (e: React.MouseEvent) => {
@@ -75,9 +79,33 @@ export function VideoActionsBar({ video, userProfile }: VideoActionsBarProps) {
     toast({ title: "Link Copied!", description: "Video link copied to clipboard." });
   };
 
-  const handleSaveToBoard = (e: React.MouseEvent) => {
+  const handleBookmarkToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowSaveBoardModal(true);
+    if (!authUser) {
+      toast({
+        variant: "destructive",
+        title: "Please sign in",
+        description: "You need to be signed in to save videos.",
+      });
+      return;
+    }
+    try {
+      if (isSaved) {
+        await unsaveVideo(authUser.uid, video.id);
+        toast({ title: "Removed from Saved" });
+      } else {
+        await saveVideo(authUser.uid, video.id);
+        toast({ title: "Saved!" });
+      }
+      mutate();
+    } catch (error) {
+      console.error("Error toggling saved status:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not update saved status.",
+      });
+    }
   };
 
   return (
@@ -93,17 +121,18 @@ export function VideoActionsBar({ video, userProfile }: VideoActionsBarProps) {
           >
             <Heart className={cn("h-7 w-7 transition-transform", isLiked && "fill-red-500 text-red-500 scale-110")} />
           </Button>
+          <span className="text-white text-xs font-semibold drop-shadow-md">{video.likeCount ?? 0}</span>
         </div>
 
-        {/* Save to Moodboard Button */}
+        {/* Save Button */}
         <div className="flex flex-col items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleSaveToBoard}
+            onClick={(event) => { event.stopPropagation(); setShowSaveToBoard(true); }}
             className="h-12 w-12 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-white backdrop-blur-sm transition-all cursor-pointer"
           >
-            <Bookmark className="h-7 w-7 text-purple-400 fill-purple-400/20 hover:fill-purple-400" />
+            <Bookmark className={cn("h-7 w-7 transition-transform", isSaved ? "fill-purple-400 text-purple-400 scale-110" : "text-purple-400 fill-purple-400/20 hover:fill-purple-400")} />
           </Button>
           <span className="text-white text-xs font-semibold drop-shadow-md">Save</span>
         </div>
@@ -122,12 +151,6 @@ export function VideoActionsBar({ video, userProfile }: VideoActionsBarProps) {
         </div>
       </div>
 
-      <SaveToBoardModal
-        open={showSaveBoardModal}
-        onOpenChange={setShowSaveBoardModal}
-        video={video}
-      />
-
       <LimitReachedDialog
         open={showLimitDialog}
         onOpenChange={setShowLimitDialog}
@@ -139,6 +162,7 @@ export function VideoActionsBar({ video, userProfile }: VideoActionsBarProps) {
         open={showDonateDialog}
         onOpenChange={setShowDonateDialog}
       />
+      <SaveToBoardModal video={video} open={showSaveToBoard} onOpenChange={setShowSaveToBoard} />
     </>
   );
 }

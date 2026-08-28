@@ -4,18 +4,17 @@
 import * as React from 'react';
 import { useState, useRef, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { Heart, Maximize, Share2, PlayCircle, ArrowLeft, ExternalLink, Instagram, Bookmark } from 'lucide-react';
+import { Heart, Maximize, Share2, PlayCircle, Play, ArrowLeft, ExternalLink, Instagram, Bookmark } from 'lucide-react';
 import { useInView } from 'react-intersection-observer';
 
 import { CreatorBadge } from '@/components/CreatorBadge';
 import { VideoActionsBar } from '@/components/VideoActionsBar';
-import { SaveToBoardModal } from '@/components/SaveToBoardModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from './ui/skeleton';
 import { useUser } from '@/hooks/use-user';
-import { likeVideo, unlikeVideo } from '@/lib/firestore';
+import { likeVideo, unlikeVideo, saveVideo, unsaveVideo } from '@/lib/firestore';
 import { useAuth } from '@/hooks/use-auth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { checkLimit } from '@/lib/limits';
@@ -65,14 +64,8 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [showLimitDialog, setShowLimitDialog] = useState(false);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
-  const [showSaveBoardModal, setShowSaveBoardModal] = useState(false);
   const [donateForceTimer, setDonateForceTimer] = useState(false);
 
-  const handleSaveToBoard = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setShowSaveBoardModal(true);
-  };
   const { ref: cardRef, inView: cardInView } = useInView({ threshold: 0, triggerOnce: true });
   const containerRef = useRef<HTMLDivElement | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -86,9 +79,21 @@ export function VideoCard({ video, poster }: VideoCardProps) {
   const isSocialLink = video.originalUrl && (video.originalUrl.includes('instagram.com') || video.originalUrl.includes('tiktok.com'));
   const isCommunityVideo = isSocialType || isSocialLink || !!video.uploader;
 
-  const isLiked = useMemo(() => {
+  const isLikedProp = useMemo(() => {
     return userProfile?.likedVideoIds?.includes(video.id) ?? false;
   }, [userProfile, video.id]);
+
+  const isSavedProp = useMemo(() => {
+    return userProfile?.savedVideoIds?.includes(video.id) ?? false;
+  }, [userProfile, video.id]);
+
+  const [optimisticLiked, setOptimisticLiked] = useState<boolean | null>(null);
+  const [optimisticSaved, setOptimisticSaved] = useState<boolean | null>(null);
+  const [likeCountDelta, setLikeCountDelta] = useState(0);
+
+  const isLiked = optimisticLiked !== null ? optimisticLiked : isLikedProp;
+  const isSaved = optimisticSaved !== null ? optimisticSaved : isSavedProp;
+  const displayLikeCount = Math.max(0, (video.likeCount ?? 0) + likeCountDelta);
 
   useEffect(() => {
     if (isHovered) {
@@ -189,16 +194,21 @@ export function VideoCard({ video, poster }: VideoCardProps) {
       return;
     }
 
+    const nextLiked = !isLiked;
+    setOptimisticLiked(nextLiked);
+    setLikeCountDelta(prev => nextLiked ? prev + 1 : prev - 1);
+
     try {
       if (isLiked) {
         await unlikeVideo(authUser.uid, video.id);
         toast({ title: "Removed from Likes", description: displayTitle });
       } else {
-        // ENFORCE LIMIT
         const currentLikes = userProfile?.likedVideoIds?.length || 0;
         const limitCheck = checkLimit(userProfile, 'likes', currentLikes);
 
         if (!limitCheck.allowed) {
+          setOptimisticLiked(isLiked);
+          setLikeCountDelta(prev => prev - 1);
           setShowLimitDialog(true);
           return;
         }
@@ -208,11 +218,48 @@ export function VideoCard({ video, poster }: VideoCardProps) {
       }
       mutate();
     } catch (error) {
+      setOptimisticLiked(isLiked);
+      setLikeCountDelta(prev => isLiked ? prev + 1 : prev - 1);
       console.error("Failed to update like status:", error);
       toast({
         variant: "destructive",
         title: "Something went wrong",
         description: "Could not update your liked videos.",
+      });
+    }
+  };
+
+  const handleBookmarkToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!authUser) {
+      toast({
+        variant: "destructive",
+        title: "Please sign in",
+        description: "You need to be signed in to save videos.",
+      });
+      return;
+    }
+
+    const nextSaved = !isSaved;
+    setOptimisticSaved(nextSaved);
+
+    try {
+      if (isSaved) {
+        await unsaveVideo(authUser.uid, video.id);
+        toast({ title: "Removed from Saved", description: displayTitle });
+      } else {
+        await saveVideo(authUser.uid, video.id);
+        toast({ title: "Saved!", description: video.status === 'draft' ? "Reference" : video.title });
+      }
+      mutate();
+    } catch (error) {
+      console.error("Failed to update saved status:", error);
+      toast({
+        variant: "destructive",
+        title: "Something went wrong",
+        description: "Could not update your saved videos.",
       });
     }
   }
@@ -439,19 +486,20 @@ export function VideoCard({ video, poster }: VideoCardProps) {
                   variant="ghost"
                   size="icon"
                   onClick={handleLikeToggle}
-                  className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+                  className="h-8 px-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm gap-1 w-auto"
                   title="Like Video"
                 >
                   <Heart className={cn("text-white h-4 w-4", isLiked && "fill-red-500 text-red-500")} />
+                  <span className="text-white text-xs font-semibold">{displayLikeCount}</span>
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={handleSaveToBoard}
+                  onClick={handleBookmarkToggle}
                   className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
-                  title="Save to Moodboard"
+                  title="Save Video"
                 >
-                  <Bookmark className="text-purple-300 fill-purple-400/30 hover:fill-purple-400 h-4 w-4" />
+                  <Bookmark className={cn("h-4 w-4", isSaved ? "fill-purple-400 text-purple-400" : "text-purple-300 fill-purple-400/30 hover:fill-purple-400")} />
                 </Button>
                 <Button
                   variant="ghost"
@@ -463,11 +511,6 @@ export function VideoCard({ video, poster }: VideoCardProps) {
                 </Button>
               </div>
 
-              <SaveToBoardModal
-                open={showSaveBoardModal}
-                onOpenChange={setShowSaveBoardModal}
-                video={video}
-              />
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
@@ -597,35 +640,52 @@ export function VideoCard({ video, poster }: VideoCardProps) {
         {/* Subtle creator badge — top-left, always visible for any video with uploader/originalUrl */}
         <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} />
 
+        {/* Dark Overlay Gradient (deepens on hover for contrast) */}
         <div className={cn(
-          "absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none z-10",
-          isHovered ? 'opacity-100' : 'opacity-0',
-          'transition-opacity duration-300'
+          "absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent pointer-events-none transition-opacity duration-300 z-10",
+          isHovered ? "opacity-100" : "opacity-60"
         )} />
 
+        {/* Hover Center Play Circle Indicator */}
+        <div className={cn(
+          "absolute inset-0 flex items-center justify-center pointer-events-none z-20 transition-all duration-300",
+          isHovered ? "opacity-100 scale-100" : "opacity-0 scale-75"
+        )}>
+          <div className="w-12 h-12 rounded-full bg-purple-600/90 text-white flex items-center justify-center shadow-2xl backdrop-blur-md border border-white/20">
+            <Play className="w-5 h-5 fill-white ml-0.5" />
+          </div>
+        </div>
+
+        {/* Bottom Title & Action Controls Bar (Reveals on Hover) */}
         <div className={cn(
           "absolute bottom-0 left-0 right-0 p-3 transition-all duration-300 z-30 pointer-events-auto",
-          !video.isShort && !poster && (isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none")
+          isHovered ? "opacity-100 translate-y-0" : "opacity-100 sm:opacity-90"
         )}>
-          <h3 className="text-white font-bold text-base truncate drop-shadow-md mb-2">
+          <h3 className="text-white font-bold text-xs sm:text-sm truncate drop-shadow-md mb-1.5">
             {displayTitle}
           </h3>
-          <div className="flex items-center justify-between">
+
+          {/* Interactive UI Action Buttons (Reveals on hover) */}
+          <div className={cn(
+            "flex items-center justify-between transition-all duration-300",
+            isHovered ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none h-0 sm:h-auto"
+          )}>
             <div className="flex items-center gap-1.5">
-              <Button variant="ghost" size="icon" onClick={handleLikeToggle} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Like Video">
-                <Heart className={cn("text-white h-4 w-4", isLiked && "fill-red-500 text-red-500")} />
+              <Button variant="ghost" size="icon" onClick={handleLikeToggle} className="h-7 px-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm gap-1 w-auto" title="Like Video">
+                <Heart className={cn("text-white h-3.5 w-3.5", isLiked && "fill-red-500 text-red-500")} />
+                <span className="text-white text-[11px] font-semibold">{displayLikeCount}</span>
               </Button>
-              <Button variant="ghost" size="icon" onClick={handleSaveToBoard} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Save to Moodboard">
-                <Bookmark className="text-purple-300 fill-purple-400/30 hover:fill-purple-400 h-4 w-4" />
+              <Button variant="ghost" size="icon" onClick={handleBookmarkToggle} className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Save Video">
+                <Bookmark className={cn("h-3.5 w-3.5", isSaved ? "fill-purple-400 text-purple-400" : "text-purple-300 fill-purple-400/30 hover:fill-purple-400")} />
               </Button>
-              <Button variant="ghost" size="icon" onClick={handleShare} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Share Link">
-                <Share2 className="text-white h-4 w-4" />
+              <Button variant="ghost" size="icon" onClick={handleShare} className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Share Link">
+                <Share2 className="text-white h-3.5 w-3.5" />
               </Button>
             </div>
             <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Fullscreen">
-                  <Maximize className="text-white h-4 w-4" />
-                </Button>
+              <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Fullscreen">
+                <Maximize className="text-white h-3.5 w-3.5" />
+              </Button>
             </div>
           </div>
         </div>

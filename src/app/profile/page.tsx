@@ -1,15 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
-import { auth, isFirebaseConfigured } from '@/lib/firebase';
+import { auth, db, isFirebaseConfigured } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { getSnapshotVideos } from '@/lib/videoSnapshot';
 import { getUserPortfolioItems, getDatabaseVideosAsPortfolioItems, updateUserProfileData, deletePortfolioItem } from '@/lib/portfolio-service';
-import type { PortfolioItem, WipStage } from '@/lib/types';
+import type { PortfolioItem, WipStage, Video } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { VideoCard } from '@/components/VideoCard';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -105,6 +108,12 @@ export default function ProfilePage() {
   const [isReordering, setIsReordering] = useState(false);
   const [featuredItemId, setFeaturedItemId] = useState<string | null>(null);
 
+  // Liked & Saved Videos
+  const [likedVideos, setLikedVideos] = useState<Video[]>([]);
+  const [savedVideos, setSavedVideos] = useState<Video[]>([]);
+  const [likedVideosLoading, setLikedVideosLoading] = useState(false);
+  const [savedSubTab, setSavedSubTab] = useState<'liked' | 'saved' | 'categories'>('liked');
+
   // Tabs & Filters
   const [activeWorkTab, setActiveWorkTab] = useState<'all' | 'portfolio' | 'wip' | 'following'>('all');
   const [selectedWipStage, setSelectedWipStage] = useState<WipStage | 'all'>('all');
@@ -142,7 +151,20 @@ export default function ProfilePage() {
       setItemsLoading(true);
       try {
         const data = await getUserPortfolioItems(currentUid);
-        setPortfolioItems(data || []);
+        const showPortfolioPreview = new URLSearchParams(window.location.search).get('portfolioPreview') === '1';
+        if (showPortfolioPreview) {
+          const previewItems = MOCK_PORTFOLIO_ITEMS.map((item) => ({
+            ...item,
+            id: `preview-${item.id}`,
+            userId: currentUid,
+            authorName: authUser.displayName || 'Demo Animator',
+            authorAvatar: authUser.photoURL || item.authorAvatar,
+          }));
+          setPortfolioItems(previewItems);
+          setFeaturedItemId(previewItems[0]?.id || null);
+        } else {
+          setPortfolioItems(data || []);
+        }
       } catch (err) {
         console.error("Error loading portfolio items:", err);
         setPortfolioItems([]);
@@ -153,6 +175,50 @@ export default function ProfilePage() {
 
     loadItems();
   }, [authUser]);
+
+  // Load user's liked & saved videos
+  useEffect(() => {
+    async function loadLikedAndSavedVideos() {
+      const likedIds = userProfile?.likedVideoIds || [];
+      const savedIds = userProfile?.savedVideoIds || [];
+      if (likedIds.length === 0 && savedIds.length === 0) {
+        setLikedVideos([]);
+        setSavedVideos([]);
+        return;
+      }
+
+      setLikedVideosLoading(true);
+      try {
+        const snapshotVideos = await getSnapshotVideos();
+        const videoMap = new Map<string, Video>();
+        snapshotVideos.forEach(v => videoMap.set(v.id, v));
+
+        // Helper to get video by ID from snapshot or Firestore
+        const fetchVideoById = async (id: string): Promise<Video | null> => {
+          if (videoMap.has(id)) return videoMap.get(id)!;
+          try {
+            const vSnap = await getDoc(doc(db, "videos", id));
+            if (vSnap.exists()) return { id: vSnap.id, ...vSnap.data() } as Video;
+          } catch (e) {
+            console.error("Error fetching video:", id, e);
+          }
+          return null;
+        };
+
+        const likedList = (await Promise.all(likedIds.map(fetchVideoById))).filter(Boolean) as Video[];
+        const savedList = (await Promise.all(savedIds.map(fetchVideoById))).filter(Boolean) as Video[];
+
+        setLikedVideos(likedList);
+        setSavedVideos(savedList);
+      } catch (err) {
+        console.error("Error loading liked/saved videos:", err);
+      } finally {
+        setLikedVideosLoading(false);
+      }
+    }
+
+    loadLikedAndSavedVideos();
+  }, [userProfile?.likedVideoIds, userProfile?.savedVideoIds]);
 
   const handleMoveItem = (index: number, direction: 'up' | 'down') => {
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
@@ -178,9 +244,10 @@ export default function ProfilePage() {
       
       const syncWithRetry = async (retries = 3) => {
         try {
+          const idToken = await authUser.getIdToken();
           const r = await fetch('/api/sync-stripe', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
             body: JSON.stringify({ userId: authUser.uid, email: authUser.email })
           });
           const data = await r.json();
@@ -218,11 +285,13 @@ export default function ProfilePage() {
     if (isPortalLoading) return;
     setIsPortalLoading(true);
     try {
+      const idToken = await authUser?.getIdToken();
       const url = new URL(window.location.href);
       url.searchParams.set('sync', 'true');
       
       const response = await fetch('/api/portal', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({ userId: authUser?.uid, returnUrl: url.toString() }),
       });
       const data = await response.json();
@@ -352,7 +421,7 @@ export default function ProfilePage() {
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-purple-500/10 blur-[140px] pointer-events-none" />
       </div>
 
-      <div className="max-w-[1700px] mx-auto px-3 sm:px-4 md:px-8 pt-16 sm:pt-20 md:pt-28 lg:pt-36 relative z-20">
+      <div className="w-full max-w-[1920px] mx-auto px-2 sm:px-4 md:px-6 pt-16 sm:pt-20 md:pt-28 lg:pt-36 relative z-20">
         {/* Change Cover Banner Button for Profile Owner */}
         <div className="flex justify-end mb-4">
           <button
@@ -474,22 +543,12 @@ export default function ProfilePage() {
             {/* Right: Action Bar */}
             {authUser && (
               <div className="flex flex-wrap lg:flex-col gap-2.5 items-stretch shrink-0 pt-4 lg:pt-0 border-t lg:border-t-0 border-white/10">
-                {isStudioMaster ? (
-                  <>
-                    <Button onClick={() => setIsReelStudioOpen(true)} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold shadow-lg shadow-purple-600/30 gap-1.5 cursor-pointer">
-                      <Wand2 className="h-4 w-4" /> Open Reel Editor Studio
-                    </Button>
-                    <Button onClick={() => setIsUploadOpen(true)} variant="secondary" className="bg-zinc-800 hover:bg-zinc-700 text-white font-semibold cursor-pointer">
-                      <Plus className="mr-1.5 h-4 w-4" /> Upload Animation / WIP
-                    </Button>
-                  </>
-                ) : (
-                  <DonateDialog>
-                    <Button className="bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-400 hover:to-purple-500 text-black font-extrabold shadow-lg gap-1.5 cursor-pointer">
-                      <Lock className="h-4 w-4" /> Unlock Portfolio Studio ($5/mo)
-                    </Button>
-                  </DonateDialog>
-                )}
+                <Button onClick={() => setIsUploadOpen(true)} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold shadow-lg shadow-purple-600/30 gap-1.5 cursor-pointer">
+                  <Plus className="h-4 w-4" /> Upload Animation / WIP
+                </Button>
+                <Button onClick={() => setIsReelStudioOpen(true)} variant="secondary" className="bg-zinc-800 hover:bg-zinc-700 text-white font-semibold cursor-pointer gap-1.5">
+                  <Wand2 className="h-4 w-4 text-amber-400" /> Open Reel Editor
+                </Button>
                 <Button variant="outline" onClick={handlePreviewPublicProfile} className="border-white/15 text-zinc-200 hover:bg-white/10 cursor-pointer gap-1.5 font-bold">
                   <Eye className="h-4 w-4 text-cyan-400" /> Preview Public View
                 </Button>
@@ -498,9 +557,6 @@ export default function ProfilePage() {
                 </Button>
                 <Button variant="outline" onClick={handleSharePublicProfile} className="border-white/15 text-zinc-200 hover:bg-white/10 cursor-pointer font-bold">
                   <Share2 className="mr-1.5 h-4 w-4" /> Share Link
-                </Button>
-                <Button variant="ghost" onClick={handleSignOut} className="text-zinc-400 hover:text-white cursor-pointer font-semibold">
-                  <LogOut className="mr-1.5 h-4 w-4" /> Sign Out
                 </Button>
               </div>
             )}
@@ -511,8 +567,8 @@ export default function ProfilePage() {
         <div className="mt-8">
           <Tabs defaultValue="works" className="w-full">
             <TabsList className="bg-zinc-900 border border-white/10 mb-6">
-              <TabsTrigger value="works" className="data-[state=active]:bg-primary data-[state=active]:text-white">
-                Portfolio & WIPs {!isStudioMaster && '🔒'} ({portfolioItems.length})
+              <TabsTrigger value="works" className="data-[state=active]:bg-primary data-[state=active]:text-white font-bold">
+                Portfolio & WIPs ({portfolioItems.length})
               </TabsTrigger>
               <TabsTrigger value="saved" className="data-[state=active]:bg-primary data-[state=active]:text-white">
                 <Bookmark className="h-3.5 w-3.5 mr-1 text-amber-400" />
@@ -525,51 +581,6 @@ export default function ProfilePage() {
 
             {/* TAB 1: Portfolio & WIPs */}
             <TabsContent value="works" className="space-y-6">
-              {!isStudioMaster ? (
-                <div className="p-8 md:p-12 rounded-3xl bg-gradient-to-br from-purple-950/80 via-zinc-950 to-black border border-purple-500/40 text-left space-y-6 shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-[500px] h-[400px] bg-purple-600/15 blur-[120px] rounded-full pointer-events-none" />
-
-                  <div className="space-y-3 relative z-10">
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-extrabold shadow-md">
-                      <Lock className="h-3.5 w-3.5" />
-                      <span>$5/MO PRO PLAN REQUIRED</span>
-                    </div>
-
-                    <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
-                      Unlock Your Creator Portfolio & Reel Studio
-                    </h2>
-
-                    <p className="text-sm md:text-base text-zinc-300 max-w-3xl leading-relaxed font-medium">
-                      Host your 2D/3D animation portfolio, showcase work-in-progress passes with stage tags (blocking, polish, splining), build custom category tabs, and use the interactive Open Reel Editor. Upgrade to the <strong>$5/mo Pro plan</strong> to unlock full portfolio hosting & studio tools!
-                    </p>
-                  </div>
-
-                  {/* Feature Checklist */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 relative z-10 max-w-4xl">
-                    {[
-                      '✨ Unlimited 4K Animation & WIP Shot Uploads',
-                      '🎞️ Open Reel Editor & Frame Stitcher Studio',
-                      '🎨 Custom ArtStation Portfolio Layout & Tabs',
-                      '⚡ Studio Recruiter Visibility & Director Badging',
-                    ].map((feature) => (
-                      <div key={feature} className="flex items-center gap-2.5 p-3 rounded-2xl bg-white/5 border border-white/10 text-xs font-bold text-zinc-200">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-                        <span>{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="pt-4 relative z-10">
-                    <DonateDialog>
-                      <Button className="h-14 px-8 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-sm gap-2 shadow-xl shadow-amber-500/20 cursor-pointer hover:scale-105 transition-all">
-                        <Wand2 className="h-5 w-5" />
-                        Upgrade to $5/mo Pro Plan
-                      </Button>
-                    </DonateDialog>
-                  </div>
-                </div>
-              ) : (
-                <>
               {/* Large Featured Demo Reel Hero Banner */}
               <PortfolioHeroBanner
                 items={portfolioItems}
@@ -741,99 +752,239 @@ export default function ProfilePage() {
                   ))}
                 </div>
               )}
-            </>
-          )}
-        </TabsContent>
-
-            {/* TAB 2: Saved Items & Moodboards */}
-            <TabsContent value="saved" className="space-y-6">
-              <div className="p-8 rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-950 to-black border border-white/10 text-left space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <h3 className="text-2xl font-black text-white flex items-center gap-2">
-                      <Bookmark className="h-6 w-6 text-amber-400 fill-amber-400/20" />
-                      Saved Animation References & Moodboards
-                    </h3>
-                    <p className="text-xs text-zinc-400 font-medium">
-                      Manage your favorited video clips, bookmarked categories, and custom canvas moodboards.
-                    </p>
-                  </div>
-                  <Button asChild className="rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs gap-2">
-                    <Link href="/list">
-                      Open Full CMS Vault <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-zinc-400">LIKED CLIPS</span>
-                      <Heart className="h-4 w-4 text-rose-400" />
-                    </div>
-                    <p className="text-3xl font-black text-white">{userProfile?.likedVideoIds?.length || 0}</p>
-                    <p className="text-[11px] text-zinc-400 font-medium">Favorited video reference clips</p>
-                  </div>
-
-                  <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-zinc-400">SAVED CATEGORIES</span>
-                      <Layers className="h-4 w-4 text-cyan-400" />
-                    </div>
-                    <p className="text-3xl font-black text-white">{userProfile?.likedCategoryIds?.length || 0}</p>
-                    <p className="text-[11px] text-zinc-400 font-medium">Bookmarked reference topics & tags</p>
-                  </div>
-
-                  <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-zinc-400">MOODBOARDS</span>
-                      <Bookmark className="h-4 w-4 text-amber-400" />
-                    </div>
-                    <p className="text-3xl font-black text-white">Active</p>
-                    <p className="text-[11px] text-zinc-400 font-medium">Shot breakdown & canvas boards</p>
-                  </div>
-                </div>
-              </div>
             </TabsContent>
 
-            {/* TAB 3: Subscription */}
-            <TabsContent value="subscription">
+            {/* TAB 2: Saved & Liked Library */}
+            <TabsContent value="saved" className="space-y-6">
+              {/* Stat Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button onClick={() => setSavedSubTab('liked')} className={cn("p-5 rounded-2xl border space-y-2 text-left transition-all", savedSubTab === 'liked' ? 'bg-rose-950/30 border-rose-500/40 shadow-lg shadow-rose-950/30' : 'bg-white/5 border-white/10 hover:border-white/20')}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-400">LIKED CLIPS</span>
+                    <Heart className={cn("h-4 w-4", savedSubTab === 'liked' ? 'text-rose-400 fill-rose-400' : 'text-rose-400')} />
+                  </div>
+                  <p className="text-3xl font-black text-white">{userProfile?.likedVideoIds?.length || 0}</p>
+                  <p className="text-[11px] text-zinc-400 font-medium">Favorited video reference clips</p>
+                </button>
+
+                <button onClick={() => setSavedSubTab('saved')} className={cn("p-5 rounded-2xl border space-y-2 text-left transition-all", savedSubTab === 'saved' ? 'bg-amber-950/30 border-amber-500/40 shadow-lg shadow-amber-950/30' : 'bg-white/5 border-white/10 hover:border-white/20')}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-400">SAVED / BOOKMARKED</span>
+                    <Bookmark className={cn("h-4 w-4", savedSubTab === 'saved' ? 'text-amber-400 fill-amber-400' : 'text-amber-400')} />
+                  </div>
+                  <p className="text-3xl font-black text-white">{userProfile?.savedVideoIds?.length || 0}</p>
+                  <p className="text-[11px] text-zinc-400 font-medium">Bookmarked for later study</p>
+                </button>
+
+                <button onClick={() => setSavedSubTab('categories')} className={cn("p-5 rounded-2xl border space-y-2 text-left transition-all", savedSubTab === 'categories' ? 'bg-cyan-950/30 border-cyan-500/40 shadow-lg shadow-cyan-950/30' : 'bg-white/5 border-white/10 hover:border-white/20')}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-400">LIKED CATEGORIES</span>
+                    <Layers className={cn("h-4 w-4", savedSubTab === 'categories' ? 'text-cyan-400' : 'text-cyan-400')} />
+                  </div>
+                  <p className="text-3xl font-black text-white">{userProfile?.likedCategoryIds?.length || 0}</p>
+                  <p className="text-[11px] text-zinc-400 font-medium">Saved reference topics & tags</p>
+                </button>
+              </div>
+
+              {/* Liked Videos Grid */}
+              {savedSubTab === 'liked' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <Heart className="h-5 w-5 text-rose-400 fill-rose-400" />
+                      Recently Liked Clips
+                    </h3>
+                    <span className="text-xs text-zinc-400 font-mono">{userProfile?.likedVideoIds?.length || 0} clips</span>
+                  </div>
+
+                  {likedVideosLoading ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {Array.from({ length: 8 }).map((_, i) => (
+                        <div key={i} className="aspect-video rounded-2xl bg-white/5 animate-pulse" />
+                      ))}
+                    </div>
+                  ) : likedVideos.length === 0 ? (
+                    <div className="py-16 text-center border border-dashed border-white/10 rounded-2xl bg-zinc-900/30">
+                      <Heart className="h-12 w-12 text-zinc-600 mx-auto mb-3" />
+                      <h3 className="text-lg font-semibold text-zinc-300">No liked clips yet</h3>
+                      <p className="text-xs text-zinc-500 mt-1 max-w-md mx-auto">Like reference clips while browsing to save them here for quick access.</p>
+                      <Button asChild className="mt-4 bg-primary hover:bg-primary/90 text-white font-semibold">
+                        <Link href="/home">Browse References</Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {likedVideos.map(v => <VideoCard key={v.id} video={v} />)}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Saved / Bookmarked Videos Grid */}
+              {savedSubTab === 'saved' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <Bookmark className="h-5 w-5 text-amber-400 fill-amber-400" />
+                      Saved for Later
+                    </h3>
+                    <span className="text-xs text-zinc-400 font-mono">{userProfile?.savedVideoIds?.length || 0} clips</span>
+                  </div>
+
+                  {savedVideos.length === 0 ? (
+                    <div className="py-16 text-center border border-dashed border-white/10 rounded-2xl bg-zinc-900/30">
+                      <Bookmark className="h-12 w-12 text-zinc-600 mx-auto mb-3" />
+                      <h3 className="text-lg font-semibold text-zinc-300">No saved clips yet</h3>
+                      <p className="text-xs text-zinc-500 mt-1 max-w-md mx-auto">Bookmark reference clips to save them for later study.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {savedVideos.map(v => <VideoCard key={v.id} video={v} />)}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Liked Categories */}
+              {savedSubTab === 'categories' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <Layers className="h-5 w-5 text-cyan-400" />
+                      Liked Categories & Topics
+                    </h3>
+                  </div>
+
+                  {(userProfile?.likedCategoryIds?.length || 0) === 0 ? (
+                    <div className="py-16 text-center border border-dashed border-white/10 rounded-2xl bg-zinc-900/30">
+                      <Layers className="h-12 w-12 text-zinc-600 mx-auto mb-3" />
+                      <h3 className="text-lg font-semibold text-zinc-300">No liked categories yet</h3>
+                      <p className="text-xs text-zinc-500 mt-1 max-w-md mx-auto">Like categories while browsing to quick-access them here.</p>
+                      <Button asChild className="mt-4 bg-primary hover:bg-primary/90 text-white font-semibold">
+                        <Link href="/categories">Browse Categories</Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {userProfile?.likedCategoryIds?.map((catId: string) => (
+                        <Link key={catId} href={`/categories?category=${catId}`} className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-cyan-500/40 transition-all space-y-1 text-left">
+                          <Layers className="h-5 w-5 text-cyan-400 mb-2" />
+                          <h4 className="text-sm font-bold text-white capitalize">{catId.replace(/-/g, ' ')}</h4>
+                          <p className="text-[10px] text-zinc-400">Saved reference category</p>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* TAB 3: Subscription & ArtStation Pro Monetization */}
+            <TabsContent value="subscription" className="space-y-6">
               <Card className="bg-zinc-900 border-white/10 text-white">
                 <CardHeader>
-                  <CardTitle className="text-white">Subscription & Billing</CardTitle>
-                  <CardDescription className="text-zinc-400">Manage your plan and billing details.</CardDescription>
+                  <CardTitle className="text-white flex items-center justify-between">
+                    <span>Subscription & Creator Monetization</span>
+                    <Badge variant="outline" className="bg-purple-950/60 text-purple-300 border-purple-800/40 text-xs font-mono">
+                      ARTSTATION PRO MODEL
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription className="text-zinc-400">
+                    Posting portfolio & WIP shots is 100% free for all animators. Pro unlocks custom domains, digital storefronts, and studio recruiter visibility.
+                  </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 rounded-lg bg-zinc-950/60 border border-white/5">
+                <CardContent className="space-y-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-5 rounded-2xl bg-zinc-950/80 border border-purple-500/30">
                     <div>
-                      <p className="font-semibold text-white">
-                        Current Plan: <span className={userProfile?.isPremium ? "text-primary font-bold" : "text-zinc-400"}>
+                      <p className="font-bold text-white text-base">
+                        Current Status: <span className={userProfile?.isPremium ? "text-purple-400 font-black" : "text-emerald-400 font-bold"}>
                           {userProfile?.isPremium ? (
-                            userProfile?.tier === 'tier1' ? '$1 Supporter' :
-                            userProfile?.tier === 'tier2' ? '$2 Super Fan' :
-                            userProfile?.tier === 'tier5' ? '$5 Pro' :
-                            'Premium'
-                          ) : 'Basic Plan'}
+                            userProfile?.tier === 'tier5' ? 'Anim.works Pro ($5/mo)' :
+                            `Supporter (${userProfile?.tier})`
+                          ) : 'Free Artist Account ($0/mo)'}
                         </span>
                       </p>
-                      <p className="text-zinc-400 text-sm mt-1">
-                        {!userProfile?.isPremium && 'Upgrade to a $1, $2, or $5 plan to support the creator!'}
-                        {userProfile?.tier === 'tier1' && 'Upgrade to a $2 or $5 plan to unlock more moodboards and priority support!'}
-                        {userProfile?.tier === 'tier2' && 'Upgrade to the $5 Pro plan to unlock unlimited features!'}
-                        {userProfile?.tier === 'tier5' && 'You have unlocked all features. Thank you for your incredible support!'}
+                      <p className="text-zinc-400 text-xs mt-1">
+                        {!userProfile?.isPremium ? 'All portfolio posting & WIP tracking features are unlocked for free.' : 'Thank you for supporting the platform!'}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Button variant="default" onClick={() => setShowDonateDialog(true)} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold">
+                      <Button variant="default" onClick={() => setShowDonateDialog(true)} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold">
                         <CreditCard className="mr-2 h-4 w-4" />
-                        {userProfile?.isPremium && userProfile?.tier !== 'tier5' ? 'Upgrade Plan' : userProfile?.tier === 'tier5' ? 'View Plans' : 'Upgrade Plan'}
+                        {userProfile?.isPremium ? 'Manage Pro Plan' : 'Upgrade to Pro ($5/mo)'}
                       </Button>
                       
                       {userProfile?.isPremium && (
                         <Button variant="secondary" onClick={handlePortal} disabled={isPortalLoading} className="bg-white/10 hover:bg-white/20 text-white border-0">
-                          {isPortalLoading ? 'Loading...' : 'Manage Billing'}
+                          {isPortalLoading ? 'Loading...' : 'Stripe Portal'}
                         </Button>
                       )}
+                    </div>
+                  </div>
+
+                  {/* Plan Feature Comparison Table (ArtStation Style) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Free Plan Box */}
+                    <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/10 space-y-4">
+                      <div className="space-y-1">
+                        <span className="text-xs font-mono font-bold text-emerald-400 uppercase">FREE FOREVER</span>
+                        <h4 className="text-xl font-black text-white">Artist Free Tier</h4>
+                        <p className="text-xs text-zinc-400">Everything needed to host your work and connect with the community.</p>
+                      </div>
+
+                      <ul className="space-y-2 text-xs font-medium text-zinc-300">
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                          <span>Unlimited 4K Animation & WIP Shot Hosting</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                          <span>Blocking, Splining, & Polish Stage Badges</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                          <span>Community Feed Exposure & Showreel Embeds</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                          <span>Custom Profile Link (anim.works/u/username)</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    {/* Pro Plan Box */}
+                    <div className="p-6 rounded-2xl bg-gradient-to-br from-purple-950/60 via-zinc-950 to-black border border-purple-500/40 space-y-4 shadow-xl">
+                      <div className="space-y-1">
+                        <span className="text-xs font-mono font-bold text-amber-400 uppercase">PRO MONETIZATION ($5/MO)</span>
+                        <h4 className="text-xl font-black text-white flex items-center gap-2">
+                          <span>ArtStation Pro Suite</span>
+                          <Sparkles className="h-4 w-4 text-amber-400" />
+                        </h4>
+                        <p className="text-xs text-zinc-300">Monetize your rigs, assets, and get recruiter priority.</p>
+                      </div>
+
+                      <ul className="space-y-2 text-xs font-medium text-zinc-200">
+                        <li className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
+                          <span><strong>Custom Domain:</strong> yourname.anim.works website</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
+                          <span><strong>Digital Storefront:</strong> Sell Maya/Blender Rigs & Pickers (Keep 95%)</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
+                          <span><strong>Recruiter Priority:</strong> Highlighted "Open for Work" Recruiter Banner</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
+                          <span><strong>Password Protected Reels:</strong> Private client review links</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
+                          <span><strong>Studio Analytics:</strong> Recruiter view counts & showreel watch data</span>
+                        </li>
+                      </ul>
                     </div>
                   </div>
                 </CardContent>

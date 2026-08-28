@@ -18,6 +18,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/hooks/use-user';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { Upload, Link as LinkIcon, Plus, X, Layers, Sparkles, Film, Image as ImageIcon, Hash, ArrowRight, ArrowLeft, ChevronRight, ChevronLeft, CheckCircle2 } from 'lucide-react';
 import type { PortfolioItem, WipStage } from '@/lib/types';
 import { createPortfolioItem, generateAutoThumbnail } from '@/lib/portfolio-service';
@@ -373,6 +376,7 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
   onItemCreated,
 }) => {
   const { toast } = useToast();
+  const { userProfile } = useUser();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<'upload' | 'url'>('upload');
@@ -511,6 +515,25 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
       return;
     }
 
+    const hasUnlimitedPortfolioPosts = userProfile?.role === 'admin' ||
+      (userProfile?.isPremium === true && userProfile.tier === 'tier5');
+    if (!hasUnlimitedPortfolioPosts) {
+      try {
+        const existingPosts = await getDocs(query(collection(db, 'portfolio_items'), where('userId', '==', userId)));
+        if (existingPosts.size >= 3) {
+          toast({
+            title: 'Free portfolio limit reached',
+            description: 'Free members can publish 3 portfolio posts. Upgrade to Pro for unlimited posts, private projects, and recruiter analytics.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      } catch {
+        toast({ title: 'Could not verify portfolio limit', description: 'Please try again in a moment.', variant: 'destructive' });
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setUploadProgress(15);
     setUploadStatusMsg('Preparing media & cover frame...');
@@ -534,7 +557,7 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
 
     try {
       let mediaType: PortfolioItem['mediaType'] = 'video_file';
-      let mediaUrl = videoUrlInput.trim();
+      const mediaUrl = videoUrlInput.trim();
 
       if (activeTab === 'upload' && mediaFile) {
         const isImage = mediaFile.type.startsWith('image/');

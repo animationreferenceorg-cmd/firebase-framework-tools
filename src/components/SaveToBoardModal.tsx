@@ -67,6 +67,8 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                         { id: 'mb-default-2', name: 'Acting & Expression', videoIds: [] },
                     ];
 
+                    if (!stored) localStorage.setItem(LOCAL_STORAGE_BOARDS_KEY, JSON.stringify(localBoards));
+
                     setBoards(
                         localBoards.map((lb) => ({
                             id: lb.id,
@@ -98,6 +100,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                     updatedItems = items.filter(
                         (i) => i.videoId !== video.id && i.videoData?.id !== video.id
                     );
+                    await MoodboardService.saveMoodboard(user.uid, boardId, updatedItems);
                     toast({ title: 'Removed from board', description: `Removed from "${boardName}"` });
                 } else {
                     // Add video item

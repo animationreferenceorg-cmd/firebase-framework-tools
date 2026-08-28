@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { ArrowDown, ArrowUp, Eye, Heart, GripVertical, Layers, Play, Sparkles, Trash2, Pencil, MessageCircle } from 'lucide-react';
+import { ArrowDown, ArrowUp, Eye, Heart, Bookmark, GripVertical, Layers, Play, Sparkles, Trash2, Pencil, MessageCircle } from 'lucide-react';
 import type { PortfolioItem, WipStage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -12,9 +12,11 @@ interface PortfolioItemCardProps {
   onClick?: () => void;
   onComment?: () => void;
   onLike?: (e: React.MouseEvent) => void;
+  onSave?: (e: React.MouseEvent) => void;
   onEdit?: (e: React.MouseEvent) => void;
   onDelete?: (e: React.MouseEvent) => void;
   isLiked?: boolean;
+  isSaved?: boolean;
   currentUserId?: string;
   isReordering?: boolean;
   onMoveUp?: () => void;
@@ -37,9 +39,11 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
   onClick,
   onComment,
   onLike,
+  onSave,
   onEdit,
   onDelete,
   isLiked: isLikedProp = false,
+  isSaved: isSavedProp = false,
   currentUserId,
   isReordering = false,
   onMoveUp,
@@ -51,6 +55,7 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const isLiked = isLikedProp || (currentUserId && item.likedBy ? item.likedBy.includes(currentUserId) : false);
+  const isSaved = isSavedProp;
   const stageInfo = item.wipStage ? STAGE_CONFIG[item.wipStage] : null;
 
   useEffect(() => {
@@ -266,6 +271,20 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
             >
               <Heart className={cn("h-3.5 w-3.5", isLiked && "fill-rose-500 text-rose-500")} />
               <span>{item.likesCount || 0}</span>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSave?.(e);
+              }}
+              className={cn(
+                "flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition-colors",
+                isSaved ? "text-amber-400 font-bold" : "text-zinc-400 hover:text-amber-400"
+              )}
+              aria-label={isSaved ? "Unsave post" : "Save post"}
+            >
+              <Bookmark className={cn("h-3.5 w-3.5", isSaved && "fill-amber-400 text-amber-400")} />
+              <span>{isSaved ? "Saved" : "Save"}</span>
             </button>
             <button
               type="button"

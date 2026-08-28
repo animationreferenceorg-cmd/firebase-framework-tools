@@ -10,10 +10,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Eye, Heart, Layers, Sparkles, Trash2, Calendar, Share2, Wrench, ArrowLeft } from 'lucide-react';
+import { Eye, Heart, Bookmark, Layers, Sparkles, Trash2, Calendar, Share2, Wrench, ArrowLeft } from 'lucide-react';
 import type { PortfolioItem, WipStage } from '@/lib/types';
 import { toggleLikePortfolioItem, deletePortfolioItem, incrementPortfolioItemViews } from '@/lib/portfolio-service';
 import { isArtistFollowed, toggleFollowArtist } from '@/lib/following-service';
+import { saveVideo, unsaveVideo } from '@/lib/firestore';
+import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { UniversalVideoPlayer } from './UniversalVideoPlayer';
@@ -44,13 +46,17 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
   onItemDeleted,
 }) => {
   const { toast } = useToast();
+  const { userProfile, mutate: mutateUserProfile } = useUser();
   const [isLiking, setIsLiking] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [likesCount, setLikesCount] = useState(item?.likesCount || 0);
   const [viewsCount, setViewsCount] = useState(item?.viewsCount || 0);
   const [isLiked, setIsLiked] = useState(
     currentUserId && item?.likedBy ? item.likedBy.includes(currentUserId) : false
   );
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const isSaved = Boolean(item?.id && userProfile?.savedVideoIds?.includes(item.id));
 
   React.useEffect(() => {
     if (open && item?.id) {
@@ -100,6 +106,30 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
     } finally {
       setIsLiking(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!currentUserId) {
+      toast({ title: 'Sign in required', description: 'Please sign in to save items to your library.', variant: 'destructive' });
+      return;
+    }
+    if (isSaving) return;
+
+    setIsSaving(true);
+    try {
+      if (isSaved) {
+        await unsaveVideo(currentUserId, item.id);
+        toast({ title: 'Removed from Saved', description: 'Item removed from your saved library.' });
+      } else {
+        await saveVideo(currentUserId, item.id);
+        toast({ title: 'Saved to Library!', description: 'Item added to your saved videos & portfolio clips.' });
+      }
+      mutateUserProfile?.();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -252,6 +282,22 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
                     >
                       <Heart className={cn("h-4 w-4", isLiked && "fill-white text-white")} />
                       <span>{likesCount} Likes</span>
+                    </Button>
+
+                    <Button
+                      size="default"
+                      variant="outline"
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className={cn(
+                        "rounded-full px-5 gap-2 font-bold transition-all cursor-pointer",
+                        isSaved
+                          ? "bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+                          : "bg-white/10 hover:bg-amber-500/20 hover:text-amber-300 text-white border border-white/15"
+                      )}
+                    >
+                      <Bookmark className={cn("h-4 w-4", isSaved && "fill-amber-400 text-amber-400")} />
+                      <span>{isSaved ? "Saved" : "Save"}</span>
                     </Button>
                   </div>
                 </div>

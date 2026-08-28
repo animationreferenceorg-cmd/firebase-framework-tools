@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import type { PortfolioItem, WipStage } from '@/lib/types';
-import { getPublicPortfolioItems } from '@/lib/portfolio-service';
+import { getPublicPortfolioItems, toggleLikePortfolioItem } from '@/lib/portfolio-service';
+import { saveVideo, unsaveVideo } from '@/lib/firestore';
 import { PortfolioItemCard } from '@/components/portfolio/PortfolioItemCard';
 import { PortfolioItemDetailModal } from '@/components/portfolio/PortfolioItemDetailModal';
 import { UploadPortfolioItemModal } from '@/components/portfolio/UploadPortfolioItemModal';
@@ -34,7 +35,7 @@ const ITEMS_PER_PAGE = 24;
 
 export default function CommunityFeedPage() {
   const { user } = useAuth();
-  const { userProfile } = useUser();
+  const { userProfile, mutate: mutateUserProfile } = useUser();
   const { toast } = useToast();
 
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
@@ -43,6 +44,52 @@ export default function CommunityFeedPage() {
   const [isMockPreview, setIsMockPreview] = useState(false);
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  const handleLikeItem = async (targetItem: PortfolioItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!user?.uid) {
+      toast({ title: 'Sign in required', description: 'Please sign in to like items.', variant: 'destructive' });
+      return;
+    }
+    try {
+      const res = await toggleLikePortfolioItem(targetItem.id, user.uid);
+      setPortfolioItems((prev) =>
+        prev.map((i) => {
+          if (i.id === targetItem.id) {
+            const likedBy = i.likedBy || [];
+            const updatedLikedBy = res.isLiked
+              ? [...likedBy.filter((id) => id !== user.uid), user.uid]
+              : likedBy.filter((id) => id !== user.uid);
+            return { ...i, likesCount: res.count, likedBy: updatedLikedBy };
+          }
+          return i;
+        })
+      );
+    } catch (error: any) {
+      console.error("Error toggling like:", error);
+    }
+  };
+
+  const handleSaveItem = async (targetItem: PortfolioItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!user?.uid) {
+      toast({ title: 'Sign in required', description: 'Please sign in to save items.', variant: 'destructive' });
+      return;
+    }
+    const isSaved = Boolean(userProfile?.savedVideoIds?.includes(targetItem.id));
+    try {
+      if (isSaved) {
+        await unsaveVideo(user.uid, targetItem.id);
+        toast({ title: 'Removed from Saved', description: 'Item removed from your library.' });
+      } else {
+        await saveVideo(user.uid, targetItem.id);
+        toast({ title: 'Saved to Library!', description: 'Item added to your saved videos & portfolio clips.' });
+      }
+      mutateUserProfile?.();
+    } catch (error: any) {
+      console.error("Error toggling save:", error);
+    }
+  };
 
   // Pagination & Filters
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
@@ -287,7 +334,11 @@ export default function CommunityFeedPage() {
               <PortfolioItemCard 
                 key={item.id} 
                 item={item} 
+                currentUserId={user?.uid}
+                isSaved={Boolean(userProfile?.savedVideoIds?.includes(item.id))}
                 onClick={() => { setSelectedItem(item); setIsDetailOpen(true); }}
+                onLike={(e) => handleLikeItem(item, e)}
+                onSave={(e) => handleSaveItem(item, e)}
               />
             ))}
           </div>

@@ -27,7 +27,7 @@ import type { Video } from '@/lib/types';
 
 function getPreviewUrl(url?: string): string | undefined {
   if (!url) return undefined;
-  let targetUrl = url;
+  let targetUrl: string | undefined = url;
   if (url.includes('playlist.m3u8')) {
     targetUrl = url.replace('playlist.m3u8', 'play_480p.mp4');
   } else if (url.startsWith('<iframe')) {

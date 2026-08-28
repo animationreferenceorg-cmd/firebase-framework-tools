@@ -2,14 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { ArrowRight, LayoutGrid, Paintbrush, Scissors, Sparkles, UserPlus } from 'lucide-react';
-import { 
-  PAINT_WORKSPACE_DATA_URI, 
-  REFERENCE_VAULT_DATA_URI, 
-  PORTFOLIO_PAGE_DATA_URI, 
-  UPDATED_BOARDS_DATA_URI 
-} from './announcementLogosData';
 
 const launches = [
   {
@@ -18,8 +11,7 @@ const launches = [
     eyebrow: 'Draw, time, and compare',
     description: 'Sketch with layers and custom brushes, build timed panels, use onion skinning, bring in references, and export your work.',
     href: '/paint',
-    image: PAINT_WORKSPACE_DATA_URI,
-    fallbackImage: '/announcements/paint-workspace.png',
+    image: '/announcements/paint-workspace.png',
     icon: Paintbrush,
     accent: 'from-fuchsia-500/25 to-purple-500/5',
   },
@@ -28,8 +20,7 @@ const launches = [
     eyebrow: 'Find and save the exact moment',
     description: 'Clip precise timestamps from the web or upload your own media, then search and organize motion references in one shared vault.',
     href: '/references',
-    image: REFERENCE_VAULT_DATA_URI,
-    fallbackImage: '/announcements/reference-vault.png',
+    image: '/announcements/reference-vault.png',
     icon: Scissors,
     accent: 'from-violet-500/30 to-fuchsia-500/5',
   },
@@ -38,8 +29,7 @@ const launches = [
     eyebrow: 'Show your work at no cost',
     description: 'Create a free animator profile, submit portfolio work and reels, and get discovered by studios and the community.',
     href: '/profile?tab=portfolio',
-    image: PORTFOLIO_PAGE_DATA_URI,
-    fallbackImage: '/announcements/portfolio-page.png',
+    image: '/announcements/portfolio-page.png',
     icon: UserPlus,
     accent: 'from-pink-500/25 to-purple-500/5',
   },
@@ -48,19 +38,17 @@ const launches = [
     eyebrow: 'Organize references visually',
     description: 'Create focused boards, file saved clips, search your collection, and arrange references on a dedicated canvas.',
     href: '/moodboard',
-    image: UPDATED_BOARDS_DATA_URI,
-    fallbackImage: '/announcements/updated-boards.png',
+    image: '/announcements/updated-boards.png',
     icon: LayoutGrid,
     accent: 'from-amber-500/20 to-violet-500/5',
   },
 ];
 
 function LaunchCardImage({ launch }: { launch: typeof launches[number] }) {
-  const [srcIndex, setSrcIndex] = useState(0);
+  const [hasError, setHasError] = useState(false);
   const Icon = launch.icon;
-  const sources = [launch.image, launch.fallbackImage];
 
-  if (srcIndex >= sources.length) {
+  if (hasError) {
     return (
       <div className={`h-full w-full flex items-center justify-center bg-gradient-to-tr ${launch.accent} bg-zinc-900`}>
         <div className="flex flex-col items-center gap-2 p-4 text-center">
@@ -75,10 +63,10 @@ function LaunchCardImage({ launch }: { launch: typeof launches[number] }) {
 
   return (
     <img
-      src={sources[srcIndex]}
+      src={launch.image}
       alt={`${launch.title} workspace preview`}
       className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
-      onError={() => setSrcIndex((prev) => prev + 1)}
+      onError={() => setHasError(true)}
     />
   );
 }

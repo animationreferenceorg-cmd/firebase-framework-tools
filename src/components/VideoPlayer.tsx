@@ -50,6 +50,14 @@ function Player({ playerRef, video, ...props }: any) {
             height="100%"
             style={{ position: 'absolute', top: 0, left: 0 }}
             controls={false} // We are using our own controls
+            config={{
+                file: {
+                    attributes: {
+                        preload: 'auto',
+                        playsInline: true,
+                    }
+                }
+            }}
             {...props}
         />
     )

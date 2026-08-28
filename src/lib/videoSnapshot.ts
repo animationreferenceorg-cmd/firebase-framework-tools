@@ -7,7 +7,7 @@ let cache: Promise<Video[]> | null = null;
 
 export function getSnapshotVideos(): Promise<Video[]> {
   if (!cache) {
-    cache = fetch('/data/videos-snapshot.json')
+    cache = fetch('/data/videos-snapshot.json', { cache: 'force-cache' })
       .then(res => {
         if (!res.ok) throw new Error(`Failed to load video snapshot (${res.status})`);
         return res.json() as Promise<Video[]>;

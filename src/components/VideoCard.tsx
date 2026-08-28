@@ -27,14 +27,18 @@ import type { Video } from '@/lib/types';
 
 function getPreviewUrl(url?: string): string | undefined {
   if (!url) return undefined;
+  let targetUrl = url;
   if (url.includes('playlist.m3u8')) {
-    return url.replace('playlist.m3u8', 'play_480p.mp4');
-  }
-  if (url.startsWith('<iframe')) {
+    targetUrl = url.replace('playlist.m3u8', 'play_480p.mp4');
+  } else if (url.startsWith('<iframe')) {
     const match = url.match(/src=["']([^"']+)["']/);
-    return match ? match[1] : undefined;
+    targetUrl = match ? match[1] : undefined;
   }
-  return url;
+  if (!targetUrl) return undefined;
+  if (targetUrl.includes('.mp4') && !targetUrl.includes('#t=')) {
+    return `${targetUrl}#t=0.1`;
+  }
+  return targetUrl;
 }
 
 function isPlayableVideoUrl(url?: string): boolean {

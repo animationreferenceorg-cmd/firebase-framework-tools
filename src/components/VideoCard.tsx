@@ -77,10 +77,15 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [socialAccessible, setSocialAccessible] = useState(true);
 
+  const cardRefRef = useRef(cardRef);
+  cardRefRef.current = cardRef;
+
   const setCombinedRef = React.useCallback((node: HTMLDivElement | null) => {
-    cardRef(node);
     containerRef.current = node;
-  }, [cardRef]);
+    if (cardRefRef.current) {
+      cardRefRef.current(node);
+    }
+  }, []);
 
   const displayTitle = video.status === 'draft' ? 'Reference' : video.title;
   const displayDescription = video.status === 'draft' ? '' : video.description;

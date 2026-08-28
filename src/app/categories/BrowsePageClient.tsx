@@ -311,13 +311,91 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
             });
         }
 
-        // 4. Sort by Tab
-        if (activeTab === 'latest') {
-            // Reverse order to show newest videos first
-            result = [...result].reverse();
+        // Helper to get numeric timestamp for sorting
+        const getVideoTimestamp = (v: Video): number => {
+          if (typeof v.createdAt === 'number') return v.createdAt;
+          if (typeof v.createdAt === 'string') {
+            const p = Date.parse(v.createdAt);
+            if (!isNaN(p)) return p;
+          }
+          if (v.createdAt?.toMillis && typeof v.createdAt.toMillis === 'function') {
+            return v.createdAt.toMillis();
+          }
+          if (v.createdAt?.seconds) {
+            return v.createdAt.seconds * 1000;
+          }
+          return 0;
+        };
+
+        // 4. Sort / Filter by Tab
+        if (activeTab === 'community') {
+            // Community: JUST tagged accounts and portfolio / user uploaded videos
+            result = result.filter(v => 
+                !!v.uploader || 
+                !!v.author_name || 
+                !!v.isPortfolio || 
+                v.type === 'social' || 
+                (v.type as string) === 'instagram' || 
+                !!v.originalUrl
+            );
         } else if (activeTab === 'trending') {
-            // Shuffle the VIEWABLE results for variety
-            result = [...result].sort(() => 0.5 - Math.random());
+            // Trending: Whoever has most likes (sorted descending by likeCount)
+            result = [...result].sort((a, b) => {
+                const likesA = a.likeCount ?? 0;
+                const likesB = b.likeCount ?? 0;
+                if (likesB !== likesA) return likesB - likesA;
+                const viewsA = a.viewCount ?? 0;
+                const viewsB = b.viewCount ?? 0;
+                return viewsB - viewsA;
+            });
+        } else if (activeTab === 'latest') {
+            // Latest: Latest uploaded references (newest first by createdAt)
+            result = [...result].sort((a, b) => getVideoTimestamp(b) - getVideoTimestamp(a));
+        } else if (activeTab === 'featured') {
+            // Featured: Randomized videos with a mix between tagged accounts, non-tagged accounts, and user uploaded videos
+            const taggedOrUploader = result.filter(v => !!v.uploader || !!v.author_name || v.type === 'social' || (v.type as string) === 'instagram' || !!v.originalUrl);
+            const userUploaded = result.filter(v => !!v.isPortfolio || !!v.uploader);
+            const standardRef = result.filter(v => !v.uploader && !v.author_name && v.type !== 'social' && (v.type as string) !== 'instagram');
+
+            function shuffle<T>(arr: T[]): T[] {
+                const copy = [...arr];
+                for (let i = copy.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [copy[i], copy[j]] = [copy[j], copy[i]];
+                }
+                return copy;
+            }
+
+            const sTagged = shuffle(taggedOrUploader);
+            const sUser = shuffle(userUploaded);
+            const sStandard = shuffle(standardRef);
+
+            const mixed: Video[] = [];
+            const seen = new Set<string>();
+            const maxLen = Math.max(sTagged.length, sUser.length, sStandard.length);
+
+            for (let i = 0; i < maxLen; i++) {
+                if (i < sTagged.length && !seen.has(sTagged[i].id)) {
+                    mixed.push(sTagged[i]);
+                    seen.add(sTagged[i].id);
+                }
+                if (i < sUser.length && !seen.has(sUser[i].id)) {
+                    mixed.push(sUser[i]);
+                    seen.add(sUser[i].id);
+                }
+                if (i < sStandard.length && !seen.has(sStandard[i].id)) {
+                    mixed.push(sStandard[i]);
+                    seen.add(sStandard[i].id);
+                }
+            }
+
+            for (const item of shuffle(result)) {
+                if (!seen.has(item.id)) {
+                    mixed.push(item);
+                    seen.add(item.id);
+                }
+            }
+            result = mixed;
         }
 
         return result;

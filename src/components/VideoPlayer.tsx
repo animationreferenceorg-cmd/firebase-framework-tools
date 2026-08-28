@@ -9,6 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import ReactPlayer from 'react-player/lazy';
+
+// Warm up ReactPlayer chunk on client mount for instant popup opening
+if (typeof window !== 'undefined') {
+    import('react-player/lazy').catch(() => {});
+}
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';

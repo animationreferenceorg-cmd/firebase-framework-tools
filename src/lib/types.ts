@@ -25,6 +25,8 @@ export interface Video {
   updatedAt?: any;
   author_name?: string;
   likeCount?: number;
+  viewCount?: number;
+  isPortfolio?: boolean;
 }
 
 export interface Folder {

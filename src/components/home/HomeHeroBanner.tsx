@@ -12,53 +12,50 @@ interface HomeHeroBannerProps {
 
 export function HomeHeroBanner({ video }: HomeHeroBannerProps) {
   const heroVideoRef = React.useRef<HTMLVideoElement>(null);
-  const [isVideoPlaying, setIsVideoPlaying] = React.useState(false);
-  const playbackUrl = video?.videoUrl?.includes('playlist.m3u8')
-    ? video.videoUrl.replace('playlist.m3u8', 'play_480p.mp4')
-    : video?.videoUrl;
+
+  // Fast fallback video URL if initial video is still resolving
+  const defaultHeroVideoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4#t=0.1";
+
+  let rawUrl = video?.videoUrl || defaultHeroVideoUrl;
+  if (rawUrl.includes('playlist.m3u8')) {
+    rawUrl = rawUrl.replace('playlist.m3u8', 'play_480p.mp4');
+  }
+  if (rawUrl.includes('.mp4') && !rawUrl.includes('#t=')) {
+    rawUrl = `${rawUrl}#t=0.1`;
+  }
+  const playbackUrl = rawUrl;
+  const posterUrl = video?.thumbnailUrl || video?.posterUrl;
 
   React.useEffect(() => {
-    setIsVideoPlaying(false);
     const player = heroVideoRef.current;
     if (!player || !playbackUrl) return;
 
     player.muted = true;
     player.defaultMuted = true;
-    const startPlayback = () => {
-      void player.play().catch(() => {
-        // The poster remains visible if a browser explicitly blocks autoplay.
-      });
-    };
-
-    startPlayback();
-    player.addEventListener('canplay', startPlayback);
-    return () => player.removeEventListener('canplay', startPlayback);
+    void player.play().catch(() => {});
   }, [playbackUrl]);
 
   return (
     <div className="relative w-full overflow-hidden rounded-3xl bg-[#09090e] border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.9)] mb-10 select-none">
       
-      {/* Keep the loading state abstract so the hero never flashes a static poster. */}
+      {/* Background ambient gradient */}
       <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_10%,rgba(126,34,206,0.3),transparent_45%),linear-gradient(135deg,#09090e,#160b24_55%,#09090e)]" />
-      {playbackUrl && (
-        <div
-          className={`absolute inset-0 z-[1] pointer-events-none transition-opacity duration-500 ${isVideoPlaying ? 'opacity-55' : 'opacity-0'}`}
-          aria-hidden="true"
-        >
-          <video
-            ref={heroVideoRef}
-            data-hero-video
-            src={playbackUrl}
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            onPlaying={() => setIsVideoPlaying(true)}
-            className="h-full w-full object-cover"
-          />
-        </div>
-      )}
+      
+      {/* Instant Video Layer */}
+      <div className="absolute inset-0 z-[1] pointer-events-none opacity-55 transition-opacity duration-300">
+        <video
+          ref={heroVideoRef}
+          data-hero-video
+          src={playbackUrl}
+          poster={posterUrl}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          className="h-full w-full object-cover"
+        />
+      </div>
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/35 via-black/65 to-[#09090e] z-[2]" />
 
       {/* Hero Content Container */}

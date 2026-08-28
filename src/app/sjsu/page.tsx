@@ -49,6 +49,7 @@ function AnimationRefLogo({ className = "w-full h-full object-contain", dynamicU
   const [srcIndex, setSrcIndex] = useState(0);
   const sources = [
     ...(dynamicUrl ? [dynamicUrl] : []),
+    'https://firebasestorage.googleapis.com/v0/b/aniamtion-reference.firebasestorage.app/o/site-assets%2Fsjsu%2Fanimation-reference-logo.png?alt=media&token=00a57104-f938-41b2-81f3-b819571b2873',
     '/site_icon_transparent.png',
     '/logo_transparent.png',
     '/site-icon.png',
@@ -78,6 +79,7 @@ function SjsuPrimaryLogo({ className = "w-full h-full object-contain", dynamicUr
   const [srcIndex, setSrcIndex] = useState(0);
   const sources = [
     ...(dynamicUrl ? [dynamicUrl] : []),
+    'https://firebasestorage.googleapis.com/v0/b/aniamtion-reference.firebasestorage.app/o/site-assets%2Fsjsu%2Fsjsu-primary-mark.png?alt=media&token=68963aaf-7e45-4f9c-8def-11659407d68d',
     '/sjsu_primary_mark.png',
   ];
 

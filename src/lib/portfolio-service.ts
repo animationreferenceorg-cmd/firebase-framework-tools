@@ -37,7 +37,11 @@ export async function uploadPortfolioMedia(
     const storagePath = `portfolio/${userId}/${folder}/${timestamp}_${cleanName}`;
     const storageRef = ref(storage, storagePath);
     
-    await uploadBytes(storageRef, file);
+    const uploadTask = uploadBytes(storageRef, file);
+    const timeoutTask = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Storage upload timeout")), 5000)
+    );
+    await Promise.race([uploadTask, timeoutTask]);
     const downloadUrl = await getDownloadURL(storageRef);
     return downloadUrl;
   } catch (error: any) {
@@ -334,9 +338,12 @@ export async function createPortfolioItem(
   }
 
   try {
-    await setDoc(newDocRef, newItem);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Firestore setDoc timeout")), 2500)
+    );
+    await Promise.race([setDoc(newDocRef, newItem), timeoutPromise]);
   } catch (error: any) {
-    console.warn("Firestore setDoc permission fallback triggered:", error?.message || error);
+    console.warn("Firestore setDoc permission or timeout fallback triggered:", error?.message || error);
   }
 
   return newItem;

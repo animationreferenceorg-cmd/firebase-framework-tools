@@ -519,8 +519,10 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
       (userProfile?.isPremium === true && userProfile.tier === 'tier5');
     if (!hasUnlimitedPortfolioPosts) {
       try {
-        const existingPosts = await getDocs(query(collection(db, 'portfolio_items'), where('userId', '==', userId)));
-        if (existingPosts.size >= 3) {
+        const q = query(collection(db, 'portfolio_items'), where('userId', '==', userId));
+        const timeoutPromise = new Promise<any>((_, reject) => setTimeout(() => reject(new Error("Limit check timeout")), 1800));
+        const existingPosts = await Promise.race([getDocs(q), timeoutPromise]);
+        if (existingPosts && existingPosts.size >= 3) {
           toast({
             title: 'Free portfolio limit reached',
             description: 'Free members can publish 3 portfolio posts. Upgrade to Pro for unlimited posts, private projects, and recruiter analytics.',
@@ -529,8 +531,7 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
           return;
         }
       } catch {
-        toast({ title: 'Could not verify portfolio limit', description: 'Please try again in a moment.', variant: 'destructive' });
-        return;
+        // Proceed gracefully if check times out or network is slow
       }
     }
 

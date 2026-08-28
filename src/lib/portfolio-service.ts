@@ -461,30 +461,62 @@ export async function getPublicPortfolioItems(options?: {
   wipStage?: WipStage;
   limitCount?: number;
 }): Promise<PortfolioItem[]> {
-  try {
-    const collectionRef = collection(db, PORTFOLIO_COLLECTION);
-    let constraints: any[] = [];
-    
-    if (options?.type) {
-      constraints.push(where("type", "==", options.type));
+  const fetchFirestore = async (): Promise<PortfolioItem[]> => {
+    try {
+      const collectionRef = collection(db, PORTFOLIO_COLLECTION);
+      const snapshot = await getDocs(collectionRef);
+      return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as PortfolioItem));
+    } catch (error) {
+      console.warn("[getPublicPortfolioItems] Firestore query fallback:", error);
+      return [];
     }
-    if (options?.wipStage) {
-      constraints.push(where("wipStage", "==", options.wipStage));
-    }
-    
-    constraints.push(orderBy("createdAt", "desc"));
-    if (options?.limitCount) {
-      constraints.push(limit(options.limitCount));
-    }
+  };
 
-    const q = query(collectionRef, ...constraints);
-    const snapshot = await getDocs(q);
-    const items = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as PortfolioItem));
-    return items.filter(item => item && item.id && item.title);
-  } catch (error) {
-    console.error("Error fetching public portfolio items:", error);
-    return [];
+  const fetchLocalStorage = (): PortfolioItem[] => {
+    const items: PortfolioItem[] = [];
+    try {
+      if (typeof window !== 'undefined') {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('local_portfolio_items_')) {
+            const raw = localStorage.getItem(k);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) items.push(...parsed);
+            }
+          }
+        }
+      }
+    } catch {}
+    return items;
+  };
+
+  const [firestoreItems, idbItems] = await Promise.all([
+    fetchFirestore(),
+    loadLocalItemsIndexedDB().catch(() => [])
+  ]);
+  const localStorageItems = fetchLocalStorage();
+
+  const itemMap = new Map<string, PortfolioItem>();
+  for (const item of [...firestoreItems, ...localStorageItems, ...idbItems]) {
+    if (item && item.id && item.title) {
+      if (options?.type && item.type !== options.type) continue;
+      if (options?.wipStage && item.wipStage !== options.wipStage) continue;
+      itemMap.set(item.id, item);
+    }
   }
+
+  const getSeconds = (item: PortfolioItem) => {
+    if (typeof item.createdAt === 'number') return item.createdAt;
+    if (item.createdAt && typeof item.createdAt === 'object' && 'seconds' in item.createdAt) {
+      return item.createdAt.seconds;
+    }
+    return 0;
+  };
+
+  const allItems = Array.from(itemMap.values()).sort((a, b) => getSeconds(b) - getSeconds(a));
+
+  return options?.limitCount ? allItems.slice(0, options.limitCount) : allItems;
 }
 
 /**

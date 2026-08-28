@@ -77,6 +77,11 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [socialAccessible, setSocialAccessible] = useState(true);
 
+  const setCombinedRef = React.useCallback((node: HTMLDivElement | null) => {
+    cardRef(node);
+    containerRef.current = node;
+  }, [cardRef]);
+
   const displayTitle = video.status === 'draft' ? 'Reference' : video.title;
   const displayDescription = video.status === 'draft' ? '' : video.description;
 
@@ -401,7 +406,7 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
     return (
       <>
       <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
-        <div ref={(node) => { cardRef(node); containerRef.current = node; }}
+        <div ref={setCombinedRef}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           onClick={handleCardClick}
@@ -594,7 +599,7 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
     <>
     <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
       <div
-        ref={(node) => { cardRef(node); containerRef.current = node; }}
+        ref={setCombinedRef}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onClick={handleCardClick}

@@ -830,7 +830,7 @@ export default function PaintPage() {
 
   const [isBrushStudioOpen, setIsBrushStudioOpen] = useState(false);
   const [isLayersPanelOpen, setIsLayersPanelOpen] = useState(true);
-  const [isTimelineOpen, setIsTimelineOpen] = useState(true);
+  const [isTimelineOpen, setIsTimelineOpen] = useState(false);
   const [showReferenceModal, setShowReferenceModal] = useState(false);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
   const [activeReferenceVideo, setActiveReferenceVideo] = useState<ReferenceVideoItem | null>(null);
@@ -1182,42 +1182,6 @@ export default function PaintPage() {
           >
             <div ref={spacerRef} className="inline-block touch-none" style={{ padding: '60vh 60vw' }}>
 
-              {/* Pinned Tracing Reference Video Overlay (rendered behind drawing canvas) */}
-              {isPinnedToCanvas && activeReferenceVideo && (
-                <div 
-                  className="absolute inset-0 pointer-events-none z-0 overflow-hidden"
-                  style={{ opacity: tracingOpacity }}
-                >
-                  <video
-                    ref={canvasBgVideoRef}
-                    src={activeReferenceVideo.videoUrl}
-                    muted
-                    playsInline
-                    onLoadedMetadata={(e) => {
-                      const vid = e.currentTarget;
-                      if (vid && vid.duration && vid.duration > 0) {
-                        const totalFrames = Math.max(24, Math.round(vid.duration * fps));
-                        setFrames((prev) => {
-                          if (prev.length >= totalFrames) return prev;
-                          const updated = [...prev];
-                          while (updated.length < totalFrames) {
-                            const newLayer = createLayer('Layer 1', canvasSize);
-                            updated.push({
-                              id: nanoid(),
-                              name: `Frame ${updated.length + 1}`,
-                              layers: [newLayer],
-                              activeLayerId: newLayer.id,
-                            });
-                          }
-                          return updated;
-                        });
-                      }
-                    }}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              )}
-
               {/* ──────────────── PHOTOSHOP-STYLE UNIFORM TRANSFORM SCALED STORYBOARD PAPER SHEET ──────────────── */}
               <div 
                 style={{ 
@@ -1225,8 +1189,52 @@ export default function PaintPage() {
                   transform: `scale(${zoom})`, 
                   transformOrigin: '0 0' 
                 }} 
-                className="relative z-10 flex flex-col items-center shadow-2xl rounded-2xl overflow-hidden bg-white border-2 border-slate-300 transition-none"
+                className={cn(
+                  "relative z-10 flex flex-col items-center shadow-2xl rounded-2xl overflow-hidden border-2 border-slate-300 transition-none",
+                  isPinnedToCanvas && activeReferenceVideo ? "bg-black" : "bg-white"
+                )}
               >
+                {/* Pinned Tracing Reference Video Overlay (rendered behind drawing canvas) */}
+                {isPinnedToCanvas && activeReferenceVideo && (
+                  <div 
+                    className="absolute top-0 left-0 pointer-events-none z-0 overflow-hidden flex items-center justify-center bg-black"
+                    style={{ 
+                      width: canvasSize.width, 
+                      height: canvasSize.height,
+                      opacity: tracingOpacity 
+                    }}
+                  >
+                    <video
+                      ref={canvasBgVideoRef}
+                      src={activeReferenceVideo.videoUrl}
+                      muted
+                      playsInline
+                      autoPlay
+                      loop
+                      onLoadedMetadata={(e) => {
+                        const vid = e.currentTarget;
+                        if (vid && vid.duration && vid.duration > 0) {
+                          const totalFrames = Math.max(24, Math.round(vid.duration * fps));
+                          setFrames((prev) => {
+                            if (prev.length >= totalFrames) return prev;
+                            const updated = [...prev];
+                            while (updated.length < totalFrames) {
+                              const newLayer = createLayer('Layer 1', canvasSize);
+                              updated.push({
+                                id: nanoid(),
+                                name: `Frame ${updated.length + 1}`,
+                                layers: [newLayer],
+                                activeLayerId: newLayer.id,
+                              });
+                            }
+                            return updated;
+                          });
+                        }
+                      }}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
                 <PaintCanvas
                   layers={layers}
                   activeLayerId={activeLayerId}

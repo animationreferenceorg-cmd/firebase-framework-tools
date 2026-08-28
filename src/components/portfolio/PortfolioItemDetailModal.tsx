@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Eye, Heart, Layers, Sparkles, Trash2, Calendar, Share2, Wrench, ArrowLeft } from 'lucide-react';
 import type { PortfolioItem, WipStage } from '@/lib/types';
-import { toggleLikePortfolioItem, deletePortfolioItem } from '@/lib/portfolio-service';
+import { toggleLikePortfolioItem, deletePortfolioItem, incrementPortfolioItemViews } from '@/lib/portfolio-service';
 import { isArtistFollowed, toggleFollowArtist } from '@/lib/following-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -46,10 +46,20 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
   const { toast } = useToast();
   const [isLiking, setIsLiking] = useState(false);
   const [likesCount, setLikesCount] = useState(item?.likesCount || 0);
+  const [viewsCount, setViewsCount] = useState(item?.viewsCount || 0);
   const [isLiked, setIsLiked] = useState(
     currentUserId && item?.likedBy ? item.likedBy.includes(currentUserId) : false
   );
   const [isDeleting, setIsDeleting] = useState(false);
+
+  React.useEffect(() => {
+    if (open && item?.id) {
+      setLikesCount(item.likesCount || 0);
+      setViewsCount((item.viewsCount || 0) + 1);
+      setIsLiked(currentUserId && item.likedBy ? item.likedBy.includes(currentUserId) : false);
+      incrementPortfolioItemViews(item.id);
+    }
+  }, [open, item?.id, currentUserId]);
 
   if (!item) return null;
 
@@ -223,11 +233,11 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
                   </div>
 
                   {/* Likes & Views Buttons */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-zinc-300 font-semibold">
-                      <Eye className="h-4 w-4 text-zinc-400" />
-                      <span>{item.viewsCount || 0} views</span>
-                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-zinc-300 font-semibold">
+                        <Eye className="h-4 w-4 text-zinc-400" />
+                        <span>{viewsCount} views</span>
+                      </div>
 
                     <Button
                       size="default"

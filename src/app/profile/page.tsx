@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { auth, db, isFirebaseConfigured } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { getSnapshotVideos } from '@/lib/videoSnapshot';
-import { getUserPortfolioItems, getDatabaseVideosAsPortfolioItems, updateUserProfileData, deletePortfolioItem } from '@/lib/portfolio-service';
+import { getUserPortfolioItems, getDatabaseVideosAsPortfolioItems, updateUserProfileData, deletePortfolioItem, toggleLikePortfolioItem } from '@/lib/portfolio-service';
 import type { PortfolioItem, WipStage, Video } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { VideoCard } from '@/components/VideoCard';
@@ -343,6 +343,31 @@ export default function ProfilePage() {
         await deletePortfolioItem(itemId, authUser.uid);
       }
       toast({ title: 'Post Deleted', description: 'Item has been removed from your portfolio.' });
+    }
+  };
+
+  const handleLikeItem = async (targetItem: PortfolioItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!authUser) {
+      toast({ title: 'Sign in required', description: 'Please sign in to like items.', variant: 'destructive' });
+      return;
+    }
+    try {
+      const res = await toggleLikePortfolioItem(targetItem.id, authUser.uid);
+      setPortfolioItems((prev) =>
+        prev.map((i) => {
+          if (i.id === targetItem.id) {
+            const likedBy = i.likedBy || [];
+            const updatedLikedBy = res.isLiked
+              ? [...likedBy.filter((id) => id !== authUser.uid), authUser.uid]
+              : likedBy.filter((id) => id !== authUser.uid);
+            return { ...i, likesCount: res.count, likedBy: updatedLikedBy };
+          }
+          return i;
+        })
+      );
+    } catch (error: any) {
+      console.error("Error toggling like:", error);
     }
   };
 
@@ -742,6 +767,7 @@ export default function ProfilePage() {
                         setIsEditOpen(true);
                       }}
                       onDelete={(e) => handleItemDeleted(item.id, e)}
+                      onLike={(e) => handleLikeItem(item, e)}
                       currentUserId={authUser?.uid}
                       isReordering={isReordering}
                       onMoveUp={() => handleMoveItem(index, 'up')}

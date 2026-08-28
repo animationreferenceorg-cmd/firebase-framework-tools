@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { getUserProfileByUsernameOrId } from '@/lib/firestore';
-import { getUserPortfolioItems, deletePortfolioItem } from '@/lib/portfolio-service';
+import { getUserPortfolioItems, deletePortfolioItem, toggleLikePortfolioItem } from '@/lib/portfolio-service';
 import type { UserProfile, PortfolioItem, WipStage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -175,6 +175,32 @@ export default function UsernamePublicProfilePage() {
         await deletePortfolioItem(itemId, auth.currentUser.uid);
       }
       toast({ title: 'Post Deleted', description: 'Item has been removed.' });
+    }
+  };
+
+  const handleLikeItem = async (targetItem: PortfolioItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const currentUid = auth.currentUser?.uid;
+    if (!currentUid) {
+      toast({ title: 'Sign in required', description: 'Please sign in to like items.', variant: 'destructive' });
+      return;
+    }
+    try {
+      const res = await toggleLikePortfolioItem(targetItem.id, currentUid);
+      setItems((prev) =>
+        prev.map((i) => {
+          if (i.id === targetItem.id) {
+            const likedBy = i.likedBy || [];
+            const updatedLikedBy = res.isLiked
+              ? [...likedBy.filter((id) => id !== currentUid), currentUid]
+              : likedBy.filter((id) => id !== currentUid);
+            return { ...i, likesCount: res.count, likedBy: updatedLikedBy };
+          }
+          return i;
+        })
+      );
+    } catch (error: any) {
+      console.error("Error toggling like:", error);
     }
   };
 
@@ -411,10 +437,12 @@ export default function UsernamePublicProfilePage() {
                 <PortfolioItemCard
                   key={item.id}
                   item={item}
+                  currentUserId={auth.currentUser?.uid}
                   onClick={() => {
                     setSelectedItem(item);
                     setIsDetailOpen(true);
                   }}
+                  onLike={(e) => handleLikeItem(item, e)}
                   onEdit={auth.currentUser && (auth.currentUser.uid === item.userId || auth.currentUser.uid === profile?.uid) ? (e) => {
                     e.stopPropagation();
                     setEditingItem(item);

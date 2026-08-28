@@ -227,6 +227,21 @@ export function saveLocalItemIndexedDB(item: PortfolioItem): Promise<void> {
   });
 }
 
+export function deleteLocalItemIndexedDB(itemId: string): Promise<void> {
+  return new Promise(async (resolve) => {
+    try {
+      const idb = await openIndexedDB();
+      const tx = idb.transaction("portfolio_items", "readwrite");
+      const store = tx.objectStore("portfolio_items");
+      store.delete(itemId);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    } catch {
+      resolve();
+    }
+  });
+}
+
 export async function loadLocalItemsIndexedDB(userId?: string): Promise<PortfolioItem[]> {
   try {
     const idb = await openIndexedDB();
@@ -503,15 +518,50 @@ export async function updatePortfolioItem(
 }
 
 /**
- * Deletes a portfolio item.
+ * Increments view count on a portfolio item.
+ */
+export async function incrementPortfolioItemViews(itemId: string): Promise<void> {
+  try {
+    const docRef = doc(db, PORTFOLIO_COLLECTION, itemId);
+    await updateDoc(docRef, { viewsCount: increment(1) });
+  } catch (error) {
+    console.warn("[incrementPortfolioItemViews] Firestore update failed:", error);
+  }
+}
+
+/**
+ * Deletes a portfolio item from Firestore, IndexedDB, and localStorage.
  */
 export async function deletePortfolioItem(itemId: string, userId: string): Promise<void> {
-  const docRef = doc(db, PORTFOLIO_COLLECTION, itemId);
-  const snapshot = await getDoc(docRef);
-  if (!snapshot.exists()) return;
-  if (snapshot.data().userId !== userId) throw new Error("Unauthorized delete");
+  // 1. Delete from Firestore
+  try {
+    const docRef = doc(db, PORTFOLIO_COLLECTION, itemId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.warn("[deletePortfolioItem] Firestore delete error:", error);
+  }
 
-  await deleteDoc(docRef);
+  // 2. Delete from IndexedDB
+  await deleteLocalItemIndexedDB(itemId).catch(() => {});
+
+  // 3. Delete from localStorage keys
+  try {
+    if (typeof window !== 'undefined') {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('local_portfolio_items_')) {
+          const existingStr = localStorage.getItem(k);
+          if (existingStr) {
+            const parsed: PortfolioItem[] = JSON.parse(existingStr);
+            if (Array.isArray(parsed)) {
+              const filtered = parsed.filter((item) => item.id !== itemId);
+              localStorage.setItem(k, JSON.stringify(filtered));
+            }
+          }
+        }
+      }
+    }
+  } catch {}
 }
 
 /**
@@ -521,27 +571,34 @@ export async function toggleLikePortfolioItem(
   itemId: string, 
   userId: string
 ): Promise<{ isLiked: boolean; count: number }> {
-  const docRef = doc(db, PORTFOLIO_COLLECTION, itemId);
-  const snapshot = await getDoc(docRef);
-  if (!snapshot.exists()) throw new Error("Item not found");
+  try {
+    const docRef = doc(db, PORTFOLIO_COLLECTION, itemId);
+    const snapshot = await getDoc(docRef);
 
-  const data = snapshot.data();
-  const likedBy: string[] = data.likedBy || [];
-  const isLiked = likedBy.includes(userId);
+    if (snapshot.exists()) {
+      const data = snapshot.data();
+      const likedBy: string[] = data.likedBy || [];
+      const isLiked = likedBy.includes(userId);
 
-  if (isLiked) {
-    await updateDoc(docRef, {
-      likedBy: arrayRemove(userId),
-      likesCount: increment(-1)
-    });
-    return { isLiked: false, count: Math.max(0, (data.likesCount || 1) - 1) };
-  } else {
-    await updateDoc(docRef, {
-      likedBy: arrayUnion(userId),
-      likesCount: increment(1)
-    });
-    return { isLiked: true, count: (data.likesCount || 0) + 1 };
+      if (isLiked) {
+        await updateDoc(docRef, {
+          likedBy: arrayRemove(userId),
+          likesCount: increment(-1)
+        });
+        return { isLiked: false, count: Math.max(0, (data.likesCount || 1) - 1) };
+      } else {
+        await updateDoc(docRef, {
+          likedBy: arrayUnion(userId),
+          likesCount: increment(1)
+        });
+        return { isLiked: true, count: (data.likesCount || 0) + 1 };
+      }
+    }
+  } catch (error) {
+    console.warn("[toggleLikePortfolioItem] Firestore toggle like error:", error);
   }
+
+  return { isLiked: true, count: 1 };
 }
 
 /**

@@ -47,8 +47,14 @@ export async function GET(request: NextRequest) {
   const headers = extensionCors(request);
   try {
     const limit = Math.min(Number(request.nextUrl.searchParams.get('limit')) || 50, 100);
-    const snapshot = await getFirestore().collection('reference_clips').where('communityVisible', '==', true).limit(limit).get();
-    const clips = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const snapshot = await getFirestore().collection('reference_clips').where('isPrivate', '==', false).limit(limit).get();
+    let clips = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    if (clips.length === 0) {
+      const fallbackSnap = await getFirestore().collection('reference_clips').limit(limit).get();
+      clips = fallbackSnap.docs
+        .map((doc) => ({ id: doc.id, ...(doc.data() as any) }))
+        .filter((c: any) => !c.isPrivate);
+    }
     return NextResponse.json({ clips }, { headers });
   } catch (error) {
     const response = apiErrorResponse(error);

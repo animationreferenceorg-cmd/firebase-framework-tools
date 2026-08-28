@@ -97,8 +97,19 @@ export async function getReferenceClip(clipId: string): Promise<ReferenceClip | 
 }
 
 export async function getPublicReferenceClips(max = 60): Promise<ReferenceClip[]> {
-  const snaps = await getDocs(query(collection(db, CLIPS), where('communityVisible', '==', true), limit(max)));
-  return newestFirst(snaps.docs.map((item) => withId<ReferenceClip>(item)).filter((clip) => !clip.removedFromCreatorAt));
+  try {
+    const snaps = await getDocs(query(collection(db, CLIPS), where('isPrivate', '==', false), limit(max)));
+    let clips = snaps.docs.map((item) => withId<ReferenceClip>(item)).filter((clip) => !clip.removedFromCreatorAt);
+    if (clips.length === 0) {
+      const allSnaps = await getDocs(query(collection(db, CLIPS), limit(max)));
+      clips = allSnaps.docs
+        .map((item) => withId<ReferenceClip>(item))
+        .filter((clip) => !clip.isPrivate && !clip.removedFromCreatorAt);
+    }
+    return newestFirst(clips);
+  } catch {
+    return [];
+  }
 }
 
 export async function getUserReferenceClips(creatorId: string, includePrivate = false): Promise<ReferenceClip[]> {

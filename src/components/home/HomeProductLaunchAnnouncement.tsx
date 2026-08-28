@@ -86,6 +86,7 @@ export function HomeProductLaunchAnnouncement() {
                   src={launch.image}
                   alt={`${launch.title} workspace preview`}
                   fill
+                  unoptimized
                   sizes="(min-width: 1024px) 33vw, 100vw"
                   className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
                 />

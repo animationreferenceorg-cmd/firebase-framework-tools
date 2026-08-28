@@ -1,22 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
   async redirects() {
     return [
       // Main Hub & References Redirects
       {
         source: '/signup',
         destination: '/login?tab=sign-up',
-        permanent: true,
-      },
-      {
-        source: '/references',
-        destination: '/categories',
-        permanent: true,
-      },
-      {
-        source: '/references/',
-        destination: '/categories',
         permanent: true,
       },
       {

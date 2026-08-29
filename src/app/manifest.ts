@@ -11,27 +11,27 @@ export default function manifest(): MetadataRoute.Manifest {
     display: 'standalone',
     background_color: '#09090b',
     theme_color: '#9333ea',
-    // Both entries previously pointed at /icon.png, which is a single 1024x1024
-    // file — so neither declared size matched the real image. Chrome checks the
-    // decoded dimensions when deciding installability, so these are now real
-    // 192 and 512 renders. The maskable copy keeps the Android launcher icon
-    // from being letterboxed inside a white circle.
+    // These entries used to claim /icon.png was both 192x192 and 512x512, but
+    // it is a single 1024x1024 image, so neither declaration matched what
+    // Chrome actually decodes. The size below is the real one — 1024 clears
+    // both the 192 minimum for installability and the 512 wanted for the
+    // splash screen.
+    //
+    // Deliberately NOT /public: next.config sets output:'standalone', which
+    // does not copy public/ into the server bundle, so every file under
+    // public/ currently 404s in production and falls through to the [username]
+    // route as HTML. src/app/icon.png is bundled and verified serving as a
+    // real image/png.
     icons: [
       {
-        src: '/icon-192.png',
-        sizes: '192x192',
+        src: '/icon.png',
+        sizes: '1024x1024',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/icon-512.png',
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'any',
-      },
-      {
-        src: '/icon-512.png',
-        sizes: '512x512',
+        src: '/icon.png',
+        sizes: '1024x1024',
         type: 'image/png',
         purpose: 'maskable',
       },

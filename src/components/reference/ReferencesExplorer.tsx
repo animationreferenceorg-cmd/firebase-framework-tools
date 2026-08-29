@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Chrome, Scissors, Search, Smartphone, Sparkles, Filter } from 'lucide-react';
+import { Chrome, Search, Smartphone, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { getPublicReferenceClips } from '@/lib/reference-service';
 import type { ReferenceClip } from '@/lib/types';
@@ -11,6 +11,7 @@ import { DirectUploadDialog } from './DirectUploadDialog';
 import { MobileInstallDialog } from './MobileInstallDialog';
 import { ExtensionInfoDialog } from './ExtensionInfoDialog';
 import { Button } from '@/components/ui/button';
+import { isMobileInstallCandidate } from '@/lib/pwa';
 
 const CATEGORIES = [
   'All',
@@ -41,7 +42,7 @@ export function ReferencesExplorer() {
 
   useEffect(() => {
     loadClips();
-    setIsMobileDevice(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+    setIsMobileDevice(isMobileInstallCandidate());
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {

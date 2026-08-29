@@ -23,22 +23,17 @@ import { FeedbackModal } from '@/components/FeedbackModal';
 import { UpdatesModal } from '@/components/UpdatesModal';
 import { UserFeedbackPanel } from '@/components/UserFeedbackPanel';
 import { MobileInstallDialog } from '@/components/reference/MobileInstallDialog';
+import { isAppInstalled, isMobileInstallCandidate } from '@/lib/pwa';
 
 import { WatchTrackerProvider } from '@/hooks/use-watch-tracker';
 
 export function LayoutClient({ children }: { children: React.ReactNode }) {
-    const { userProfile, loading: userProfileLoading } = useUser();
-    const { user, loading: authLoading } = useAuth();
+    const { userProfile } = useUser();
+    const { user } = useAuth();
     const { storage } = useFirebase();
     const { toast } = useToast();
     const [uploading, setUploading] = useState(false);
     const pathname = usePathname();
-    const [isClient, setIsClient] = useState(false);
-
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
-
     const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !user || !storage) return;
@@ -59,8 +54,6 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const loading = authLoading || userProfileLoading;
-
     const isAdminPage = pathname.startsWith('/admin');
     const isComingSoon = pathname === '/';
     const isPaintPage = pathname.startsWith('/paint');
@@ -76,10 +69,6 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                 </UploadProvider>
             </WatchTrackerProvider>
         );
-    }
-
-    if (!isClient) {
-        return null;
     }
 
     const isAdmin = userProfile?.role === 'admin';
@@ -286,23 +275,53 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     )
 }
 
+const INSTALL_PROMPT_DISMISSED_AT = 'animref:pwa-install-prompt-dismissed-at';
+const INSTALL_PROMPT_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
+
 function MobileInstallAfterLogin() {
+    const pathname = usePathname();
     const [showPrompt, setShowPrompt] = useState(false);
 
     useEffect(() => {
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(() => {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {
                 // The install instructions remain available if registration fails.
             });
         }
-        const shouldPrompt = sessionStorage.getItem('showMobileInstallPrompt') === '1';
-        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        const isInstalled = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-        if (shouldPrompt) sessionStorage.removeItem('showMobileInstallPrompt');
-        if (shouldPrompt && isMobile && !isInstalled) setShowPrompt(true);
-    }, []);
 
-    return showPrompt ? <MobileInstallDialog defaultOpen /> : null;
+        if (!isMobileInstallCandidate() || isAppInstalled()) return;
+
+        let requestedAfterLogin = false;
+        let recentlyDismissed = false;
+        try {
+            requestedAfterLogin = sessionStorage.getItem('showMobileInstallPrompt') === '1';
+            if (requestedAfterLogin) sessionStorage.removeItem('showMobileInstallPrompt');
+
+            const dismissedAt = Number(localStorage.getItem(INSTALL_PROMPT_DISMISSED_AT) || 0);
+            recentlyDismissed = dismissedAt > 0 && Date.now() - dismissedAt < INSTALL_PROMPT_COOLDOWN_MS;
+        } catch {
+            // Some privacy modes block browser storage. The prompt can still work.
+        }
+
+        const shouldPrompt = requestedAfterLogin || (pathname.startsWith('/references') && !recentlyDismissed);
+        if (!shouldPrompt) return;
+
+        const timer = window.setTimeout(() => setShowPrompt(true), 700);
+        return () => window.clearTimeout(timer);
+    }, [pathname]);
+
+    const handleOpenChange = (open: boolean) => {
+        setShowPrompt(open);
+        if (!open) {
+            try {
+                localStorage.setItem(INSTALL_PROMPT_DISMISSED_AT, String(Date.now()));
+            } catch {
+                // Closing the dialog should always work, even when storage is blocked.
+            }
+        }
+    };
+
+    return showPrompt ? <MobileInstallDialog defaultOpen onOpenChange={handleOpenChange} /> : null;
 }
 
 function SimulateTierButton({ tier, label, fullWidth }: { tier: string, label: string, fullWidth?: boolean }) {

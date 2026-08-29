@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, Chrome, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -8,13 +8,21 @@ import { Button } from '@/components/ui/button';
 import { auth } from '@/lib/firebase';
 
 export default function ExtensionConnectPage() {
+  return (
+    <Suspense fallback={<ConnectShell><Loader2 className="h-8 w-8 animate-spin text-purple-400" /></ConnectShell>}>
+      <ExtensionConnectContent />
+    </Suspense>
+  );
+}
+
+function ExtensionConnectContent() {
   const params = useSearchParams();
   const { user, loading } = useAuth();
   const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const extensionId = params.get('extension_id') || '';
 
-  const attemptConnect = async () => {
+  const attemptConnect = useCallback(async () => {
     if (!user || !extensionId) return;
     setStatus('connecting');
     setErrorMessage('');
@@ -49,13 +57,13 @@ export default function ExtensionConnectPage() {
       setErrorMessage(err.message || 'Connection failed.');
       setStatus('error');
     }
-  };
+  }, [extensionId, user]);
 
   useEffect(() => {
     if (user && extensionId && status === 'idle') {
       attemptConnect();
     }
-  }, [user, extensionId, status]);
+  }, [user, extensionId, status, attemptConnect]);
 
   useEffect(() => {
     if (!loading && !user && extensionId) {

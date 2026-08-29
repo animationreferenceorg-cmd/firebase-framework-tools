@@ -1,31 +1,56 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Download, Share2, Smartphone, Sparkles, Check, Clipboard } from 'lucide-react';
+import { Check, Clipboard, Download, Share2, Smartphone } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { isAppInstalled } from '@/lib/pwa';
 
-export function MobileInstallDialog({ children, defaultOpen = false }: { children?: React.ReactNode; defaultOpen?: boolean }) {
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
+
+export function MobileInstallDialog({
+  children,
+  defaultOpen = false,
+  onOpenChange,
+}: {
+  children?: React.ReactNode;
+  defaultOpen?: boolean;
+  onOpenChange?(open: boolean): void;
+}) {
   const { toast } = useToast();
   const [open, setOpen] = useState(defaultOpen);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
     // Check if app is already installed/running in standalone mode
-    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
-      setIsStandalone(true);
-    }
+    setIsStandalone(isAppInstalled());
 
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+    const handleInstalled = () => {
+      setDeferredPrompt(null);
+      setIsStandalone(true);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    window.addEventListener('appinstalled', handleInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('appinstalled', handleInstalled);
+    };
   }, []);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
@@ -35,7 +60,7 @@ export function MobileInstallDialog({ children, defaultOpen = false }: { childre
       });
       return;
     }
-    deferredPrompt.prompt();
+    await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
       toast({ title: 'App installed!', description: 'Animation Reference is now on your home screen.' });
@@ -57,7 +82,7 @@ export function MobileInstallDialog({ children, defaultOpen = false }: { childre
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {children || (
           <Button variant="outline" className="border-white/10 bg-black/40 hover:bg-purple-950/40 text-purple-300">
@@ -66,7 +91,7 @@ export function MobileInstallDialog({ children, defaultOpen = false }: { childre
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="border-white/10 bg-zinc-950 text-white sm:max-w-md">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border-white/10 bg-zinc-950 text-white sm:max-w-md">
         <DialogHeader>
           <div className="mx-auto mb-2 grid h-12 w-12 place-items-center rounded-2xl bg-purple-500/10 text-purple-400">
             <Smartphone className="h-6 w-6" />
@@ -79,10 +104,10 @@ export function MobileInstallDialog({ children, defaultOpen = false }: { childre
 
         <div className="space-y-4 pt-2">
           {/* Native Install Button if supported */}
-          {deferredPrompt && (
+          {!isStandalone && (
             <Button onClick={handleInstallClick} className="w-full bg-purple-600 hover:bg-purple-500 py-5 font-bold shadow-lg shadow-purple-950/50">
               <Download className="mr-2 h-5 w-5" />
-              Install Web App Now
+              {deferredPrompt ? 'Install Web App Now' : 'Add App to Home Screen'}
             </Button>
           )}
 

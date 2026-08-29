@@ -16,7 +16,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
-import { SlidersHorizontal, Settings2 } from 'lucide-react'; // Import Icon
+import { Settings2 } from 'lucide-react';
 
 export type TabOption = 'featured' | 'community' | 'trending' | 'latest';
 export type TypeOption = 'all' | '2D' | '3D';
@@ -46,16 +46,17 @@ interface FilterBarProps {
 
 export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, columns, setColumns, activePill = 'all', setActivePill }: FilterBarProps) {
     return (
-        <div className="space-y-4 py-4">
+        <div className="min-w-0 space-y-3 py-3 sm:space-y-4 sm:py-4">
             {/* Top Row: Dribbble-style Quick Filter Pills */}
             {setActivePill && (
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none no-scrollbar snap-x">
+                <div className="-mx-1 flex touch-pan-x items-center gap-2 overflow-x-auto px-1 pb-2 scrollbar-none no-scrollbar snap-x scroll-px-1">
                     {QUICK_FILTER_PILLS.map((pill) => {
                         const isSelected = activePill === pill.id;
                         return (
                             <button
                                 key={pill.id}
                                 onClick={() => setActivePill(pill.id)}
+                                aria-pressed={isSelected}
                                 className={cn(
                                     "px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 snap-start border cursor-pointer flex items-center gap-1.5 select-none",
                                     isSelected
@@ -71,13 +72,14 @@ export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, 
             )}
 
             {/* Sub Row: Tabs and Controls */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2">
+            <div className="flex min-w-0 flex-col justify-between gap-3 pt-1 sm:pt-2 md:flex-row md:items-center md:gap-4">
             {/* Left Tabs */}
-            <div className="flex items-center gap-8">
+            <div className="-mx-1 flex w-[calc(100%+0.5rem)] touch-pan-x items-center gap-6 overflow-x-auto px-1 pb-3 scrollbar-none no-scrollbar md:mx-0 md:w-auto md:gap-8 md:overflow-visible md:px-0 md:pb-0">
                 <button
                     onClick={() => setActiveTab('featured')}
+                    aria-pressed={activeTab === 'featured'}
                     className={cn(
-                        "text-sm font-semibold transition-colors relative",
+                        "relative min-h-10 shrink-0 py-2 text-sm font-semibold transition-colors md:min-h-0 md:py-0",
                         activeTab === 'featured' ? "text-purple-400" : "text-zinc-500 hover:text-zinc-300"
                     )}
                 >
@@ -88,8 +90,9 @@ export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, 
                 </button>
                 <button
                     onClick={() => setActiveTab('community')}
+                    aria-pressed={activeTab === 'community'}
                     className={cn(
-                        "text-sm font-semibold transition-colors relative",
+                        "relative min-h-10 shrink-0 py-2 text-sm font-semibold transition-colors md:min-h-0 md:py-0",
                         activeTab === 'community' ? "text-white" : "text-zinc-500 hover:text-zinc-300"
                     )}
                 >
@@ -100,8 +103,9 @@ export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, 
                 </button>
                 <button
                     onClick={() => setActiveTab('trending')}
+                    aria-pressed={activeTab === 'trending'}
                     className={cn(
-                        "text-sm font-semibold transition-colors relative",
+                        "relative min-h-10 shrink-0 py-2 text-sm font-semibold transition-colors md:min-h-0 md:py-0",
                         activeTab === 'trending' ? "text-cyan-400" : "text-zinc-500 hover:text-zinc-300"
                     )}
                 >
@@ -112,8 +116,9 @@ export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, 
                 </button>
                 <button
                     onClick={() => setActiveTab('latest')}
+                    aria-pressed={activeTab === 'latest'}
                     className={cn(
-                        "text-sm font-semibold transition-colors relative",
+                        "relative min-h-10 shrink-0 py-2 text-sm font-semibold transition-colors md:min-h-0 md:py-0",
                         activeTab === 'latest' ? "text-white" : "text-zinc-500 hover:text-zinc-300"
                     )}
                 >
@@ -125,7 +130,7 @@ export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, 
             </div>
 
             {/* Right Filters */}
-            <div className="flex items-center gap-3">
+            <div className="-mx-1 flex w-[calc(100%+0.5rem)] touch-pan-x items-center gap-2 overflow-x-auto px-1 pb-1 scrollbar-none no-scrollbar md:mx-0 md:w-auto md:gap-3 md:overflow-visible md:px-0 md:pb-0">
                 {/* Grid Size Control (Desktop Only) */}
                 {setColumns && (
                     <Popover>
@@ -160,13 +165,13 @@ export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, 
                 )}
 
                 {/* 2D/3D Segmented Control */}
-                <div className="flex p-1 bg-zinc-900/80 rounded-lg border border-white/5">
+                <div className="flex shrink-0 rounded-lg border border-white/5 bg-zinc-900/80 p-1">
                     {(['all', '2D', '3D'] as TypeOption[]).map((type) => (
                         <button
                             key={type}
                             onClick={() => setActiveType(type)}
                             className={cn(
-                                "px-4 py-1.5 rounded-md text-xs font-semibold transition-all",
+                                "min-h-9 rounded-md px-3 py-1.5 text-xs font-semibold transition-all sm:px-4",
                                 activeType === type
                                     ? "bg-cyan-500 text-black shadow-lg shadow-cyan-500/20"
                                     : "text-zinc-400 hover:text-zinc-200"
@@ -180,7 +185,7 @@ export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, 
                 {/* Media Type Dropdown */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="bg-zinc-900 border-white/5 text-zinc-300 hover:bg-zinc-800 hover:text-white h-9 px-4 text-xs font-medium">
+                        <Button variant="outline" size="sm" className="h-10 shrink-0 border-white/5 bg-zinc-900 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white sm:h-9 sm:px-4">
                             All Media <ChevronDown className="ml-2 h-3 w-3" />
                         </Button>
                     </DropdownMenuTrigger>

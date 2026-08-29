@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import type { PortfolioItem, WipStage } from '@/lib/types';
+import type { PortfolioItem } from '@/lib/types';
 import { getPublicPortfolioItems, toggleLikePortfolioItem } from '@/lib/portfolio-service';
 import { saveVideo, unsaveVideo } from '@/lib/firestore';
 import { PortfolioItemCard } from '@/components/portfolio/PortfolioItemCard';
@@ -15,15 +15,11 @@ import {
   Sparkles, 
   Users, 
   Plus, 
-  Film,
   AlertCircle,
   UploadCloud,
-  CheckCircle2,
   ArrowRight,
   UserCheck,
   Zap,
-  Eye,
-  Heart,
   Layers
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -191,10 +187,10 @@ export default function CommunityFeedPage() {
   }, [hasMore, filteredItems.length]);
 
   return (
-    <div className="min-h-screen text-foreground space-y-10 pb-20 pt-2 text-left">
+    <div className="min-h-screen min-w-0 space-y-6 pb-16 pt-1 text-left text-foreground sm:space-y-10 sm:pb-20 sm:pt-2">
       {/* 1. Page Header */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 px-1">
-        <div className="space-y-1.5 max-w-2xl">
+      <div className="flex min-w-0 flex-col items-start justify-between gap-4 px-0.5 sm:px-1 md:flex-row md:items-center md:gap-6">
+        <div className="min-w-0 max-w-2xl space-y-1.5">
           <div className="flex items-center gap-2">
             <span className="px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1.5 shadow-sm">
               <Users className="w-3.5 h-3.5 text-purple-400" />
@@ -202,7 +198,7 @@ export default function CommunityFeedPage() {
             </span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
+          <h1 className="text-3xl font-black leading-tight tracking-tight text-white sm:text-4xl md:text-5xl">
             Community Submissions
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 font-medium leading-relaxed">
@@ -210,23 +206,23 @@ export default function CommunityFeedPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex w-full items-center gap-3 md:w-auto">
           <Button 
             onClick={handleOpenUploadModal}
-            className="h-11 px-6 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-500 to-rose-600 hover:from-purple-500 hover:to-rose-500 text-white font-bold text-xs shadow-xl shadow-purple-950/60 flex items-center gap-2 hover:scale-105 transition-all w-full md:w-auto justify-center"
+            className="h-12 w-full justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-500 to-rose-600 px-5 text-xs font-bold text-white shadow-xl shadow-purple-950/60 transition-all hover:from-purple-500 hover:to-rose-500 md:h-11 md:w-auto md:px-6 md:hover:scale-105"
           >
             <Plus className="w-4 h-4" />
-            <span>+ Submit Work to Portfolio</span>
+            <span>Submit Work to Portfolio</span>
           </Button>
         </div>
       </div>
 
       {/* 2. Hero Call-To-Action: Promote Portfolio Uploads */}
-      <div className="relative overflow-hidden rounded-3xl border border-purple-500/30 bg-gradient-to-br from-purple-950/60 via-zinc-950 to-black p-6 sm:p-10 shadow-2xl">
+      <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-950/60 via-zinc-950 to-black p-5 shadow-2xl sm:rounded-3xl sm:p-10">
         <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-purple-600/15 blur-[100px] rounded-full pointer-events-none" />
         
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
-          <div className="space-y-4 max-w-2xl">
+        <div className="relative z-10 flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center lg:gap-8">
+          <div className="min-w-0 max-w-2xl space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-bold">
               <Sparkles className="w-3.5 h-3.5 text-purple-400" />
               <span>Built for Animators</span>
@@ -243,27 +239,27 @@ export default function CommunityFeedPage() {
               Showcase your blocking passes, splining iterations, and final polish reels. Get peer feedback, tag your rigs & software, and let studios discover your work.
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-xs text-zinc-300 font-semibold">
+            <div className="grid grid-cols-3 gap-2 pt-2 sm:gap-3">
+              <div className="flex min-w-0 flex-col items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] p-2 text-center text-[10px] font-semibold leading-tight text-zinc-300 sm:flex-row sm:gap-2 sm:p-2.5 sm:text-left sm:text-xs">
                 <Layers className="w-4 h-4 text-purple-400 shrink-0" />
                 <span>Track WIP Stages</span>
               </div>
-              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-xs text-zinc-300 font-semibold">
+              <div className="flex min-w-0 flex-col items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] p-2 text-center text-[10px] font-semibold leading-tight text-zinc-300 sm:flex-row sm:gap-2 sm:p-2.5 sm:text-left sm:text-xs">
                 <Zap className="w-4 h-4 text-amber-400 shrink-0" />
                 <span>Auto Silent Previews</span>
               </div>
-              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-xs text-zinc-300 font-semibold">
+              <div className="flex min-w-0 flex-col items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] p-2 text-center text-[10px] font-semibold leading-tight text-zinc-300 sm:flex-row sm:gap-2 sm:p-2.5 sm:text-left sm:text-xs">
                 <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>Featured Profile</span>
               </div>
             </div>
           </div>
 
-          <div className="w-full lg:w-auto shrink-0 flex flex-col sm:flex-row lg:flex-col gap-3">
+          <div className="flex w-full shrink-0 flex-col gap-3 sm:flex-row lg:w-auto lg:flex-col">
             <Button 
               onClick={handleOpenUploadModal}
               size="lg"
-              className="h-14 px-8 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-black text-sm shadow-[0_0_30px_rgba(168,85,247,0.4)] hover:shadow-[0_0_40px_rgba(168,85,247,0.6)] transition-all hover:scale-105 flex items-center justify-center gap-2"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-purple-600 px-6 text-sm font-black text-white shadow-[0_0_30px_rgba(168,85,247,0.4)] transition-all hover:bg-purple-500 hover:shadow-[0_0_40px_rgba(168,85,247,0.6)] sm:h-14 sm:px-8 lg:w-auto lg:hover:scale-105"
             >
               <UploadCloud className="w-5 h-5" />
               <span>Start Submitting Shots</span>
@@ -273,7 +269,7 @@ export default function CommunityFeedPage() {
               <Button 
                 variant="outline"
                 size="lg"
-                className="h-14 px-8 rounded-2xl bg-white/[0.05] border-white/15 hover:bg-white/10 text-white font-bold text-sm transition-all w-full flex items-center justify-center gap-2"
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border-white/15 bg-white/[0.05] px-6 text-sm font-bold text-white transition-all hover:bg-white/10 sm:h-14 sm:px-8"
               >
                 <span>View Portfolio Profile</span>
                 <ArrowRight className="w-4 h-4" />
@@ -284,14 +280,14 @@ export default function CommunityFeedPage() {
       </div>
 
       {/* 3. Community Submissions & WIP Passes Section */}
-      <section className="space-y-4 pt-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-1">
-          <div className="flex items-center gap-2">
+      <section className="min-w-0 space-y-3 pt-2 sm:space-y-4 sm:pt-4">
+        <div className="flex flex-col justify-between gap-3 px-0.5 sm:flex-row sm:items-center sm:gap-4 sm:px-1">
+          <div className="flex min-w-0 flex-wrap items-start gap-2 sm:items-center">
             <Sparkles className="w-4 h-4 text-purple-400" />
-            <h3 className="text-xl md:text-2xl font-black text-white tracking-tight">
+            <h3 className="min-w-0 flex-1 text-lg font-black leading-tight tracking-tight text-white sm:text-xl md:text-2xl">
               Community Submissions & WIP Passes
             </h3>
-            <Badge variant="outline" className="bg-purple-950/60 text-purple-300 border-purple-800/40 text-xs font-bold">
+            <Badge variant="outline" className="shrink-0 border-purple-800/40 bg-purple-950/60 text-xs font-bold text-purple-300">
               {filteredItems.length} Posts
             </Badge>
           </div>
@@ -337,7 +333,10 @@ export default function CommunityFeedPage() {
             </Button>
           </div>
         ) : (
-          <div className={`grid gap-4`} style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+          <div
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:[grid-template-columns:repeat(var(--community-columns),minmax(0,1fr))]"
+            style={{ '--community-columns': columns } as React.CSSProperties}
+          >
             {visibleItems.map((item) => (
               <PortfolioItemCard 
                 key={item.id} 

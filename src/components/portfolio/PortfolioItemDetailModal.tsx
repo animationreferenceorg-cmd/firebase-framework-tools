@@ -174,28 +174,28 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
         </Button>
 
         <div className="min-h-screen w-full relative">
-          <main className="container mx-auto px-4 pt-10 pb-16">
+          <main className="container mx-auto px-3 pb-12 pt-16 sm:px-4 sm:pb-16 sm:pt-10">
             <div className="max-w-6xl mx-auto space-y-6">
               
               {/* Top Back Navigation Bar */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <Button
                   variant="ghost"
                   onClick={() => onOpenChange(false)}
-                  className="rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md px-4 py-2 text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer"
+                  className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-white/10 p-0 text-sm font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/20 sm:h-auto sm:w-auto sm:px-4 sm:py-2"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  <span>Back to Profile</span>
+                  <span className="hidden sm:inline">Back to Profile</span>
                 </Button>
 
                 {/* Top Actions */}
                 <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={handleShare} className="h-9 border-white/10 text-zinc-300 hover:bg-white/10 rounded-full px-4 text-xs font-semibold cursor-pointer">
-                    <Share2 className="h-3.5 w-3.5 mr-1.5" /> Share Link
+                  <Button size="sm" variant="outline" onClick={handleShare} aria-label="Share this post" className="h-10 w-10 cursor-pointer rounded-full border-white/10 p-0 text-xs font-semibold text-zinc-300 hover:bg-white/10 sm:h-9 sm:w-auto sm:px-4">
+                    <Share2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Share Link</span>
                   </Button>
                   {isOwner && (
-                    <Button size="sm" variant="destructive" onClick={handleDelete} disabled={isDeleting} className="h-9 rounded-full px-4 text-xs font-semibold cursor-pointer">
-                      <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete Piece
+                    <Button size="sm" variant="destructive" onClick={handleDelete} disabled={isDeleting} aria-label="Delete this post" className="h-10 w-10 cursor-pointer rounded-full p-0 text-xs font-semibold sm:h-9 sm:w-auto sm:px-4">
+                      <Trash2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Delete Piece</span>
                     </Button>
                   )}
                 </div>
@@ -257,13 +257,13 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
                       )}
                     </div>
 
-                    <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-white drop-shadow-md">
+                    <h1 className="break-words text-2xl font-extrabold tracking-tight text-white drop-shadow-md sm:text-3xl md:text-5xl">
                       {item.title}
                     </h1>
                   </div>
 
                   {/* Likes & Views Buttons */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-zinc-300 font-semibold">
                         <Eye className="h-4 w-4 text-zinc-400" />
                         <span>{viewsCount} views</span>
@@ -274,7 +274,7 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
                       onClick={handleLike}
                       disabled={isLiking}
                       className={cn(
-                        "rounded-full px-5 gap-2 font-bold shadow-lg transition-all cursor-pointer",
+                        "cursor-pointer gap-2 rounded-full px-3 font-bold shadow-lg transition-all sm:px-5",
                         isLiked
                           ? "bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/30"
                           : "bg-white/10 hover:bg-rose-500/20 hover:text-rose-400 text-white border border-white/15"
@@ -290,7 +290,7 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
                       onClick={handleSave}
                       disabled={isSaving}
                       className={cn(
-                        "rounded-full px-5 gap-2 font-bold transition-all cursor-pointer",
+                        "cursor-pointer gap-2 rounded-full px-3 font-bold transition-all sm:px-5",
                         isSaved
                           ? "bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
                           : "bg-white/10 hover:bg-amber-500/20 hover:text-amber-300 text-white border border-white/15"
@@ -306,16 +306,16 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                   <div className="md:col-span-2 space-y-6">
                     {/* Author Card with Follow Button */}
-                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-                      <div className="flex items-center gap-4">
+                    <div className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md min-[420px]:flex-row min-[420px]:items-center">
+                      <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                         <Avatar className="h-12 w-12 border-2 border-primary/60 shadow-md">
                           <AvatarImage src={item.authorAvatar} alt={item.authorName} />
                           <AvatarFallback className="font-bold bg-primary text-white">
                             {item.authorName?.charAt(0).toUpperCase() || 'A'}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <h3 className="font-bold text-base text-white">{item.authorName}</h3>
+                        <div className="min-w-0">
+                          <h3 className="truncate text-base font-bold text-white">{item.authorName}</h3>
                           <p className="text-xs text-zinc-400 flex items-center gap-1 mt-0.5">
                             <Calendar className="h-3.5 w-3.5" />
                             Published {item.createdAt?.seconds ? new Date(item.createdAt.seconds * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : 'Recently'}
@@ -340,7 +340,7 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
                             });
                           }}
                           className={cn(
-                            "rounded-full px-4 text-xs font-bold gap-1.5 transition-all cursor-pointer",
+                            "min-h-10 cursor-pointer gap-1.5 rounded-full px-4 text-xs font-bold transition-all",
                             isArtistFollowed(currentUserId, item.userId)
                               ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
                               : "bg-primary hover:bg-primary/90 text-white shadow-lg shadow-purple-600/30"

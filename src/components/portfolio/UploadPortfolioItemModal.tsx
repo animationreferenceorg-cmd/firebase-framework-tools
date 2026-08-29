@@ -621,7 +621,7 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl w-[94vw] max-h-[92vh] overflow-y-auto bg-zinc-950/90 backdrop-blur-2xl border border-white/15 text-white rounded-3xl md:rounded-[32px] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.85)] ring-1 ring-purple-500/20">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-2xl overflow-y-auto rounded-2xl border border-white/15 bg-zinc-950/90 p-4 text-white shadow-[0_30px_90px_rgba(0,0,0,0.85)] ring-1 ring-purple-500/20 backdrop-blur-2xl sm:max-h-[92vh] sm:w-[94vw] sm:rounded-3xl sm:p-6 md:rounded-[32px]">
         
         {/* Instagram-style Top Story Segmented Progress Bar */}
         <div className="space-y-3 pb-3 border-b border-white/10">
@@ -650,14 +650,14 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
           </div>
 
           <DialogHeader className="p-0">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
+            <div className="flex items-start justify-between gap-3">
+              <DialogTitle className="flex min-w-0 items-start gap-2 pr-1 text-base font-bold leading-tight sm:items-center sm:text-xl">
+                <Sparkles className="h-5 w-5 shrink-0 text-primary" />
                 {currentStep === 1 && 'Step 1: Media & Cover Frame'}
                 {currentStep === 2 && 'Step 2: Placement & Details'}
                 {currentStep === 3 && 'Step 3: Hashtags & Software'}
               </DialogTitle>
-              <Badge variant="outline" className="bg-zinc-900 border-white/15 text-zinc-300 text-[11px] font-mono">
+              <Badge variant="outline" className="shrink-0 border-white/15 bg-zinc-900 text-[11px] font-mono text-zinc-300">
                 {currentStep} of 3
               </Badge>
             </div>
@@ -678,19 +678,19 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
               <div className="space-y-2">
                 <Label className="text-xs text-zinc-300 font-medium">Animation Media Source *</Label>
                 <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)}>
-                  <TabsList className="grid grid-cols-2 bg-zinc-900 border border-white/10 h-10">
-                    <TabsTrigger value="upload" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-white font-medium">
-                      <Upload className="h-4 w-4 mr-2" />
-                      File Upload (Video/GIF/Image)
+                  <TabsList className="grid h-11 grid-cols-2 border border-white/10 bg-zinc-900">
+                    <TabsTrigger value="upload" className="text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-white">
+                      <Upload className="mr-1.5 h-4 w-4 sm:mr-2" />
+                      <span className="sm:hidden">Upload File</span><span className="hidden sm:inline">File Upload (Video/GIF/Image)</span>
                     </TabsTrigger>
-                    <TabsTrigger value="url" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-white font-medium">
-                      <LinkIcon className="h-4 w-4 mr-2" />
-                      Embed Link / Direct URL
+                    <TabsTrigger value="url" className="text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-white">
+                      <LinkIcon className="mr-1.5 h-4 w-4 sm:mr-2" />
+                      <span className="sm:hidden">Paste Link</span><span className="hidden sm:inline">Embed Link / Direct URL</span>
                     </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="upload" className="pt-3">
-                    <div className="border-2 border-dashed border-white/15 hover:border-primary/50 rounded-2xl p-6 text-center bg-zinc-900/50 transition-colors">
+                    <div className="rounded-2xl border-2 border-dashed border-white/15 bg-zinc-900/50 p-4 text-center transition-colors hover:border-primary/50 sm:p-6">
                       <input
                         type="file"
                         id="media-upload"
@@ -788,7 +788,7 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
               {/* Profile Placement Selection */}
               <div className="space-y-2">
                 <Label className="text-xs text-zinc-300 font-medium">Profile Destination & Placement *</Label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <button
                     type="button"
                     onClick={() => {

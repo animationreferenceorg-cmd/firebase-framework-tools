@@ -183,25 +183,25 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
       </div>
 
       {/* Dark Gradient Overlay for Text & Badges */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/30 group-hover:via-black/40 transition-colors z-10 p-4 flex flex-col justify-between pointer-events-none">
+      <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between bg-gradient-to-t from-black via-black/50 to-black/30 p-3 transition-colors group-hover:via-black/40 sm:p-4">
         
         {/* Top Badges (WIP / Stage) */}
         <div className="flex items-center justify-between pointer-events-auto">
           <div className="flex items-center gap-1.5 flex-wrap">
             {item.type === 'wip' ? (
-              <Badge variant="outline" className="bg-amber-500/30 text-amber-300 border-amber-500/50 backdrop-blur-md text-xs font-bold px-2 py-0.5 shadow">
+              <Badge variant="outline" className="border-amber-500/50 bg-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-300 shadow backdrop-blur-md sm:text-xs">
                 <Layers className="h-3 w-3 mr-1" />
                 WIP
               </Badge>
             ) : (
-              <Badge variant="outline" className="bg-emerald-500/30 text-emerald-300 border-emerald-500/50 backdrop-blur-md text-xs font-bold px-2 py-0.5 shadow">
+              <Badge variant="outline" className="border-emerald-500/50 bg-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-300 shadow backdrop-blur-md sm:text-xs">
                 <Sparkles className="h-3 w-3 mr-1" />
                 Portfolio
               </Badge>
             )}
 
             {stageInfo && (
-              <Badge variant="outline" className={cn("backdrop-blur-md text-xs font-semibold px-2 py-0.5 shadow", stageInfo.bg, stageInfo.color)}>
+              <Badge variant="outline" className={cn("px-2 py-0.5 text-[10px] font-semibold shadow backdrop-blur-md sm:text-xs", stageInfo.bg, stageInfo.color)}>
                 {stageInfo.label}
               </Badge>
             )}
@@ -262,7 +262,7 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
           </div>
 
           {/* Likes & Views Counter Bar */}
-          <div className="flex items-center justify-between pt-1 border-t border-white/10 text-xs text-zinc-400">
+          <div className="flex items-center justify-between gap-1 border-t border-white/10 pt-1 text-xs text-zinc-400">
             <span className="flex items-center gap-1"><Eye className="h-3 w-3 text-zinc-400" /> {item.viewsCount || 0}</span>
             <button
               onClick={(e) => {
@@ -270,7 +270,7 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
                 onLike?.(e);
               }}
               className={cn(
-                "flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition-colors",
+                "flex min-h-9 min-w-9 items-center justify-center gap-1 rounded-full px-1.5 py-0.5 text-xs transition-colors sm:min-h-0 sm:min-w-0 sm:px-2",
                 isLiked ? "text-rose-400 font-bold" : "text-zinc-400 hover:text-rose-400"
               )}
             >
@@ -283,22 +283,22 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
                 onSave?.(e);
               }}
               className={cn(
-                "flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition-colors",
+                "flex min-h-9 min-w-9 items-center justify-center gap-1 rounded-full px-1.5 py-0.5 text-xs transition-colors sm:min-h-0 sm:min-w-0 sm:px-2",
                 isSaved ? "text-amber-400 font-bold" : "text-zinc-400 hover:text-amber-400"
               )}
               aria-label={isSaved ? "Unsave post" : "Save post"}
             >
               <Bookmark className={cn("h-3.5 w-3.5", isSaved && "fill-amber-400 text-amber-400")} />
-              <span>{isSaved ? "Saved" : "Save"}</span>
+              <span className="hidden sm:inline">{isSaved ? "Saved" : "Save"}</span>
             </button>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); (onComment || onClick)?.(); }}
-              className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-zinc-400 transition-colors hover:text-purple-300"
+              className="flex min-h-9 min-w-9 items-center justify-center gap-1 rounded-full px-1.5 py-0.5 text-xs text-zinc-400 transition-colors hover:text-purple-300 sm:min-h-0 sm:min-w-0 sm:px-2"
               aria-label={`Open comments for ${item.title}`}
             >
               <MessageCircle className="h-3.5 w-3.5" />
-              <span>Comment</span>
+              <span className="hidden sm:inline">Comment</span>
             </button>
           </div>
         </div>

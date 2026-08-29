@@ -8,3 +8,7 @@ node_modules
 scratch/
 .next.stale-rebuild/
 
+
+# Never commit credentials (private_key.txt was previously tracked — key must be revoked)
+private_key.txt
+*.pem

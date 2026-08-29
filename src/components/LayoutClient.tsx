@@ -260,6 +260,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     <Link href="/resources/combat-animation-reference" className="hover:text-white/70 transition-colors">Combat Reference</Link>
                                     <Link href="/resources/locomotion-animation-reference" className="hover:text-white/70 transition-colors">Locomotion Reference</Link>
                                     <Link href="/terms" className="hover:text-white/70 transition-colors">Terms</Link>
+                                    <Link href="/privacy" className="hover:text-white/70 transition-colors">Privacy</Link>
                                     <Link href="/dmca" className="hover:text-white/70 transition-colors">DMCA / Copyright</Link>
                                 </nav>
                                 <p className="text-[10px] text-white/20 mt-4">© 2026 Animation Reference. Built for the community.</p>

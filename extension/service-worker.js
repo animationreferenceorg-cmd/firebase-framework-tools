@@ -129,8 +129,34 @@ async function resolvePostInBrowserUncached(url) {
         const avatar = avatarImage?.currentSrc || avatarImage?.src || '';
         const caption = article?.querySelector('[data-e2e="browse-video-desc"], h1, div[aria-label*="caption" i], span[dir="auto"]')?.textContent?.trim() || '';
         const video = [...document.querySelectorAll('video')].sort((a, b) => b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight)[0];
-        const description = descriptionMeta || caption;
-        const title = meta('meta[property="og:title"]') || document.title || caption;
+        const ogTitle = meta('meta[property="og:title"]');
+        const isInstagram = location.hostname.endsWith('instagram.com');
+
+        // Instagram buries the real caption inside its og tags:
+        //   og:description -> `12 likes, 3 comments - handle on Jan 1, 2026: "caption"`
+        //   og:title       -> `Name on Instagram: "caption"`
+        // Taken raw, those put the like count and date into the description and
+        // the word "Instagram" into the title. Unwrap the quoted part so the
+        // fields get the post's own words.
+        const unwrapQuoted = (text) => (String(text).match(/:\s*["“](.+)["”]\s*$/s)?.[1] || '').trim();
+        const instagramCaption = isInstagram
+          ? unwrapQuoted(descriptionMeta) || unwrapQuoted(ogTitle) || caption
+          : '';
+
+        const description = instagramCaption || descriptionMeta || caption;
+
+        let title;
+        if (isInstagram) {
+          // Instagram posts have no title of their own — the first line of the
+          // caption is the closest thing to one.
+          const firstLine = instagramCaption.split('\n').map((line) => line.trim()).find(Boolean) || '';
+          const handle = String(authorText || descriptionHandle || '').replace(/^@/, '');
+          title = firstLine
+            ? (firstLine.length > 110 ? `${firstLine.slice(0, 107)}…` : firstLine)
+            : (handle ? `@${handle} on Instagram` : 'Instagram Reference');
+        } else {
+          title = ogTitle || document.title || caption;
+        }
         return {
           url: canonical,
           title,

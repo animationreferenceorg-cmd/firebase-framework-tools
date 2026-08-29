@@ -21,6 +21,21 @@ async function api(path, options = {}) {
   return chrome.runtime.sendMessage({ type: 'AR_API', path, ...options });
 }
 
+/** Returns the value only if it fits the API's length cap, else undefined —
+ * truncating a signed URL would just produce a broken one. */
+function fitOptional(value, max) {
+  const text = typeof value === 'string' ? value.trim() : '';
+  return text && text.length <= max ? text : undefined;
+}
+
+/** Mirrors the selected board's privacy onto the (read-only) checkbox. The API
+ * requires clip.isPrivate to equal the destination board's isPrivate. */
+function syncPrivacyToSelectedBoard() {
+  const selectedId = $('board').value;
+  const board = state.bootstrap?.boards.find((item) => item.id === selectedId);
+  $('isPrivate').checked = Boolean(board?.isPrivate);
+}
+
 async function updateFloatingWidgetProfile(user) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) return;
@@ -101,10 +116,18 @@ async function fetchMetadataForUrl(url, force = true) {
   $('message').textContent = '';
 
   try {
-    // Social URLs use the same server-side metadata path as every other link.
-    // This avoids opening a temporary tab or requiring the user to visit it.
-    const isInstagramOrFb = false;
-    
+    // Instagram and Facebook serve a login wall to server-side fetches, so
+    // /api/oembed only ever sees their generic boilerplate. Those two go
+    // through the background tab instead, which loads the post in the user's
+    // own browser session and reads the real DOM. Everything else (YouTube,
+    // Vimeo, TikTok, X) has a working public oEmbed and stays server-side.
+    let isInstagramOrFb = false;
+    try {
+      isInstagramOrFb = /(^|\.)(instagram\.com|facebook\.com|fb\.watch)$/i.test(new URL(url).hostname);
+    } catch {
+      // Malformed URL — fall through to the server path, which reports the error.
+    }
+
     let response;
     if (isInstagramOrFb) {
       $('message').textContent = 'Loading background tab to bypass login walls…';
@@ -240,7 +263,18 @@ async function init() {
 
   $('board').replaceChildren();
   response.data.boards.forEach((item) => $('board').add(new Option(`${item.isPrivate ? '🔒 ' : ''}${item.title}`, item.id)));
+  // Always offer a no-board target: it's the only option for an account with no
+  // reference boards yet, and an escape hatch if a board ever rejects the save.
+  $('board').add(new Option(
+    response.data.boards.length ? 'No board — just my clips' : 'No boards yet — save to my clips',
+    ''
+  ));
   $('isPrivate').disabled = true;
+  // The server rejects a clip whose privacy doesn't match its destination board
+  // (422 PRIVACY_MISMATCH). The change handler below only fires when the user
+  // picks a board by hand, so without this the default selection was never
+  // mirrored — saving into a private board failed every time.
+  syncPrivacyToSelectedBoard();
 
   // Step 1: Instant DOM extraction from active tab
   const tabMeta = await extractMetaFromActiveTab();
@@ -277,8 +311,33 @@ $('sourceUrlInput').addEventListener('keydown', (e) => {
 });
 
 $('connectButton').addEventListener('click', async () => {
-  const response = await chrome.runtime.sendMessage({ type: 'AR_START_CONNECT' });
-  if (!response?.ok) $('message').textContent = response?.error || 'Could not open sign in.';
+  // Report into the connect section, not #message — that element lives inside
+  // the hidden #clipForm while signed out, so anything written there was
+  // invisible and a failed sign-in looked like a dead button.
+  const status = $('connectMessage');
+  const button = $('connectButton');
+  status.className = 'pending';
+  status.textContent = 'Opening sign in…';
+  button.disabled = true;
+
+  try {
+    const response = await chrome.runtime.sendMessage({ type: 'AR_START_CONNECT' });
+    if (response?.ok) {
+      status.textContent = 'Finish signing in on the tab that just opened.';
+      return;
+    }
+    status.className = '';
+    status.textContent = response?.error || 'Could not open sign in.';
+  } catch (error) {
+    // sendMessage rejects when the service worker isn't running. Previously
+    // this rejection was unhandled, so the click produced no feedback at all.
+    status.className = '';
+    status.textContent =
+      'Extension background script not responding. Reload it at chrome://extensions, then try again.';
+    console.error('Animation Reference: AR_START_CONNECT failed.', error);
+  } finally {
+    button.disabled = false;
+  }
 });
 
 chrome.runtime.onMessage.addListener((message) => {
@@ -289,10 +348,7 @@ window.addEventListener('focus', () => {
   if (!state.bootstrap) init();
 });
 
-$('board').addEventListener('change', (event) => {
-  const board = state.bootstrap?.boards.find((item) => item.id === event.target.value);
-  if (board) $('isPrivate').checked = Boolean(board.isPrivate);
-});
+$('board').addEventListener('change', syncPrivacyToSelectedBoard);
 
 $('clipForm').addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -317,9 +373,13 @@ $('clipForm').addEventListener('submit', async (event) => {
         thumbnailUrl: state.context?.thumbnailUrl || undefined,
         sourceDescription: $('descriptionInput').value || state.context?.description || undefined,
         sourceAuthorName: state.context?.authorName || state.context?.author || undefined,
-        sourceAuthorUrl: state.context?.authorUrl || undefined,
-        sourceAuthorAvatar: state.context?.authorAvatar || undefined,
-        mediaUrl: state.context?.mediaUrl || undefined,
+        // These are optional extras, but the API length-caps them (2000 chars,
+        // 4000 for mediaUrl) and a signed social CDN URL can blow past that —
+        // which would 422 the whole save. Drop an oversized one instead:
+        // losing the avatar beats losing the reference.
+        sourceAuthorUrl: fitOptional(state.context?.authorUrl, 2000),
+        sourceAuthorAvatar: fitOptional(state.context?.authorAvatar, 2000),
+        mediaUrl: fitOptional(state.context?.mediaUrl, 4000),
         startTime: 0,
         endTime: state.context?.duration || 60,
         title: $('title').value || 'Video Reference',
@@ -347,4 +407,15 @@ $('clipForm').addEventListener('submit', async (event) => {
   chrome.runtime.sendMessage({ type: 'AR_OPEN_REFERENCES', clipId: response.data?.id }).catch(() => {});
 });
 
-init();
+// A rejection here (background script asleep or erroring) used to leave the
+// popup showing neither the sign-in section nor the clip form — a blank panel
+// with no explanation. Fall back to the sign-in view and say what happened.
+init().catch((error) => {
+  console.error('Animation Reference: popup init failed.', error);
+  $('connect').hidden = false;
+  $('clipForm').hidden = true;
+  const status = $('connectMessage');
+  status.className = '';
+  status.textContent =
+    'Could not reach the extension background script. Reload it at chrome://extensions.';
+});

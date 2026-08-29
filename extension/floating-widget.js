@@ -52,11 +52,11 @@
       @media (max-width: 460px) { .launcher { top: 10px; right: 10px; width: 58px; height: 58px; } .panel { top: 8px; right: 8px; width: calc(100vw - 16px); height: calc(100vh - 16px); } }
       @media (prefers-reduced-motion: reduce) { .launcher { transition: none; } .panel { animation: none; } }
     </style>
-    <button class="launcher" type="button" title="Open Animation Reference" aria-label="Open Animation Reference capture panel"><img class="brand-logo" src="${chrome.runtime.getURL('site-icon.png')}" alt="" /></button>
+    <button class="launcher" type="button" title="Open Animation Reference" aria-label="Open Animation Reference capture panel"><img class="brand-logo" src="${chrome.runtime.getURL('icon-128.png')}" alt="" /></button>
     <aside class="panel" hidden aria-label="Animation Reference capture panel">
       <div class="panel-header">
         <span class="mini-mark" title="Your Animation Reference account">
-          <img class="mini-logo" src="${chrome.runtime.getURL('site-icon.png')}" alt="" />
+          <img class="mini-logo" src="${chrome.runtime.getURL('icon-128.png')}" alt="" />
           <img class="profile-avatar" hidden alt="" referrerpolicy="no-referrer" />
         </span>
         <span class="title">Animation Reference</span>

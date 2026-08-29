@@ -22,7 +22,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { FeedbackModal } from '@/components/FeedbackModal';
 import { UpdatesModal } from '@/components/UpdatesModal';
 import { UserFeedbackPanel } from '@/components/UserFeedbackPanel';
-import { MobileInstallDialog } from '@/components/reference/MobileInstallDialog';
+import { MobileInstallBanner } from '@/components/reference/MobileInstallBanner';
 import { isAppInstalled, isMobileInstallCandidate } from '@/lib/pwa';
 
 import { WatchTrackerProvider } from '@/hooks/use-watch-tracker';
@@ -304,7 +304,14 @@ function MobileInstallAfterLogin() {
             // Some privacy modes block browser storage. The prompt can still work.
         }
 
-        const shouldPrompt = requestedAfterLogin || (pathname.startsWith('/references') && !recentlyDismissed);
+        // Previously only /references could ever show this, which is most of why
+        // it seemed never to appear. Now it can surface anywhere except the
+        // full-screen tools (where a bar dropping over the canvas is disruptive)
+        // and the auth/extension hand-off screens, which are mid-flow.
+        const suppressedPaths = ['/paint', '/moodboard', '/board', '/login', '/extension', '/clip'];
+        const onSuppressedPath = suppressedPaths.some((path) => pathname.startsWith(path));
+
+        const shouldPrompt = requestedAfterLogin || (!onSuppressedPath && !recentlyDismissed);
         if (!shouldPrompt) return;
 
         const timer = window.setTimeout(() => setShowPrompt(true), 700);
@@ -322,7 +329,7 @@ function MobileInstallAfterLogin() {
         }
     };
 
-    return showPrompt ? <MobileInstallDialog defaultOpen onOpenChange={handleOpenChange} /> : null;
+    return showPrompt ? <MobileInstallBanner onDismiss={() => handleOpenChange(false)} /> : null;
 }
 
 function SimulateTierButton({ tier, label, fullWidth }: { tier: string, label: string, fullWidth?: boolean }) {

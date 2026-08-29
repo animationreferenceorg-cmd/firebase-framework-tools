@@ -29,7 +29,6 @@ import { useMoodboardInteraction } from './hooks/useMoodboardInteraction';
 import { PropertyToolbar } from './components/PropertyToolbar';
 import { ConnectionLine } from './components/ConnectionLine';
 import { MoodboardDashboard } from './components/MoodboardDashboard';
-import { toPng } from 'html-to-image';
 import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
@@ -1546,6 +1545,7 @@ function MoodboardContent() {
                                 try {
                                     const canvasNode = document.getElementById('canvas-container');
                                     if (canvasNode) {
+                                        const { toPng } = await import('html-to-image');
                                         const dataUrl = await toPng(canvasNode, {
                                             quality: 0.8,
                                             pixelRatio: 0.5,

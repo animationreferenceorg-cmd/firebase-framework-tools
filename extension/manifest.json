@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Animation Reference — Clip & Save",
-  "version": "0.3.28",
+  "version": "0.3.29",
   "description": "Capture precise video moments from the web into your Animation Reference boards.",
   "homepage_url": "https://animationreference.org",
   "permissions": ["activeTab", "scripting", "storage", "tabs"],

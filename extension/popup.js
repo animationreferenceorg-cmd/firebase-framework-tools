@@ -166,9 +166,28 @@ async function fetchMetadataForUrl(url, force = true) {
   }
 }
 
+/** Pages that can never be a reference source. Animation Reference itself is
+ * the important one: the connect flow leaves the tab on /references, so
+ * auto-capture used to prefill the form with our own URL — which then reached
+ * the downloader and failed with "Unsupported URL". */
+function isCapturablePageUrl(rawUrl) {
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+  const host = parsed.hostname.toLowerCase();
+  if (host === 'animationreference.org' || host.endsWith('.animationreference.org')) return false;
+  if (host === 'localhost' || host === '127.0.0.1') return false;
+  return true;
+}
+
 async function extractMetaFromActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id || !tab?.url) return null;
+  if (!isCapturablePageUrl(tab.url)) return null;
 
   try {
     const results = await chrome.scripting.executeScript({
@@ -357,6 +376,13 @@ $('clipForm').addEventListener('submit', async (event) => {
   const sourceUrl = $('sourceUrlInput').value.trim();
   if (!sourceUrl || !sourceUrl.startsWith('http')) {
     return ($('message').textContent = 'Please enter a valid HTTP video URL.');
+  }
+  // The server queues a download for whatever lands here, so catching our own
+  // pages up front turns a confusing "Upload failed / Unsupported URL" card on
+  // the references page into an instant, explainable message.
+  if (!isCapturablePageUrl(sourceUrl)) {
+    return ($('message').textContent =
+      'Paste the original post URL (YouTube, Instagram, TikTok, Vimeo, X) — not an Animation Reference page.');
   }
 
   $('saveButton').disabled = true;

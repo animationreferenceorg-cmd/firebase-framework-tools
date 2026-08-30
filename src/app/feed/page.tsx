@@ -86,6 +86,26 @@ export default function CommunityFeedPage() {
     }
   };
 
+  const handleShareItem = async (targetItem: PortfolioItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const url = `${window.location.origin}/feed?item=${targetItem.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Link copied', description: 'Portfolio link copied to clipboard.' });
+      await incrementPortfolioItemShares(targetItem.id);
+      setPortfolioItems((prev) =>
+        prev.map((i) => {
+          if (i.id === targetItem.id) {
+            return { ...i, sharesCount: (i.sharesCount || 0) + 1 };
+          }
+          return i;
+        })
+      );
+    } catch (error: any) {
+      console.error("Error sharing item:", error);
+    }
+  };
+
   // Pagination & Filters
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const [activeTab, setActiveTab] = useState<TabOption>('featured');
@@ -346,6 +366,7 @@ export default function CommunityFeedPage() {
                 onClick={() => { setSelectedItem(item); setIsDetailOpen(true); }}
                 onLike={(e) => handleLikeItem(item, e)}
                 onSave={(e) => handleSaveItem(item, e)}
+                onShare={(e) => handleShareItem(item, e)}
               />
             ))}
           </div>

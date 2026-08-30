@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
-import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc, increment } from 'firebase/firestore';
 import { Loader2, MessageCircle, Pencil, Send, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,9 @@ export function PortfolioCommentsPanel({ itemId }: { itemId: string }) {
         body: body.trim().slice(0, 1000),
         createdAt: serverTimestamp(),
       });
+      await updateDoc(doc(db, 'portfolio_items', itemId), {
+        commentsCount: increment(1)
+      });
       setBody('');
     } finally { setSending(false); }
   };
@@ -57,6 +60,9 @@ export function PortfolioCommentsPanel({ itemId }: { itemId: string }) {
     setBusyId(comment.id);
     try {
       await deleteDoc(doc(db, 'portfolio_items', itemId, 'comments', comment.id));
+      await updateDoc(doc(db, 'portfolio_items', itemId), {
+        commentsCount: increment(-1)
+      });
     } finally { setBusyId(null); }
   };
 

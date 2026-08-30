@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { ArrowDown, ArrowUp, Eye, Heart, Bookmark, GripVertical, Layers, Play, Sparkles, Trash2, Pencil, MessageCircle } from 'lucide-react';
+import { ArrowDown, ArrowUp, Eye, Heart, Bookmark, GripVertical, Layers, Play, Sparkles, Trash2, Pencil, MessageCircle, Share2 } from 'lucide-react';
 import type { PortfolioItem, WipStage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ interface PortfolioItemCardProps {
   onComment?: () => void;
   onLike?: (e: React.MouseEvent) => void;
   onSave?: (e: React.MouseEvent) => void;
+  onShare?: (e: React.MouseEvent) => void;
   onEdit?: (e: React.MouseEvent) => void;
   onDelete?: (e: React.MouseEvent) => void;
   isLiked?: boolean;
@@ -40,6 +41,7 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
   onComment,
   onLike,
   onSave,
+  onShare,
   onEdit,
   onDelete,
   isLiked: isLikedProp = false,
@@ -263,7 +265,7 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
 
           {/* Likes & Views Counter Bar */}
           <div className="flex items-center justify-between gap-1 border-t border-white/10 pt-1 text-xs text-zinc-400">
-            <span className="flex items-center gap-1"><Eye className="h-3 w-3 text-zinc-400" /> {item.viewsCount || 0}</span>
+            <span className="flex items-center gap-1" title="Views"><Eye className="h-3 w-3 text-zinc-400" /> {item.viewsCount || 0}</span>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -273,6 +275,7 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
                 "flex min-h-9 min-w-9 items-center justify-center gap-1 rounded-full px-1.5 py-0.5 text-xs transition-colors sm:min-h-0 sm:min-w-0 sm:px-2",
                 isLiked ? "text-rose-400 font-bold" : "text-zinc-400 hover:text-rose-400"
               )}
+              title="Like"
             >
               <Heart className={cn("h-3.5 w-3.5", isLiked && "fill-rose-500 text-rose-500")} />
               <span>{item.likesCount || 0}</span>
@@ -287,6 +290,7 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
                 isSaved ? "text-amber-400 font-bold" : "text-zinc-400 hover:text-amber-400"
               )}
               aria-label={isSaved ? "Unsave post" : "Save post"}
+              title="Save"
             >
               <Bookmark className={cn("h-3.5 w-3.5", isSaved && "fill-amber-400 text-amber-400")} />
               <span className="hidden sm:inline">{isSaved ? "Saved" : "Save"}</span>
@@ -296,9 +300,23 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
               onClick={(e) => { e.stopPropagation(); (onComment || onClick)?.(); }}
               className="flex min-h-9 min-w-9 items-center justify-center gap-1 rounded-full px-1.5 py-0.5 text-xs text-zinc-400 transition-colors hover:text-purple-300 sm:min-h-0 sm:min-w-0 sm:px-2"
               aria-label={`Open comments for ${item.title}`}
+              title="Comments"
             >
               <MessageCircle className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Comment</span>
+              <span>{item.commentsCount || 0}</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onShare?.(e);
+              }}
+              className="flex min-h-9 min-w-9 items-center justify-center gap-1 rounded-full px-1.5 py-0.5 text-xs text-zinc-400 transition-colors hover:text-blue-400 sm:min-h-0 sm:min-w-0 sm:px-2"
+              aria-label="Share post"
+              title="Share"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              <span>{item.sharesCount || 0}</span>
             </button>
           </div>
         </div>

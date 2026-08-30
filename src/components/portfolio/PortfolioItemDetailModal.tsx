@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Eye, Heart, Bookmark, Layers, Sparkles, Trash2, Calendar, Share2, Wrench, ArrowLeft } from 'lucide-react';
 import type { PortfolioItem, WipStage } from '@/lib/types';
-import { toggleLikePortfolioItem, deletePortfolioItem, incrementPortfolioItemViews } from '@/lib/portfolio-service';
+import { toggleLikePortfolioItem, deletePortfolioItem, incrementPortfolioItemViews, incrementPortfolioItemShares } from '@/lib/portfolio-service';
 import { isArtistFollowed, toggleFollowArtist } from '@/lib/following-service';
 import { saveVideo, unsaveVideo } from '@/lib/firestore';
 import { useUser } from '@/hooks/use-user';
@@ -51,6 +51,7 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
   const [isSaving, setIsSaving] = useState(false);
   const [likesCount, setLikesCount] = useState(item?.likesCount || 0);
   const [viewsCount, setViewsCount] = useState(item?.viewsCount || 0);
+  const [sharesCount, setSharesCount] = useState(item?.sharesCount || 0);
   const [isLiked, setIsLiked] = useState(
     currentUserId && item?.likedBy ? item.likedBy.includes(currentUserId) : false
   );
@@ -62,6 +63,7 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
     if (open && item?.id) {
       setLikesCount(item.likesCount || 0);
       setViewsCount((item.viewsCount || 0) + 1);
+      setSharesCount(item.sharesCount || 0);
       setIsLiked(currentUserId && item.likedBy ? item.likedBy.includes(currentUserId) : false);
       incrementPortfolioItemViews(item.id);
     }
@@ -151,9 +153,11 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
   };
 
   const handleShare = () => {
-    const url = window.location.href;
+    const url = `${window.location.origin}/feed?item=${item.id}`;
     navigator.clipboard.writeText(url);
     toast({ title: 'Link copied', description: 'Portfolio link copied to clipboard.' });
+    incrementPortfolioItemShares(item.id);
+    setSharesCount(prev => prev + 1);
   };
 
   return (
@@ -191,7 +195,7 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
                 {/* Top Actions */}
                 <div className="flex items-center gap-2">
                   <Button size="sm" variant="outline" onClick={handleShare} aria-label="Share this post" className="h-10 w-10 cursor-pointer rounded-full border-white/10 p-0 text-xs font-semibold text-zinc-300 hover:bg-white/10 sm:h-9 sm:w-auto sm:px-4">
-                    <Share2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Share Link</span>
+                    <Share2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline font-bold">{sharesCount} Shares</span>
                   </Button>
                   {isOwner && (
                     <Button size="sm" variant="destructive" onClick={handleDelete} disabled={isDeleting} aria-label="Delete this post" className="h-10 w-10 cursor-pointer rounded-full p-0 text-xs font-semibold sm:h-9 sm:w-auto sm:px-4">

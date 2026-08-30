@@ -207,6 +207,8 @@ export interface PortfolioItem {
   software: string[];
   likesCount?: number;
   viewsCount?: number;
+  commentsCount?: number;
+  sharesCount?: number;
   likedBy?: string[];
   sortIndex?: number;
   isFeatured?: boolean;

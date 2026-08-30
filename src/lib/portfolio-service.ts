@@ -441,11 +441,26 @@ export async function getUserPortfolioItems(userId: string): Promise<PortfolioIt
   ]);
   const localStorageItems = fetchLocalStorage();
 
-  // Deduplicate items by ID with IndexedDB highest priority for full resolution base64
+  // Deduplicate items by ID with Firestore taking priority, local caches as fallback/merged values
   const itemMap = new Map<string, PortfolioItem>();
-  for (const item of [...firestoreItems, ...localStorageItems, ...idbItems]) {
+  for (const item of firestoreItems) {
     if (item && item.id) {
       itemMap.set(item.id, item);
+    }
+  }
+  for (const item of [...localStorageItems, ...idbItems]) {
+    if (item && item.id) {
+      if (!itemMap.has(item.id)) {
+        itemMap.set(item.id, item);
+      } else {
+        const dbItem = itemMap.get(item.id)!;
+        itemMap.set(item.id, {
+          ...item,
+          ...dbItem,
+          mediaUrl: dbItem.mediaUrl || item.mediaUrl,
+          thumbnailUrl: dbItem.thumbnailUrl || item.thumbnailUrl,
+        });
+      }
     }
   }
 
@@ -498,11 +513,26 @@ export async function getPublicPortfolioItems(options?: {
   const localStorageItems = fetchLocalStorage();
 
   const itemMap = new Map<string, PortfolioItem>();
-  for (const item of [...firestoreItems, ...localStorageItems, ...idbItems]) {
+  for (const item of firestoreItems) {
+    if (item && item.id && item.title) {
+      itemMap.set(item.id, item);
+    }
+  }
+  for (const item of [...localStorageItems, ...idbItems]) {
     if (item && item.id && item.title) {
       if (options?.type && item.type !== options.type) continue;
       if (options?.wipStage && item.wipStage !== options.wipStage) continue;
-      itemMap.set(item.id, item);
+      if (!itemMap.has(item.id)) {
+        itemMap.set(item.id, item);
+      } else {
+        const dbItem = itemMap.get(item.id)!;
+        itemMap.set(item.id, {
+          ...item,
+          ...dbItem,
+          mediaUrl: dbItem.mediaUrl || item.mediaUrl,
+          thumbnailUrl: dbItem.thumbnailUrl || item.thumbnailUrl,
+        });
+      }
     }
   }
 
@@ -566,6 +596,18 @@ export async function incrementPortfolioItemViews(itemId: string): Promise<void>
     await updateDoc(docRef, { viewsCount: increment(1) });
   } catch (error) {
     console.warn("[incrementPortfolioItemViews] Firestore update failed:", error);
+  }
+}
+
+/**
+ * Increments share count on a portfolio item.
+ */
+export async function incrementPortfolioItemShares(itemId: string): Promise<void> {
+  try {
+    const docRef = doc(db, PORTFOLIO_COLLECTION, itemId);
+    await updateDoc(docRef, { sharesCount: increment(1) });
+  } catch (error) {
+    console.warn("[incrementPortfolioItemShares] Firestore update failed:", error);
   }
 }
 

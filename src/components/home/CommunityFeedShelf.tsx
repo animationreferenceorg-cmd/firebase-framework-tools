@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowRight, Users, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PortfolioItemCard } from '@/components/portfolio/PortfolioItemCard';
-import { getPublicPortfolioItems, toggleLikePortfolioItem } from '@/lib/portfolio-service';
+import { getPublicPortfolioItems, toggleLikePortfolioItem, incrementPortfolioItemShares } from '@/lib/portfolio-service';
 import { saveVideo, unsaveVideo } from '@/lib/firestore';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
@@ -79,6 +79,26 @@ export function CommunityFeedShelf() {
     }
   };
 
+  const handleShareItem = async (targetItem: PortfolioItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const url = `${window.location.origin}/feed?item=${targetItem.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Link copied', description: 'Portfolio link copied to clipboard.' });
+      await incrementPortfolioItemShares(targetItem.id);
+      setItems((prev) =>
+        prev.map((i) => {
+          if (i.id === targetItem.id) {
+            return { ...i, sharesCount: (i.sharesCount || 0) + 1 };
+          }
+          return i;
+        })
+      );
+    } catch (error: any) {
+      console.error("Error sharing item:", error);
+    }
+  };
+
   if (loading) {
     return (
       <section className="mb-12 mt-6 animate-pulse">
@@ -141,6 +161,7 @@ export function CommunityFeedShelf() {
             isSaved={Boolean(userProfile?.savedVideoIds?.includes(item.id))}
             onLike={(e) => handleLikeItem(item, e)}
             onSave={(e) => handleSaveItem(item, e)}
+            onShare={(e) => handleShareItem(item, e)}
             onClick={() => {
               if (item.userId) {
                 window.location.href = `/u/${item.userId}`;

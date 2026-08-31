@@ -549,7 +549,7 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
           setUploadStatusMsg('Saving to portfolio storage...');
           return prev + 3;
         } else if (prev < 92) {
-          setUploadStatusMsg('Syncing to local cache & profile link...');
+          setUploadStatusMsg('Publishing to your portfolio & community feed...');
           return prev + 1;
         }
         return prev;
@@ -594,7 +594,7 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
       // Short delay so user sees 100% completion glow before modal closes
       await new Promise((r) => setTimeout(r, 450));
 
-      toast({ title: 'Success!', description: 'Your work has been published to your portfolio.' });
+      toast({ title: 'Success!', description: 'Your work is live on your portfolio and the community feed.' });
 
       // Reset form
       setTitle('');

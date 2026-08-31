@@ -58,9 +58,41 @@ service cloud.firestore {
       allow read: if true;
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+
+      // Likes must be a real one-user toggle paired with an exact counter change.
       allow update: if request.auth != null
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'likesCount', 'viewsCount']);
-      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewsCount']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'likesCount'])
+        && request.resource.data.likedBy is list
+        && request.resource.data.likesCount is int
+        && request.resource.data.likesCount >= 0
+        && (
+          (!(request.auth.uid in resource.data.get('likedBy', []))
+            && request.auth.uid in request.resource.data.likedBy
+            && request.resource.data.likedBy.size() == resource.data.get('likedBy', []).size() + 1
+            && request.resource.data.likesCount == resource.data.get('likesCount', 0) + 1)
+          ||
+          (request.auth.uid in resource.data.get('likedBy', [])
+            && !(request.auth.uid in request.resource.data.likedBy)
+            && request.resource.data.likedBy.size() == resource.data.get('likedBy', []).size() - 1
+            && request.resource.data.likesCount == resource.data.get('likesCount', 0) - 1)
+        );
+
+      // Public views and shares are append-only counters. Comment totals may
+      // move by one only when a signed-in user creates or removes a comment.
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewsCount'])
+        && request.resource.data.viewsCount is int
+        && request.resource.data.viewsCount == resource.data.get('viewsCount', 0) + 1;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sharesCount'])
+        && request.resource.data.sharesCount is int
+        && request.resource.data.sharesCount == resource.data.get('sharesCount', 0) + 1;
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentsCount'])
+        && request.resource.data.commentsCount is int
+        && request.resource.data.commentsCount >= 0
+        && (
+          request.resource.data.commentsCount == resource.data.get('commentsCount', 0) + 1
+          || request.resource.data.commentsCount == resource.data.get('commentsCount', 0) - 1
+        );
 
       match /comments/{commentId} {
         allow read: if true;

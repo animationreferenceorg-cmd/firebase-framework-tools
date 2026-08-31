@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import type { PortfolioItem } from '@/lib/types';
-import { getPublicPortfolioItems, toggleLikePortfolioItem } from '@/lib/portfolio-service';
+import { getPublicPortfolioItems, incrementPortfolioItemShares, toggleLikePortfolioItem } from '@/lib/portfolio-service';
 import { saveVideo, unsaveVideo } from '@/lib/firestore';
 import { PortfolioItemCard } from '@/components/portfolio/PortfolioItemCard';
 import { PortfolioItemDetailModal } from '@/components/portfolio/PortfolioItemDetailModal';
@@ -92,11 +92,11 @@ export default function CommunityFeedPage() {
     try {
       await navigator.clipboard.writeText(url);
       toast({ title: 'Link copied', description: 'Portfolio link copied to clipboard.' });
-      await incrementPortfolioItemShares(targetItem.id);
+      const sharesCount = await incrementPortfolioItemShares(targetItem.id);
       setPortfolioItems((prev) =>
         prev.map((i) => {
           if (i.id === targetItem.id) {
-            return { ...i, sharesCount: (i.sharesCount || 0) + 1 };
+            return { ...i, sharesCount };
           }
           return i;
         })
@@ -118,7 +118,7 @@ export default function CommunityFeedPage() {
     const loadItems = async () => {
       setLoading(true);
       try {
-        const data = await getPublicPortfolioItems({ limitCount: 200 });
+        const data = await getPublicPortfolioItems();
         setPortfolioItems(data || []);
         setIsMockPreview(false);
       } catch (e) {
@@ -128,7 +128,7 @@ export default function CommunityFeedPage() {
       }
     };
     loadItems();
-  }, []);
+  }, [user?.uid]);
 
   const handleOpenUploadModal = () => {
     if (!user) {

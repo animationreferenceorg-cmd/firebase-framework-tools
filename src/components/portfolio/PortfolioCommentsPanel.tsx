@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
-import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc, increment } from 'firebase/firestore';
+import { collection, doc, increment, onSnapshot, orderBy, query, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore';
 import { Loader2, MessageCircle, Pencil, Send, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -30,16 +30,19 @@ export function PortfolioCommentsPanel({ itemId }: { itemId: string }) {
     if (!user || !body.trim() || sending) return;
     setSending(true);
     try {
-      await addDoc(collection(db, 'portfolio_items', itemId, 'comments'), {
+      const commentRef = doc(collection(db, 'portfolio_items', itemId, 'comments'));
+      const batch = writeBatch(db);
+      batch.set(commentRef, {
         userId: user.uid,
         authorName: userProfile?.displayName || userProfile?.username || user.displayName || 'Animator',
         authorAvatar: userProfile?.photoURL || user.photoURL || null,
         body: body.trim().slice(0, 1000),
         createdAt: serverTimestamp(),
       });
-      await updateDoc(doc(db, 'portfolio_items', itemId), {
+      batch.update(doc(db, 'portfolio_items', itemId), {
         commentsCount: increment(1)
       });
+      await batch.commit();
       setBody('');
     } finally { setSending(false); }
   };
@@ -59,10 +62,12 @@ export function PortfolioCommentsPanel({ itemId }: { itemId: string }) {
     if (busyId || !window.confirm('Delete this comment?')) return;
     setBusyId(comment.id);
     try {
-      await deleteDoc(doc(db, 'portfolio_items', itemId, 'comments', comment.id));
-      await updateDoc(doc(db, 'portfolio_items', itemId), {
+      const batch = writeBatch(db);
+      batch.delete(doc(db, 'portfolio_items', itemId, 'comments', comment.id));
+      batch.update(doc(db, 'portfolio_items', itemId), {
         commentsCount: increment(-1)
       });
+      await batch.commit();
     } finally { setBusyId(null); }
   };
 

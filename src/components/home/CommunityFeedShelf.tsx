@@ -31,7 +31,7 @@ export function CommunityFeedShelf() {
       }
     }
     loadFeed();
-  }, []);
+  }, [user?.uid]);
 
   const handleLikeItem = async (targetItem: PortfolioItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -85,11 +85,11 @@ export function CommunityFeedShelf() {
     try {
       await navigator.clipboard.writeText(url);
       toast({ title: 'Link copied', description: 'Portfolio link copied to clipboard.' });
-      await incrementPortfolioItemShares(targetItem.id);
+      const sharesCount = await incrementPortfolioItemShares(targetItem.id);
       setItems((prev) =>
         prev.map((i) => {
           if (i.id === targetItem.id) {
-            return { ...i, sharesCount: (i.sharesCount || 0) + 1 };
+            return { ...i, sharesCount };
           }
           return i;
         })

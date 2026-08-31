@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
-import { addDoc, collection, onSnapshot, orderBy, query, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, increment, onSnapshot, orderBy, query, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { Loader2, MessageCircle, Send } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -41,13 +41,19 @@ export function PortfolioCommentsDialog({ itemId, title, open, onOpenChange }: {
     if (!user || !cleanBody || sending) return;
     setSending(true);
     try {
-      await addDoc(collection(db, 'portfolio_items', itemId, 'comments'), {
+      const commentRef = doc(collection(db, 'portfolio_items', itemId, 'comments'));
+      const batch = writeBatch(db);
+      batch.set(commentRef, {
         userId: user.uid,
         authorName: userProfile?.displayName || userProfile?.username || user.displayName || 'Animator',
         authorAvatar: userProfile?.photoURL || user.photoURL || null,
         body: cleanBody.slice(0, 1000),
         createdAt: serverTimestamp(),
       });
+      batch.update(doc(db, 'portfolio_items', itemId), {
+        commentsCount: increment(1),
+      });
+      await batch.commit();
       setBody('');
     } finally {
       setSending(false);

@@ -61,11 +61,19 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
 
   React.useEffect(() => {
     if (open && item?.id) {
+      let cancelled = false;
       setLikesCount(item.likesCount || 0);
-      setViewsCount((item.viewsCount || 0) + 1);
+      setViewsCount(item.viewsCount || 0);
       setSharesCount(item.sharesCount || 0);
       setIsLiked(currentUserId && item.likedBy ? item.likedBy.includes(currentUserId) : false);
-      incrementPortfolioItemViews(item.id);
+      incrementPortfolioItemViews(item.id)
+        .then((count) => {
+          if (!cancelled) setViewsCount(count);
+        })
+        .catch((error) => console.error('Could not record portfolio view:', error));
+      return () => {
+        cancelled = true;
+      };
     }
   }, [open, item?.id, currentUserId]);
 
@@ -152,12 +160,17 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
     }
   };
 
-  const handleShare = () => {
-    const url = `${window.location.origin}/feed?item=${item.id}`;
-    navigator.clipboard.writeText(url);
-    toast({ title: 'Link copied', description: 'Portfolio link copied to clipboard.' });
-    incrementPortfolioItemShares(item.id);
-    setSharesCount(prev => prev + 1);
+  const handleShare = async () => {
+    try {
+      const url = `${window.location.origin}/feed?item=${item.id}`;
+      await navigator.clipboard.writeText(url);
+      const count = await incrementPortfolioItemShares(item.id);
+      setSharesCount(count);
+      toast({ title: 'Link copied', description: 'Portfolio link copied to clipboard.' });
+    } catch (error) {
+      console.error('Could not share portfolio item:', error);
+      toast({ title: 'Share failed', description: 'Please try copying the link again.', variant: 'destructive' });
+    }
   };
 
   return (

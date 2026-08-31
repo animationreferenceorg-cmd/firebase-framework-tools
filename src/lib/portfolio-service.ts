@@ -1,6 +1,7 @@
 import { 
   collection, 
   doc, 
+  getCountFromServer,
   getDoc, 
   getDocs, 
   setDoc, 
@@ -8,12 +9,9 @@ import {
   deleteDoc, 
   query, 
   where, 
-  orderBy, 
   limit, 
   serverTimestamp, 
-  increment,
-  arrayUnion,
-  arrayRemove
+  runTransaction
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage, auth } from "./firebase";
@@ -23,74 +21,21 @@ const PORTFOLIO_COLLECTION = "portfolio_items";
 const USERS_COLLECTION = "users";
 
 /**
- * Uploads a file (video, image, thumbnail) to Firebase Storage under portfolio/{userId}/{folder}/
- * Falls back to Data URL if Firebase Storage permissions fail.
+ * Uploads a file (video, image, thumbnail) to Firebase Storage under portfolio/{userId}/{folder}/.
+ * Portfolio media must be remotely available so other community members can see it.
  */
 export async function uploadPortfolioMedia(
   userId: string, 
   file: File, 
   folder: 'media' | 'thumbnails'
 ): Promise<string> {
-  try {
-    const timestamp = Date.now();
-    const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const storagePath = `portfolio/${userId}/${folder}/${timestamp}_${cleanName}`;
-    const storageRef = ref(storage, storagePath);
-    
-    const uploadTask = uploadBytes(storageRef, file);
-    const timeoutTask = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Storage upload timeout")), 5000)
-    );
-    await Promise.race([uploadTask, timeoutTask]);
-    const downloadUrl = await getDownloadURL(storageRef);
-    return downloadUrl;
-  } catch (error: any) {
-    console.warn("Firebase Storage upload permission fallback triggered:", error?.message || error);
-    return new Promise((resolve) => {
-      if (file.type.startsWith('image/')) {
-        const img = document.createElement('img');
-        const url = URL.createObjectURL(file);
-        img.onload = () => {
-          URL.revokeObjectURL(url);
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          const MAX_DIM = 1200;
-          if (width > MAX_DIM || height > MAX_DIM) {
-            if (width > height) {
-              height = Math.round((height * MAX_DIM) / width);
-              width = MAX_DIM;
-            } else {
-              width = Math.round((width * MAX_DIM) / height);
-              height = MAX_DIM;
-            }
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
-            resolve(dataUrl);
-            return;
-          }
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target?.result as string);
-          reader.readAsDataURL(file);
-        };
-        img.onerror = () => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target?.result as string);
-          reader.readAsDataURL(file);
-        };
-        img.src = url;
-      } else {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target?.result as string);
-        reader.readAsDataURL(file);
-      }
-    });
-  }
+  const timestamp = Date.now();
+  const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+  const storagePath = `portfolio/${userId}/${folder}/${timestamp}_${cleanName}`;
+  const storageRef = ref(storage, storagePath);
+
+  await uploadBytes(storageRef, file, { contentType: file.type || undefined });
+  return getDownloadURL(storageRef);
 }
 
 /**
@@ -255,7 +200,7 @@ export async function loadLocalItemsIndexedDB(userId?: string): Promise<Portfoli
       const request = store.getAll();
       request.onsuccess = () => {
         const results: PortfolioItem[] = request.result || [];
-        resolve(results);
+        resolve(userId ? results.filter((item) => item.userId === userId) : results);
       };
       request.onerror = () => resolve([]);
     });
@@ -272,9 +217,146 @@ function safeSaveLocalStorage(key: string, items: PortfolioItem[]) {
   }
 }
 
+function withPortfolioDefaults(item: PortfolioItem): PortfolioItem {
+  const likedBy = Array.isArray(item.likedBy)
+    ? Array.from(new Set(item.likedBy.filter((id): id is string => typeof id === 'string')))
+    : [];
+
+  return {
+    ...item,
+    tags: Array.isArray(item.tags) ? item.tags : [],
+    software: Array.isArray(item.software) ? item.software : [],
+    likedBy,
+    likesCount: Math.max(likedBy.length, Number(item.likesCount) || 0),
+    viewsCount: Math.max(0, Number(item.viewsCount) || 0),
+    commentsCount: Math.max(0, Number(item.commentsCount) || 0),
+    sharesCount: Math.max(0, Number(item.sharesCount) || 0),
+  };
+}
+
+function portfolioCreatedAtSeconds(item: PortfolioItem): number {
+  if (typeof item.createdAt === 'number') return item.createdAt;
+  if (item.createdAt && typeof item.createdAt.seconds === 'number') return item.createdAt.seconds;
+  if (item.createdAt && typeof item.createdAt.toMillis === 'function') {
+    return Math.floor(item.createdAt.toMillis() / 1000);
+  }
+  return 0;
+}
+
+function withoutUndefined<T extends Record<string, unknown>>(value: T): T {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, fieldValue]) => fieldValue !== undefined)
+  ) as T;
+}
+
+async function persistItemLocally(item: PortfolioItem): Promise<void> {
+  if (typeof window === 'undefined') return;
+
+  await saveLocalItemIndexedDB(item);
+  const storageKey = `local_portfolio_items_${item.userId}`;
+  try {
+    const existingStr = localStorage.getItem(storageKey);
+    const existing: PortfolioItem[] = existingStr ? JSON.parse(existingStr) : [];
+    const filtered = Array.isArray(existing) ? existing.filter((entry) => entry.id !== item.id) : [];
+    safeSaveLocalStorage(storageKey, [item, ...filtered]);
+  } catch (error) {
+    console.warn('[portfolio] Could not update the local cache:', error);
+  }
+}
+
+const legacySyncs = new Map<string, Promise<PortfolioItem | null>>();
+
+async function uploadLegacyDataUrl(
+  userId: string,
+  dataUrl: string,
+  folder: 'media' | 'thumbnails',
+  itemId: string,
+): Promise<string> {
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+  const extension = blob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'bin';
+  const file = new File([blob], `${itemId}.${extension}`, { type: blob.type });
+  return uploadPortfolioMedia(userId, file, folder);
+}
+
 /**
- * Creates a new Portfolio or WIP item in Firestore.
- * Falls back to local persistence if Firestore permissions fail.
+ * Older builds reported uploads as successful after saving them only in this browser.
+ * When an owner returns, migrate those recoverable records to shared storage so they
+ * become visible to the whole community.
+ */
+async function syncLegacyLocalItem(item: PortfolioItem): Promise<PortfolioItem | null> {
+  if (
+    typeof window === 'undefined' ||
+    !auth.currentUser ||
+    auth.currentUser.uid !== item.userId ||
+    !item.id ||
+    !item.mediaUrl
+  ) {
+    return null;
+  }
+
+  const existingSync = legacySyncs.get(item.id);
+  if (existingSync) return existingSync;
+
+  const sync = (async () => {
+    try {
+      const remoteRef = doc(db, PORTFOLIO_COLLECTION, item.id);
+      const remoteSnapshot = await getDoc(remoteRef);
+      if (remoteSnapshot.exists()) {
+        const remoteItem = withPortfolioDefaults({
+          id: remoteSnapshot.id,
+          ...remoteSnapshot.data(),
+        } as PortfolioItem);
+        await persistItemLocally(remoteItem);
+        return remoteItem;
+      }
+
+      let mediaUrl = item.mediaUrl;
+      let thumbnailUrl = item.thumbnailUrl;
+
+      if (mediaUrl.startsWith('data:')) {
+        mediaUrl = await uploadLegacyDataUrl(item.userId, mediaUrl, 'media', item.id);
+      }
+      if (thumbnailUrl?.startsWith('data:')) {
+        thumbnailUrl = item.thumbnailUrl === item.mediaUrl
+          ? mediaUrl
+          : await uploadLegacyDataUrl(item.userId, thumbnailUrl, 'thumbnails', `${item.id}_thumbnail`);
+      }
+
+      if (mediaUrl !== item.mediaUrl || thumbnailUrl !== item.thumbnailUrl) {
+        await persistItemLocally(withPortfolioDefaults({ ...item, mediaUrl, thumbnailUrl }));
+      }
+
+      const commentsSnapshot = await getCountFromServer(
+        collection(db, PORTFOLIO_COLLECTION, item.id, 'comments')
+      );
+      const migratedItem = withPortfolioDefaults({
+        ...item,
+        mediaUrl,
+        thumbnailUrl,
+        commentsCount: Math.max(Number(item.commentsCount) || 0, commentsSnapshot.data().count),
+      });
+      await setDoc(
+        remoteRef,
+        withoutUndefined(migratedItem as unknown as Record<string, unknown>)
+      );
+      await persistItemLocally(migratedItem);
+      return migratedItem;
+    } catch (error) {
+      console.warn(`[portfolio] Could not migrate local item ${item.id} to the community feed:`, error);
+      return null;
+    } finally {
+      legacySyncs.delete(item.id);
+    }
+  })();
+
+  legacySyncs.set(item.id, sync);
+  return sync;
+}
+
+/**
+ * Creates a new Portfolio or WIP item in shared storage and Firestore.
+ * The remote write is authoritative; local caches are updated only after it succeeds.
  */
 export async function createPortfolioItem(
   itemData: Omit<PortfolioItem, 'id' | 'createdAt' | 'updatedAt' | 'likesCount' | 'viewsCount' | 'likedBy'>,
@@ -313,38 +395,25 @@ export async function createPortfolioItem(
   }
 
   const nowSeconds = Math.floor(Date.now() / 1000);
-  const newItem: PortfolioItem = {
+  const newItem = withPortfolioDefaults({
     ...itemData,
     id: newDocRef.id,
     mediaUrl,
     thumbnailUrl: thumbnailUrl || (itemData.mediaType === 'image' || itemData.mediaType === 'gif' ? mediaUrl : undefined),
     likesCount: 0,
     viewsCount: 0,
+    commentsCount: 0,
+    sharesCount: 0,
     likedBy: [],
     createdAt: { seconds: nowSeconds },
     updatedAt: { seconds: nowSeconds },
-  };
+  } as PortfolioItem);
 
-  // Always store full item locally in IndexedDB and localStorage so uploaded work is immediately visible across preview links
-  await saveLocalItemIndexedDB(newItem);
-  try {
-    const storageKey = `local_portfolio_items_${itemData.userId}`;
-    const existingStr = localStorage.getItem(storageKey);
-    const existing: PortfolioItem[] = existingStr ? JSON.parse(existingStr) : [];
-    const filtered = existing.filter((i) => i.id !== newItem.id);
-    safeSaveLocalStorage(storageKey, [newItem, ...filtered]);
-  } catch (e) {
-    console.error("Failed to save to local storage fallback:", e);
-  }
-
-  try {
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Firestore setDoc timeout")), 2500)
-    );
-    await Promise.race([setDoc(newDocRef, newItem), timeoutPromise]);
-  } catch (error: any) {
-    console.warn("Firestore setDoc permission or timeout fallback triggered:", error?.message || error);
-  }
+  await setDoc(
+    newDocRef,
+    withoutUndefined(newItem as unknown as Record<string, unknown>)
+  );
+  await persistItemLocally(newItem);
 
   return newItem;
 }
@@ -403,11 +472,10 @@ export async function getUserPortfolioItems(userId: string): Promise<PortfolioIt
     try {
       const collectionRef = collection(db, PORTFOLIO_COLLECTION);
       const q = query(collectionRef, where("userId", "==", userId));
-      const timeoutPromise = new Promise<any>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 1500));
-      const snapshot = await Promise.race([getDocs(q), timeoutPromise]);
-      if (snapshot && snapshot.docs) {
-        return snapshot.docs.map((d: any) => ({ id: d.id, ...d.data() } as PortfolioItem));
-      }
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map((snapshotDoc) =>
+        withPortfolioDefaults({ id: snapshotDoc.id, ...snapshotDoc.data() } as PortfolioItem)
+      );
     } catch (e) {
       console.warn("[getUserPortfolioItems] Firestore query fallback:", e);
     }
@@ -415,31 +483,39 @@ export async function getUserPortfolioItems(userId: string): Promise<PortfolioIt
   };
 
   const fetchLocalStorage = (): PortfolioItem[] => {
-    const items: PortfolioItem[] = [];
     try {
       if (typeof window !== 'undefined') {
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k && k.startsWith('local_portfolio_items_')) {
-            const existingStr = localStorage.getItem(k);
-            if (existingStr) {
-              const parsed: PortfolioItem[] = JSON.parse(existingStr);
-              if (Array.isArray(parsed)) {
-                items.push(...parsed);
-              }
-            }
-          }
-        }
+        const existingStr = localStorage.getItem(`local_portfolio_items_${userId}`);
+        const parsed: PortfolioItem[] = existingStr ? JSON.parse(existingStr) : [];
+        return Array.isArray(parsed) ? parsed.filter((item) => item.userId === userId) : [];
       }
     } catch (e) {}
-    return items;
+    return [];
   };
 
   const [firestoreItems, idbItems] = await Promise.all([
     fetchFirestore(),
-    loadLocalItemsIndexedDB().catch(() => [])
+    loadLocalItemsIndexedDB(userId).catch(() => [])
   ]);
   const localStorageItems = fetchLocalStorage();
+
+  const remoteIds = new Set(firestoreItems.map((item) => item.id));
+  const localById = new Map<string, PortfolioItem>();
+  for (const item of [...localStorageItems, ...idbItems]) {
+    if (item?.id && item.userId === userId) localById.set(item.id, item);
+  }
+
+  const migratedItems = await Promise.all(
+    Array.from(localById.values())
+      .filter((item) => !remoteIds.has(item.id))
+      .map((item) => syncLegacyLocalItem(item))
+  );
+  for (const item of migratedItems) {
+    if (item && !remoteIds.has(item.id)) {
+      firestoreItems.push(item);
+      remoteIds.add(item.id);
+    }
+  }
 
   // Deduplicate items by ID with Firestore taking priority, local caches as fallback/merged values
   const itemMap = new Map<string, PortfolioItem>();
@@ -448,7 +524,7 @@ export async function getUserPortfolioItems(userId: string): Promise<PortfolioIt
       itemMap.set(item.id, item);
     }
   }
-  for (const item of [...localStorageItems, ...idbItems]) {
+  for (const item of localById.values()) {
     if (item && item.id) {
       if (!itemMap.has(item.id)) {
         itemMap.set(item.id, item);
@@ -464,8 +540,9 @@ export async function getUserPortfolioItems(userId: string): Promise<PortfolioIt
     }
   }
 
-  const allCombined = Array.from(itemMap.values());
-  return allCombined.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  return Array.from(itemMap.values())
+    .map(withPortfolioDefaults)
+    .sort((a, b) => portfolioCreatedAtSeconds(b) - portfolioCreatedAtSeconds(a));
 }
 
 /**
@@ -480,7 +557,9 @@ export async function getPublicPortfolioItems(options?: {
     try {
       const collectionRef = collection(db, PORTFOLIO_COLLECTION);
       const snapshot = await getDocs(collectionRef);
-      return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as PortfolioItem));
+      return snapshot.docs.map((snapshotDoc) =>
+        withPortfolioDefaults({ id: snapshotDoc.id, ...snapshotDoc.data() } as PortfolioItem)
+      );
     } catch (error) {
       console.warn("[getPublicPortfolioItems] Firestore query fallback:", error);
       return [];
@@ -512,16 +591,35 @@ export async function getPublicPortfolioItems(options?: {
   ]);
   const localStorageItems = fetchLocalStorage();
 
+  const remoteIds = new Set(firestoreItems.map((item) => item.id));
+  const localById = new Map<string, PortfolioItem>();
+  for (const item of [...localStorageItems, ...idbItems]) {
+    if (item?.id && item.title) localById.set(item.id, item);
+  }
+
+  const currentUserId = auth.currentUser?.uid;
+  if (currentUserId) {
+    const migratedItems = await Promise.all(
+      Array.from(localById.values())
+        .filter((item) => item.userId === currentUserId && !remoteIds.has(item.id))
+        .map((item) => syncLegacyLocalItem(item))
+    );
+    for (const item of migratedItems) {
+      if (item && !remoteIds.has(item.id)) {
+        firestoreItems.push(item);
+        remoteIds.add(item.id);
+      }
+    }
+  }
+
   const itemMap = new Map<string, PortfolioItem>();
   for (const item of firestoreItems) {
     if (item && item.id && item.title) {
       itemMap.set(item.id, item);
     }
   }
-  for (const item of [...localStorageItems, ...idbItems]) {
+  for (const item of localById.values()) {
     if (item && item.id && item.title) {
-      if (options?.type && item.type !== options.type) continue;
-      if (options?.wipStage && item.wipStage !== options.wipStage) continue;
       if (!itemMap.has(item.id)) {
         itemMap.set(item.id, item);
       } else {
@@ -536,15 +634,11 @@ export async function getPublicPortfolioItems(options?: {
     }
   }
 
-  const getSeconds = (item: PortfolioItem) => {
-    if (typeof item.createdAt === 'number') return item.createdAt;
-    if (item.createdAt && typeof item.createdAt === 'object' && 'seconds' in item.createdAt) {
-      return item.createdAt.seconds;
-    }
-    return 0;
-  };
-
-  const allItems = Array.from(itemMap.values()).sort((a, b) => getSeconds(b) - getSeconds(a));
+  const allItems = Array.from(itemMap.values())
+    .map(withPortfolioDefaults)
+    .filter((item) => !options?.type || item.type === options.type)
+    .filter((item) => !options?.wipStage || item.wipStage === options.wipStage)
+    .sort((a, b) => portfolioCreatedAtSeconds(b) - portfolioCreatedAtSeconds(a));
 
   return options?.limitCount ? allItems.slice(0, options.limitCount) : allItems;
 }
@@ -558,10 +652,10 @@ export async function getPortfolioItemById(itemId: string): Promise<PortfolioIte
     const snapshot = await getDoc(docRef);
     if (!snapshot.exists()) return null;
     
-    // Increment view count asynchronously
-    updateDoc(docRef, { viewsCount: increment(1) }).catch(console.error);
+    // Increment view count asynchronously without delaying the detail view.
+    incrementPortfolioItemViews(itemId).catch(console.error);
 
-    return { id: snapshot.id, ...snapshot.data() } as PortfolioItem;
+    return withPortfolioDefaults({ id: snapshot.id, ...snapshot.data() } as PortfolioItem);
   } catch (error) {
     console.error("Error getting portfolio item by ID:", error);
     return null;
@@ -588,27 +682,36 @@ export async function updatePortfolioItem(
 }
 
 /**
+ * Atomically increments a public engagement counter and returns its persisted value.
+ */
+async function incrementPortfolioCounter(
+  itemId: string,
+  field: 'viewsCount' | 'sharesCount',
+): Promise<number> {
+  const docRef = doc(db, PORTFOLIO_COLLECTION, itemId);
+  return runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(docRef);
+    if (!snapshot.exists()) throw new Error('Portfolio item not found');
+
+    const currentCount = Math.max(0, Number(snapshot.data()[field]) || 0);
+    const nextCount = currentCount + 1;
+    transaction.update(docRef, { [field]: nextCount });
+    return nextCount;
+  });
+}
+
+/**
  * Increments view count on a portfolio item.
  */
-export async function incrementPortfolioItemViews(itemId: string): Promise<void> {
-  try {
-    const docRef = doc(db, PORTFOLIO_COLLECTION, itemId);
-    await updateDoc(docRef, { viewsCount: increment(1) });
-  } catch (error) {
-    console.warn("[incrementPortfolioItemViews] Firestore update failed:", error);
-  }
+export function incrementPortfolioItemViews(itemId: string): Promise<number> {
+  return incrementPortfolioCounter(itemId, 'viewsCount');
 }
 
 /**
  * Increments share count on a portfolio item.
  */
-export async function incrementPortfolioItemShares(itemId: string): Promise<void> {
-  try {
-    const docRef = doc(db, PORTFOLIO_COLLECTION, itemId);
-    await updateDoc(docRef, { sharesCount: increment(1) });
-  } catch (error) {
-    console.warn("[incrementPortfolioItemShares] Firestore update failed:", error);
-  }
+export function incrementPortfolioItemShares(itemId: string): Promise<number> {
+  return incrementPortfolioCounter(itemId, 'sharesCount');
 }
 
 /**
@@ -653,34 +756,33 @@ export async function toggleLikePortfolioItem(
   itemId: string, 
   userId: string
 ): Promise<{ isLiked: boolean; count: number }> {
-  try {
-    const docRef = doc(db, PORTFOLIO_COLLECTION, itemId);
-    const snapshot = await getDoc(docRef);
-
-    if (snapshot.exists()) {
-      const data = snapshot.data();
-      const likedBy: string[] = data.likedBy || [];
-      const isLiked = likedBy.includes(userId);
-
-      if (isLiked) {
-        await updateDoc(docRef, {
-          likedBy: arrayRemove(userId),
-          likesCount: increment(-1)
-        });
-        return { isLiked: false, count: Math.max(0, (data.likesCount || 1) - 1) };
-      } else {
-        await updateDoc(docRef, {
-          likedBy: arrayUnion(userId),
-          likesCount: increment(1)
-        });
-        return { isLiked: true, count: (data.likesCount || 0) + 1 };
-      }
-    }
-  } catch (error) {
-    console.warn("[toggleLikePortfolioItem] Firestore toggle like error:", error);
+  if (!auth.currentUser || auth.currentUser.uid !== userId) {
+    throw new Error('You must be signed in to like a portfolio item.');
   }
 
-  return { isLiked: true, count: 1 };
+  const docRef = doc(db, PORTFOLIO_COLLECTION, itemId);
+  return runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(docRef);
+    if (!snapshot.exists()) throw new Error('Portfolio item not found');
+
+    const data = snapshot.data();
+    const likedBy = Array.isArray(data.likedBy)
+      ? Array.from(new Set(data.likedBy.filter((id): id is string => typeof id === 'string')))
+      : [];
+    const isLiked = likedBy.includes(userId);
+    const currentCount = Math.max(0, Number(data.likesCount) || 0);
+    const updatedLikedBy = isLiked
+      ? likedBy.filter((id) => id !== userId)
+      : [...likedBy, userId];
+    const nextCount = isLiked ? Math.max(0, currentCount - 1) : currentCount + 1;
+
+    transaction.update(docRef, {
+      likedBy: updatedLikedBy,
+      likesCount: nextCount,
+    });
+
+    return { isLiked: !isLiked, count: nextCount };
+  });
 }
 
 /**

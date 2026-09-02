@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Suspense, useEffect, useState } from 'react';
 import { UploadProvider } from '@/hooks/use-upload';
 import { UploadProgressManager } from './UploadProgressManager';
+import { LocalUploadRecovery } from './portfolio/LocalUploadRecovery';
 import { cn } from '@/lib/utils';
 import { GlassHeader } from '@/components/GlassHeader';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -65,6 +66,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                 <UploadProvider>
                     {children}
                     <UploadProgressManager />
+                    <LocalUploadRecovery />
                 </UploadProvider>
             </WatchTrackerProvider>
         );
@@ -267,6 +269,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                         )}
                     </div>
                     <UploadProgressManager />
+                    <LocalUploadRecovery />
                     <MobileInstallAfterLogin />
                 </SidebarInset>
             </SidebarProvider>

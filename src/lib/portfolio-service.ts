@@ -355,6 +355,60 @@ async function syncLegacyLocalItem(item: PortfolioItem): Promise<PortfolioItem |
 }
 
 /**
+ * Pushes any of this user's browser-only portfolio items up to Firestore.
+ *
+ * Uploads made before server persistence worked live solely in this browser's
+ * localStorage/IndexedDB. They are invisible to everyone else, and nobody else
+ * can recover them — the data exists only on this device. Migrating on sign-in
+ * means a returning user rescues their own work without having to re-upload,
+ * and without needing to visit any particular page.
+ *
+ * Safe to call repeatedly: syncLegacyLocalItem skips anything already on the
+ * server and de-dupes concurrent attempts for the same item.
+ */
+export async function syncLocalItemsForUser(userId: string): Promise<number> {
+  if (typeof window === 'undefined' || !userId) return 0;
+
+  const seen = new Map<string, PortfolioItem>();
+
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith('local_portfolio_items_')) continue;
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        for (const item of parsed) {
+          if (item?.id && item.userId === userId) seen.set(item.id, item);
+        }
+      }
+    }
+  } catch {
+    // Storage unavailable or corrupt — fall through to IndexedDB.
+  }
+
+  const idbItems = await loadLocalItemsIndexedDB(userId).catch(() => [] as PortfolioItem[]);
+  for (const item of idbItems) {
+    if (item?.id && item.userId === userId) seen.set(item.id, item);
+  }
+
+  if (seen.size === 0) return 0;
+
+  const results = await Promise.all(
+    Array.from(seen.values()).map((item) =>
+      syncLegacyLocalItem(item).catch(() => null)
+    )
+  );
+
+  const migrated = results.filter(Boolean).length;
+  if (migrated > 0) {
+    console.log(`[portfolio] Restored ${migrated} local upload(s) to your account.`);
+  }
+  return migrated;
+}
+
+/**
  * Creates a new Portfolio or WIP item in shared storage and Firestore.
  * The remote write is authoritative; local caches are updated only after it succeeds.
  */

@@ -6,6 +6,14 @@ import { ArrowDown, ArrowUp, Eye, Heart, Bookmark, GripVertical, Layers, Play, S
 import type { PortfolioItem, WipStage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { incrementPortfolioItemViews } from '@/lib/portfolio-service';
+import { HOVER_GRACE_MS } from '@/lib/watch-tracker';
+
+/**
+ * Items already counted this session. Hovering the same card repeatedly, or
+ * scrolling it in and out of view, should not keep inflating its view count.
+ */
+const viewedThisSession = new Set<string>();
 
 interface PortfolioItemCardProps {
   item: PortfolioItem;
@@ -55,6 +63,34 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [viewsCount, setViewsCount] = useState(item.viewsCount || 0);
+  const viewTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setViewsCount(item.viewsCount || 0);
+  }, [item.viewsCount]);
+
+  // A sustained hover counts as a view, the same way opening it fullscreen
+  // does. The grace period is shared with the watch tracker so a cursor
+  // sweeping across a grid contributes nothing — without it, scrolling past
+  // twenty cards would register twenty views.
+  useEffect(() => {
+    if (!isHovered || viewedThisSession.has(item.id)) return;
+
+    viewTimerRef.current = setTimeout(() => {
+      viewedThisSession.add(item.id);
+      setViewsCount((n) => n + 1); // optimistic: the number moves immediately
+      incrementPortfolioItemViews(item.id).catch(() => {
+        // A failed count must never interrupt playback; roll the number back.
+        viewedThisSession.delete(item.id);
+        setViewsCount((n) => Math.max(0, n - 1));
+      });
+    }, HOVER_GRACE_MS);
+
+    return () => {
+      if (viewTimerRef.current) clearTimeout(viewTimerRef.current);
+    };
+  }, [isHovered, item.id]);
 
   const isLiked = isLikedProp || (currentUserId && item.likedBy ? item.likedBy.includes(currentUserId) : false);
   const isSaved = isSavedProp;
@@ -265,7 +301,7 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
 
           {/* Likes & Views Counter Bar */}
           <div className="flex items-center justify-between gap-1 border-t border-white/10 pt-1 text-xs text-zinc-400">
-            <span className="flex items-center gap-1" title="Views"><Eye className="h-3 w-3 text-zinc-400" /> {item.viewsCount || 0}</span>
+            <span className="flex items-center gap-1" title="Views"><Eye className="h-3 w-3 text-zinc-400" /> {viewsCount}</span>
             <button
               onClick={(e) => {
                 e.stopPropagation();

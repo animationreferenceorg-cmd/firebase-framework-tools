@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { getUserProfileByUsernameOrId } from '@/lib/firestore';
-import { getUserPortfolioItems, deletePortfolioItem, toggleLikePortfolioItem } from '@/lib/portfolio-service';
+import { getUserPortfolioItems, deletePortfolioItem, toggleLikePortfolioItem, incrementPortfolioItemShares } from '@/lib/portfolio-service';
 import type { UserProfile, PortfolioItem, WipStage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -175,6 +175,22 @@ export default function UsernamePublicProfilePage() {
         await deletePortfolioItem(itemId, auth.currentUser.uid);
       }
       toast({ title: 'Post Deleted', description: 'Item has been removed.' });
+    }
+  };
+
+  // Every page rendering PortfolioItemCard has to supply this: the card always
+  // shows a share button, and without a handler it was inert on this page.
+  const handleShareItem = async (targetItem: PortfolioItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const url = `${window.location.origin}${window.location.pathname}?item=${targetItem.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Link copied', description: 'Portfolio link copied to clipboard.' });
+      const sharesCount = await incrementPortfolioItemShares(targetItem.id);
+      setItems((prev) => prev.map((i) => (i.id === targetItem.id ? { ...i, sharesCount } : i)));
+    } catch (error: any) {
+      console.error("Error sharing item:", error);
+      toast({ title: 'Could not copy link', variant: 'destructive' });
     }
   };
 
@@ -443,6 +459,8 @@ export default function UsernamePublicProfilePage() {
                     setIsDetailOpen(true);
                   }}
                   onLike={(e) => handleLikeItem(item, e)}
+                  onShare={(e) => handleShareItem(item, e)}
+                  onComment={() => { setSelectedItem(item); setIsDetailOpen(true); }}
                   onEdit={auth.currentUser && (auth.currentUser.uid === item.userId || auth.currentUser.uid === profile?.uid) ? (e) => {
                     e.stopPropagation();
                     setEditingItem(item);

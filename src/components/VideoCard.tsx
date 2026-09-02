@@ -41,8 +41,11 @@ function getPreviewUrl(url?: string): string | undefined {
 
 function isPlayableVideoUrl(url?: string): boolean {
   if (!url) return false;
-  if (url.includes('.mp4') || url.includes('.webm') || url.includes('firebasestorage.googleapis.com')) return true;
-  // If it's a social link (instagram, tiktok), it's not directly playable in a <video> tag
+  // Direct video formats
+  if (url.includes('.mp4') || url.includes('.webm')) return true;
+  // Firebase Storage URLs (both firebasestorage.googleapis.com and storage.googleapis.com)
+  if (url.includes('firebasestorage.googleapis.com') || url.includes('storage.googleapis.com')) return true;
+  // Instagram and TikTok embed pages are not directly playable via <video>
   if (url.includes('instagram.com') || url.includes('tiktok.com')) return false;
   return true; // assume playable otherwise
 }
@@ -665,6 +668,18 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
               setHasImageError(true);
               setIsImageLoaded(true);
             }}
+          />
+        ) : video.videoUrl && isPlayableVideoUrl(video.videoUrl) ? (
+          <video
+            src={cardInView ? getPreviewUrl(video.videoUrl) : undefined}
+            preload="metadata"
+            muted
+            playsInline
+            onLoadedData={() => setIsImageLoaded(true)}
+            className={cn(
+              "w-full h-full object-cover transition-opacity duration-300",
+              !isImageLoaded && "opacity-0"
+            )}
           />
         ) : (
           <div className={cn(

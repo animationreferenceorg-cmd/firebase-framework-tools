@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { auth, db, isFirebaseConfigured } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { getSnapshotVideos } from '@/lib/videoSnapshot';
-import { getUserPortfolioItems, getDatabaseVideosAsPortfolioItems, updateUserProfileData, deletePortfolioItem, toggleLikePortfolioItem } from '@/lib/portfolio-service';
+import { getUserPortfolioItems, getDatabaseVideosAsPortfolioItems, updateUserProfileData, deletePortfolioItem, toggleLikePortfolioItem, incrementPortfolioItemShares } from '@/lib/portfolio-service';
 import type { PortfolioItem, WipStage, Video } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { VideoCard } from '@/components/VideoCard';
@@ -351,6 +351,22 @@ export default function ProfilePage() {
         await deletePortfolioItem(itemId, authUser.uid);
       }
       toast({ title: 'Post Deleted', description: 'Item has been removed from your portfolio.' });
+    }
+  };
+
+  // The card renders a share button unconditionally, so every page that uses it
+  // must supply a handler — without one the button silently did nothing here.
+  const handleShareItem = async (targetItem: PortfolioItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const url = `${window.location.origin}/${userProfile?.username || 'u/' + targetItem.userId}?item=${targetItem.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Link copied', description: 'Portfolio link copied to clipboard.' });
+      const sharesCount = await incrementPortfolioItemShares(targetItem.id);
+      setPortfolioItems((prev) => prev.map((i) => (i.id === targetItem.id ? { ...i, sharesCount } : i)));
+    } catch (error: any) {
+      console.error("Error sharing item:", error);
+      toast({ title: 'Could not copy link', variant: 'destructive' });
     }
   };
 
@@ -776,6 +792,8 @@ export default function ProfilePage() {
                       }}
                       onDelete={(e) => handleItemDeleted(item.id, e)}
                       onLike={(e) => handleLikeItem(item, e)}
+                      onShare={(e) => handleShareItem(item, e)}
+                      onComment={() => { setSelectedItem(item); setIsDetailOpen(true); }}
                       currentUserId={authUser?.uid}
                       isReordering={isReordering}
                       onMoveUp={() => handleMoveItem(index, 'up')}

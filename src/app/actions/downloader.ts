@@ -19,7 +19,7 @@ import { bunnyMp4Url, bunnyStreamConfig, waitForBunnyVideo } from '@/lib/bunny-s
  * "permanent" signed URLs break the moment that key is rotated or the account
  * is deleted. A public object has no such dependency.
  */
-export function publicStorageUrl(bucketName: string, objectPath: string): string {
+export async function publicStorageUrl(bucketName: string, objectPath: string): Promise<string> {
     const encoded = objectPath.split('/').map(encodeURIComponent).join('/');
     return `https://storage.googleapis.com/${bucketName}/${encoded}`;
 }
@@ -391,7 +391,7 @@ export async function downloadSocialVideo(
                     // its signing service-account key was rotated or removed.
                     console.log('[Downloader] Upload complete. Publishing object...');
                     await bucket.file(destination).makePublic();
-                    videoUrl = publicStorageUrl(bucket.name, destination);
+                    videoUrl = await publicStorageUrl(bucket.name, destination);
                 }
 
                 const mappedTags = (postInfo.tags || '')
@@ -570,7 +570,7 @@ export async function downloadSocialVideo(
                 }
             });
             await bucket.file(storagePath).makePublic();
-            storedVideoUrl = publicStorageUrl(bucket.name, storagePath);
+            storedVideoUrl = await publicStorageUrl(bucket.name, storagePath);
             await onProgress?.(94, 'Finalizing reference');
         }
 

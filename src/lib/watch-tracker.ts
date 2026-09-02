@@ -1,9 +1,9 @@
 const WATCH_COUNT_KEY = 'animref_watch_count';
-const WATCH_LIMIT_BEFORE_DONATE_POPUP = 10;
+export const WATCH_LIMIT_BEFORE_DONATE_POPUP = 20;
 
 /**
  * Increments reference watch count in localStorage.
- * Returns true if user reached 10 watched references and should trigger the 12s Donate Popup.
+ * Returns true if the user reached the configured watch limit and should trigger the Donate Popup.
  */
 export function recordReferenceView(isPremium?: boolean): boolean {
   if (isPremium) {
@@ -21,7 +21,7 @@ export function recordReferenceView(isPremium?: boolean): boolean {
 
     if (newCount >= WATCH_LIMIT_BEFORE_DONATE_POPUP) {
       localStorage.setItem(WATCH_COUNT_KEY, '0');
-      console.log(`[Watch Tracker] Limit reached (10/10)! Triggering 12s Donate Popup.`);
+      console.log(`[Watch Tracker] Limit reached (${WATCH_LIMIT_BEFORE_DONATE_POPUP}/${WATCH_LIMIT_BEFORE_DONATE_POPUP})! Triggering 12s Donate Popup.`);
       return true;
     } else {
       localStorage.setItem(WATCH_COUNT_KEY, newCount.toString());

@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, orderBy, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquare, Check, Trash2, Clock, Send } from 'lucide-react';
+import { MessageSquare, Check, Trash2, Clock, Send, Pencil, Save, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
@@ -22,6 +22,7 @@ interface Feedback {
   status: 'new' | 'read' | 'archived';
   response?: string;
   respondedAt?: any;
+  responseEditedAt?: any;
 }
 
 export default function FeedbackPage() {
@@ -29,6 +30,8 @@ export default function FeedbackPage() {
   const [loading, setLoading] = useState(true);
   const [responses, setResponses] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState<Record<string, boolean>>({});
+  const [editingResponseId, setEditingResponseId] = useState<string | null>(null);
+  const [editingResponse, setEditingResponse] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -84,6 +87,39 @@ export default function FeedbackPage() {
     } catch (error) {
       console.error('Error sending response:', error);
       toast({ title: 'Error', description: 'Failed to send response', variant: 'destructive' });
+    } finally {
+      setSubmitting(prev => ({ ...prev, [feedbackId]: false }));
+    }
+  };
+
+  const startEditingResponse = (item: Feedback) => {
+    setEditingResponseId(item.id);
+    setEditingResponse(item.response || '');
+  };
+
+  const cancelEditingResponse = () => {
+    setEditingResponseId(null);
+    setEditingResponse('');
+  };
+
+  const handleUpdateResponse = async (feedbackId: string) => {
+    const responseText = editingResponse.trim();
+    if (!responseText) {
+      toast({ title: 'Error', description: 'Response cannot be empty', variant: 'destructive' });
+      return;
+    }
+
+    setSubmitting(prev => ({ ...prev, [feedbackId]: true }));
+    try {
+      await updateDoc(doc(db, 'feedback', feedbackId), {
+        response: responseText,
+        responseEditedAt: serverTimestamp(),
+      });
+      cancelEditingResponse();
+      toast({ title: 'Success', description: 'Response updated!' });
+    } catch (error) {
+      console.error('Error updating response:', error);
+      toast({ title: 'Error', description: 'Failed to update response', variant: 'destructive' });
     } finally {
       setSubmitting(prev => ({ ...prev, [feedbackId]: false }));
     }
@@ -233,17 +269,67 @@ export default function FeedbackPage() {
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-sm">Animation Reference</p>
-                            <span className="text-xs text-muted-foreground">
-                              {item.respondedAt?.toDate
-                                ? format(item.respondedAt.toDate(), 'MMM d, yyyy h:mm a')
-                                : 'Unknown date'}
-                            </span>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-sm">Animation Reference</p>
+                              <span className="text-xs text-muted-foreground">
+                                {item.respondedAt?.toDate
+                                  ? format(item.respondedAt.toDate(), 'MMM d, yyyy h:mm a')
+                                  : 'Unknown date'}
+                              </span>
+                              {item.responseEditedAt && (
+                                <span className="text-xs text-muted-foreground italic">Edited</span>
+                              )}
+                            </div>
+                            {editingResponseId !== item.id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => startEditingResponse(item)}
+                                className="h-8 gap-1.5 flex-shrink-0"
+                                title="Edit response"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                                Edit
+                              </Button>
+                            )}
                           </div>
-                          <p className="text-sm leading-relaxed text-foreground/90 mt-1 break-words">
-                            {item.response}
-                          </p>
+                          {editingResponseId === item.id ? (
+                            <div className="mt-2 space-y-3">
+                              <Textarea
+                                aria-label="Edit admin response"
+                                value={editingResponse}
+                                onChange={(e) => setEditingResponse(e.target.value)}
+                                className="min-h-[100px] resize-y text-sm"
+                                autoFocus
+                              />
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={cancelEditingResponse}
+                                  disabled={submitting[item.id]}
+                                  className="gap-1.5"
+                                >
+                                  <X className="h-4 w-4" />
+                                  Cancel
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleUpdateResponse(item.id)}
+                                  disabled={submitting[item.id] || !editingResponse.trim()}
+                                  className="gap-1.5"
+                                >
+                                  <Save className="h-4 w-4" />
+                                  {submitting[item.id] ? 'Saving...' : 'Save Changes'}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm leading-relaxed text-foreground/90 mt-1 break-words">
+                              {item.response}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>

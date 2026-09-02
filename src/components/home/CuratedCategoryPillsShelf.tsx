@@ -125,7 +125,7 @@ export function CuratedCategoryPillsShelf({ onSelectPill, categories = [], video
       });
 
       // 2. Count matching videos
-      let matchingVideos = videos.filter((v) => {
+      const matchingVideos = videos.filter((v) => {
         if (cfg.slug === 'shorts') return v.isShort;
         const tags = (v.tags || []).map((t) => t.toLowerCase());
         const cats = (v.categoryIds || []).concat(v.categories || []).map((c) => c.toLowerCase());
@@ -185,7 +185,7 @@ export function CuratedCategoryPillsShelf({ onSelectPill, categories = [], video
       </div>
 
       {/* 6-Card Category Shelf Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+      <div className="flex touch-pan-x snap-x snap-mandatory gap-3.5 overflow-x-auto pb-2 scrollbar-none sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 lg:grid-cols-6">
         {resolvedCapsules.map((cat) => {
           const Icon = cat.icon;
           return (
@@ -193,7 +193,7 @@ export function CuratedCategoryPillsShelf({ onSelectPill, categories = [], video
               key={cat.id}
               href={cat.targetHref}
               onClick={() => onSelectPill?.(cat.slug)}
-              className={`group relative rounded-2xl overflow-hidden border ${cat.borderColor} bg-gradient-to-b ${cat.colorGradient} p-4 shadow-lg hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between min-h-[140px]`}
+              className={`group relative flex min-h-[140px] w-[72vw] max-w-[280px] shrink-0 snap-start flex-col justify-between overflow-hidden rounded-2xl border ${cat.borderColor} bg-gradient-to-b ${cat.colorGradient} p-4 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-2xl sm:w-auto sm:max-w-none`}
             >
               {/* Background Art Overlay from Real Database Thumbnail */}
               <div className="absolute inset-0 opacity-40 group-hover:opacity-60 transition-opacity mix-blend-luminosity">

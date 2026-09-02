@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useUser } from './use-user';
-import { recordReferenceView } from '@/lib/watch-tracker';
+import { recordReferenceView, WATCH_LIMIT_BEFORE_DONATE_POPUP } from '@/lib/watch-tracker';
 import { DonateDialog } from '@/components/DonateDialog';
 
 interface WatchTrackerContextType {
@@ -58,7 +58,7 @@ export function WatchTrackerProvider({ children }: { children: ReactNode }) {
         },
         getWatchCount: () => {
           const val = localStorage.getItem('animref_watch_count') || '0';
-          console.log(`[Watch Tracker] Current count: ${val}/10`);
+          console.log(`[Watch Tracker] Current count: ${val}/${WATCH_LIMIT_BEFORE_DONATE_POPUP}`);
           return val;
         }
       };

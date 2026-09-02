@@ -99,14 +99,14 @@ export function HomeProductLaunchAnnouncement() {
         </Link>
       </div>
 
-      <div className="relative grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="relative -mx-5 flex touch-pan-x snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-2 scrollbar-none sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 xl:grid-cols-4">
         {launches.map((launch) => {
           const Icon = launch.icon;
           return (
             <Link
               key={launch.title}
               href={launch.href}
-              className="group overflow-hidden rounded-2xl border border-white/10 bg-black/35 transition-all duration-300 hover:-translate-y-1 hover:border-purple-400/40 hover:shadow-[0_18px_50px_rgba(88,28,135,0.22)]"
+              className="group w-[82vw] max-w-[320px] shrink-0 snap-start overflow-hidden rounded-2xl border border-white/10 bg-black/35 transition-all duration-300 hover:-translate-y-1 hover:border-purple-400/40 hover:shadow-[0_18px_50px_rgba(88,28,135,0.22)] sm:w-auto sm:max-w-none"
             >
               <div className="relative aspect-[16/9] overflow-hidden bg-zinc-950">
                 <LaunchCardImage launch={launch} />

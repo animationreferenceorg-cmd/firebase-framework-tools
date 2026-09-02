@@ -37,7 +37,6 @@ import { HomeProductLaunchAnnouncement } from '@/components/home/HomeProductLaun
 import { ArtistStoriesRail } from '@/components/home/ArtistStoriesRail';
 import { CommunityFeedShelf } from '@/components/home/CommunityFeedShelf';
 import { CuratedCategoryPillsShelf } from '@/components/home/CuratedCategoryPillsShelf';
-import { ScrollingBentoShelf } from '@/components/home/ScrollingBentoShelf';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { VideoPlayer } from '@/components/VideoPlayer';
@@ -395,12 +394,12 @@ export default function HomePage() {
             </h3>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="flex touch-pan-x snap-x snap-mandatory gap-5 overflow-x-auto pb-2 scrollbar-none sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-3">
             {dailyCommunityPicks.map((pick) => (
               <div
                 key={pick.video.id}
                 onClick={() => setSelectedPickVideo(pick.video)}
-                className={`group relative rounded-3xl overflow-hidden bg-gradient-to-br ${pick.bgGradient} p-6 shadow-2xl transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col justify-between min-h-[220px] cursor-pointer`}
+                className={`group relative flex min-h-[220px] w-[82vw] max-w-[340px] shrink-0 snap-start cursor-pointer flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br ${pick.bgGradient} p-6 shadow-2xl transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] sm:w-auto sm:max-w-none`}
               >
                 <div className="absolute inset-0 opacity-50 group-hover:opacity-65 transition-opacity mix-blend-luminosity">
                   <img

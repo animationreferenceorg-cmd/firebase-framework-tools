@@ -43,6 +43,9 @@ service cloud.firestore {
           request.resource.data.likeCount == resource.data.get('likeCount', 0) + 1
           || request.resource.data.likeCount == resource.data.get('likeCount', 0) - 1
         );
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount'])
+        && request.resource.data.viewCount is int
+        && request.resource.data.viewCount == resource.data.get('viewCount', 0) + 1;
     }
     match /categories/{categoryId} { allow read: if true; allow write: if isAdmin(); }
     match /folders/{folderId} { allow read: if true; allow write: if isAdmin(); }

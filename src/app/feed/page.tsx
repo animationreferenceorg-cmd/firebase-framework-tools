@@ -60,6 +60,14 @@ export default function CommunityFeedPage() {
           return i;
         })
       );
+      setSelectedItem((curr) => {
+        if (!curr || curr.id !== targetItem.id) return curr;
+        const likedBy = curr.likedBy || [];
+        const updatedLikedBy = res.isLiked
+          ? [...likedBy.filter((id) => id !== user.uid), user.uid]
+          : likedBy.filter((id) => id !== user.uid);
+        return { ...curr, likesCount: res.count, likedBy: updatedLikedBy };
+      });
     } catch (error: any) {
       console.error("Error toggling like:", error);
     }

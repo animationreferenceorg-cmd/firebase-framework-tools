@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from './ui/skeleton';
 import { useUser } from '@/hooks/use-user';
-import { likeVideo, unlikeVideo, saveVideo, unsaveVideo } from '@/lib/firestore';
+import { likeVideo, unlikeVideo, saveVideo, unsaveVideo, incrementVideoViewCount } from '@/lib/firestore';
 import { useAuth } from '@/hooks/use-auth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { checkLimit } from '@/lib/limits';
@@ -183,10 +183,25 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
     setIsHovered(false);
   };
 
+  const countedVideoViewRef = useRef(false);
+
+  useEffect(() => {
+    if (!isHovered || countedVideoViewRef.current || !video.id) return;
+    const t = setTimeout(() => {
+      countedVideoViewRef.current = true;
+      incrementVideoViewCount(video.id).catch(() => {});
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [isHovered, video.id]);
+
   const openVideoPlayer = () => {
     setIsPlayerOpen(true);
     // Deliberate playback — counts from the first second, no grace period.
     beginWatch(playKey, 'playback');
+    if (!countedVideoViewRef.current && video.id) {
+      countedVideoViewRef.current = true;
+      incrementVideoViewCount(video.id).catch(() => {});
+    }
   };
 
   const handleCardClick = (e: React.MouseEvent) => {

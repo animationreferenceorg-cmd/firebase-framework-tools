@@ -476,3 +476,21 @@ export async function grantSjsuStudentAccess(uid: string, sjsuEmail: string, acc
     console.warn('[SJSU Verification] Warning creating verification document:', err);
   }
 }
+
+/**
+ * Atomically increments the view count of a video document in Firestore.
+ */
+export async function incrementVideoViewCount(videoId: string): Promise<number> {
+  if (!videoId) return 0;
+  try {
+    const videoRef = doc(db, VIDEOS_COLLECTION, videoId);
+    await updateDoc(videoRef, {
+      viewCount: increment(1),
+    });
+    return 1;
+  } catch (error) {
+    console.warn("Could not increment video view count:", error);
+    return 0;
+  }
+}
+

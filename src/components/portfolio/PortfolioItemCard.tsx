@@ -85,12 +85,22 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
         viewedThisSession.delete(item.id);
         setViewsCount((n) => Math.max(0, n - 1));
       });
-    }, HOVER_GRACE_MS);
+    }, 1200);
 
     return () => {
       if (viewTimerRef.current) clearTimeout(viewTimerRef.current);
     };
   }, [isHovered, item.id]);
+
+  const handleCardClick = () => {
+    if (isReordering) return;
+    if (!viewedThisSession.has(item.id)) {
+      viewedThisSession.add(item.id);
+      setViewsCount((n) => n + 1);
+      incrementPortfolioItemViews(item.id).catch(() => {});
+    }
+    onClick?.();
+  };
 
   const isLiked = isLikedProp || (currentUserId && item.likedBy ? item.likedBy.includes(currentUserId) : false);
   const isSaved = isSavedProp;
@@ -136,7 +146,7 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={isReordering ? undefined : onClick}
+      onClick={handleCardClick}
       className={cn(
         "group relative w-full aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black transition-all duration-300 shadow-xl",
         isReordering

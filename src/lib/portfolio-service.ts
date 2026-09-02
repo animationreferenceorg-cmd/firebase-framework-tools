@@ -314,10 +314,10 @@ async function syncLegacyLocalItem(item: PortfolioItem): Promise<PortfolioItem |
       let mediaUrl = item.mediaUrl;
       let thumbnailUrl = item.thumbnailUrl;
 
-      if (mediaUrl.startsWith('data:')) {
+      if (mediaUrl.startsWith('data:') || mediaUrl.startsWith('blob:')) {
         mediaUrl = await uploadLegacyDataUrl(item.userId, mediaUrl, 'media', item.id);
       }
-      if (thumbnailUrl?.startsWith('data:')) {
+      if (thumbnailUrl?.startsWith('data:') || thumbnailUrl?.startsWith('blob:')) {
         thumbnailUrl = item.thumbnailUrl === item.mediaUrl
           ? mediaUrl
           : await uploadLegacyDataUrl(item.userId, thumbnailUrl, 'thumbnails', `${item.id}_thumbnail`);

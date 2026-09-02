@@ -68,7 +68,7 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
       setIsLiked(currentUserId && item.likedBy ? item.likedBy.includes(currentUserId) : false);
       incrementPortfolioItemViews(item.id)
         .then((count) => {
-          if (!cancelled) setViewsCount(count);
+          if (!cancelled && count > 0) setViewsCount(count);
         })
         .catch((error) => console.error('Could not record portfolio view:', error));
       return () => {

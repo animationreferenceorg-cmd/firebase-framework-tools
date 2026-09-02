@@ -573,6 +573,12 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
           </div>
 
           <DialogContent className="w-screen h-screen max-w-none m-0 p-0 rounded-none border-0 bg-[#0f0c1d]/95 backdrop-blur-xl overflow-y-auto">
+            {/* Radix requires a title on every dialog so screen readers can
+                announce it. The design has no visible heading here, so it is
+                positioned off-screen rather than hidden with display:none,
+                which would remove it from the accessibility tree too. */}
+            <DialogTitle className="sr-only">{displayTitle}</DialogTitle>
+
             {/* Back button — top RIGHT so it doesn't cover the top-left social link */}
             <Button
               variant="ghost"

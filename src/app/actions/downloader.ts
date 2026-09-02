@@ -11,6 +11,19 @@ import { bunnyMp4Url, bunnyStreamConfig, waitForBunnyVideo } from '@/lib/bunny-s
 
 // --- Helpers ---
 
+/**
+ * Public download URL for an object in a Cloud Storage bucket.
+ *
+ * Preferred over getSignedUrl for reference clips: a signature is only valid
+ * while the service account that produced it still holds the signing key, so
+ * "permanent" signed URLs break the moment that key is rotated or the account
+ * is deleted. A public object has no such dependency.
+ */
+export function publicStorageUrl(bucketName: string, objectPath: string): string {
+    const encoded = objectPath.split('/').map(encodeURIComponent).join('/');
+    return `https://storage.googleapis.com/${bucketName}/${encoded}`;
+}
+
 function runCommand(command: string, args: string[], options: any = {}): Promise<string> {
     return new Promise((resolve, reject) => {
         // Arguments include user-supplied source URLs; never pass them through a shell.
@@ -372,12 +385,13 @@ export async function downloadSocialVideo(
                         }
                     });
 
-                    console.log('[Downloader] Upload complete. Generating signed URL...');
-                    const [signedUrl] = await bucket.file(destination).getSignedUrl({
-                        action: 'read',
-                        expires: '03-01-2500'
-                    });
-                    videoUrl = signedUrl;
+                    // Reference clips are public, so serve them from a plain
+                    // public URL. The previous approach signed a URL expiring in
+                    // 2500, which looked permanent but silently died the moment
+                    // its signing service-account key was rotated or removed.
+                    console.log('[Downloader] Upload complete. Publishing object...');
+                    await bucket.file(destination).makePublic();
+                    videoUrl = publicStorageUrl(bucket.name, destination);
                 }
 
                 const mappedTags = (postInfo.tags || '')
@@ -555,11 +569,8 @@ export async function downloadSocialVideo(
                     metadata: { originalUrl: url, uploader, title }
                 }
             });
-            const [signedUrl] = await bucket.file(storagePath).getSignedUrl({
-                action: 'read',
-                expires: '03-01-2500'
-            });
-            storedVideoUrl = signedUrl;
+            await bucket.file(storagePath).makePublic();
+            storedVideoUrl = publicStorageUrl(bucket.name, storagePath);
             await onProgress?.(94, 'Finalizing reference');
         }
 

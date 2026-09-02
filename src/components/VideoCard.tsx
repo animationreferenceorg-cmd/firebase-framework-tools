@@ -381,7 +381,7 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
           ) : isCommunityVideo && video.videoUrl ? (
             <video
               ref={videoRef}
-              src={cardInView ? `${videoUrlForPreview}#t=0.1` : undefined}
+              src={cardInView ? videoUrlForPreview : undefined}
               preload="metadata"
               muted
               playsInline
@@ -474,7 +474,7 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
             </>
           ) : video.videoUrl ? (
             <video
-              src={cardInView ? `${videoUrlForPreview}#t=0.1` : undefined}
+              src={cardInView ? videoUrlForPreview : undefined}
               preload="metadata"
               muted
               playsInline

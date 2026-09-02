@@ -42,7 +42,10 @@ export function MoodboardItemCard({ video, className, onMaximize, playbackSpeed 
     const [isImageLoaded, setIsImageLoaded] = useState(false);
     const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
-    const { recordWatch } = useWatchTracker();
+    const { beginWatch, endWatch } = useWatchTracker();
+    // The card takes a Video or a LocalImage, so key off whichever identifier
+    // the item actually carries.
+    const hoverKey = `hover:moodboard:${'id' in video ? video.id : (video as { url?: string }).url ?? 'item'}`;
 
     useEffect(() => {
         if (isHovered && videoRef.current) {
@@ -59,7 +62,7 @@ export function MoodboardItemCard({ video, className, onMaximize, playbackSpeed 
     }, [isHovered]);
 
     const handleMouseEnter = () => {
-        recordWatch();
+        beginWatch(hoverKey, 'hover');
         if (hoverDelay === 0) {
             setIsHovered(true);
             return;
@@ -70,6 +73,7 @@ export function MoodboardItemCard({ video, className, onMaximize, playbackSpeed 
     };
 
     const handleMouseLeave = () => {
+        endWatch(hoverKey);
         if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
         setIsHovered(false);
     };

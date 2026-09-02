@@ -14,7 +14,6 @@ import { useToast } from '@/hooks/use-toast';
 import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
-import { recordReferenceView } from '@/lib/watch-tracker';
 
 interface ShortsPlayerProps {
     video: Video;
@@ -57,7 +56,7 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
 
     const { user: authUser } = useAuth();
     const { userProfile, mutate } = useUser();
-    const { recordWatch } = useWatchTracker();
+    const { beginWatch, endWatch } = useWatchTracker();
     const { toast } = useToast();
 
     // Always mount paused; the IntersectionObserver below is the sole source of
@@ -73,14 +72,18 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
     const [isSeeking, setIsSeeking] = React.useState(false);
     const [playbackRate, setPlaybackRate] = React.useState(1);
 
-    const hasRecordedWatchRef = React.useRef<string | null>(null);
-
+    // The session follows playback rather than firing once: scrolling a short
+    // out of view pauses it, which both stops the clock and counts as a pause.
     React.useEffect(() => {
-        if (isPlaying && video?.id && hasRecordedWatchRef.current !== video.id) {
-            hasRecordedWatchRef.current = video.id;
-            recordWatch();
+        if (!video?.id) return;
+        const key = `play:short:${video.id}`;
+        if (isPlaying) {
+            beginWatch(key, 'playback');
+        } else {
+            endWatch(key);
         }
-    }, [isPlaying, video?.id, recordWatch]);
+        return () => endWatch(key);
+    }, [isPlaying, video?.id, beginWatch, endWatch]);
 
     React.useEffect(() => {
         const observer = new IntersectionObserver(

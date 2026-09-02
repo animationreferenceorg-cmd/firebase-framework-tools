@@ -23,13 +23,17 @@ export function VideoDetailClient({ id, initialData }: VideoDetailClientProps) {
     const [video, setVideo] = useState<Video | null>(initialData || null);
     const [loading, setLoading] = useState(!initialData);
     const { userProfile } = useUser();
-    const { recordWatch } = useWatchTracker();
+    const { beginWatch, endWatch } = useWatchTracker();
 
+    // Opening a video page is deliberate viewing: it counts from the first
+    // second, and leaving the page is the natural pause that can surface a
+    // queued prompt.
     useEffect(() => {
-        if (video) {
-            recordWatch();
-        }
-    }, [video?.id, recordWatch]);
+        if (!video?.id) return;
+        const key = `play:detail:${video.id}`;
+        beginWatch(key, 'playback');
+        return () => endWatch(key);
+    }, [video?.id, beginWatch, endWatch]);
 
     useEffect(() => {
         const fetchVideo = async () => {

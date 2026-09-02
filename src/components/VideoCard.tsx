@@ -19,7 +19,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
-import { recordReferenceView } from '@/lib/watch-tracker';
 import { VideoPlayer } from './VideoPlayer';
 import Link from 'next/link';
 import type { Video } from '@/lib/types';
@@ -59,8 +58,20 @@ interface VideoCardProps {
 export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
   const { user: authUser } = useAuth();
   const { userProfile, mutate } = useUser();
-  const { recordWatch } = useWatchTracker();
+  const { beginWatch, endWatch } = useWatchTracker();
+  const hoverKey = `hover:${video.id}`;
+  const playKey = `play:${video.id}`;
   const { toast } = useToast();
+
+  // A card can unmount while still hovered — filtering a grid, or navigating
+  // away mid-preview. Without this the session would stay open and keep
+  // accruing time against a card nobody is looking at.
+  useEffect(() => {
+    return () => {
+      endWatch(hoverKey);
+      endWatch(playKey);
+    };
+  }, [endWatch, hoverKey, playKey]);
 
   const [isHovered, setIsHovered] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
@@ -151,7 +162,9 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
   }, [isHovered]);
 
   const handleMouseEnter = () => {
-    recordWatch();
+    // Timed, not counted: a hover only contributes once the preview has been
+    // running past the grace period.
+    beginWatch(hoverKey, 'hover');
     if (video.isShort || poster) return;
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovered(true);
@@ -159,6 +172,7 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
   };
 
   const handleMouseLeave = () => {
+    endWatch(hoverKey);
     if (video.isShort || poster) return;
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
@@ -168,7 +182,8 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
 
   const openVideoPlayer = () => {
     setIsPlayerOpen(true);
-    recordWatch();
+    // Deliberate playback — counts from the first second, no grace period.
+    beginWatch(playKey, 'playback');
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -206,7 +221,10 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
   const handleOpenPlayerChange = (open: boolean) => {
     setIsPlayerOpen(open);
     if (open) {
-      recordWatch();
+      beginWatch(playKey, 'playback');
+    } else {
+      // Closing the player is a natural pause — a queued prompt surfaces here.
+      endWatch(playKey);
     }
   };
 
@@ -322,12 +340,13 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
       <>
       <Link href={`/shorts/${video.id}`} className="w-full cursor-pointer group/card block">
         <div ref={containerRef} onMouseEnter={() => {
-            recordWatch();
+            beginWatch(hoverKey, 'hover');
             setIsHovered(true);
             if (videoRef.current) {
               videoRef.current.play().catch(() => {});
             }
           }} onMouseLeave={() => {
+            endWatch(hoverKey);
             setIsHovered(false);
             if (videoRef.current) {
               videoRef.current.pause();

@@ -31,9 +31,18 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
       // Any signed-in user may adjust the like counter only (via like/unlike),
-      // never any other field on the video document.
+      // never any other field on the video document. Restricted to a single
+      // step in either direction: without this, one request could set the
+      // count to an arbitrary value. Per-user like state lives on
+      // users/{uid}.likedVideoIds, so only the delta can be checked here.
       allow update: if request.auth != null
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount'])
+        && request.resource.data.likeCount is int
+        && request.resource.data.likeCount >= 0
+        && (
+          request.resource.data.likeCount == resource.data.get('likeCount', 0) + 1
+          || request.resource.data.likeCount == resource.data.get('likeCount', 0) - 1
+        );
     }
     match /categories/{categoryId} { allow read: if true; allow write: if isAdmin(); }
     match /folders/{folderId} { allow read: if true; allow write: if isAdmin(); }

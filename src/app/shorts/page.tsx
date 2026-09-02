@@ -6,117 +6,76 @@ import Link from 'next/link';
 import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Video } from '@/lib/types';
-import { 
-  Play, 
-  Search, 
-  Flame, 
-  ChevronRight, 
-  ChevronLeft, 
-  Clock, 
-  Download, 
-  MoreHorizontal,
-  PenTool,
+import {
+  Play,
+  Flame,
+  ChevronRight,
+  ChevronLeft,
   Film,
-  Star,
   Heart,
-  Info
+  Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { VideoCard } from '@/components/VideoCard';
 
-/* ─── Mock Data ─── */
+/* ─── Helpers ─── */
 
-interface FeaturedFilm {
-  id: string;
-  title: string;
-  logline: string;
-  genres: string[];
-  director: string;
-  studio: string;
-  duration: string;
-  year: string;
-  rating: number;
-  imageUrl: string;
-  videoUrl: string;
+/** Best available cover for a film. posterUrl is the vertical art, thumbnailUrl
+ * the landscape still; either is a real frame from the film itself. */
+function coverFor(video: Video, orientation: 'portrait' | 'landscape'): string | null {
+  const preferred = orientation === 'portrait' ? video.posterUrl : video.thumbnailUrl;
+  return preferred || video.thumbnailUrl || video.posterUrl || null;
 }
 
-const HERO_FILMS: FeaturedFilm[] = [
-  {
-    id: 'hero-1',
-    title: 'Dimensional Kids on an Adventure',
-    logline: 'When two curious kids stumble into a hidden portal, they travel across magical dimensions while trying to find their way home....',
-    genres: ['Drama', 'Fantasy'],
-    director: 'Gobelins Masters',
-    studio: 'Gobelins',
-    duration: '6:42',
-    year: '2025',
-    rating: 4.9,
-    imageUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1600&auto=format&fit=crop&q=80',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-  },
-  {
-    id: 'hero-2',
-    title: 'Cyber Ronin: Neon Protocol',
-    logline: 'A lone cybernetic swordsman faces waves of synthetic defense units in subterranean Neo-Tokyo with extreme kinetic smears.',
-    genres: ['Sci-Fi', 'Action'],
-    director: 'Marcus Vance',
-    studio: 'Trigger Inspired',
-    duration: '4:15',
-    year: '2026',
-    rating: 4.8,
-    imageUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=1600&auto=format&fit=crop&q=80',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-  },
-  {
-    id: 'hero-3',
-    title: 'Kitsune: Whispers of the Shrine',
-    logline: 'A young forest spirit discovers ancient shapeshifting forms while protecting the sacred torii gate from darkness.',
-    genres: ['Mythic', 'Creature'],
-    director: 'Elena Rostova',
-    studio: 'Fortiche Collab',
-    duration: '5:50',
-    year: '2026',
-    rating: 5.0,
-    imageUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-  },
-];
+/**
+ * Cover art for a film, falling back to the film's own first frame when no
+ * poster or thumbnail has been set. The #t=0.1 fragment makes the browser seek
+ * a hair into the file so it paints an actual frame rather than black.
+ *
+ * Deliberately never renders a generic stock photo — a wrong image is worse
+ * than an honest empty slate, because it misrepresents someone's film.
+ */
+function FilmCover({
+  video,
+  orientation,
+  className = '',
+}: {
+  video: Video;
+  orientation: 'portrait' | 'landscape';
+  className?: string;
+}) {
+  const cover = coverFor(video, orientation);
 
-interface ContinueItem {
-  id: string;
-  title: string;
-  episode: string;
-  duration: string;
-  progress: number;
-  imageUrl: string;
-  videoUrl: string;
+  if (cover) {
+    return (
+      <img
+        src={cover}
+        alt={video.title}
+        loading="lazy"
+        className={`h-full w-full object-cover ${className}`}
+      />
+    );
+  }
+
+  if (video.videoUrl) {
+    return (
+      <video
+        src={`${video.videoUrl}#t=0.1`}
+        preload="metadata"
+        muted
+        playsInline
+        aria-label={video.title}
+        className={`h-full w-full object-cover ${className}`}
+      />
+    );
+  }
+
+  return (
+    <div className={`grid h-full w-full place-items-center bg-zinc-900 ${className}`}>
+      <Film className="h-6 w-6 text-zinc-700" />
+    </div>
+  );
 }
-
-const CONTINUE_ITEMS: ContinueItem[] = [
-  { id: 'cw-1', title: 'Midnight Mischief Squad', episode: 'S1, Ep-3', duration: '30min 55sec', progress: 65, imageUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80', videoUrl: '' },
-  { id: 'cw-2', title: 'Legends of the Emerald Mist', episode: 'S1, Ep-3', duration: '30min 55sec', progress: 40, imageUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80', videoUrl: '' },
-  { id: 'cw-3', title: 'Rise of the Last Guardian', episode: 'S1, Ep-3', duration: '30min 55sec', progress: 85, imageUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=800&auto=format&fit=crop&q=80', videoUrl: '' },
-  { id: 'cw-4', title: 'The Boy Who Dreamed', episode: 'S1, Ep-1', duration: '25min 10sec', progress: 20, imageUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800&auto=format&fit=crop&q=80', videoUrl: '' },
-];
-
-interface RecommendedItem {
-  id: string;
-  title: string;
-  subtitle: string;
-  rating: number;
-  imageUrl: string;
-}
-
-const RECOMMENDED: RecommendedItem[] = [
-  { id: 'rec-1', title: 'Transformers: Smear Mech', subtitle: 'Mecha Action', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&auto=format&fit=crop&q=80' },
-  { id: 'rec-2', title: 'Joker: Silhouette Madness', subtitle: 'Dark Expression', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=600&auto=format&fit=crop&q=80' },
-  { id: 'rec-3', title: 'Kokosnuss: Forest Spirits', subtitle: 'Stylized 3D', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80' },
-  { id: 'rec-4', title: 'Gobelins Showcase 2026', subtitle: 'Festival Winners', rating: 5.0, imageUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600&auto=format&fit=crop&q=80' },
-  { id: 'rec-5', title: 'The Silent Lighthouse', subtitle: 'Atmospheric Drama', rating: 4.7, imageUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600&auto=format&fit=crop&q=80' },
-  { id: 'rec-6', title: 'Creature Locomotion Reel', subtitle: 'Quadruped Study', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80' },
-];
 
 /* ─── Horizontal Scroll Hook ─── */
 function useHorizontalScroll() {
@@ -132,193 +91,245 @@ export default function ShortFilmsStreamingPage() {
   const [heroIndex, setHeroIndex] = useState(0);
   const [allShorts, setAllShorts] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
-  const continueScroll = useHorizontalScroll();
   const recommendedScroll = useHorizontalScroll();
 
-  const hero = HERO_FILMS[heroIndex];
-
-  // Auto-rotate hero
-  useEffect(() => {
-    const t = setInterval(() => setHeroIndex(i => (i + 1) % HERO_FILMS.length), 8000);
-    return () => clearInterval(t);
-  }, []);
-
-  // Fetch real shorts from Firestore
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
         const q = query(collection(db, 'videos'), where('isShort', '==', true), limit(60));
         const snap = await getDocs(q);
-        setAllShorts(snap.docs.map(d => ({ id: d.id, ...d.data() } as Video)));
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
+        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Video));
+
+        // Drafts were previously shown alongside published films. Treat a
+        // missing status as published so older records aren't dropped.
+        const published = rows.filter((v) => (v.status ?? 'published') === 'published');
+
+        // Collapse duplicates — the same film re-imported under a second doc
+        // shows up twice otherwise. Same source URL, or the same title, is the
+        // same film; keep whichever copy has the better artwork.
+        const byKey = new Map<string, Video>();
+        for (const video of published) {
+          const key = (video.videoUrl || video.originalUrl || video.title || video.id)
+            .trim()
+            .toLowerCase();
+          const existing = byKey.get(key);
+          if (!existing) {
+            byKey.set(key, video);
+            continue;
+          }
+          const existingHasArt = Boolean(coverFor(existing, 'landscape'));
+          const candidateHasArt = Boolean(coverFor(video, 'landscape'));
+          if (!existingHasArt && candidateHasArt) byKey.set(key, video);
+        }
+
+        setAllShorts([...byKey.values()]);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
+  // The hero needs landscape artwork to fill a 16/7 frame, so it only features
+  // films that actually have some.
+  const heroFilms = useMemo(
+    () => allShorts.filter((v) => Boolean(v.thumbnailUrl || v.posterUrl)).slice(0, 5),
+    [allShorts]
+  );
+
+  const mostWatched = useMemo(
+    () =>
+      [...allShorts]
+        .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0) || (b.likeCount || 0) - (a.likeCount || 0))
+        .slice(0, 12),
+    [allShorts]
+  );
+
+  const hero = heroFilms[heroIndex] || null;
+
+  useEffect(() => {
+    if (heroFilms.length < 2) return;
+    const t = setInterval(() => setHeroIndex((i) => (i + 1) % heroFilms.length), 8000);
+    return () => clearInterval(t);
+  }, [heroFilms.length]);
+
+  // Keep the index valid if the film list shrinks between renders.
+  useEffect(() => {
+    if (heroIndex >= heroFilms.length) setHeroIndex(0);
+  }, [heroFilms.length, heroIndex]);
+
+  if (!loading && allShorts.length === 0) {
+    return (
+      <div className="grid min-h-[60vh] place-items-center px-6 text-center">
+        <div className="max-w-md space-y-3">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-purple-500/10">
+            <Film className="h-7 w-7 text-purple-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-white">No short films yet</h1>
+          <p className="text-sm text-zinc-400">
+            Published short films will appear here. Add one from the admin dashboard to get started.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen pb-24 space-y-8">
+    <div className="min-h-screen space-y-8 pb-24">
 
       {/* ──────────────── HERO SPOTLIGHT ──────────────── */}
-      <section className="relative w-full aspect-[16/7] min-h-[380px] max-h-[520px] rounded-[32px] overflow-hidden">
-        {/* BG image */}
-        <Image src={hero.imageUrl} alt={hero.title} fill priority className="object-cover" />
+      {hero && (
+        <section className="relative aspect-[16/7] max-h-[520px] min-h-[380px] w-full overflow-hidden rounded-[32px]">
+          <Image
+            src={(hero.thumbnailUrl || hero.posterUrl) as string}
+            alt={hero.title}
+            fill
+            priority
+            className="object-cover"
+            unoptimized
+          />
 
-        {/* Gradients */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a14] via-[#0a0a14]/50 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a14]/90 via-[#0a0a14]/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a14] via-[#0a0a14]/50 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a14]/90 via-[#0a0a14]/40 to-transparent" />
 
-        {/* Content */}
-        <div className="absolute inset-0 flex flex-col justify-between p-6 sm:p-10">
-          {/* Top row — badge */}
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500 text-black text-[11px] font-extrabold shadow-lg">
-              <Flame className="w-3.5 h-3.5" />
-              Now Trending
-            </span>
+          <div className="absolute inset-0 flex flex-col justify-between p-6 sm:p-10">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1 text-[11px] font-extrabold text-black shadow-lg">
+                <Flame className="h-3.5 w-3.5" />
+                Featured
+              </span>
+            </div>
+
+            <div className="max-w-xl space-y-3">
+              {(hero.categories?.length || hero.tags?.length) ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {(hero.categories?.length ? hero.categories : hero.tags).slice(0, 3).map((g) => (
+                    <span
+                      key={g}
+                      className="rounded-lg border border-white/20 bg-white/15 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-md"
+                    >
+                      {g}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+
+              <h1 className="text-3xl font-black leading-[1.1] tracking-tight text-white sm:text-4xl md:text-[3.2rem]">
+                {hero.title}
+              </h1>
+
+              {hero.description ? (
+                <p className="line-clamp-2 max-w-lg text-sm leading-relaxed text-zinc-300">
+                  {hero.description}
+                </p>
+              ) : null}
+
+              {hero.author_name ? (
+                <p className="text-xs font-medium text-zinc-400">by {hero.author_name}</p>
+              ) : null}
+
+              <div className="flex items-center gap-3 pt-1">
+                <Button
+                  asChild
+                  className="h-11 gap-2 rounded-xl bg-purple-600 px-6 text-sm font-bold text-white shadow-xl shadow-purple-900/60 hover:bg-purple-500"
+                >
+                  <Link href={`/shorts/${hero.id}`}>
+                    <Play className="h-4 w-4 fill-white" />
+                    Watch Now
+                  </Link>
+                </Button>
+              </div>
+            </div>
           </div>
 
-          {/* Bottom row — info */}
-          <div className="max-w-xl space-y-3">
-            {/* Genre pills */}
-            <div className="flex items-center gap-2">
-              {hero.genres.map(g => (
-                <span key={g} className="px-3 py-1 rounded-lg bg-white/15 backdrop-blur-md text-white text-[11px] font-semibold border border-white/20">
-                  {g}
-                </span>
+          {heroFilms.length > 1 && (
+            <div className="absolute bottom-6 right-8 z-10 flex items-center gap-2">
+              {heroFilms.map((film, i) => (
+                <button
+                  key={film.id}
+                  onClick={() => setHeroIndex(i)}
+                  aria-label={`Show ${film.title}`}
+                  className={`rounded-full transition-all duration-300 ${
+                    heroIndex === i ? 'h-2.5 w-7 bg-purple-500' : 'h-2.5 w-2.5 bg-white/30 hover:bg-white/60'
+                  }`}
+                />
               ))}
             </div>
+          )}
+        </section>
+      )}
 
-            <h1 className="text-3xl sm:text-4xl md:text-[3.2rem] font-black text-white leading-[1.1] tracking-tight">
-              {hero.title}
-            </h1>
-
-            <p className="text-sm text-zinc-300 leading-relaxed line-clamp-2 max-w-lg">
-              {hero.logline}
-            </p>
-
-            {/* Actions */}
-            <div className="flex items-center gap-3 pt-1">
-              <Button
-                onClick={() => window.open(hero.videoUrl, '_blank')}
-                className="h-11 px-6 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-xl shadow-purple-900/60 gap-2"
+      {/* ──────────────── MOST WATCHED ──────────────── */}
+      {mostWatched.length > 0 && (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white">Most Watched</h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => recommendedScroll.scroll('left')}
+                aria-label="Scroll left"
+                className="rounded-lg border border-white/10 bg-white/5 p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
               >
-                <Play className="w-4 h-4 fill-white" />
-                Watch Now
-              </Button>
-
-              <button className="h-11 w-11 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 text-white flex items-center justify-center transition-colors" title="Download">
-                <Download className="w-4 h-4" />
+                <ChevronLeft className="h-4 w-4" />
               </button>
-
-              <button className="h-11 w-11 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 text-white flex items-center justify-center transition-colors" title="More">
-                <MoreHorizontal className="w-4 h-4" />
+              <button
+                onClick={() => recommendedScroll.scroll('right')}
+                aria-label="Scroll right"
+                className="rounded-lg border border-white/10 bg-white/5 p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           </div>
-        </div>
 
-        {/* Slide dots — bottom right */}
-        <div className="absolute bottom-6 right-8 flex items-center gap-2 z-10">
-          {HERO_FILMS.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setHeroIndex(i)}
-              className={`rounded-full transition-all duration-300 ${
-                heroIndex === i
-                  ? 'w-7 h-2.5 bg-purple-500'
-                  : 'w-2.5 h-2.5 bg-white/30 hover:bg-white/60'
-              }`}
-            />
-          ))}
-        </div>
-      </section>
+          <div ref={recommendedScroll.ref} className="flex snap-x gap-4 overflow-x-auto pb-2 scrollbar-none">
+            {mostWatched.map((item) => (
+              <Link
+                key={item.id}
+                href={`/shorts/${item.id}`}
+                className="group w-[200px] shrink-0 snap-start sm:w-[220px]"
+              >
+                <div className="relative mb-2 aspect-[3/4] w-full overflow-hidden rounded-2xl bg-zinc-900">
+                  <FilmCover
+                    video={item}
+                    orientation="portrait"
+                    className="transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
 
-      {/* ──────────────── CONTINUE WATCHING ──────────────── */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">Continue Watching</h2>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-purple-400 hover:text-white cursor-pointer transition-colors">See All</span>
-            <button onClick={() => continueScroll.scroll('left')} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10 transition-colors">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button onClick={() => continueScroll.scroll('right')} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10 transition-colors">
-              <ChevronRight className="w-4 h-4" />
-            </button>
+                  {/* Real engagement numbers only — no invented ratings. */}
+                  {(item.viewCount || item.likeCount) ? (
+                    <div className="absolute left-2.5 top-2.5 flex items-center gap-2 rounded-md border border-white/10 bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-md">
+                      {item.viewCount ? (
+                        <span className="flex items-center gap-1">
+                          <Eye className="h-3 w-3" />
+                          {item.viewCount}
+                        </span>
+                      ) : null}
+                      {item.likeCount ? (
+                        <span className="flex items-center gap-1">
+                          <Heart className="h-3 w-3 fill-current text-pink-400" />
+                          {item.likeCount}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+                <h4 className="truncate text-xs font-bold text-white transition-colors group-hover:text-purple-300">
+                  {item.title}
+                </h4>
+                {item.author_name ? (
+                  <p className="truncate text-[10px] text-zinc-500">{item.author_name}</p>
+                ) : null}
+              </Link>
+            ))}
           </div>
-        </div>
+        </section>
+      )}
 
-        <div ref={continueScroll.ref} className="flex gap-4 overflow-x-auto scrollbar-none snap-x pb-2">
-          {CONTINUE_ITEMS.map(item => (
-            <div key={item.id} className="group shrink-0 w-[280px] sm:w-[320px] snap-start cursor-pointer">
-              {/* Thumbnail */}
-              <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-zinc-900">
-                <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-
-                {/* Play icon on hover */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-xl">
-                    <Play className="w-5 h-5 text-black fill-black ml-0.5" />
-                  </div>
-                </div>
-
-                {/* Bottom overlay — title & info inside the image */}
-                <div className="absolute bottom-0 left-0 right-0 p-3 space-y-1.5">
-                  <h4 className="text-sm font-bold text-white leading-tight truncate drop-shadow-md">
-                    {item.title}
-                  </h4>
-                  <div className="flex items-center justify-between text-[10px] text-zinc-300 font-medium">
-                    <span className="bg-black/50 px-1.5 py-0.5 rounded backdrop-blur-sm">{item.episode}</span>
-                    <span>{item.duration}</span>
-                  </div>
-                  {/* Progress bar */}
-                  <div className="w-full h-1 rounded-full bg-white/20 overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500" style={{ width: `${item.progress}%` }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ──────────────── YOU MIGHT LIKE ──────────────── */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">You Might Like</h2>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-purple-400 hover:text-white cursor-pointer transition-colors">See All</span>
-            <button onClick={() => recommendedScroll.scroll('left')} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10 transition-colors">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button onClick={() => recommendedScroll.scroll('right')} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10 transition-colors">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        <div ref={recommendedScroll.ref} className="flex gap-4 overflow-x-auto scrollbar-none snap-x pb-2">
-          {RECOMMENDED.map(item => (
-            <div key={item.id} className="group shrink-0 w-[200px] sm:w-[220px] snap-start cursor-pointer">
-              <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden bg-zinc-900 mb-2">
-                <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                {/* Rating badge */}
-                <div className="absolute top-2.5 left-2.5 flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-amber-300 text-[10px] font-bold border border-white/10">
-                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                  {item.rating} IMDB
-                </div>
-              </div>
-              <h4 className="text-xs font-bold text-white truncate group-hover:text-purple-300 transition-colors">{item.title}</h4>
-              <p className="text-[10px] text-zinc-500">{item.subtitle}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ──────────────── NETFLIX-STYLE CATEGORY ROWS ──────────────── */}
+      {/* ──────────────── CATEGORY ROWS ──────────────── */}
       {!loading && <CategoryRows videos={allShorts} />}
     </div>
   );
@@ -336,23 +347,23 @@ function CategoryRow({ title, videos }: { title: string; videos: Video[] }) {
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-white hover:text-purple-300 transition-colors cursor-pointer group flex items-center gap-1.5">
+        <h2 className="group flex cursor-pointer items-center gap-1.5 text-lg font-bold text-white transition-colors hover:text-purple-300">
           {title}
-          <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-purple-400" />
+          <ChevronRight className="h-4 w-4 text-purple-400 opacity-0 transition-opacity group-hover:opacity-100" />
         </h2>
         <div className="flex items-center gap-1.5">
-          <button onClick={() => scroll('left')} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10 transition-colors">
-            <ChevronLeft className="w-4 h-4" />
+          <button onClick={() => scroll('left')} aria-label="Scroll left" className="rounded-lg border border-white/10 bg-white/5 p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white">
+            <ChevronLeft className="h-4 w-4" />
           </button>
-          <button onClick={() => scroll('right')} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10 transition-colors">
-            <ChevronRight className="w-4 h-4" />
+          <button onClick={() => scroll('right')} aria-label="Scroll right" className="rounded-lg border border-white/10 bg-white/5 p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white">
+            <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      <div ref={scrollRef} className="flex gap-3 overflow-x-auto scrollbar-none snap-x pb-1 -mx-1 px-1">
-        {videos.map(v => (
-          <div key={v.id} className="shrink-0 w-[180px] sm:w-[200px] snap-start">
+      <div ref={scrollRef} className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-1 scrollbar-none">
+        {videos.map((v) => (
+          <div key={v.id} className="w-[180px] shrink-0 snap-start sm:w-[200px]">
             <VideoCard video={v} />
           </div>
         ))}

@@ -20,7 +20,7 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/hooks/use-user';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { Upload, Link as LinkIcon, Plus, X, Layers, Sparkles, Film, Image as ImageIcon, Hash, ArrowRight, ArrowLeft, ChevronRight, ChevronLeft, CheckCircle2 } from 'lucide-react';
 import type { PortfolioItem, WipStage } from '@/lib/types';
 import { createPortfolioItem, generateAutoThumbnail } from '@/lib/portfolio-service';
@@ -557,6 +557,18 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
     }, 150);
 
     try {
+      const activeUid = auth.currentUser?.uid || userId;
+      if (!activeUid || activeUid === 'guest-user') {
+        clearInterval(progressInterval);
+        setIsSubmitting(false);
+        toast({
+          title: 'Sign in required',
+          description: 'Please sign in to publish your work.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       let mediaType: PortfolioItem['mediaType'] = 'video_file';
       const mediaUrl = videoUrlInput.trim();
 
@@ -570,9 +582,9 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
 
       const newItem = await createPortfolioItem(
         {
-          userId,
-          authorName,
-          authorAvatar,
+          userId: activeUid,
+          authorName: userProfile?.displayName || authorName,
+          authorAvatar: userProfile?.photoURL || authorAvatar,
           title: title.trim(),
           description: description.trim(),
           type,
@@ -590,7 +602,7 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
       clearInterval(progressInterval);
       setUploadProgress(100);
       setUploadStatusMsg('Published successfully!');
-      
+
       // Short delay so user sees 100% completion glow before modal closes
       await new Promise((r) => setTimeout(r, 450));
 
@@ -622,7 +634,6 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-2xl overflow-y-auto rounded-2xl border border-white/15 bg-zinc-950/90 p-4 text-white shadow-[0_30px_90px_rgba(0,0,0,0.85)] ring-1 ring-purple-500/20 backdrop-blur-2xl sm:max-h-[92vh] sm:w-[94vw] sm:rounded-3xl sm:p-6 md:rounded-[32px]">
-        
         {/* Instagram-style Top Story Segmented Progress Bar */}
         <div className="space-y-3 pb-3 border-b border-white/10">
           <div className="flex items-center gap-2">

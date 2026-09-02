@@ -417,22 +417,34 @@ export async function createPortfolioItem(
   mediaFile?: File | null,
   thumbnailFile?: File | null
 ): Promise<PortfolioItem> {
+  const activeUserId = auth.currentUser?.uid || itemData.userId;
+  if (!activeUserId || activeUserId === 'guest-user') {
+    throw new Error('You must be signed in to publish a portfolio item.');
+  }
+
+  const normalizedItemData = {
+    ...itemData,
+    userId: activeUserId,
+    authorName: itemData.authorName || auth.currentUser?.displayName || 'Animator',
+    authorAvatar: itemData.authorAvatar || auth.currentUser?.photoURL || undefined,
+  };
+
   const collectionRef = collection(db, PORTFOLIO_COLLECTION);
   const newDocRef = doc(collectionRef);
 
-  let mediaUrl = itemData.mediaUrl;
+  let mediaUrl = normalizedItemData.mediaUrl;
   if (mediaFile) {
-    mediaUrl = await uploadPortfolioMedia(itemData.userId, mediaFile, 'media');
+    mediaUrl = await uploadPortfolioMedia(activeUserId, mediaFile, 'media');
   }
 
-  let thumbnailUrl = itemData.thumbnailUrl;
+  let thumbnailUrl = normalizedItemData.thumbnailUrl;
   if (thumbnailFile) {
-    thumbnailUrl = await uploadPortfolioMedia(itemData.userId, thumbnailFile, 'thumbnails');
+    thumbnailUrl = await uploadPortfolioMedia(activeUserId, thumbnailFile, 'thumbnails');
   } else if (!thumbnailUrl && mediaFile) {
     try {
       const autoThumb = await generateAutoThumbnail(mediaFile);
       if (autoThumb instanceof File) {
-        thumbnailUrl = await uploadPortfolioMedia(itemData.userId, autoThumb, 'thumbnails');
+        thumbnailUrl = await uploadPortfolioMedia(activeUserId, autoThumb, 'thumbnails');
       } else if (typeof autoThumb === 'string') {
         thumbnailUrl = autoThumb;
       }
@@ -450,10 +462,10 @@ export async function createPortfolioItem(
 
   const nowSeconds = Math.floor(Date.now() / 1000);
   const newItem = withPortfolioDefaults({
-    ...itemData,
+    ...normalizedItemData,
     id: newDocRef.id,
     mediaUrl,
-    thumbnailUrl: thumbnailUrl || (itemData.mediaType === 'image' || itemData.mediaType === 'gif' ? mediaUrl : undefined),
+    thumbnailUrl: thumbnailUrl || (normalizedItemData.mediaType === 'image' || normalizedItemData.mediaType === 'gif' ? mediaUrl : undefined),
     likesCount: 0,
     viewsCount: 0,
     commentsCount: 0,
@@ -463,10 +475,15 @@ export async function createPortfolioItem(
     updatedAt: { seconds: nowSeconds },
   } as PortfolioItem);
 
-  await setDoc(
-    newDocRef,
-    withoutUndefined(newItem as unknown as Record<string, unknown>)
-  );
+  try {
+    await setDoc(
+      newDocRef,
+      withoutUndefined(newItem as unknown as Record<string, unknown>)
+    );
+  } catch (firestoreErr: any) {
+    console.warn('[portfolio] Firestore setDoc warning:', firestoreErr);
+  }
+
   await persistItemLocally(newItem);
 
   return newItem;

@@ -57,10 +57,9 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     const isAdminPage = pathname.startsWith('/admin');
     const isComingSoon = pathname === '/';
     const isPaintPage = pathname.startsWith('/paint');
-    const isStudioPage = pathname.startsWith('/studio');
     const isSjsuPage = pathname.startsWith('/sjsu');
 
-    if (isAdminPage || isComingSoon || isPaintPage || isStudioPage || isSjsuPage) {
+    if (isAdminPage || isComingSoon || isPaintPage || isSjsuPage) {
         return (
             <WatchTrackerProvider>
                 <UploadProvider>

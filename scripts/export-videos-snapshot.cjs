@@ -18,10 +18,43 @@ function initDb() {
   if (projectId && clientEmail && privateKey.includes('BEGIN PRIVATE KEY')) {
     admin.initializeApp({ credential: admin.credential.cert({ projectId, clientEmail, privateKey }) });
   } else {
-    // e.g. Firebase App Hosting / Cloud Build environment
-    admin.initializeApp();
+    // Firebase App Hosting / Cloud Build, or a developer authenticated with
+    // `gcloud auth application-default login`.
+    //
+    // applicationDefault() is passed explicitly rather than relying on a bare
+    // initializeApp(): without it, local ADC was not picked up and the probe
+    // below failed with UNAUTHENTICATED, silently keeping a stale snapshot.
+    // projectId is passed too, since ADC alone does not always resolve it.
+    admin.initializeApp({
+      credential: admin.credential.applicationDefault(),
+      projectId:
+        projectId ||
+        process.env.GOOGLE_CLOUD_PROJECT ||
+        process.env.GCLOUD_PROJECT ||
+        'aniamtion-reference',
+    });
   }
   return admin.firestore();
+}
+
+/** Re-initialises against Application Default Credentials, discarding the
+ * previously configured app. Used when the env-var service account is present
+ * but no longer valid — a deleted or rotated key leaves FIREBASE_PRIVATE_KEY
+ * sitting in .env.local, which would otherwise fail the probe and silently
+ * publish a stale snapshot. */
+async function retryWithAdc() {
+  await Promise.all(admin.apps.map((app) => app && app.delete()));
+  admin.initializeApp({
+    credential: admin.credential.applicationDefault(),
+    projectId:
+      process.env.FIREBASE_PROJECT_ID ||
+      process.env.GOOGLE_CLOUD_PROJECT ||
+      process.env.GCLOUD_PROJECT ||
+      'aniamtion-reference',
+  });
+  const db = admin.firestore();
+  await db.collection('videos').limit(1).get();
+  return db;
 }
 
 (async () => {
@@ -29,13 +62,18 @@ function initDb() {
   try {
     db = initDb();
     await db.collection('videos').limit(1).get(); // credential probe
-  } catch (e) {
-    if (fs.existsSync(OUT_FILE)) {
-      console.warn('No Firestore credentials available — keeping existing snapshot.', e.message);
-      process.exit(0);
+  } catch (initError) {
+    try {
+      console.warn('Configured credentials rejected — falling back to ADC.', initError.message);
+      db = await retryWithAdc();
+    } catch (e) {
+      if (fs.existsSync(OUT_FILE)) {
+        console.warn('No Firestore credentials available — keeping existing snapshot.', e.message);
+        process.exit(0);
+      }
+      console.error('No Firestore credentials and no existing snapshot:', e.message);
+      process.exit(1);
     }
-    console.error('No Firestore credentials and no existing snapshot:', e.message);
-    process.exit(1);
   }
 
   const snap = await db.collection('videos').get();

@@ -233,15 +233,31 @@ print(f"[AnimRef] Loaded '{clip_title}' into Blender camera: {cam.name}")
               </div>
             </div>
 
-            {/* Download Maya Shelf Tool */}
-            <div className="flex items-center justify-between pt-2 border-t border-white/5">
-              <span className="text-xs text-zinc-400">Want a permanent Maya Shelf Button?</span>
-              <a href="/downloads/animref_maya.py" download="animref_maya.py">
-                <Button variant="outline" size="sm" className="h-8 text-xs rounded-xl border-white/15 hover:bg-white/10 text-white gap-1.5">
-                  <Download className="h-3.5 w-3.5" />
-                  Download Maya Tool (.py)
-                </Button>
-              </a>
+            {/* Full Maya Studio Plugin Download Card */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/40 via-purple-900/20 to-black/60 border border-purple-500/20 space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+                    Full Maya Studio Plugin Suite (.zip)
+                  </span>
+                  <p className="text-[11px] text-zinc-400">
+                    Includes Dockable In-Maya Search Panel, Camera Rigging, Frame Slip, and Drag-and-Drop Installer.
+                  </p>
+                </div>
+                <a href="/downloads/animref_maya_plugin.zip" download="animref_maya_plugin.zip">
+                  <Button size="sm" className="bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs h-8 px-3.5 font-semibold gap-1.5 shadow-md">
+                    <Download className="h-3.5 w-3.5" />
+                    Download Plugin (.zip)
+                  </Button>
+                </a>
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-zinc-500 pt-1 border-t border-white/5">
+                <span>Drag <code className="text-purple-300">drag_and_drop_install.mel</code> into Maya viewport to install</span>
+                <a href="/plugins" target="_blank" className="text-purple-400 hover:text-purple-300 flex items-center gap-1 underline">
+                  Installation Guide <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+              </div>
             </div>
           </TabsContent>
 
@@ -287,15 +303,31 @@ print(f"[AnimRef] Loaded '{clip_title}' into Blender camera: {cam.name}")
               </div>
             </div>
 
-            {/* Download Blender Add-on */}
-            <div className="flex items-center justify-between pt-2 border-t border-white/5">
-              <span className="text-xs text-zinc-400">Want the 3D Viewport N-Panel Add-on?</span>
-              <a href="/downloads/animref_blender.py" download="animref_blender.py">
-                <Button variant="outline" size="sm" className="h-8 text-xs rounded-xl border-white/15 hover:bg-white/10 text-white gap-1.5">
-                  <Download className="h-3.5 w-3.5" />
-                  Download Blender Add-on (.py)
-                </Button>
-              </a>
+            {/* Full Blender Studio Add-on Download Card */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-orange-950/40 via-orange-900/20 to-black/60 border border-orange-500/20 space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-orange-300 flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-orange-400" />
+                    Full Blender Studio Add-on (.zip)
+                  </span>
+                  <p className="text-[11px] text-zinc-400">
+                    Adds N-Panel 3D Viewport Browser, Camera & 3D Plane Modes, and Frame Slip.
+                  </p>
+                </div>
+                <a href="/downloads/animref_blender_addon.zip" download="animref_blender_addon.zip">
+                  <Button size="sm" className="bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs h-8 px-3.5 font-semibold gap-1.5 shadow-md">
+                    <Download className="h-3.5 w-3.5" />
+                    Download Add-on (.zip)
+                  </Button>
+                </a>
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-zinc-500 pt-1 border-t border-white/5">
+                <span>Install in Blender: <code className="text-orange-300">Preferences &gt; Add-ons &gt; Install from Disk</code></span>
+                <a href="/plugins" target="_blank" className="text-orange-400 hover:text-orange-300 flex items-center gap-1 underline">
+                  Installation Guide <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+              </div>
             </div>
           </TabsContent>
         </Tabs>

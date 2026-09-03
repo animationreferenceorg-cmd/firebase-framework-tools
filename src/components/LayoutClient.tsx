@@ -166,6 +166,11 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                         Resources
                                     </SidebarLink>
                                 </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarLink href="/plugins" icon={Box} tooltip="Maya & Blender Plugins">
+                                        3D Plugins
+                                    </SidebarLink>
+                                </SidebarMenuItem>
 
                             </SidebarMenu>
                         </SidebarGroup>
@@ -256,6 +261,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     <FeedbackModal />
                                 </div>
                                 <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/40 mt-2">
+                                    <Link href="/plugins" className="text-purple-400 hover:text-purple-300 transition-colors font-medium">Maya & Blender Plugins</Link>
                                     <Link href="/blog" className="hover:text-white/70 transition-colors">Blog</Link>
                                     <Link href="/resources/12-principles-of-animation-reference" className="hover:text-white/70 transition-colors">12 Principles of Animation</Link>
                                     <Link href="/resources/combat-animation-reference" className="hover:text-white/70 transition-colors">Combat Reference</Link>

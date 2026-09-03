@@ -1,0 +1,21 @@
+// =============================================================================
+// AnimationReference.org - Maya Drag & Drop Installer
+// =============================================================================
+// Drag and drop this file directly into your Maya 3D Viewport to install!
+// =============================================================================
+
+global proc onMayaDroppedAndLoaded(string $dropPath) {
+    string $pluginDir = `substring $dropPath 1 (size($dropPath) - size("/drag_and_drop_install.mel"))`;
+    string $scriptsDir = $pluginDir + "/scripts";
+
+    python("import sys");
+    python("if r'" + $scriptsDir + "' not in sys.path: sys.path.insert(0, r'" + $scriptsDir + "')");
+    
+    // Create Shelf Button
+    python("import animref_shelf; animref_shelf.create_shelf_button()");
+    
+    // Launch Window
+    python("import animref_ui; animref_ui.show_window()");
+    
+    inViewMessage -amg "<hl>Animation Reference Plugin Installed!</hl><br>Added 'AnimRef' button to your active shelf." -pos topCenter -fade true -fot 3000;
+}

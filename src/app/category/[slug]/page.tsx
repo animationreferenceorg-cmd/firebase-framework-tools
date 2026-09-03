@@ -11,7 +11,7 @@ import { notFound } from 'next/navigation';
 import { BrowseHero } from '@/components/BrowseHero';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { Skeleton } from '@/components/ui/skeleton';
-import { VideoCard } from '@/components/VideoCard';
+import { VideoGrid } from '@/components/VideoGrid';
 import { CategoryViewTracker } from '@/components/CategoryViewTracker';
 
 export const dynamic = 'force-dynamic';
@@ -59,6 +59,14 @@ async function getCategoryBySlug(slug: string): Promise<Category | null> {
     return null;
 }
 
+/**
+ * How many clips a category page renders. Was 20, which was fine when the page
+ * only showed three of them as a teaser — as a full grid it made large
+ * categories look nearly empty. Still capped rather than unbounded so a
+ * category holding thousands of clips does not ship an enormous document.
+ */
+const CATEGORY_VIDEO_LIMIT = 200;
+
 function getCategoryVideos(category: Category): Video[] {
     try {
         // Served from the static snapshot: zero Firestore reads per page view.
@@ -67,10 +75,10 @@ function getCategoryVideos(category: Category): Video[] {
 
         // Top up with clips that share the category's tags so newly imported
         // reference clips (which have tags but no categoryIds) surface too.
-        if (matches.length < 20 && category.tags?.length) {
+        if (matches.length < CATEGORY_VIDEO_LIMIT && category.tags?.length) {
             const catTags = new Set(category.tags.map(t => t.toLowerCase()));
             const seen = new Set(matches.map(v => v.id));
-            for (let i = all.length - 1; i >= 0 && matches.length < 20; i--) {
+            for (let i = all.length - 1; i >= 0 && matches.length < CATEGORY_VIDEO_LIMIT; i--) {
                 const v = all[i];
                 if (seen.has(v.id)) continue;
                 if ((v.tags || []).some(t => catTags.has(t.toLowerCase()))) {
@@ -80,7 +88,7 @@ function getCategoryVideos(category: Category): Video[] {
             }
         }
 
-        return matches.slice(0, 20).map(v => serializeVideo(v));
+        return matches.slice(0, CATEGORY_VIDEO_LIMIT).map(v => serializeVideo(v));
     } catch (error) {
         console.error("Error fetching category videos:", error);
         return [];
@@ -171,12 +179,6 @@ export default async function Page({ params }: Props) {
         heroVideo = videos[Math.floor(Math.random() * videos.length)];
     }
 
-    // Random 6 Examples Logic
-    const exampleVideos = videos
-        .filter(v => v.id !== heroVideo?.id)
-        .sort(() => 0.5 - Math.random())
-        .slice(0, 6);
-
     // Vault Preview Videos (take 4 for density)
     const vaultPreviewVideos = videos
         .filter(v => v.id !== heroVideo?.id)
@@ -233,7 +235,35 @@ export default async function Page({ params }: Props) {
                 </div>
             )}
 
-            {/* 2. CONVERSATIONAL HOOK & SEO INTRO */}
+            {/* 2. THE REFERENCES — the reason people open this page.
+                This used to sit near the bottom as three random "examples"
+                behind a CTA to another page, so a category looked almost empty
+                even when it held hundreds of clips. The full grid now leads,
+                in the same layout as the home feed. The SEO sections below are
+                kept, but they no longer stand between the visitor and the work. */}
+            <section className="py-12 md:py-16">
+                <div className="container mx-auto px-6">
+                    {videos.length > 0 ? (
+                        <>
+                            <div className="mb-6 flex flex-wrap items-baseline justify-between gap-3">
+                                <h2 className="text-2xl md:text-3xl font-bold text-white">
+                                    {category.title} References
+                                </h2>
+                                <span className="text-sm text-zinc-400">
+                                    {videos.length} {videos.length === 1 ? 'clip' : 'clips'}
+                                </span>
+                            </div>
+                            <VideoGrid title="" videos={videos} columns={4} />
+                        </>
+                    ) : (
+                        <div className="py-16 text-center text-zinc-500">
+                            <p>No references in this category yet.</p>
+                        </div>
+                    )}
+                </div>
+            </section>
+
+            {/* 3. CONVERSATIONAL HOOK & SEO INTRO */}
             <section className="py-20 relative bg-black/20">
                 <div className="container mx-auto px-6 max-w-4xl text-center">
                     <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white leading-tight">
@@ -421,22 +451,9 @@ export default async function Page({ params }: Props) {
             {/* 6. 3 EXAMPLES + CTA */}
             <section className="py-24">
                 <div className="container mx-auto px-6">
-                    <div className="text-center mb-16">
-                        <h2 className="text-3xl md:text-5xl font-bold mb-6">Featured Examples</h2>
-                        <p className="text-zinc-400">A sneak peek at what's inside the collection.</p>
-                    </div>
-
-                    {/* The 3 Videos */}
-                    {/* The 3 Videos */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-                        {exampleVideos.length > 0 ? exampleVideos.map(video => (
-                            <VideoCard key={video.id} video={video} />
-                        )) : (
-                            <div className="col-span-3 text-center py-12 text-zinc-500">
-                                <p>Adding examples soon...</p>
-                            </div>
-                        )}
-                    </div>
+                    {/* The example teaser that used to sit here is gone: every
+                        clip is already in the grid at the top of the page, so
+                        repeating a random three of them only padded the page. */}
 
                     {/* Final CTA */}
                     <div className="text-center">

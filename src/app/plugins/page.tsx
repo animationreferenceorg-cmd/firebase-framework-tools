@@ -158,9 +158,9 @@ export default function PluginsPage() {
                   <div className="flex gap-4">
                     <div className="h-7 w-7 rounded-full bg-purple-500/20 text-purple-300 font-bold text-xs flex items-center justify-center shrink-0">2</div>
                     <div className="space-y-1">
-                      <h4 className="text-sm font-semibold text-white">Drag & Drop Install</h4>
+                      <h4 className="text-sm font-semibold text-white">Drag & Drop Python Install</h4>
                       <p className="text-xs text-zinc-400">
-                        Drag <code className="text-purple-300 font-bold">drag_and_drop_install.mel</code> directly into your Maya 3D Viewport. It automatically adds the <code className="text-purple-300">AnimRef</code> button to your active shelf!
+                        Drag <code className="text-purple-300 font-bold">drag_and_drop_install.py</code> directly into your Maya 3D Viewport (or open it in Maya&apos;s Script Editor and press Run). It automatically creates the <code className="text-purple-300 font-bold">AnimRef</code> button on your shelf!
                       </p>
                     </div>
                   </div>

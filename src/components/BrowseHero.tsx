@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import type { Video } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Play, Info, Volume2, VolumeX } from 'lucide-react';
-import ReactPlayer from 'react-player/lazy';
+import ReactPlayer from 'react-player';
 import Link from 'next/link';
 
 interface BrowseHeroProps {

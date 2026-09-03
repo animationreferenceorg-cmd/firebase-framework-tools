@@ -14,7 +14,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 import { likeCategory, unlikeCategory } from '@/lib/firestore';
-import ReactPlayer from 'react-player/lazy';
+import ReactPlayer from 'react-player';
 
 
 export function CategoryCard({ title, description, tags, href, imageUrl, videoUrl, hint, hideLikeButton }: Category & { hideLikeButton?: boolean }) {

@@ -253,7 +253,7 @@ print(f"[AnimRef] Loaded '{clip_title}' into Blender camera: {cam.name}")
                 </a>
               </div>
               <div className="flex items-center justify-between text-[10px] text-zinc-500 pt-1 border-t border-white/5">
-                <span>Drag <code className="text-purple-300">drag_and_drop_install.mel</code> into Maya viewport to install</span>
+                <span>Drag <code className="text-purple-300">drag_and_drop_install.py</code> into Maya viewport to install</span>
                 <a href="/plugins" target="_blank" className="text-purple-400 hover:text-purple-300 flex items-center gap-1 underline">
                   Installation Guide <ExternalLink className="h-2.5 w-2.5" />
                 </a>

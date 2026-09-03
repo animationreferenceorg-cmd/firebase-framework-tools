@@ -6,7 +6,7 @@ import { Play, Pause, Volume2, VolumeX, Heart, Share2, MoreHorizontal, ExternalL
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
-import ReactPlayer from 'react-player/lazy';
+import ReactPlayer from 'react-player';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { likeVideo, unlikeVideo, saveShort, unsaveShort } from '@/lib/firestore';

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import ReactPlayer from 'react-player/lazy';
+import ReactPlayer from 'react-player';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import type { Video } from '@/lib/types';
 

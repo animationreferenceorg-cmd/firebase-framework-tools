@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import ReactPlayer from 'react-player/lazy';
+import ReactPlayer from 'react-player';
 import type { Video, LocalImage } from '@/lib/types';
 
 import { Skeleton } from '@/components/ui/skeleton';

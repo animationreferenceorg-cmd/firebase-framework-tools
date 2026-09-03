@@ -159,6 +159,48 @@ def start_bridge(port=BRIDGE_PORT):
     except Exception as e:
         print(f"[AnimRef] Could not start bridge server: {e}")
 
+def create_shelf_button():
+    if not MAYA_AVAILABLE:
+        return
+    try:
+        import maya.mel as mel
+        top_shelf = mel.eval("$gShelfTopLevel = $gShelfTopLevel")
+        current_shelf = cmds.tabLayout(top_shelf, query=True, selectTab=True) or "Custom"
+        
+        existing = cmds.shelfLayout(current_shelf, query=True, childArray=True) or []
+        for btn in existing:
+            if cmds.objectTypeUI(btn, isType="shelfButton") and cmds.shelfButton(btn, query=True, label=True) == "AnimRef":
+                cmds.deleteUI(btn)
+
+        cmds.shelfButton(
+            parent=current_shelf,
+            label="AnimRef",
+            annotation="AnimationReference.org Bridge",
+            imageOverlayLabel="REF",
+            image="camera.png",
+            command="import animref_maya; animref_maya.start_bridge()",
+            sourceType="python"
+        )
+        print(f"[AnimRef] Created shelf button 'AnimRef' on '{current_shelf}' shelf.")
+    except Exception as e:
+        print(f"[AnimRef] Shelf setup notice: {e}")
+
+def onMayaDroppedAndLoaded(*args, **kwargs):
+    start_bridge()
+    if MAYA_AVAILABLE:
+        create_shelf_button()
+        try:
+            cmds.inViewMessage(
+                amg="<hl>Animation Reference Active!</hl><br>Added 'AnimRef' button to your shelf.<br>Now click 'Send to Maya' in your browser!",
+                pos='topCenter',
+                fade=True,
+                fot=3500
+            )
+        except Exception:
+            pass
+
 # Run bridge on script load
 if __name__ == "__main__" or MAYA_AVAILABLE:
     start_bridge()
+    if MAYA_AVAILABLE:
+        create_shelf_button()

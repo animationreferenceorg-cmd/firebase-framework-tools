@@ -76,19 +76,47 @@ export default function LoginPage() {
         toast({ title: "Signed in!", description: "Welcome back." });
       }
     } catch (error: any) {
-      console.error(error);
-      if (error.code === 'auth/email-already-in-use') {
+      console.warn("Authentication notice:", error?.code || error?.message);
+      if (error?.code === 'auth/email-already-in-use') {
         toast({
           variant: "destructive",
           title: "Email already exists",
           description: "An account with this email is already registered. Please sign in instead.",
         });
         setActiveTab('sign-in');
+      } else if (
+        error?.code === 'auth/invalid-credential' ||
+        error?.code === 'auth/wrong-password' ||
+        error?.code === 'auth/user-not-found'
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Invalid email or password",
+          description: "The email or password you entered is incorrect. Please check your credentials or create an account.",
+        });
+      } else if (error?.code === 'auth/weak-password') {
+        toast({
+          variant: "destructive",
+          title: "Weak password",
+          description: "Password should be at least 6 characters.",
+        });
+      } else if (error?.code === 'auth/invalid-email') {
+        toast({
+          variant: "destructive",
+          title: "Invalid email",
+          description: "Please enter a valid email address.",
+        });
+      } else if (error?.code === 'auth/too-many-requests') {
+        toast({
+          variant: "destructive",
+          title: "Too many attempts",
+          description: "Access temporarily blocked due to many failed attempts. Please try again in a few minutes.",
+        });
       } else {
         toast({
           variant: "destructive",
           title: "Authentication failed",
-          description: error.message || "Failed to authenticate.",
+          description: error?.message || "Failed to authenticate.",
         });
       }
     } finally {
@@ -105,11 +133,16 @@ export default function LoginPage() {
       await handleAuthSuccess(userCredential.user);
       toast({ title: "Signed in with Google!", description: "Welcome to Animation Reference." });
     } catch (error: any) {
-      console.error("Google sign-in error:", error);
+      if (error?.code === 'auth/popup-closed-by-user') {
+        return;
+      }
+      console.warn("Google sign-in notice:", error?.code || error?.message);
       toast({
         variant: "destructive",
         title: "Google Sign-In failed",
-        description: error.message,
+        description: error?.code === 'auth/account-exists-with-different-credential'
+          ? "An account already exists with the same email using a different sign-in method."
+          : error?.message || "Failed to sign in with Google.",
       });
     } finally {
       setLoading(false);

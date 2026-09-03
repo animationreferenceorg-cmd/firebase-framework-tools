@@ -2,7 +2,8 @@
 
 import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Heart, Share2, Bookmark } from 'lucide-react';
+import { Heart, Share2, Bookmark, PencilLine, Box } from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -13,6 +14,7 @@ import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
 import { checkLimit } from '@/lib/limits';
 import { SaveToBoardModal } from '@/components/SaveToBoardModal';
+import { SendTo3DModal } from '@/components/reference/SendTo3DModal';
 
 interface VideoActionsBarProps {
   video: Video;
@@ -27,6 +29,7 @@ export function VideoActionsBar({ video, userProfile }: VideoActionsBarProps) {
   const [showLimitDialog, setShowLimitDialog] = useState(false);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
   const [showSaveToBoard, setShowSaveToBoard] = useState(false);
+  const [showSendTo3D, setShowSendTo3D] = useState(false);
 
   const isLiked = useMemo(() => {
     return userProfile?.likedVideoIds?.includes(video.id) ?? false;
@@ -144,12 +147,49 @@ export function VideoActionsBar({ video, userProfile }: VideoActionsBarProps) {
             size="icon"
             onClick={handleShare}
             className="h-12 w-12 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-white backdrop-blur-sm transition-all cursor-pointer"
+            title="Share Video"
           >
-            <Share2 className="h-7 w-7" />
+            <Share2 className="h-6 w-6" />
           </Button>
           <span className="text-white text-xs font-semibold drop-shadow-md">Share</span>
         </div>
+
+        {/* Draw on Frames Button */}
+        <div className="flex flex-col items-center gap-1">
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            className="h-12 w-12 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-white backdrop-blur-sm transition-all cursor-pointer"
+            title="Draw Over Frames (Grease Pencil)"
+          >
+            <Link href={`/paint?refVideoUrl=${encodeURIComponent(video.videoUrl)}&refTitle=${encodeURIComponent(video.title)}&pinned=true&fps=${video.fps || 24}`}>
+              <PencilLine className="h-6 w-6 text-pink-400" />
+            </Link>
+          </Button>
+          <span className="text-white text-xs font-semibold drop-shadow-md">Draw</span>
+        </div>
+
+        {/* Send to 3D Viewport Button */}
+        <div className="flex flex-col items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => { e.stopPropagation(); setShowSendTo3D(true); }}
+            className="h-12 w-12 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-white backdrop-blur-sm transition-all cursor-pointer"
+            title="Send to Maya / Blender Viewport"
+          >
+            <Box className="h-6 w-6 text-purple-400" />
+          </Button>
+          <span className="text-white text-xs font-semibold drop-shadow-md">Send 3D</span>
+        </div>
       </div>
+
+      <SendTo3DModal 
+        isOpen={showSendTo3D} 
+        onClose={() => setShowSendTo3D(false)} 
+        video={video} 
+      />
 
       <LimitReachedDialog
         open={showLimitDialog}

@@ -912,6 +912,40 @@ export default function PaintPage() {
     });
   };
 
+  // ──────────────── DEEP-LINKED REFERENCE VIDEO INITIALIZER ────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const refUrl = params.get('refVideoUrl');
+    if (!refUrl) return;
+
+    const refTitle = params.get('refTitle');
+    const refId = params.get('refId');
+    const pinned = params.get('pinned');
+    const refFps = params.get('fps');
+
+    const item: ReferenceVideoItem = {
+      id: refId || 'ref-imported',
+      title: refTitle ? decodeURIComponent(refTitle) : 'Reference Clip',
+      videoUrl: decodeURIComponent(refUrl),
+      category: 'Reference'
+    };
+
+    setActiveReferenceVideo(item);
+    setIsPinnedToCanvas(pinned !== 'false');
+    setIsTimelineOpen(true);
+
+    if (refFps) {
+      const parsedFps = parseInt(refFps, 10);
+      if (!isNaN(parsedFps) && parsedFps > 0) setFps(parsedFps);
+    }
+
+    toast({
+      title: "Reference Video Pinned 🎬",
+      description: `Loaded "${item.title}". Draw poses, arcs & spacing directly over frames.`,
+    });
+  }, [toast]);
+
   // Auto-generate animation timeline keyframes to match the reference video length
   useEffect(() => {
     if (activeReferenceVideo) {

@@ -61,7 +61,7 @@ export function WatchTrackerProvider({ children }: { children: ReactNode }) {
       console.log('[Watch Tracker] Paid plan active — donate popup suppressed.');
       return;
     }
-    setForceTimer(true);
+    setForceTimer(false);
     setShowDonatePopup(true);
   }, []);
 

@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import type { Video } from '@/lib/types';
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Rewind, FastForward, Camera, ExternalLink, Instagram, Film, Share2, Heart, Bookmark } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Rewind, FastForward, Camera, ExternalLink, Instagram, Film, Share2, Heart, Bookmark, FlipHorizontal } from 'lucide-react';
 import { CreatorBadge } from '@/components/CreatorBadge';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -140,6 +140,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
     const [playbackRate, setPlaybackRate] = React.useState(1);
     const [videoError, setVideoError] = React.useState(false);
     const [fps, setFps] = React.useState<number>(video.fps || 24);
+    const [isFlipped, setIsFlipped] = React.useState(false);
     const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
     React.useEffect(() => {
@@ -205,15 +206,24 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                 return;
             }
 
-            if (e.key === ',') {
+            if (e.key === ',' || (e.key === 'ArrowLeft' && e.shiftKey)) {
                 e.preventDefault();
                 stepFrame('backward');
-            } else if (e.key === '.') {
+            } else if (e.key === '.' || (e.key === 'ArrowRight' && e.shiftKey)) {
                 e.preventDefault();
                 stepFrame('forward');
             } else if (e.key === ' ') {
                 e.preventDefault();
                 handlePlayPause();
+            } else if (e.key === 'm' || e.key === 'M') {
+                e.preventDefault();
+                setIsFlipped(prev => !prev);
+            } else if (e.key === '[') {
+                e.preventDefault();
+                setPlaybackRate(prev => Math.max(0.25, Number((prev - 0.25).toFixed(2))));
+            } else if (e.key === ']') {
+                e.preventDefault();
+                setPlaybackRate(prev => Math.min(2.0, Number((prev + 0.25).toFixed(2))));
             }
         };
 
@@ -351,7 +361,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                 handlePlayPause();
             }}
         >
-            <div className="relative w-full aspect-video max-w-full max-h-full">
+            <div className={cn("relative w-full aspect-video max-w-full max-h-full transition-transform duration-200", isFlipped && "-scale-x-100")}>
                 <Player
                     playerRef={playerRef}
                     url={video.videoUrl}
@@ -592,6 +602,23 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                                 <span className="text-[10px] font-mono text-zinc-200">{playbackRate}x</span>
                             </div>
                         )}
+
+                        {/* Horizontal Flip / Mirror Button for Animators */}
+                        <Button
+                            type="button"
+                            onClick={() => setIsFlipped(prev => !prev)}
+                            variant="ghost"
+                            size="icon"
+                            title="Mirror Video Horizontally (M)"
+                            className={cn(
+                                "hover:bg-white/20 text-white rounded-full h-8 w-8 transition-colors cursor-pointer shrink-0 ml-1.5",
+                                isFlipped 
+                                    ? "bg-purple-500/30 text-purple-300 border border-purple-400/50 shadow-[0_0_10px_rgba(168,85,247,0.4)]" 
+                                    : "bg-black/40 border border-white/5 sm:bg-transparent"
+                            )}
+                        >
+                            <FlipHorizontal className="h-4 w-4" />
+                        </Button>
                     </div>
 
                     {/* Right: Like, Save, Share, Timeline Toggle & Fullscreen */}

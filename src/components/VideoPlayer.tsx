@@ -3,14 +3,13 @@
 
 import * as React from 'react';
 import type { Video } from '@/lib/types';
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Rewind, FastForward, Camera, ExternalLink, Instagram, Film, Share2, Heart, Bookmark, FlipHorizontal, PencilLine, Box } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Rewind, FastForward, Camera, ExternalLink, Instagram, Film, Share2, Heart, Bookmark, FlipHorizontal, PencilLine } from 'lucide-react';
 import Link from 'next/link';
 import { CreatorBadge } from '@/components/CreatorBadge';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import ReactPlayer from 'react-player';
-import { SendTo3DModal } from '@/components/reference/SendTo3DModal';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
@@ -138,8 +137,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
     const [videoError, setVideoError] = React.useState(false);
     const [fps, setFps] = React.useState<number>(video.fps || 24);
     const [isFlipped, setIsFlipped] = React.useState(false);
-    const [showSendTo3DModal, setShowSendTo3DModal] = React.useState(false);
-    const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+        const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
     React.useEffect(() => {
         setFps(video.fps || 24);
@@ -631,18 +629,6 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                                 <PencilLine className="h-4 w-4 text-pink-300 hover:text-pink-200" />
                             </Link>
                         </Button>
-
-                        {/* Send to Maya / Blender Button */}
-                        <Button
-                            type="button"
-                            onClick={() => setShowSendTo3DModal(true)}
-                            variant="ghost"
-                            size="icon"
-                            title="Send to Maya / Blender Viewport"
-                            className="hover:bg-white/20 text-white rounded-full h-8 w-8 transition-colors cursor-pointer shrink-0 ml-1 bg-black/40 border border-white/5 sm:bg-transparent"
-                        >
-                            <Box className="h-4 w-4 text-purple-300 hover:text-purple-200" />
-                        </Button>
                     </div>
 
                     {/* Right: Like, Save, Share, Timeline Toggle & Fullscreen */}
@@ -711,11 +697,6 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                     </div>
                 </div>
             </div>
-            <SendTo3DModal 
-                isOpen={showSendTo3DModal} 
-                onClose={() => setShowSendTo3DModal(false)} 
-                video={video} 
-            />
         </div>
     );
 });

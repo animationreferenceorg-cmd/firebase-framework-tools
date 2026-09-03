@@ -552,8 +552,10 @@ export async function downloadSocialVideo(
             if (!uploadRes.ok) throw new Error(`Could not upload the video to Bunny Stream (${uploadRes.status}).`);
 
             await onProgress?.(76, 'Processing playback');
-            const encoded = await waitForBunnyVideo(externalBunnyId);
-            storedVideoUrl = bunnyMp4Url(externalBunnyId, encoded.availableResolutions);
+            const encoded = await waitForBunnyVideo(externalBunnyId).catch(() => null);
+            storedVideoUrl = (encoded && encoded.availableResolutions)
+              ? bunnyMp4Url(externalBunnyId, encoded.availableResolutions)
+              : `https://${bunnyHost}/${externalBunnyId}/playlist.m3u8`;
             storedThumbnailUrl = `https://${bunnyHost}/${externalBunnyId}/thumbnail.jpg`;
             storagePath = `bunny/${bunnyLibraryId}/${externalBunnyId}`;
             await onProgress?.(94, 'Finalizing reference');

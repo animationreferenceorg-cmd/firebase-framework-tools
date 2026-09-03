@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiErrorResponse, getTrustedProfile, profileHasPro, requireFirebaseUser } from '@/lib/api-auth';
 import { getFirebaseStorage, getFirestore } from '@/lib/firebase-admin';
-import { bunnyMp4Url, bunnyStreamConfig, waitForBunnyVideo } from '@/lib/bunny-stream';
+import { bunnyStreamConfig } from '@/lib/bunny-stream';
 import { analyzeReferenceVisuals } from '@/lib/reference-discovery';
 
 export const runtime = 'nodejs';
@@ -17,7 +17,6 @@ export async function POST(request: NextRequest) {
   try {
     const identity = await requireFirebaseUser(request);
     const profile = await getTrustedProfile(identity.uid);
-    if (!profileHasPro(profile)) throw new ApiError(403, 'PRO_REQUIRED', 'Direct media uploads require Pro.');
 
     const form = await request.formData();
     const file = form.get('file');
@@ -30,12 +29,16 @@ export async function POST(request: NextRequest) {
       throw new ApiError(422, 'FILE_TOO_LARGE', isVideo ? 'Videos must be no larger than 250 MB.' : 'Images must be no larger than 25 MB.');
     }
 
+    const isPrivate = String(form.get('isPrivate')) === 'true';
+    if (isPrivate && !profileHasPro(profile)) {
+      throw new ApiError(403, 'PRO_REQUIRED', 'Private media uploads require Pro.');
+    }
+
     const mediaType = isVideo ? 'video' : file.type === 'image/gif' ? 'gif' : 'image';
     const fileBuffer = Buffer.from(await file.arrayBuffer());
     const title = String(form.get('title') || file.name).trim().slice(0, 120);
-    const category = String(form.get('category') || 'Personal Reference').trim().slice(0, 60);
+    const category = String(form.get('category') || 'Acting').trim().slice(0, 60);
     const tags = String(form.get('tags') || '').split(',').map((tag) => tag.trim().toLowerCase()).filter(Boolean).slice(0, 20);
-    const isPrivate = String(form.get('isPrivate')) !== 'false';
     const boardId = String(form.get('boardId') || '').trim();
 
     const db = getFirestore();
@@ -55,7 +58,7 @@ export async function POST(request: NextRequest) {
     const { apiKey: bunnyApiKey, libraryId: bunnyLibraryId, host: bunnyHost } = bunnyStreamConfig();
 
     if (isVideo && bunnyApiKey && bunnyLibraryId) {
-      // 🚀 Upload Video to Bunny Stream CDN for cheap storage & adaptive HLS playback
+      // Upload Video to Bunny Stream CDN
       const createRes = await fetch(`https://video.bunnycdn.com/library/${bunnyLibraryId}/videos`, {
         method: 'POST',
         headers: { AccessKey: bunnyApiKey, 'Content-Type': 'application/json' },
@@ -82,19 +85,29 @@ export async function POST(request: NextRequest) {
         throw new Error(`Failed to transfer video to Bunny Stream (${uploadRes.statusText})`);
       }
 
-      const encoded = await waitForBunnyVideo(bunnyGuid);
-      uploadedMediaUrl = bunnyMp4Url(bunnyGuid, encoded.availableResolutions);
+      uploadedMediaUrl = `https://${bunnyHost}/${externalBunnyId}/playlist.m3u8`;
       thumbnailUrl = `https://${bunnyHost}/${externalBunnyId}/thumbnail.jpg`;
       storagePath = `bunny/${bunnyLibraryId}/${externalBunnyId}`;
     } else {
-      // Fallback: Firebase Storage for images and non-Bunny uploads
+      // Fallback: Firebase Storage for images, GIFs, and direct uploads
       const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      storagePath = `private-reference/${identity.uid}/${clipRef.id}/${cleanName}`;
-      await getFirebaseStorage().bucket().file(storagePath).save(fileBuffer, {
+      storagePath = isPrivate
+        ? `private-reference/${identity.uid}/${clipRef.id}/${cleanName}`
+        : `reference-uploads/${identity.uid}/${clipRef.id}/${cleanName}`;
+      const bucket = getFirebaseStorage().bucket();
+      const fileRef = bucket.file(storagePath);
+      await fileRef.save(fileBuffer, {
         resumable: false,
-        metadata: { contentType: file.type, cacheControl: 'private,max-age=300' },
+        metadata: { contentType: file.type, cacheControl: isPrivate ? 'private,max-age=300' : 'public,max-age=31536000' },
       });
-      uploadedMediaUrl = `/api/clips/${clipRef.id}/playback`;
+      if (!isPrivate) {
+        await fileRef.makePublic().catch(() => {});
+        const encoded = storagePath.split('/').map(encodeURIComponent).join('/');
+        uploadedMediaUrl = `https://storage.googleapis.com/${bucket.name}/${encoded}`;
+        thumbnailUrl = isImage ? uploadedMediaUrl : '';
+      } else {
+        uploadedMediaUrl = `/api/clips/${clipRef.id}/playback`;
+      }
     }
 
     const now = FieldValue.serverTimestamp();
@@ -125,11 +138,14 @@ export async function POST(request: NextRequest) {
         tags,
         ...discovery,
         isPrivate,
-        // Direct uploads are personal references, never automatic Community posts.
-        communityVisible: false,
+        communityVisible: !isPrivate,
         removedFromCreatorAt: null,
         primaryBoardId: boardId || null,
         saveCount: boardId ? 1 : 0,
+        captureStatus: 'ready',
+        captureStage: 'Reference ready',
+        captureProgress: 100,
+        bunnySyncStatus: externalBunnyId ? 'ready' : null,
         createdAt: now,
         updatedAt: now,
       });

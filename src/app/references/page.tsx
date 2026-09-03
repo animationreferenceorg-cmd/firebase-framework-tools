@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ReferencesExplorer } from '@/components/reference/ReferencesExplorer';
 import { CaptureClipDialog } from '@/components/reference/CaptureClipDialog';
+import { DirectUploadDialog } from '@/components/reference/DirectUploadDialog';
 
 export const metadata = {
   title: 'Community Reference Clips | Animation Reference',
@@ -22,6 +23,7 @@ export default function ReferencesPage() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <CaptureClipDialog />
+          <DirectUploadDialog />
         </div>
       </section>
       <ReferencesExplorer />

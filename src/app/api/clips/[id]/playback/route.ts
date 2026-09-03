@@ -16,10 +16,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (String(clip.storagePath).startsWith('bunny/') && clip.uploadedMediaUrl) {
       const guid = clip.externalBunnyId || String(clip.storagePath).split('/').pop();
       const bunnyVideo = guid ? await getBunnyVideoStatus(guid) : null;
-      if (guid && bunnyVideo?.status === 4) {
-        return NextResponse.json({ url: bunnyMp4Url(guid, bunnyVideo.availableResolutions), status: 'ready' });
-      }
-      return NextResponse.json({ status: 'processing', progress: bunnyVideo?.encodeProgress || 0 }, { status: 202 });
+      const streamUrl = (guid && bunnyVideo?.status === 4) 
+        ? (bunnyMp4Url(guid, bunnyVideo.availableResolutions) || clip.uploadedMediaUrl)
+        : clip.uploadedMediaUrl;
+      return NextResponse.json({ url: streamUrl, status: 'ready' });
     }
     const [url] = await getFirebaseStorage().bucket().file(clip.storagePath).getSignedUrl({ action: 'read', expires: Date.now() + 5 * 60 * 1000 });
     return NextResponse.json({ url });

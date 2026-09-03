@@ -9,13 +9,18 @@ export function ReferenceHomeVideoPlayer({ clip }: { clip: ReferenceClip }) {
   const { user } = useAuth();
   const isStillImage = clip.mediaType === 'image' || clip.mediaType === 'gif';
   const [playbackUrl, setPlaybackUrl] = useState(() => {
-    if (clip.storagePath) return '';
-    return clip.uploadedMediaUrl || clip.sourceUrl || '';
+    if (clip.uploadedMediaUrl && (clip.uploadedMediaUrl.startsWith('http://') || clip.uploadedMediaUrl.startsWith('https://'))) {
+      return clip.uploadedMediaUrl;
+    }
+    if (clip.sourceUrl && (clip.sourceUrl.startsWith('http://') || clip.sourceUrl.startsWith('https://'))) {
+      return clip.sourceUrl;
+    }
+    return '';
   });
 
   useEffect(() => {
     if (isStillImage) return;
-    if (!clip.storagePath) {
+    if (playbackUrl || !clip.storagePath) {
       setPlaybackUrl(clip.uploadedMediaUrl || clip.sourceUrl || '');
       return;
     }

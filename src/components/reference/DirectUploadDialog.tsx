@@ -30,7 +30,7 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
   const [boards, setBoards] = useState<ReferenceBoard[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
-  const [form, setForm] = useState({ title: '', category: 'Personal Reference', tags: '', boardId: '', isPrivate: false, duration: 10 });
+  const [form, setForm] = useState({ title: '', category: 'Acting', tags: '', boardId: '', isPrivate: false, duration: 10 });
 
   useEffect(() => {
     if (open && user) getUserReferenceBoards(user.uid, true).then(setBoards).catch(() => setBoards([]));
@@ -106,7 +106,7 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
       setUploadProgress(0);
       setFile(null);
       setPreviewUrl('');
-      setForm({ title: '', category: 'Personal Reference', tags: '', boardId: '', isPrivate: false, duration: 10 });
+      setForm({ title: '', category: 'Acting', tags: '', boardId: '', isPrivate: false, duration: 10 });
       onCreated?.();
     } catch (error: any) {
       setUploadFailed(true);
@@ -128,11 +128,14 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
           <DialogTitle>Add your own reference</DialogTitle>
           <DialogDescription>Upload videos, acting takes, photos, pose sheets, GIFs, and visual research as reference clips.</DialogDescription>
         </DialogHeader>
-        {!pro ? (
-          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6 text-center">
-            <Crown className="mx-auto mb-3 h-8 w-8 text-amber-300" />
-            <h3 className="font-bold">Personal media uploads are Pro</h3>
-            <p className="mt-2 text-sm text-zinc-400">The $5 plan includes secure storage for videos and images, private boards, and breakdown pages.</p>
+        {!user ? (
+          <div className="rounded-2xl border border-purple-500/20 bg-purple-950/20 p-6 text-center">
+            <Upload className="mx-auto mb-3 h-8 w-8 text-purple-300" />
+            <h3 className="font-bold text-white">Sign in to upload reference</h3>
+            <p className="mt-2 text-sm text-zinc-400">Join the community library to upload your videos, photos, and GIF references.</p>
+            <Button asChild className="mt-4 bg-purple-600 hover:bg-purple-500 font-bold">
+              <a href="/login?redirect=/references">Sign in to Upload</a>
+            </Button>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4">
@@ -161,7 +164,16 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
 
             <Field label="Title"><Input required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} /></Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Category"><Input value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} /></Field>
+              <Field label="Category">
+                <Select value={form.category} onValueChange={(val) => setForm({ ...form, category: val })}>
+                  <SelectTrigger className="border-white/10 bg-black/40"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-zinc-950 border-white/10">
+                    {['Acting', 'Body Mechanics', 'Combat', 'Creature', 'Dance', 'Facial', 'Locomotion', 'Sports', 'Stunts'].map((item) => (
+                      <SelectItem value={item} key={item}>{item}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
               <Field label="Board">
                 <Select value={form.boardId || 'none'} onValueChange={(value) => {
                   const board = boards.find((item) => item.id === value);
@@ -175,7 +187,7 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
             <Field label="Tags"><Input value={form.tags} onChange={(event) => setForm({ ...form, tags: event.target.value })} placeholder="pose sheet, facial acting, client-x" /></Field>
             <div className="flex items-center justify-between rounded-xl border border-white/10 p-3">
               <div><Label>Private</Label><p className="text-xs text-zinc-500">Keep this media outside public discovery</p></div>
-              <Switch checked={form.isPrivate} onCheckedChange={(value) => setForm({ ...form, isPrivate: value })} />
+              <Switch checked={form.isPrivate} disabled={!pro} onCheckedChange={(value) => setForm({ ...form, isPrivate: value })} />
             </div>
             {(saving || uploadProgress > 0) && (
               <div className={`rounded-xl border p-3 ${uploadFailed ? 'border-red-500/30 bg-red-500/5' : uploadProgress === 100 ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-purple-500/30 bg-purple-500/5'}`} aria-live="polite">

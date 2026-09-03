@@ -10,8 +10,12 @@ export function ReferenceMediaPreview({ clip }: { clip: ReferenceClip }) {
 
   const getInitialSource = (c: ReferenceClip) => {
     if (c.thumbnailUrl) return c.thumbnailUrl;
-    if (c.uploadedMediaUrl) return c.uploadedMediaUrl;
+    if (c.uploadedMediaUrl && !c.uploadedMediaUrl.includes('/api/clips/')) return c.uploadedMediaUrl;
     if (c.mediaType === 'image' || c.mediaType === 'gif') return c.sourceUrl || '';
+    if (c.externalBunnyId) {
+      const host = process.env.NEXT_PUBLIC_BUNNY_STREAM_HOST || 'vz-cdfeb679-25c.b-cdn.net';
+      return `https://${host}/${c.externalBunnyId}/thumbnail.jpg`;
+    }
     if (c.sourcePlatform === 'youtube' && c.sourceVideoId) {
       return `https://i.ytimg.com/vi/${c.sourceVideoId}/hqdefault.jpg`;
     }

@@ -16,3 +16,7 @@ private_key.txt
 # Generated build artefacts
 tsconfig.tsbuildinfo
 *.tsbuildinfo
+
+# Python bytecode
+__pycache__/
+*.pyc

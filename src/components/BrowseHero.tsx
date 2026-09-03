@@ -80,7 +80,7 @@ export function BrowseHero({ video, children }: BrowseHeroProps) {
             <div className="absolute inset-0 z-20 container mx-auto px-4 md:px-12 flex flex-col justify-center h-full pt-16">
                 {children ? (
                     children
-                ) : (
+                ) : video ? (
                     <div className="max-w-2xl space-y-6 animate-fade-in">
                         <h1 className="text-4xl md:text-6xl font-black text-white drop-shadow-2xl tracking-tight leading-tight">
                             {video.status === 'draft' ? 'Reference' : video.title}
@@ -109,7 +109,7 @@ export function BrowseHero({ video, children }: BrowseHeroProps) {
                             </Button>
                         </div>
                     </div>
-                )}
+                ) : null}
             </div>
 
             {/* Volume Toggle */}

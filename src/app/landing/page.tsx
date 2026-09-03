@@ -13,16 +13,17 @@ import { VideoRow } from '@/components/VideoRow';
 import { VideoGrid } from '@/components/VideoGrid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BrowseHero } from '@/components/BrowseHero';
+import { DEFAULT_HERO_VIDEO, DEFAULT_LANDING_VIDEOS, DEFAULT_LANDING_CATEGORIES } from '@/lib/landing-data';
 
 export default function LandingPage() {
-    const [allCategories, setAllCategories] = useState<Category[]>([]);
-    const [allVideos, setAllVideos] = useState<Video[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [allCategories, setAllCategories] = useState<Category[]>(DEFAULT_LANDING_CATEGORIES);
+    const [allVideos, setAllVideos] = useState<Video[]>(DEFAULT_LANDING_VIDEOS);
+    const [loading, setLoading] = useState(false);
 
-    // Data Fetching
+    // Non-blocking background data hydration
     useEffect(() => {
+        let isMounted = true;
         const fetchData = async () => {
-            setLoading(true);
             try {
                 const categoriesQuery = query(collection(db, "categories"), where("status", "==", "published"));
 
@@ -34,21 +35,27 @@ export default function LandingPage() {
                     getSnapshotVideos().catch(() => [])
                 ]);
 
+                if (!isMounted) return;
+
                 const categories = (categorySnapshot.docs || []).map(doc => ({
                     id: doc.id,
                     href: `/browse?category=${doc.id}`,
                     ...doc.data()
                 } as Category));
-                setAllCategories(categories);
-                setAllVideos(videos);
+
+                if (categories && categories.length > 0) {
+                    setAllCategories(categories);
+                }
+                if (videos && videos.length > 0) {
+                    setAllVideos(videos);
+                }
 
             } catch (error) {
                 console.warn("Error fetching landing data:", error);
-            } finally {
-                setLoading(false);
             }
-        }
+        };
         fetchData();
+        return () => { isMounted = false; };
     }, []);
 
     const videosByCategory = useMemo(() => {
@@ -73,65 +80,56 @@ export default function LandingPage() {
     }, [allCategories, videosByCategory]);
 
     const exampleVideos = useMemo(() => {
-        // Get 9 random videos for the 3x3 grid
-        return [...allVideos].sort(() => 0.5 - Math.random()).slice(0, 9);
+        // First 9 videos for the 3x3 grid (deterministic for instant SSR/first paint)
+        return allVideos.slice(0, 9);
     }, [allVideos]);
 
     const heroVideo = useMemo(() => {
-        if (allVideos.length === 0) return null;
-        const randomIndex = Math.floor(Math.random() * allVideos.length);
-        return allVideos[randomIndex];
+        return allVideos[0] || DEFAULT_HERO_VIDEO;
     }, [allVideos]);
 
 
     return (
         <div className="min-h-screen bg-transparent text-white overflow-x-hidden font-sans selection:bg-purple-500/30 -mt-24">
 
-            {/* Hero Section */}
-            {heroVideo ? (
-                <BrowseHero video={heroVideo}>
-                    <div className="w-full h-full flex flex-col justify-center items-center text-center pb-20 animate-fade-in-up">
-                        {/* Badge */}
-                        <div className="flex justify-center mb-8 animate-fade-in">
-                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black/40 border border-white/10 backdrop-blur-md shadow-[0_0_30px_-5px_rgba(109,40,217,0.3)] group hover:scale-105 transition-transform duration-300">
-                                <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
-                                <span className="text-sm font-medium text-purple-100/90">Your Ultimate Animation Library</span>
-                            </div>
-                        </div>
-
-                        {/* Headline */}
-                        <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-8 leading-[1.1] md:leading-[1.1] max-w-5xl mx-auto drop-shadow-2xl">
-                            <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/70">
-                                Master the Art of
-                            </span>
-                            <br />
-                            <span className="text-purple-400">
-                                Motion & Timing
-                            </span>
-                        </h1>
-
-                        {/* Subheadline */}
-                        <p className="text-lg md:text-xl text-zinc-100 mb-12 max-w-2xl mx-auto leading-relaxed drop-shadow-lg font-medium">
-                            Highly customizable reference library for animators. Analyze frame-by-frame, build your collections, and discover inspiration from the world's best studios.
-                        </p>
-
-                        {/* CTA Button */}
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-                            <Button asChild className="h-16 px-10 rounded-2xl text-lg font-semibold bg-gradient-to-br from-[#7c3aed] to-[#6d28d9] hover:scale-105 shadow-[0_10px_40px_-10px_rgba(124,58,237,0.5)] border border-purple-400/20 transition-all duration-300 group text-white">
-                                <Link href="/home">
-                                    Start Finding Animations Now
-                                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                                </Link>
-                            </Button>
+            {/* Hero Section - Instant render on frame 0 */}
+            <BrowseHero video={heroVideo}>
+                <div className="w-full h-full flex flex-col justify-center items-center text-center pb-20 animate-fade-in-up">
+                    {/* Badge */}
+                    <div className="flex justify-center mb-8 animate-fade-in">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black/40 border border-white/10 backdrop-blur-md shadow-[0_0_30px_-5px_rgba(109,40,217,0.3)] group hover:scale-105 transition-transform duration-300">
+                            <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
+                            <span className="text-sm font-medium text-purple-100/90">Your Ultimate Animation Library</span>
                         </div>
                     </div>
-                </BrowseHero>
-            ) : (
-                // Fallback Skeleton
-                <div className="h-[85vh] w-full bg-[#030014] flex items-center justify-center pt-20">
-                    <Skeleton className="h-full w-full bg-zinc-900/50" />
+
+                    {/* Headline */}
+                    <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-8 leading-[1.1] md:leading-[1.1] max-w-5xl mx-auto drop-shadow-2xl">
+                        <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/70">
+                            Master the Art of
+                        </span>
+                        <br />
+                        <span className="text-purple-400">
+                            Motion & Timing
+                        </span>
+                    </h1>
+
+                    {/* Subheadline */}
+                    <p className="text-lg md:text-xl text-zinc-100 mb-12 max-w-2xl mx-auto leading-relaxed drop-shadow-lg font-medium">
+                        Highly customizable reference library for animators. Analyze frame-by-frame, build your collections, and discover inspiration from the world's best studios.
+                    </p>
+
+                    {/* CTA Button - Instantly visible and clickable */}
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+                        <Button asChild className="h-16 px-10 rounded-2xl text-lg font-semibold bg-gradient-to-br from-[#7c3aed] to-[#6d28d9] hover:scale-105 shadow-[0_10px_40px_-10px_rgba(124,58,237,0.5)] border border-purple-400/20 transition-all duration-300 group text-white cursor-pointer">
+                            <Link href="/home">
+                                Start Finding Animations Now
+                                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
-            )}
+            </BrowseHero>
 
             {/* Benefits Section Side-by-Side */}
             <section className="py-32 relative" id="benefits">

@@ -56,9 +56,10 @@ interface VideoCardProps {
   video: Video;
   poster?: boolean;
   onSelect?: (video: Video) => void;
+  priority?: boolean;
 }
 
-export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
+export function VideoCard({ video, poster, onSelect, priority = false }: VideoCardProps) {
   const { user: authUser } = useAuth();
   const { userProfile, mutate } = useUser();
   const { beginWatch, endWatch } = useWatchTracker();
@@ -378,11 +379,13 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
         >
           {!isImageLoaded && <Skeleton className="absolute inset-0" />}
           {imageUrl && !hasImageError ? (
-            <>
-              <Image loading="lazy"
+              <Image
+                loading={priority ? undefined : "lazy"}
+                priority={priority}
                 src={imageUrl}
                 alt={video.title}
                 fill
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 unoptimized={isExternalCdn}
                 className={cn(
                   "w-full h-full object-cover transition-opacity duration-300",
@@ -395,7 +398,6 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
                   setIsImageLoaded(true);
                 }}
               />
-            </>
           ) : isCommunityVideo && video.videoUrl ? (
             <video
               ref={videoRef}
@@ -668,9 +670,12 @@ export function VideoCard({ video, poster, onSelect }: VideoCardProps) {
         {!isImageLoaded && <Skeleton className="absolute inset-0" />}
         {imageUrl && !hasImageError ? (
           <Image
+            loading={priority ? undefined : "lazy"}
+            priority={priority}
             src={imageUrl}
             alt={video.title}
             fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             unoptimized={isExternalCdn}
             className={cn(
               "w-full h-full object-cover transition-opacity duration-300",

@@ -8,7 +8,7 @@ import ReactPlayer from 'react-player/lazy';
 import Link from 'next/link';
 
 interface BrowseHeroProps {
-    video: Video;
+    video?: Video | null;
     children?: React.ReactNode;
 }
 
@@ -28,18 +28,24 @@ export function BrowseHero({ video, children }: BrowseHeroProps) {
     return (
         <div className="relative h-[85vh] w-full overflow-hidden group/hero">
             {/* Background Layer */}
-            <div className="absolute inset-0 bg-black">
+            <div className="absolute inset-0 bg-[#060312]">
+                {/* Ambient dynamic glow when video is loading or idle */}
+                <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[70vw] h-[50vh] bg-purple-600/20 rounded-full blur-[120px] pointer-events-none" />
+                <div className="absolute bottom-0 right-1/4 w-[40vw] h-[40vh] bg-indigo-600/15 rounded-full blur-[100px] pointer-events-none" />
+
                 {/* Fallback Image / Poster */}
-                <div
-                    className="absolute inset-0 bg-cover bg-center transition-opacity duration-700"
-                    style={{
-                        backgroundImage: `url(${video.thumbnailUrl || video.posterUrl})`,
-                        opacity: showVideo ? 0 : 1
-                    }}
-                />
+                {video && (video.thumbnailUrl || video.posterUrl) && (
+                    <div
+                        className="absolute inset-0 bg-cover bg-center transition-opacity duration-700"
+                        style={{
+                            backgroundImage: `url(${video.thumbnailUrl || video.posterUrl})`,
+                            opacity: showVideo ? 0 : 1
+                        }}
+                    />
+                )}
 
                 {/* Video Player */}
-                {video.videoUrl && (
+                {video?.videoUrl && (
                     <div className={`absolute inset-0 transition-opacity duration-1000 ${showVideo ? 'opacity-100' : 'opacity-0'}`}>
                         <ReactPlayer
                             url={video.videoUrl}

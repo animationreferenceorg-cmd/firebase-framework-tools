@@ -32,8 +32,8 @@ export function VideoGrid({ title, videos, columns = 4 }: VideoGridProps) {
         "grid gap-2.5 sm:gap-4",
         getGridClass()
       )}>
-        {videos.map(video => (
-          <VideoCard key={video.id} video={video} />
+        {videos.map((video, index) => (
+          <VideoCard key={video.id} video={video} priority={index < 4} />
         ))}
       </div>
     </section>

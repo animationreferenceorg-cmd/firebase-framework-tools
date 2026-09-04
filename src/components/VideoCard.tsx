@@ -20,6 +20,7 @@ import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
 import { VideoPlayer } from './VideoPlayer';
+import { SaveToBoardModal } from './SaveToBoardModal';
 import Link from 'next/link';
 import type { Video } from '@/lib/types';
 
@@ -129,6 +130,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   const [optimisticLiked, setOptimisticLiked] = useState<boolean | null>(null);
   const [optimisticSaved, setOptimisticSaved] = useState<boolean | null>(null);
   const [likeCountDelta, setLikeCountDelta] = useState(0);
+  const [showSaveToBoard, setShowSaveToBoard] = useState(false);
 
   const isLiked = optimisticLiked !== null ? optimisticLiked : isLikedProp;
   const isSaved = optimisticSaved !== null ? optimisticSaved : isSavedProp;
@@ -295,7 +297,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
     }
   };
 
-  const handleBookmarkToggle = async (e: React.MouseEvent) => {
+  const handleBookmarkToggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -308,27 +310,8 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
       return;
     }
 
-    const nextSaved = !isSaved;
-    setOptimisticSaved(nextSaved);
-
-    try {
-      if (isSaved) {
-        await unsaveVideo(authUser.uid, video.id);
-        toast({ title: "Removed from Saved", description: displayTitle });
-      } else {
-        await saveVideo(authUser.uid, video.id);
-        toast({ title: "Saved!", description: video.status === 'draft' ? "Reference" : video.title });
-      }
-      mutate();
-    } catch (error) {
-      console.error("Failed to update saved status:", error);
-      toast({
-        variant: "destructive",
-        title: "Something went wrong",
-        description: "Could not update your saved videos.",
-      });
-    }
-  }
+    setShowSaveToBoard(true);
+  };
 
   const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -870,6 +853,12 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           setShowDonateDialog(val);
           if (!val) setDonateForceTimer(false);
         }}
+      />
+
+      <SaveToBoardModal
+        video={video}
+        open={showSaveToBoard}
+        onOpenChange={setShowSaveToBoard}
       />
     </>
   );

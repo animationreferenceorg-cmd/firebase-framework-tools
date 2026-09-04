@@ -13,6 +13,7 @@ import type { Video, Category, Moodboard } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { VideoGrid } from '@/components/VideoGrid';
 import { CategoryCard } from '@/components/CategoryCard';
 import { 
@@ -30,7 +31,8 @@ import {
     ArrowRight, 
     Loader2, 
     LayoutGrid,
-    Clock
+    Clock,
+    Pencil
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -49,6 +51,29 @@ export default function CreativeCMSListPage() {
     const [likedVideos, setLikedVideos] = useState<Video[]>([]);
     const [savedCategories, setSavedCategories] = useState<Category[]>([]);
     const [moodboards, setMoodboards] = useState<Moodboard[]>([]);
+    const [editingBoard, setEditingBoard] = useState<{ id: string; name: string } | null>(null);
+
+    const handleRenameBoard = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingBoard || !editingBoard.name.trim()) return;
+
+        try {
+            if (user?.uid) {
+                await MoodboardService.updateMoodboardName(user.uid, editingBoard.id, editingBoard.name.trim());
+            } else {
+                const stored = localStorage.getItem(LOCAL_STORAGE_BOARDS_KEY);
+                let localBoards = stored ? JSON.parse(stored) : [];
+                localBoards = localBoards.map((b: any) => b.id === editingBoard.id ? { ...b, name: editingBoard.name.trim() } : b);
+                localStorage.setItem(LOCAL_STORAGE_BOARDS_KEY, JSON.stringify(localBoards));
+            }
+            setMoodboards(prev => prev.map(b => b.id === editingBoard.id ? { ...b, name: editingBoard.name.trim() } : b));
+            toast({ title: "Board Renamed", description: `Renamed to "${editingBoard.name.trim()}"` });
+            setEditingBoard(null);
+        } catch (err) {
+            console.error("Failed to rename board:", err);
+            toast({ variant: "destructive", title: "Could not rename board" });
+        }
+    };
 
     // Fetch User Liked Videos, Categories, and Moodboards
     useEffect(() => {
@@ -292,7 +317,21 @@ export default function CreativeCMSListPage() {
                                                 <span className="px-2.5 py-0.5 rounded-full bg-purple-900/80 border border-purple-700/50 text-purple-200 font-mono text-[10px] font-bold shadow-md">
                                                     {(board.items || []).length} ITEMS
                                                 </span>
-                                                <ExternalLink className="h-4 w-4 text-zinc-400 group-hover:text-purple-300 transition-colors" />
+                                                <div className="flex items-center gap-1.5">
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            setEditingBoard({ id: board.id, name: board.name });
+                                                        }}
+                                                        className="p-1.5 rounded-full bg-black/40 hover:bg-white/20 text-zinc-300 hover:text-white transition-colors"
+                                                        title="Rename Moodboard"
+                                                    >
+                                                        <Pencil className="h-3.5 w-3.5" />
+                                                    </button>
+                                                    <ExternalLink className="h-4 w-4 text-zinc-400 group-hover:text-purple-300 transition-colors" />
+                                                </div>
                                             </div>
 
                                             <div className="relative z-20 text-left space-y-1">
@@ -366,6 +405,32 @@ export default function CreativeCMSListPage() {
                     )}
                 </div>
             )}
+
+            {/* Rename Moodboard Dialog */}
+            <Dialog open={Boolean(editingBoard)} onOpenChange={(open) => { if (!open) setEditingBoard(null); }}>
+                <DialogContent className="sm:max-w-md bg-zinc-950 border border-white/10 text-white rounded-2xl p-6 shadow-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-lg font-bold">Rename Moodboard</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleRenameBoard} className="space-y-4 mt-2">
+                        <Input
+                            autoFocus
+                            value={editingBoard?.name || ''}
+                            onChange={(e) => setEditingBoard(prev => prev ? { ...prev, name: e.target.value } : null)}
+                            placeholder="Moodboard name"
+                            className="bg-black/60 border-white/15 text-white h-10 rounded-xl"
+                        />
+                        <div className="flex justify-end gap-2">
+                            <Button type="button" variant="ghost" onClick={() => setEditingBoard(null)} className="rounded-xl">
+                                Cancel
+                            </Button>
+                            <Button type="submit" className="bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl">
+                                Save Name
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

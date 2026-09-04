@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { 
     ChevronLeft, Plus, Image as ImageIcon, ArrowLeft, Layout, Trash2, Search, X, ChevronDown,
     MousePointer, Hand, Type, StickyNote, Square, Circle, Triangle, 
-    ArrowUpRight, ArrowRight, Pen, Eraser, ZoomIn, ZoomOut, Maximize2, 
+    ArrowUpRight, ArrowRight, Pen, Pencil, Eraser, ZoomIn, ZoomOut, Maximize2, 
     MoreHorizontal, Sun, Moon 
 } from 'lucide-react';
 
@@ -255,6 +255,9 @@ function MoodboardContent() {
     const [isLoadingBoards, setIsLoadingBoards] = useState(true);
     const [editingBoardId, setEditingBoardId] = useState<string | null>(null);
     const [tempName, setTempName] = useState("");
+    const [isEditingCanvasBoardName, setIsEditingCanvasBoardName] = useState(false);
+    const [canvasBoardDraftName, setCanvasBoardDraftName] = useState("");
+    const [allSavedReferences, setAllSavedReferences] = useState<Video[]>([]);
 
     const [loading, setLoading] = useState(true);
     const [expandedVideo, setExpandedVideo] = useState<Video | LocalImage | null>(null);
@@ -386,30 +389,77 @@ function MoodboardContent() {
         loadBoards();
     }, [userProfile?.uid, currentBoardId]);
 
-    // Fetch Liked Videos
+    // Fetch Saved and Liked Videos for Moodboard and All Saves
     useEffect(() => {
-        const fetchLiked = async () => {
-            const ids = userProfile?.likedVideoIds || [];
-            if (ids.length === 0) {
+        const fetchAllUserReferences = async () => {
+            if (!userProfile) {
                 setLoading(false);
                 return;
             }
-            const sliceIds = ids.slice(-20);
+
+            const savedIds = userProfile.savedVideoIds || [];
+            const likedIds = userProfile.likedVideoIds || [];
+            const combinedIds = Array.from(new Set([...savedIds, ...likedIds]));
+
+            if (combinedIds.length === 0) {
+                setLikedVideos([]);
+                setAllSavedReferences([]);
+                setLoading(false);
+                return;
+            }
 
             try {
-                const q = query(collection(db, "videos"), where(documentId(), 'in', sliceIds));
-                const snap = await getDocs(q);
-                const videos = snap.docs.map(d => ({ id: d.id, ...d.data() } as Video));
-                setLikedVideos(videos);
+                // Fetch in chunks of 30 because Firestore `in` queries have a limit of 30
+                const chunkSize = 30;
+                const chunks: string[][] = [];
+                for (let i = 0; i < combinedIds.length; i += chunkSize) {
+                    chunks.push(combinedIds.slice(i, i + chunkSize));
+                }
+
+                const fetchedMap = new Map<string, Video>();
+                await Promise.all(
+                    chunks.map(async (chunk) => {
+                        try {
+                            const q = query(collection(db, "videos"), where(documentId(), 'in', chunk));
+                            const snap = await getDocs(q);
+                            snap.docs.forEach(d => {
+                                fetchedMap.set(d.id, { id: d.id, ...d.data() } as Video);
+                            });
+                        } catch (err) {
+                            console.error("Failed to fetch chunk of references:", err);
+                        }
+                    })
+                );
+
+                const savedList: Video[] = [];
+                savedIds.forEach(id => {
+                    const video = fetchedMap.get(id);
+                    if (video) savedList.push(video);
+                });
+
+                const likedList: Video[] = [];
+                likedIds.forEach(id => {
+                    const video = fetchedMap.get(id);
+                    if (video) likedList.push(video);
+                });
+
+                const allCombinedList: Video[] = [];
+                combinedIds.forEach(id => {
+                    const video = fetchedMap.get(id);
+                    if (video) allCombinedList.push(video);
+                });
+
+                setLikedVideos(likedList.length > 0 ? likedList : allCombinedList);
+                setAllSavedReferences(allCombinedList);
             } catch (e) {
-                console.error("Failed to fetch sidebar videos", e);
+                console.error("Failed to fetch references", e);
             } finally {
                 setLoading(false);
             }
         };
 
-        if (userProfile) fetchLiked();
-    }, [userProfile]);
+        fetchAllUserReferences();
+    }, [userProfile?.savedVideoIds, userProfile?.likedVideoIds]);
 
     // Load Moodboard Items when a board is selected
     useEffect(() => {
@@ -1619,6 +1669,71 @@ function MoodboardContent() {
                         <ChevronLeft className="h-6 w-6" />
                     </Button>
                 )}
+
+                {/* Moodboard Name & Renaming in Canvas Header */}
+                {currentBoardId && (() => {
+                    const currentBoard = moodboards.find(b => b.id === currentBoardId);
+                    return (
+                        <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border backdrop-blur-md shadow-sm transition-all ${
+                            isDark
+                                ? 'bg-black/50 border-white/10 text-white'
+                                : 'bg-white/80 border-black/10 text-stone-900'
+                        }`}>
+                            {isEditingCanvasBoardName ? (
+                                <form
+                                    onSubmit={async (e) => {
+                                        e.preventDefault();
+                                        const trimmed = canvasBoardDraftName.trim();
+                                        if (trimmed && userProfile?.uid && currentBoardId && trimmed !== currentBoard?.name) {
+                                            await MoodboardService.updateMoodboardName(userProfile.uid, currentBoardId, trimmed);
+                                            setMoodboards(prev => prev.map(b => b.id === currentBoardId ? { ...b, name: trimmed } : b));
+                                            toast({ title: 'Board Renamed', description: `Renamed to "${trimmed}"` });
+                                        }
+                                        setIsEditingCanvasBoardName(false);
+                                    }}
+                                    className="flex items-center gap-1.5"
+                                >
+                                    <input
+                                        autoFocus
+                                        value={canvasBoardDraftName}
+                                        onChange={(e) => setCanvasBoardDraftName(e.target.value)}
+                                        onBlur={async () => {
+                                            const trimmed = canvasBoardDraftName.trim();
+                                            if (trimmed && userProfile?.uid && currentBoardId && trimmed !== currentBoard?.name) {
+                                                await MoodboardService.updateMoodboardName(userProfile.uid, currentBoardId, trimmed);
+                                                setMoodboards(prev => prev.map(b => b.id === currentBoardId ? { ...b, name: trimmed } : b));
+                                                toast({ title: 'Board Renamed', description: `Renamed to "${trimmed}"` });
+                                            }
+                                            setIsEditingCanvasBoardName(false);
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Escape') {
+                                                setCanvasBoardDraftName(currentBoard?.name || 'Untitled Moodboard');
+                                                setIsEditingCanvasBoardName(false);
+                                            }
+                                        }}
+                                        className="bg-transparent border-b border-purple-500 text-sm font-bold tracking-tight outline-none px-1 py-0.5 min-w-[140px]"
+                                    />
+                                </form>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setCanvasBoardDraftName(currentBoard?.name || 'Untitled Moodboard');
+                                        setIsEditingCanvasBoardName(true);
+                                    }}
+                                    className="group flex items-center gap-2 cursor-pointer text-left"
+                                    title="Click to rename moodboard"
+                                >
+                                    <span className="text-sm font-bold tracking-tight truncate max-w-[200px] sm:max-w-[300px]">
+                                        {currentBoard?.name || 'Untitled Moodboard'}
+                                    </span>
+                                    <Pencil className="h-3.5 w-3.5 opacity-40 group-hover:opacity-100 transition-opacity text-stone-400 group-hover:text-purple-400" />
+                                </button>
+                            )}
+                        </div>
+                    );
+                })()}
             </div>
 
             {/* Savee-style dashboard. The spatial canvas below remains unchanged. */}
@@ -1626,7 +1741,7 @@ function MoodboardContent() {
                 <div className="absolute inset-0 z-10 overflow-y-auto bg-[#f7f6f2] pt-16">
                     <MoodboardDashboard
                         moodboards={moodboards}
-                        savedReferences={likedVideos}
+                        savedReferences={allSavedReferences.length > 0 ? allSavedReferences : likedVideos}
                         onCreateBoard={async () => {
                             if (!userProfile?.uid) return;
                             const limitCheck = checkLimit(userProfile, 'moodboards', moodboards.length);

@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { likeVideo, unlikeVideo, saveVideo, unsaveVideo } from '@/lib/firestore';
+import { SaveToBoardModal } from '@/components/SaveToBoardModal';
 
 interface VideoPlayerProps {
     video: Video;
@@ -99,24 +100,15 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
         }
     };
 
-    const handleBookmarkToggle = async (e: React.MouseEvent) => {
+    const [showSaveToBoard, setShowSaveToBoard] = React.useState(false);
+
+    const handleBookmarkToggle = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!authUser) {
             toast({ variant: "destructive", title: "Please sign in to save videos" });
             return;
         }
-        try {
-            if (isSaved) {
-                await unsaveVideo(authUser.uid, video.id);
-                toast({ title: "Removed from Saved" });
-            } else {
-                await saveVideo(authUser.uid, video.id);
-                toast({ title: "Saved!" });
-            }
-            mutate();
-        } catch (err) {
-            console.error("Failed to update saved status", err);
-        }
+        setShowSaveToBoard(true);
     };
 
     const [isPlaying, setIsPlaying] = React.useState(autoPlay ?? !startsPaused);
@@ -697,6 +689,12 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                     </div>
                 </div>
             </div>
+
+            <SaveToBoardModal
+                video={video}
+                open={showSaveToBoard}
+                onOpenChange={setShowSaveToBoard}
+            />
         </div>
     );
 });

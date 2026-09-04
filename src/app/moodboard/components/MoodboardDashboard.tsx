@@ -11,6 +11,7 @@ import {
     LayoutDashboard,
     Lock,
     MoreHorizontal,
+    Pencil,
     Plus,
     Search,
     Trash2,
@@ -216,12 +217,48 @@ export function MoodboardDashboard({
                         {moodboards.map(board => {
                             const count = getFolderReferences(board).length;
                             const isSelected = selectedFolderId === board.id;
+                            const isEditingThis = editingId === board.id;
                             return (
-                                <button key={board.id} onClick={() => setSelectedFolderId(board.id)} className={`group/folder flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm transition ${isSelected ? 'bg-white shadow-sm' : 'hover:bg-black/5'}`}>
-                                    {isSelected ? <FolderOpen className="h-4 w-4 text-amber-600" /> : <Folder className="h-4 w-4 text-stone-400" />}
-                                    <span className="min-w-0 flex-1 truncate font-medium">{board.name || 'Untitled board'}</span>
-                                    <span className="text-xs text-stone-400">{count}</span>
-                                </button>
+                                <div key={board.id} className={`group/folder flex items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${isSelected ? 'bg-white shadow-sm' : 'hover:bg-black/5'}`}>
+                                    {isEditingThis ? (
+                                        <input
+                                            autoFocus
+                                            value={draftName}
+                                            onChange={e => setDraftName(e.target.value)}
+                                            onBlur={() => commitRename(board)}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter') commitRename(board);
+                                                if (e.key === 'Escape') setEditingId(null);
+                                            }}
+                                            onClick={e => e.stopPropagation()}
+                                            className="w-full bg-transparent border-b border-stone-800 text-sm font-medium outline-none py-0.5"
+                                        />
+                                    ) : (
+                                        <>
+                                            <button
+                                                onClick={() => setSelectedFolderId(board.id)}
+                                                className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer text-left"
+                                            >
+                                                {isSelected ? <FolderOpen className="h-4 w-4 text-amber-600 shrink-0" /> : <Folder className="h-4 w-4 text-stone-400 shrink-0" />}
+                                                <span className="min-w-0 flex-1 truncate font-medium">{board.name || 'Untitled board'}</span>
+                                            </button>
+                                            <div className="flex items-center gap-1 shrink-0 ml-1">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setEditingId(board.id);
+                                                        setDraftName(board.name || 'Untitled board');
+                                                    }}
+                                                    className="p-1 rounded-md text-stone-400 hover:text-stone-900 hover:bg-black/5 opacity-0 group-hover/folder:opacity-100 transition"
+                                                    title="Rename board"
+                                                >
+                                                    <Pencil className="h-3 w-3" />
+                                                </button>
+                                                <span className="text-xs text-stone-400">{count}</span>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                             );
                         })}
                         {moodboards.length === 0 && <p className="px-3 py-3 text-xs leading-relaxed text-stone-400">Create a board to group references with its own canvas.</p>}
@@ -235,8 +272,43 @@ export function MoodboardDashboard({
                                 <div>
                                     <div className="mb-2 flex items-center gap-2 text-xs text-stone-400"><span>All saves</span><ChevronRight className="h-3 w-3" /></div>
                                     {editingId === selectedFolder.id ? (
-                                        <input autoFocus value={draftName} onChange={event => setDraftName(event.target.value)} onBlur={() => commitRename(selectedFolder)} onKeyDown={event => { if (event.key === 'Enter') commitRename(selectedFolder); if (event.key === 'Escape') setEditingId(null); }} className="border-b border-stone-900 bg-transparent text-3xl font-semibold tracking-tight outline-none" />
-                                    ) : <h2 className="text-3xl font-semibold tracking-[-0.03em]">{selectedFolder.name || 'Untitled board'}</h2>}
+                                        <form onSubmit={(e) => { e.preventDefault(); commitRename(selectedFolder); }} className="flex items-center gap-2">
+                                            <input
+                                                autoFocus
+                                                value={draftName}
+                                                onChange={event => setDraftName(event.target.value)}
+                                                onBlur={() => commitRename(selectedFolder)}
+                                                onKeyDown={event => {
+                                                    if (event.key === 'Enter') commitRename(selectedFolder);
+                                                    if (event.key === 'Escape') setEditingId(null);
+                                                }}
+                                                className="border-b-2 border-stone-900 bg-transparent text-3xl font-semibold tracking-tight outline-none pb-0.5"
+                                            />
+                                        </form>
+                                    ) : (
+                                        <div className="flex items-center gap-2.5">
+                                            <h2
+                                                onClick={() => {
+                                                    setEditingId(selectedFolder.id);
+                                                    setDraftName(selectedFolder.name || 'Untitled board');
+                                                }}
+                                                className="text-3xl font-semibold tracking-[-0.03em] cursor-pointer hover:text-stone-700 transition-colors"
+                                                title="Click to rename board"
+                                            >
+                                                {selectedFolder.name || 'Untitled board'}
+                                            </h2>
+                                            <button
+                                                onClick={() => {
+                                                    setEditingId(selectedFolder.id);
+                                                    setDraftName(selectedFolder.name || 'Untitled board');
+                                                }}
+                                                className="p-1.5 rounded-full hover:bg-black/5 text-stone-400 hover:text-stone-700 transition"
+                                                title="Rename board"
+                                            >
+                                                <Pencil className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    )}
                                     <p className="mt-2 text-sm text-stone-500">{visibleReferences.length} references · Gallery and canvas</p>
                                 </div>
                                 <Popover>

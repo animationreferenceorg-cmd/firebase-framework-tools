@@ -194,7 +194,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
             auth.currentUser.getIdToken().then((idToken) => fetch('/api/sync-stripe', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-              body: JSON.stringify({ userId: uid, email: profile.email }),
+              body: JSON.stringify({ userId: uid, email: profile?.email }),
             })).catch((e) => console.error('[Subscription Check] Failed to trigger server-side sync:', e));
           }
         }

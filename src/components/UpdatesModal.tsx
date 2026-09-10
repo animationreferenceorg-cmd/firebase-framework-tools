@@ -17,6 +17,14 @@ import { Button } from "@/components/ui/button";
 
 const RECENT_UPDATES = [
   {
+    date: 'September 10, 2026',
+    title: 'Portfolio Uploads Restored & Submissions Live',
+    description: 'We have resolved the upload permission issues! Animators can now upload video and image portfolio items directly to their profile and the community showcase.\n\n• Free accounts receive 3 portfolio submissions.\n• Pro accounts ($5/mo) receive unlimited submissions.\n• Instant silent preview playback, WIP stage tagging (blocking, splining, polish), and reel builder.',
+    type: 'Fix',
+    href: '/feed',
+    cta: 'View Community Showcase & Submit',
+  },
+  {
     date: 'August 27, 2026',
     title: 'Paint Beta, Reference Clips, Free Portfolios & Updated Boards',
     description: 'Try the new Paint workspace in beta, collect exact motion moments in Reference Clips, submit your animation portfolio for free, and organize saved inspiration with redesigned Boards.',

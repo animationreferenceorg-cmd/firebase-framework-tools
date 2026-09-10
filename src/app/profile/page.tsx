@@ -26,6 +26,7 @@ import { MOCK_PORTFOLIO_ITEMS } from '@/lib/mock-portfolio-data';
 import { PortfolioItemCard } from '@/components/portfolio/PortfolioItemCard';
 import { PortfolioHeroBanner } from '@/components/portfolio/PortfolioHeroBanner';
 import { UploadPortfolioItemModal } from '@/components/portfolio/UploadPortfolioItemModal';
+import { UploadAnnouncementBanner } from '@/components/portfolio/UploadAnnouncementBanner';
 import { EditPortfolioItemModal } from '@/components/portfolio/EditPortfolioItemModal';
 import { PortfolioFounderDealModal } from '@/components/portfolio/PortfolioFounderDealModal';
 import { PortfolioItemDetailModal } from '@/components/portfolio/PortfolioItemDetailModal';
@@ -165,8 +166,8 @@ export default function ProfilePage() {
             ...item,
             id: `preview-${item.id}`,
             userId: currentUid,
-            authorName: authUser.displayName || 'Demo Animator',
-            authorAvatar: authUser.photoURL || item.authorAvatar,
+            authorName: authUser?.displayName || 'Demo Animator',
+            authorAvatar: authUser?.photoURL || item.authorAvatar,
           }));
           setPortfolioItems(previewItems);
           setFeaturedItemId(previewItems[0]?.id || null);
@@ -611,6 +612,13 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
+
+        {/* Upload Fix Announcement Banner */}
+        <UploadAnnouncementBanner
+          onUploadClick={() => setIsUploadOpen(true)}
+          source="profile"
+          className="mt-6"
+        />
 
         {/* Main Profile Tabs */}
         <div className="mt-8">

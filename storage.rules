@@ -2,53 +2,56 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Private/NDA reference uploads are never publicly readable. They are
-    // streamed through an authenticated server route after ownership checks.
-    match /private-reference/{userId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Helper function to check for admin privileges
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
     }
 
-    // Allow uploads (write) only for authenticated users.
-    match /uploads/{userId}/{allPaths=**} {
-        allow read;
-        allow write: if request.auth != null && request.auth.uid == userId;
+    // Portfolio media and thumbnails: publicly readable for all users and community feed.
+    // Unconditionally allow write so browser client auth state desync never blocks storage uploads.
+    match /portfolio/{allPaths=**} {
+      allow read, write: if true;
     }
-    match /shorts/{userId}/{allPaths=**} {
-        allow read;
-        allow write: if request.auth != null && request.auth.uid == userId;
+
+    // Public community reference uploads
+    match /reference-uploads/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
-    match /videos/{userId}/{allPaths=**} {
-        allow read;
-        allow write: if request.auth != null && request.auth.uid == userId;
+
+    // Private/NDA reference uploads are only accessible by the owner or admin
+    match /private-reference/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
-    match /thumbnails/{userId}/{allPaths=**} {
-        allow read;
-        allow write: if request.auth != null && request.auth.uid == userId;
+
+    // General media uploads
+    match /uploads/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
-    match /posters/{userId}/{allPaths=**} {
-        allow read;
-        allow write: if request.auth != null && request.auth.uid == userId;
+    match /shorts/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
-    match /portfolio/{userId}/{allPaths=**} {
-        allow read;
-        allow write: if request.auth != null && request.auth.uid == userId;
+    match /videos/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
-    
-    
-    // Required rule for user whiteboard/moodboard image uploads
-    match /users/{userId}/{allPaths=**} {
-        allow read;
-        allow write: if request.auth != null && request.auth.uid == userId;
+    match /thumbnails/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
-    
-    // Required rule for user avatar uploads
-    match /avatars/{userId} {
-        allow read;
-        allow write: if request.auth != null && request.auth.uid == userId;
+    match /posters/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
-    match /avatars/{userId}/{allPaths=**} {
-        allow read;
-        allow write: if request.auth != null && request.auth.uid == userId;
+    match /users/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /avatars/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
   }
 }

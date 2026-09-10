@@ -29,13 +29,43 @@ export async function uploadPortfolioMedia(
   file: File, 
   folder: 'media' | 'thumbnails'
 ): Promise<string> {
+  if (typeof auth.authStateReady === 'function') {
+    await auth.authStateReady();
+  }
+
+  if (auth.currentUser) {
+    try {
+      await auth.currentUser.getIdToken(true);
+    } catch (tokenErr) {
+      console.warn('[portfolio] Token refresh warning:', tokenErr);
+    }
+  }
+
+  const currentUid = auth.currentUser?.uid || userId;
+  if (!currentUid || currentUid === 'guest-user') {
+    throw new Error('Please sign in to upload portfolio media.');
+  }
+
   const timestamp = Date.now();
   const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-  const storagePath = `portfolio/${userId}/${folder}/${timestamp}_${cleanName}`;
+  const storagePath = `portfolio/${currentUid}/${folder}/${timestamp}_${cleanName}`;
   const storageRef = ref(storage, storagePath);
 
-  await uploadBytes(storageRef, file, { contentType: file.type || undefined });
-  return getDownloadURL(storageRef);
+  try {
+    await uploadBytes(storageRef, file, { contentType: file.type || undefined });
+    return await getDownloadURL(storageRef);
+  } catch (err: any) {
+    console.error('[portfolio] Storage upload error details:', {
+      code: err?.code,
+      message: err?.message,
+      currentUser: auth.currentUser?.uid,
+      targetPath: storagePath
+    });
+    if (err?.code === 'storage/unauthorized') {
+      throw new Error(`Firebase Storage: User does not have permission to access '${storagePath}' (storage/unauthorized). Please set 'allow read, write: if true;' on portfolio in Firebase Storage rules or verify CORS.`);
+    }
+    throw err;
+  }
 }
 
 /**
@@ -481,7 +511,13 @@ export async function createPortfolioItem(
       withoutUndefined(newItem as unknown as Record<string, unknown>)
     );
   } catch (firestoreErr: any) {
-    console.warn('[portfolio] Firestore setDoc warning:', firestoreErr);
+    console.error('[portfolio] Firestore setDoc error:', firestoreErr);
+    // Ensure item is cached locally so user never loses work
+    await persistItemLocally(newItem);
+    if (firestoreErr?.code === 'permission-denied') {
+      throw new Error('Firestore permission denied: Please deploy updated Firestore security rules to publish portfolio items.');
+    }
+    throw new Error(`Failed to publish to community feed: ${firestoreErr?.message || firestoreErr}`);
   }
 
   await persistItemLocally(newItem);

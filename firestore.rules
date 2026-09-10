@@ -68,8 +68,9 @@ service cloud.firestore {
     // Portfolio Items: Public read, owner create/update/delete or admin
     match /portfolio_items/{itemId} {
       allow read: if true;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if request.auth != null && (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin())
+        && (!('userId' in request.resource.data) || request.resource.data.userId == resource.data.userId || isAdmin());
 
       // Likes must be a real one-user toggle paired with an exact counter change.
       allow update: if request.auth != null
@@ -142,7 +143,7 @@ service cloud.firestore {
         && request.resource.data.get('stripeCustomerId', '') == resource.data.get('stripeCustomerId', '');
       allow delete: if request.auth != null && request.auth.uid == userId;
       allow create: if request.auth != null && request.auth.uid == userId
-        && request.resource.data.role == 'user'
+        && request.resource.data.get('role', 'user') == 'user'
         && request.resource.data.get('isPremium', false) == false
         && request.resource.data.get('tier', 'free') == 'free';
       allow read, write: if isAdmin();

@@ -7,6 +7,7 @@ import { saveVideo, unsaveVideo } from '@/lib/firestore';
 import { PortfolioItemCard } from '@/components/portfolio/PortfolioItemCard';
 import { PortfolioItemDetailModal } from '@/components/portfolio/PortfolioItemDetailModal';
 import { UploadPortfolioItemModal } from '@/components/portfolio/UploadPortfolioItemModal';
+import { UploadAnnouncementBanner } from '@/components/portfolio/UploadAnnouncementBanner';
 import { FilterBar, TabOption, TypeOption, PillOption } from '@/components/FilterBar';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
@@ -244,6 +245,9 @@ export default function CommunityFeedPage() {
           </Button>
         </div>
       </div>
+
+      {/* Upload Fix Announcement Banner */}
+      <UploadAnnouncementBanner onUploadClick={handleOpenUploadModal} source="feed" />
 
       {/* 2. Hero Call-To-Action: Promote Portfolio Uploads */}
       <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-950/60 via-zinc-950 to-black p-5 shadow-2xl sm:rounded-3xl sm:p-10">

@@ -70,7 +70,7 @@ export function GlassHeader() {
                             >
                                 <Icon className="h-3.5 w-3.5" />
                                 <span>{item.label}</span>
-                                {item.isPro && (
+                                {(item as any).isPro && (
                                     <span className="px-1.5 py-0.2 rounded-full bg-purple-950 text-purple-300 border border-purple-700/50 text-[9px] font-mono font-bold">
                                         PRO
                                     </span>

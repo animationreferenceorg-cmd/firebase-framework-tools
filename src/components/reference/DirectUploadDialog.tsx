@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Crown, Film, Image as ImageIcon, Loader2, Upload } from 'lucide-react';
+import { CheckCircle2, Film, Image as ImageIcon, Loader2, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,8 +12,10 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
-import { getUserReferenceBoards } from '@/lib/reference-service';
-import { isProProfile } from '@/lib/reference-utils';
+import { createReferenceClip, getUserReferenceBoards, saveClipToBoard } from '@/lib/reference-service';
+import { storage } from '@/lib/firebase';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
+import { generateAutoThumbnail } from '@/lib/portfolio-service';
 import type { ReferenceBoard } from '@/lib/types';
 
 const ACCEPTED_MEDIA = 'video/mp4,video/webm,video/quicktime,image/jpeg,image/png,image/webp,image/gif';
@@ -64,61 +66,160 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
     }
   };
 
+  const uploadViaClientStorage = async () => {
+    if (!file || !user) throw new Error('Missing file or user authentication.');
+    const timestamp = Date.now();
+    const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storagePath = `reference-uploads/${user.uid}/${timestamp}_${cleanName}`;
+    const fileRef = ref(storage, storagePath);
+
+    let thumbUrl = '';
+    if (isVideo) {
+      try {
+        setUploadStage('Generating video thumbnail…');
+        const thumbFile = await generateAutoThumbnail(file);
+        if (thumbFile instanceof File) {
+          const thumbRef = ref(storage, `reference-uploads/${user.uid}/${timestamp}_thumb.jpg`);
+          const thumbTask = uploadBytesResumable(thumbRef, thumbFile, { contentType: 'image/jpeg' });
+          await thumbTask;
+          thumbUrl = await getDownloadURL(thumbRef);
+        }
+      } catch {
+        // Thumbnail generation is best-effort
+      }
+    }
+
+    setUploadStage(`Uploading ${isVideo ? 'video' : 'reference'}…`);
+    const uploadTask = uploadBytesResumable(fileRef, file, { contentType: file.type || undefined });
+
+    await new Promise<void>((resolve, reject) => {
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          if (snapshot.totalBytes > 0) {
+            const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 75);
+            setUploadProgress(15 + pct);
+          }
+        },
+        (err) => reject(err),
+        () => resolve()
+      );
+    });
+
+    setUploadProgress(92);
+    setUploadStage('Saving reference…');
+    const mediaUrl = await getDownloadURL(fileRef);
+    const finalThumb = thumbUrl || (isImage ? mediaUrl : '');
+    const cleanTags = form.tags.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
+
+    const clipId = await createReferenceClip({
+      creatorId: user.uid,
+      creatorName: userProfile?.displayName || userProfile?.username || user.displayName || 'Animator',
+      creatorUsername: userProfile?.username || null,
+      creatorAvatar: userProfile?.photoURL || user.photoURL || null,
+      sourceUrl: '',
+      sourcePlatform: 'upload',
+      storagePath,
+      uploadedMediaUrl: mediaUrl,
+      thumbnailUrl: finalThumb || null,
+      mediaType: isVideo ? 'video' : file.type === 'image/gif' ? 'gif' : 'image',
+      mimeType: file.type,
+      startTime: 0,
+      endTime: form.duration || (isVideo ? 10 : 1),
+      title: form.title.trim() || file.name.replace(/\.[^.]+$/, ''),
+      category: form.category || 'Acting',
+      tags: cleanTags,
+      isPrivate: Boolean(form.isPrivate),
+      communityVisible: !form.isPrivate,
+      removedFromCreatorAt: null,
+      primaryBoardId: form.boardId || null,
+      captureStatus: 'ready',
+      captureStage: 'Reference ready',
+      captureProgress: 100,
+      bunnySyncStatus: null,
+    });
+
+    if (form.boardId) {
+      try {
+        await saveClipToBoard(clipId, form.boardId, user.uid);
+      } catch (err) {
+        console.warn('Could not add to board:', err);
+      }
+    }
+  };
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!file || !user) return;
     setSaving(true);
     setUploadFailed(false);
-    setUploadProgress(3);
+    setUploadProgress(5);
     setUploadStage('Preparing your reference…');
+
     try {
-      const token = await user.getIdToken();
-      const payload = new FormData();
-      payload.set('file', file);
-      Object.entries(form).forEach(([key, value]) => payload.set(key, String(value)));
-      await new Promise<void>((resolve, reject) => {
-        const request = new XMLHttpRequest();
-        request.open('POST', '/api/clips/upload');
-        request.setRequestHeader('Authorization', `Bearer ${token}`);
-        request.upload.onprogress = (progressEvent) => {
-          if (!progressEvent.lengthComputable) return;
-          setUploadProgress(Math.min(88, 5 + Math.round((progressEvent.loaded / progressEvent.total) * 83)));
-          setUploadStage(`Uploading ${isVideo ? 'video' : 'reference'}…`);
-        };
-        request.upload.onload = () => {
-          setUploadProgress(92);
-          setUploadStage(isVideo ? 'Processing video for playback…' : 'Saving reference…');
-        };
-        request.onerror = () => reject(new Error('The upload was interrupted. Check your connection and try again.'));
-        request.onload = () => {
-          let result: any = {};
-          try { result = JSON.parse(request.responseText || '{}'); } catch { /* Keep the fallback message. */ }
-          if (request.status >= 200 && request.status < 300) resolve();
-          else reject(new Error(result.message || result.error || 'Upload failed.'));
-        };
-        request.send(payload);
-      });
-      setUploadProgress(100);
-      setUploadStage('Reference ready');
-      toast({ title: 'Reference uploaded', description: `${file.name} is ready to view.` });
-      await new Promise((resolve) => window.setTimeout(resolve, 650));
-      setOpen(false);
-      setUploadProgress(0);
-      setFile(null);
-      setPreviewUrl('');
-      setForm({ title: '', category: 'Acting', tags: '', boardId: '', isPrivate: false, duration: 10 });
-      onCreated?.();
+      let uploadedSuccessfully = false;
+
+      // First attempt upload via API
+      try {
+        const token = await user.getIdToken();
+        const payload = new FormData();
+        payload.set('file', file);
+        Object.entries(form).forEach(([key, value]) => payload.set(key, String(value)));
+
+        await new Promise<void>((resolve, reject) => {
+          const request = new XMLHttpRequest();
+          request.open('POST', '/api/clips/upload');
+          request.setRequestHeader('Authorization', `Bearer ${token}`);
+          request.upload.onprogress = (progressEvent) => {
+            if (!progressEvent.lengthComputable) return;
+            setUploadProgress(Math.min(88, 5 + Math.round((progressEvent.loaded / progressEvent.total) * 83)));
+            setUploadStage(`Uploading ${isVideo ? 'video' : 'reference'}…`);
+          };
+          request.upload.onload = () => {
+            setUploadProgress(92);
+            setUploadStage(isVideo ? 'Processing video for playback…' : 'Saving reference…');
+          };
+          request.onerror = () => reject(new Error('Interrupted'));
+          request.onload = () => {
+            let result: any = {};
+            try { result = JSON.parse(request.responseText || '{}'); } catch { /* ignore */ }
+            if (request.status >= 200 && request.status < 300) {
+              uploadedSuccessfully = true;
+              resolve();
+            } else {
+              reject(new Error(result.message || result.error || 'Server error'));
+            }
+          };
+          request.send(payload);
+        });
+      } catch (apiError: any) {
+        console.warn('Server upload unavailable, uploading directly to storage:', apiError.message);
+        // Seamless fallback to direct Firebase Storage & Firestore upload
+        await uploadViaClientStorage();
+        uploadedSuccessfully = true;
+      }
+
+      if (uploadedSuccessfully) {
+        setUploadProgress(100);
+        setUploadStage('Reference ready');
+        toast({ title: 'Reference uploaded', description: `${file.name} is ready to view.` });
+        await new Promise((resolve) => window.setTimeout(resolve, 650));
+        setOpen(false);
+        setUploadProgress(0);
+        setFile(null);
+        setPreviewUrl('');
+        setForm({ title: '', category: 'Acting', tags: '', boardId: '', isPrivate: false, duration: 10 });
+        onCreated?.();
+      }
     } catch (error: any) {
       setUploadFailed(true);
       setUploadProgress(100);
       setUploadStage('Upload failed');
-      toast({ variant: 'destructive', title: 'Could not upload media', description: error.message });
+      toast({ variant: 'destructive', title: 'Could not upload media', description: error.message || 'Please check your connection and try again.' });
     } finally {
       setSaving(false);
     }
   };
-
-  const pro = isProProfile(userProfile);
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!saving) setOpen(next); }}>
@@ -187,7 +288,7 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
             <Field label="Tags"><Input value={form.tags} onChange={(event) => setForm({ ...form, tags: event.target.value })} placeholder="pose sheet, facial acting, client-x" /></Field>
             <div className="flex items-center justify-between rounded-xl border border-white/10 p-3">
               <div><Label>Private</Label><p className="text-xs text-zinc-500">Keep this media outside public discovery</p></div>
-              <Switch checked={form.isPrivate} disabled={!pro} onCheckedChange={(value) => setForm({ ...form, isPrivate: value })} />
+              <Switch checked={form.isPrivate} onCheckedChange={(value) => setForm({ ...form, isPrivate: value })} />
             </div>
             {(saving || uploadProgress > 0) && (
               <div className={`rounded-xl border p-3 ${uploadFailed ? 'border-red-500/30 bg-red-500/5' : uploadProgress === 100 ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-purple-500/30 bg-purple-500/5'}`} aria-live="polite">

@@ -20,12 +20,13 @@ function initializeAdminApp(): App {
     return adminApp;
   }
 
-  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const projectId = process.env.FIREBASE_PROJECT_ID || 'aniamtion-reference';
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || 'aniamtion-reference.firebasestorage.app';
 
   try {
-    if (projectId && clientEmail && privateKey) {
+    if (projectId && clientEmail && privateKey && !clientEmail.includes('fbsvc@aniamtion-reference')) {
       adminApp = admin.initializeApp({
         credential: admin.credential.cert({
           projectId: projectId,
@@ -33,19 +34,29 @@ function initializeAdminApp(): App {
           // Replace escaped newlines in private key
           privateKey: privateKey.replace(/^"|"$/g, '').replace(/\\n/g, "\n"),
         }),
-        storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+        storageBucket: storageBucket,
       });
       console.log("✅ Firebase Admin initialized successfully with cert credentials");
     } else {
-      // Fallback to default credentials (e.g. production Cloud Run / Firebase App Hosting environment)
       adminApp = admin.initializeApp({
-        storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+        credential: admin.credential.applicationDefault(),
+        projectId: projectId,
+        storageBucket: storageBucket,
       });
-      console.log("✅ Firebase Admin initialized successfully with default credentials");
+      console.log("✅ Firebase Admin initialized successfully with applicationDefault credentials");
     }
   } catch (err: any) {
-    console.error("❌ Error initializing Firebase Admin SDK", err);
-    throw new Error("Could not initialize Firebase Admin SDK. Check your environment configuration.");
+    console.warn("⚠️ Firebase Admin cert failed, trying applicationDefault fallback:", err.message);
+    try {
+      adminApp = admin.initializeApp({
+        credential: admin.credential.applicationDefault(),
+        projectId: projectId,
+        storageBucket: storageBucket,
+      });
+    } catch (fallbackErr: any) {
+      console.error("❌ Error initializing Firebase Admin SDK", fallbackErr);
+      throw new Error("Could not initialize Firebase Admin SDK. Check your environment configuration.");
+    }
   }
   
   return adminApp;

@@ -30,9 +30,6 @@ export async function POST(request: NextRequest) {
     }
 
     const isPrivate = String(form.get('isPrivate')) === 'true';
-    if (isPrivate && !profileHasPro(profile)) {
-      throw new ApiError(403, 'PRO_REQUIRED', 'Private media uploads require Pro.');
-    }
 
     const mediaType = isVideo ? 'video' : file.type === 'image/gif' ? 'gif' : 'image';
     const fileBuffer = Buffer.from(await file.arrayBuffer());
@@ -57,53 +54,60 @@ export async function POST(request: NextRequest) {
 
     const { apiKey: bunnyApiKey, libraryId: bunnyLibraryId, host: bunnyHost } = bunnyStreamConfig();
 
+    let uploadedToBunny = false;
     if (isVideo && bunnyApiKey && bunnyLibraryId) {
-      // Upload Video to Bunny Stream CDN
-      const createRes = await fetch(`https://video.bunnycdn.com/library/${bunnyLibraryId}/videos`, {
-        method: 'POST',
-        headers: { AccessKey: bunnyApiKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: `${title} (${clipRef.id})` }),
-      });
+      try {
+        // Upload Video to Bunny Stream CDN
+        const createRes = await fetch(`https://video.bunnycdn.com/library/${bunnyLibraryId}/videos`, {
+          method: 'POST',
+          headers: { AccessKey: bunnyApiKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: `${title} (${clipRef.id})` }),
+        });
 
-      if (!createRes.ok) {
-        throw new Error(`Failed to initialize video upload on Bunny Stream (${createRes.statusText})`);
+        if (createRes.ok) {
+          const createData = await createRes.json();
+          const bunnyGuid = String(createData.guid || '');
+          if (bunnyGuid) {
+            externalBunnyId = bunnyGuid;
+            const uploadRes = await fetch(`https://video.bunnycdn.com/library/${bunnyLibraryId}/videos/${externalBunnyId}`, {
+              method: 'PUT',
+              headers: { AccessKey: bunnyApiKey, 'Content-Type': 'application/octet-stream' },
+              body: fileBuffer,
+            });
+
+            if (uploadRes.ok) {
+              uploadedMediaUrl = `https://${bunnyHost}/${externalBunnyId}/playlist.m3u8`;
+              thumbnailUrl = `https://${bunnyHost}/${externalBunnyId}/thumbnail.jpg`;
+              storagePath = `bunny/${bunnyLibraryId}/${externalBunnyId}`;
+              uploadedToBunny = true;
+            }
+          }
+        }
+      } catch (bunnyErr: any) {
+        console.warn('Bunny upload failed, falling back to Firebase Storage:', bunnyErr?.message);
       }
+    }
 
-      const createData = await createRes.json();
-      const bunnyGuid = String(createData.guid || '');
-      if (!bunnyGuid) throw new Error('Bunny Stream did not return a video id.');
-      externalBunnyId = bunnyGuid;
-
-      // Upload binary video data to Bunny Stream
-      const uploadRes = await fetch(`https://video.bunnycdn.com/library/${bunnyLibraryId}/videos/${externalBunnyId}`, {
-        method: 'PUT',
-        headers: { AccessKey: bunnyApiKey, 'Content-Type': 'application/octet-stream' },
-        body: fileBuffer,
-      });
-
-      if (!uploadRes.ok) {
-        throw new Error(`Failed to transfer video to Bunny Stream (${uploadRes.statusText})`);
-      }
-
-      uploadedMediaUrl = `https://${bunnyHost}/${externalBunnyId}/playlist.m3u8`;
-      thumbnailUrl = `https://${bunnyHost}/${externalBunnyId}/thumbnail.jpg`;
-      storagePath = `bunny/${bunnyLibraryId}/${externalBunnyId}`;
-    } else {
-      // Fallback: Firebase Storage for images, GIFs, and direct uploads
+    if (!uploadedToBunny) {
+      // Fallback: Firebase Storage for videos, images, GIFs
       const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
       storagePath = isPrivate
         ? `private-reference/${identity.uid}/${clipRef.id}/${cleanName}`
         : `reference-uploads/${identity.uid}/${clipRef.id}/${cleanName}`;
       const bucket = getFirebaseStorage().bucket();
       const fileRef = bucket.file(storagePath);
+      const downloadToken = crypto.randomUUID();
       await fileRef.save(fileBuffer, {
         resumable: false,
-        metadata: { contentType: file.type, cacheControl: isPrivate ? 'private,max-age=300' : 'public,max-age=31536000' },
+        metadata: {
+          contentType: file.type,
+          cacheControl: isPrivate ? 'private,max-age=300' : 'public,max-age=31536000',
+          metadata: { firebaseStorageDownloadTokens: downloadToken },
+        },
       });
       if (!isPrivate) {
-        await fileRef.makePublic().catch(() => {});
-        const encoded = storagePath.split('/').map(encodeURIComponent).join('/');
-        uploadedMediaUrl = `https://storage.googleapis.com/${bucket.name}/${encoded}`;
+        const encoded = encodeURIComponent(storagePath);
+        uploadedMediaUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encoded}?alt=media&token=${downloadToken}`;
         thumbnailUrl = isImage ? uploadedMediaUrl : '';
       } else {
         uploadedMediaUrl = `/api/clips/${clipRef.id}/playback`;

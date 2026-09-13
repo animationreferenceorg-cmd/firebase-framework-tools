@@ -29,7 +29,6 @@ export async function createReferenceBoard(input: {
   isPrivate?: boolean;
   duplicatedFromId?: string;
 }): Promise<string> {
-  if (input.isPrivate && !isProProfile(input.owner)) throw new Error('Private boards require Animation Reference Pro.');
   const ref = await addDoc(collection(db, BOARDS), {
     ownerId: input.owner.uid,
     ownerName: input.owner.displayName || input.owner.username || 'Animator',
@@ -49,7 +48,6 @@ export async function createReferenceBoard(input: {
 }
 
 export async function updateReferenceBoard(boardId: string, input: Partial<Pick<ReferenceBoard, 'title' | 'description' | 'coverUrl' | 'isPrivate'>>, owner: UserProfile) {
-  if (input.isPrivate && !isProProfile(owner)) throw new Error('Private boards require Animation Reference Pro.');
   const changes: Record<string, unknown> = { ...input, updatedAt: serverTimestamp() };
   if (input.title) changes.slug = slugifyReference(input.title);
   await updateDoc(doc(db, BOARDS, boardId), changes);
@@ -98,16 +96,13 @@ export async function getReferenceClip(clipId: string): Promise<ReferenceClip | 
 
 export async function getPublicReferenceClips(max = 60): Promise<ReferenceClip[]> {
   try {
-    const snaps = await getDocs(query(collection(db, CLIPS), where('isPrivate', '==', false), limit(max)));
-    let clips = snaps.docs.map((item) => withId<ReferenceClip>(item)).filter((clip) => !clip.removedFromCreatorAt);
-    if (clips.length === 0) {
-      const allSnaps = await getDocs(query(collection(db, CLIPS), limit(max)));
-      clips = allSnaps.docs
-        .map((item) => withId<ReferenceClip>(item))
-        .filter((clip) => !clip.isPrivate && !clip.removedFromCreatorAt);
-    }
+    const snaps = await getDocs(query(collection(db, CLIPS), limit(max)));
+    const clips = snaps.docs
+      .map((item) => withId<ReferenceClip>(item))
+      .filter((clip) => !clip.isPrivate && !clip.removedFromCreatorAt);
     return newestFirst(clips);
-  } catch {
+  } catch (err) {
+    console.error('Failed to load public reference clips:', err);
     return [];
   }
 }
@@ -180,7 +175,6 @@ export async function toggleBoardFollow(boardId: string, userId: string): Promis
 }
 
 export async function createShotBreakdown(input: Omit<ShotBreakdown, 'id' | 'createdAt' | 'updatedAt'>, owner: UserProfile): Promise<string> {
-  if (!isProProfile(owner)) throw new Error('Shot breakdowns require Animation Reference Pro.');
   const ref = await addDoc(collection(db, BREAKDOWNS), {
     ...input,
     slug: slugifyReference(input.slug || input.title),

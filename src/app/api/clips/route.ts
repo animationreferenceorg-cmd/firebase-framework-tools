@@ -82,9 +82,7 @@ export async function POST(request: NextRequest) {
     const cleanTags = [...new Set(input.tags.map((t) => t.trim().toLowerCase()).filter((t) => t.length > 0 && t.length < 50))];
     const cleanTitle = (input.title || 'Video Reference').trim().slice(0, 140);
 
-    if (input.isPrivate && !profileHasPro(profile)) {
-      throw new ApiError(403, 'PRO_REQUIRED', 'Private clips require Pro.');
-    }
+
 
     const sourceUrl = normalizeHttpUrl(input.sourceUrl);
     const db = getFirestore();

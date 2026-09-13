@@ -87,6 +87,20 @@ export function ReferenceMediaPreview({ clip }: { clip: ReferenceClip }) {
     );
   }
 
+  const isVideoSource = Boolean(source && (source.endsWith('.mp4') || source.includes('.mp4?') || source.endsWith('.webm') || source.includes('.webm?')));
+
+  if (isVideoSource) {
+    return (
+      <video
+        src={source}
+        muted
+        playsInline
+        preload="metadata"
+        className="h-full w-full object-cover transition duration-500 group-hover:scale-105 pointer-events-none"
+      />
+    );
+  }
+
   return (
     <img
       src={source}
@@ -96,4 +110,3 @@ export function ReferenceMediaPreview({ clip }: { clip: ReferenceClip }) {
     />
   );
 }
-

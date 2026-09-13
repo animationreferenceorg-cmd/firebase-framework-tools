@@ -408,7 +408,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           </div>
           
           {/* Subtle creator badge — top-left, always visible */}
-          <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} size="sm" />
+          <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} avatarUrl={video.authorAvatar || (video as any).author_avatar || (video as any).creatorAvatar} size="sm" />
         </div>
       </Link>
 
@@ -426,6 +426,12 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           setShowDonateDialog(val);
           if (!val) setDonateForceTimer(false);
         }}
+      />
+
+      <SaveToBoardModal
+        video={video}
+        open={showSaveToBoard}
+        onOpenChange={setShowSaveToBoard}
       />
       </>
     )
@@ -519,7 +525,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           )} />
 
           {/* Subtle creator badge — top-left, always visible for community videos */}
-          <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} />
+          <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} avatarUrl={video.authorAvatar || (video as any).author_avatar || (video as any).creatorAvatar} />
 
           {/* Bottom Actions Bar (High Z-Index so buttons STAY visible when video plays) */}
           <div className={cn(
@@ -598,6 +604,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
                 uploader={video.uploader}
                 originalUrl={communityLinkUrl || video.originalUrl}
                 videoUrl={video.videoUrl}
+                avatarUrl={video.authorAvatar || (video as any).author_avatar || (video as any).creatorAvatar}
               />
             </div>
 
@@ -632,6 +639,12 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           setShowDonateDialog(val);
           if (!val) setDonateForceTimer(false);
         }}
+      />
+
+      <SaveToBoardModal
+        video={video}
+        open={showSaveToBoard}
+        onOpenChange={setShowSaveToBoard}
       />
       </>
     );
@@ -710,7 +723,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
         )}
 
         {/* Subtle creator badge — top-left, always visible for any video with uploader/originalUrl */}
-        <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} />
+        <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} avatarUrl={video.authorAvatar || (video as any).author_avatar || (video as any).creatorAvatar} />
 
         {/* Dark Overlay Gradient (deepens on hover for contrast) */}
         <div className={cn(

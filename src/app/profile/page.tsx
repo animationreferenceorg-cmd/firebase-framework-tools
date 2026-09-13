@@ -34,6 +34,7 @@ import { getFollowedArtists } from '@/lib/following-service';
 import { EditProfileModal } from '@/components/portfolio/EditProfileModal';
 import { ReelStudioModal } from '@/components/portfolio/ReelStudioModal';
 import { UsernameSetupModal } from '@/components/portfolio/UsernameSetupModal';
+import { portfolioItemToVideo } from '@/lib/portfolio-service';
 
 import { 
   CreditCard, 
@@ -208,6 +209,29 @@ export default function ProfilePage() {
           try {
             const vSnap = await getDoc(doc(db, "videos", id));
             if (vSnap.exists()) return { id: vSnap.id, ...vSnap.data() } as Video;
+
+            const pSnap = await getDoc(doc(db, "portfolio_items", id));
+            if (pSnap.exists()) {
+              return portfolioItemToVideo({ id: pSnap.id, ...pSnap.data() } as any);
+            }
+
+            const rSnap = await getDoc(doc(db, "reference_clips", id));
+            if (rSnap.exists()) {
+              const rData = rSnap.data() as any;
+              return {
+                id: rSnap.id,
+                title: rData.title || 'Reference Clip',
+                description: rData.description || rData.sourceDescription || '',
+                videoUrl: rData.videoUrl || rData.mediaUrl || '',
+                thumbnailUrl: rData.thumbnailUrl || rData.coverUrl || '',
+                posterUrl: rData.thumbnailUrl || rData.coverUrl || '',
+                tags: rData.tags || [],
+                author_name: rData.creatorName || rData.sourceAuthorName,
+                authorAvatar: rData.creatorAvatar || rData.sourceAuthorAvatar,
+                uploader: rData.creatorUsername ? `@${rData.creatorUsername}` : rData.sourceAuthorName,
+                originalUrl: rData.sourceUrl,
+              };
+            }
           } catch (e) {
             console.error("Error fetching video:", id, e);
           }

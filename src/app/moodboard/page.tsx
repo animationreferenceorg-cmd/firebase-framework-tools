@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase';
 import type { Video, LocalImage, Moodboard, MoodboardItem } from '@/lib/types';
 
 import { MoodboardService } from '@/lib/moodboard-service';
+import { portfolioItemToVideo } from '@/lib/portfolio-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -425,6 +426,17 @@ function MoodboardContent() {
                             snap.docs.forEach(d => {
                                 fetchedMap.set(d.id, { id: d.id, ...d.data() } as Video);
                             });
+
+                            const missing = chunk.filter(id => !fetchedMap.has(id));
+                            if (missing.length > 0) {
+                                try {
+                                    const qP = query(collection(db, "portfolio_items"), where(documentId(), 'in', missing));
+                                    const snapP = await getDocs(qP);
+                                    snapP.docs.forEach(d => {
+                                        fetchedMap.set(d.id, portfolioItemToVideo({ id: d.id, ...d.data() } as any));
+                                    });
+                                } catch {}
+                            }
                         } catch (err) {
                             console.error("Failed to fetch chunk of references:", err);
                         }

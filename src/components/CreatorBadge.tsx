@@ -8,13 +8,14 @@ interface CreatorBadgeProps {
   uploader?: string;
   originalUrl?: string;
   videoUrl?: string;
+  avatarUrl?: string;
   className?: string;
   size?: 'sm' | 'md';
 }
 
 /**
  * Subtle creator badge — top left of video cards.
- * - Resting: small frosted circle showing the creator's initial
+ * - Resting: small frosted circle showing the creator's avatar or initial
  * - Hover the VIDEO CARD (group/card): pill expands to show "@username [link icon]"
  * - Click anywhere on it to open the original post in a new tab
  */
@@ -22,6 +23,7 @@ export function CreatorBadge({
   uploader,
   originalUrl,
   videoUrl,
+  avatarUrl,
   className,
   size = 'md',
 }: CreatorBadgeProps) {
@@ -59,13 +61,17 @@ export function CreatorBadge({
         // Collapsed to just the circle width; expands on card hover
         'max-w-[32px] group-hover/card:max-w-[200px]',
       )}>
-        {/* Creator initial */}
+        {/* Creator avatar image or initial */}
         <div className={cn(
-          'flex-shrink-0 flex items-center justify-center rounded-full font-bold text-white',
+          'flex-shrink-0 flex items-center justify-center rounded-full font-bold text-white overflow-hidden',
           'bg-gradient-to-br from-violet-500 to-fuchsia-500',
           circleSize
         )}>
-          {initial}
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+          ) : (
+            initial
+          )}
         </div>
 
         {/* Expanded content — fades in on card hover */}

@@ -24,6 +24,7 @@ export interface Video {
   createdAt?: any;
   updatedAt?: any;
   author_name?: string;
+  authorAvatar?: string;
   likeCount?: number;
   viewCount?: number;
   isPortfolio?: boolean;

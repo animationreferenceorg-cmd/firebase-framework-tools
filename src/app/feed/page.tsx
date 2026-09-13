@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import type { PortfolioItem } from '@/lib/types';
-import { getPublicPortfolioItems, incrementPortfolioItemShares, toggleLikePortfolioItem } from '@/lib/portfolio-service';
+import type { PortfolioItem, Video } from '@/lib/types';
+import { getPublicPortfolioItems, incrementPortfolioItemShares, toggleLikePortfolioItem, portfolioItemToVideo } from '@/lib/portfolio-service';
 import { saveVideo, unsaveVideo } from '@/lib/firestore';
 import { PortfolioItemCard } from '@/components/portfolio/PortfolioItemCard';
 import { PortfolioItemDetailModal } from '@/components/portfolio/PortfolioItemDetailModal';
+import { SaveToBoardModal } from '@/components/SaveToBoardModal';
 import { UploadPortfolioItemModal } from '@/components/portfolio/UploadPortfolioItemModal';
 import { UploadAnnouncementBanner } from '@/components/portfolio/UploadAnnouncementBanner';
 import { FilterBar, TabOption, TypeOption, PillOption } from '@/components/FilterBar';
@@ -40,6 +41,8 @@ export default function CommunityFeedPage() {
   const [isMockPreview, setIsMockPreview] = useState(false);
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [saveVideoTarget, setSaveVideoTarget] = useState<Video | null>(null);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
 
   const handleLikeItem = async (targetItem: PortfolioItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -74,25 +77,14 @@ export default function CommunityFeedPage() {
     }
   };
 
-  const handleSaveItem = async (targetItem: PortfolioItem, e?: React.MouseEvent) => {
+  const handleSaveItem = (targetItem: PortfolioItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (!user?.uid) {
       toast({ title: 'Sign in required', description: 'Please sign in to save items.', variant: 'destructive' });
       return;
     }
-    const isSaved = Boolean(userProfile?.savedVideoIds?.includes(targetItem.id));
-    try {
-      if (isSaved) {
-        await unsaveVideo(user.uid, targetItem.id);
-        toast({ title: 'Removed from Saved', description: 'Item removed from your library.' });
-      } else {
-        await saveVideo(user.uid, targetItem.id);
-        toast({ title: 'Saved to Library!', description: 'Item added to your saved videos & portfolio clips.' });
-      }
-      mutateUserProfile?.();
-    } catch (error: any) {
-      console.error("Error toggling save:", error);
-    }
+    setSaveVideoTarget(portfolioItemToVideo(targetItem));
+    setIsSaveModalOpen(true);
   };
 
   const handleShareItem = async (targetItem: PortfolioItem, e?: React.MouseEvent) => {
@@ -418,6 +410,13 @@ export default function CommunityFeedPage() {
         currentUserId={user?.uid}
         onItemDeleted={(itemId) => setPortfolioItems((current) => current.filter((item) => item.id !== itemId))}
       />
+      {saveVideoTarget && (
+        <SaveToBoardModal
+          video={saveVideoTarget}
+          open={isSaveModalOpen}
+          onOpenChange={setIsSaveModalOpen}
+        />
+      )}
     </div>
   );
 }

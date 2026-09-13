@@ -15,7 +15,7 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage, auth } from "./firebase";
-import type { PortfolioItem, UserProfile, WipStage } from "./types";
+import type { PortfolioItem, UserProfile, WipStage, Video } from "./types";
 
 const PORTFOLIO_COLLECTION = "portfolio_items";
 const USERS_COLLECTION = "users";
@@ -911,4 +911,25 @@ export async function updateUserProfileData(
       localStorage.setItem(storageKey, JSON.stringify({ ...existing, ...data }));
     } catch (e) {}
   }
+}
+
+/**
+ * Converts a community PortfolioItem into a standard Video object
+ * so it can be saved to moodboards, boards, and rendered across video components.
+ */
+export function portfolioItemToVideo(item: PortfolioItem): Video {
+  return {
+    id: item.id,
+    title: item.title || 'Untitled Community Post',
+    description: item.description || '',
+    videoUrl: item.mediaUrl || '',
+    thumbnailUrl: item.thumbnailUrl || item.mediaUrl || '',
+    posterUrl: item.thumbnailUrl || item.mediaUrl || '',
+    tags: item.tags || [],
+    author_name: item.authorName,
+    authorAvatar: item.authorAvatar,
+    uploader: item.authorName ? `@${item.authorName.replace(/^@/, '')}` : undefined,
+    originalUrl: item.mediaUrl,
+    isPortfolio: true,
+  };
 }

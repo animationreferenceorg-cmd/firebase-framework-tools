@@ -34,7 +34,8 @@ import {
   removeClipFromBoard,
   saveClipToBoard,
 } from '@/lib/reference-service';
-import type { ReferenceBoard, ReferenceClip } from '@/lib/types';
+import { MoodboardService } from '@/lib/moodboard-service';
+import type { ReferenceBoard, ReferenceClip, Video } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const SUGGESTED_BOARDS = [
@@ -82,12 +83,44 @@ export function SaveClipToBoardDialog({
 
     Promise.all([
       getUserReferenceBoards(user.uid, true),
+      MoodboardService.getMoodboards(user.uid),
       getClipSavedBoardIds(clip.id, user.uid),
     ])
-      .then(([userBoards, savedIds]) => {
+      .then(([userBoards, userMoodboards, savedIds]) => {
         if (!isMounted) return;
-        setBoards(userBoards);
-        setSavedBoardIds(new Set(savedIds));
+        const seenIds = new Set<string>();
+        const merged: ReferenceBoard[] = [];
+        const allSaved = new Set<string>(savedIds);
+
+        userBoards.forEach(b => {
+          seenIds.add(b.id);
+          merged.push(b);
+        });
+
+        (userMoodboards || []).forEach(mb => {
+          if (!seenIds.has(mb.id)) {
+            seenIds.add(mb.id);
+            merged.push({
+              id: mb.id,
+              ownerId: user.uid,
+              ownerName: userProfile?.displayName || userProfile?.username || 'Animator',
+              title: mb.name || 'Untitled Moodboard',
+              slug: (mb.name || 'untitled').toLowerCase().replace(/\s+/g, '-'),
+              coverUrl: mb.thumbnailUrl || mb.items?.[0]?.imageUrl || '',
+              isPrivate: Boolean(mb.isPrivate),
+              clipCount: mb.items?.length || mb.itemCount || 0,
+              followerCount: 0,
+              createdAt: mb.createdAt || new Date(),
+              updatedAt: mb.updatedAt || new Date(),
+            });
+          }
+          if ((mb.items || []).some(it => it.videoId === clip.id || it.videoData?.id === clip.id)) {
+            allSaved.add(mb.id);
+          }
+        });
+
+        setBoards(merged);
+        setSavedBoardIds(allSaved);
       })
       .catch((err) => {
         console.error('Failed to load boards for save dialog:', err);
@@ -99,7 +132,7 @@ export function SaveClipToBoardDialog({
     return () => {
       isMounted = false;
     };
-  }, [open, user?.uid, clip?.id]);
+  }, [open, user?.uid, clip?.id, userProfile]);
 
   // 1-Click Save or Unsave to a selected board
   const handleBoardClick = async (board: ReferenceBoard) => {
@@ -112,6 +145,14 @@ export function SaveClipToBoardDialog({
       if (isAlreadySaved) {
         // Toggle/Remove from board
         await removeClipFromBoard(clip.id, board.id);
+        try {
+          const items = await MoodboardService.loadMoodboard(user.uid, board.id);
+          if (items) {
+            const nextItems = items.filter(it => it.videoId !== clip.id && it.videoData?.id !== clip.id);
+            await MoodboardService.saveMoodboard(user.uid, board.id, nextItems);
+          }
+        } catch (e) {}
+
         setSavedBoardIds((prev) => {
           const next = new Set(prev);
           next.delete(board.id);
@@ -127,7 +168,28 @@ export function SaveClipToBoardDialog({
       } else {
         // Automatic 1-Click Save
         const thumb = clip.thumbnailUrl || clip.posterUrl || clip.videoUrl;
+        const clipAsVideo: Video = {
+          id: clip.id,
+          title: clip.title,
+          videoUrl: clip.videoUrl,
+          thumbnailUrl: thumb,
+          posterUrl: clip.posterUrl || thumb,
+          category: clip.category,
+          categories: [clip.category],
+          tags: clip.tags || [],
+          description: clip.sourceDescription || '',
+          sourceUrl: clip.sourceUrl || '',
+          sourceAuthorName: clip.sourceAuthorName || '',
+          sourceAuthorUrl: clip.sourceAuthorUrl || '',
+          sourceAuthorAvatar: clip.sourceAuthorAvatar || '',
+        };
+
         await saveClipToBoard(clip.id, board.id, user.uid, thumb);
+        try {
+          await MoodboardService.addReferenceToMoodboard(user.uid, board.id, clipAsVideo);
+        } catch (e) {
+          // If board is only in reference_boards, that's fine
+        }
 
         setSavedBoardIds((prev) => new Set([...prev, board.id]));
         setBoards((prev) =>
@@ -140,7 +202,7 @@ export function SaveClipToBoardDialog({
 
         toast({
           title: `Saved to ${board.title}! ✨`,
-          description: `Clip added to your vault board.`,
+          description: `Clip added to your board canvas & gallery.`,
         });
 
         // Automatically close modal after brief positive visual feedback
@@ -174,7 +236,26 @@ export function SaveClipToBoardDialog({
       });
 
       const thumb = clip.thumbnailUrl || clip.posterUrl || clip.videoUrl;
+      const clipAsVideo: Video = {
+        id: clip.id,
+        title: clip.title,
+        videoUrl: clip.videoUrl,
+        thumbnailUrl: thumb,
+        posterUrl: clip.posterUrl || thumb,
+        category: clip.category,
+        categories: [clip.category],
+        tags: clip.tags || [],
+        description: clip.sourceDescription || '',
+        sourceUrl: clip.sourceUrl || '',
+        sourceAuthorName: clip.sourceAuthorName || '',
+        sourceAuthorUrl: clip.sourceAuthorUrl || '',
+        sourceAuthorAvatar: clip.sourceAuthorAvatar || '',
+      };
+
       await saveClipToBoard(clip.id, boardId, userProfile.uid, thumb);
+      try {
+        await MoodboardService.addReferenceToMoodboard(userProfile.uid, boardId, clipAsVideo);
+      } catch (e) {}
 
       const newBoard: ReferenceBoard = {
         id: boardId,

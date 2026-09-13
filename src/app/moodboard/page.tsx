@@ -475,16 +475,27 @@ function MoodboardContent() {
             try {
                 const items = await MoodboardService.loadMoodboard(userProfile.uid, currentBoardId);
                 if (items) {
-                    const mappedItems: DraggableCanvasItem[] = items.map(item => {
+                    const mappedItems: DraggableCanvasItem[] = items.map((item, idx) => {
+                        const videoObj = item.videoData || {
+                            id: item.videoId || item.id,
+                            title: (item as any).title || 'Saved Reference',
+                            thumbnailUrl: item.imageUrl || '',
+                            posterUrl: item.imageUrl || '',
+                            videoUrl: (item as any).videoUrl || '',
+                            description: '',
+                            tags: [],
+                            categories: [],
+                        } as Video;
+
                         const mapped: DraggableCanvasItem = {
                             id: item.id,
-                            type: item.type,
-                            x: item.x,
-                            y: item.y,
-                            width: item.width,
-                            height: item.height,
+                            type: item.type || 'video',
+                            x: typeof item.x === 'number' ? item.x : 120 + (idx % 4) * 300,
+                            y: typeof item.y === 'number' ? item.y : 120 + Math.floor(idx / 4) * 200,
+                            width: item.width || 280,
+                            height: item.height || 160,
                             color: item.color,
-                            zIndex: item.zIndex || 1,
+                            zIndex: item.zIndex || idx + 1,
                             text: item.text,
                             shapeType: item.shapeType,
                             borderColor: item.borderColor,
@@ -494,15 +505,7 @@ function MoodboardContent() {
                             points: item.points,
                             fromItem: item.fromItem,
                             toItem: item.toItem,
-                            video: item.videoData || (item.imageUrl ? {
-                                id: item.id,
-                                title: 'Image',
-                                thumbnailUrl: item.imageUrl,
-                                videoUrl: '',
-                                description: '',
-                                tags: [],
-                                posterUrl: item.imageUrl
-                            } as Video : {} as Video)
+                            video: videoObj,
                         };
                         return mapped;
                     });
@@ -551,10 +554,9 @@ function MoodboardContent() {
                 };
 
                 if (item.type === 'video' || item.type === 'image') {
-                    const isVideo = 'videoUrl' in item.video! && item.video.videoUrl;
-                    cleanItem.videoData = JSON.parse(JSON.stringify(item.video));
-                    cleanItem.videoId = isVideo ? item.video!.id : null;
-                    cleanItem.imageUrl = !isVideo ? (item.video as any).thumbnailUrl || (item.video as any).url : null;
+                    cleanItem.videoData = JSON.parse(JSON.stringify(item.video || {}));
+                    cleanItem.videoId = item.video?.id || item.id;
+                    cleanItem.imageUrl = item.video?.thumbnailUrl || item.video?.posterUrl || (item.video as any)?.url || null;
                 }
 
                 return cleanItem;
@@ -1742,6 +1744,7 @@ function MoodboardContent() {
                     <MoodboardDashboard
                         moodboards={moodboards}
                         savedReferences={allSavedReferences.length > 0 ? allSavedReferences : likedVideos}
+                        userId={userProfile?.uid}
                         onCreateBoard={async () => {
                             if (!userProfile?.uid) return;
                             const limitCheck = checkLimit(userProfile, 'moodboards', moodboards.length);

@@ -42,14 +42,14 @@ export class MoodboardService {
         return snap.docs.map((d: QueryDocumentSnapshot<DocumentData, DocumentData>) => ({ id: d.id, ...d.data() } as Moodboard));
     }
 
-    // Save specific moodboard state
+    // Save specific moodboard state (uses setDoc with merge to ensure resilience)
     static async saveMoodboard(userId: string, moodboardId: string, items: MoodboardItem[], thumbnailUrl?: string) {
         const docRef = doc(db, 'users', userId, 'moodboards', moodboardId);
 
         // Deep sanitize to ensure no undefined values exist anywhere
         const cleanItems = JSON.parse(JSON.stringify(items));
 
-        const updateData: any = {
+        const updateData: Record<string, unknown> = {
             items: cleanItems,
             itemCount: cleanItems.length,
             updatedAt: new Date()
@@ -59,7 +59,7 @@ export class MoodboardService {
             updateData.thumbnailUrl = thumbnailUrl;
         }
 
-        await updateDoc(docRef, updateData);
+        await setDoc(docRef, updateData, { merge: true });
     }
 
     // Load specific moodboard
@@ -69,7 +69,7 @@ export class MoodboardService {
 
         if (snap.exists()) {
             const data = snap.data();
-            return data.items as MoodboardItem[];
+            return (data.items || []) as MoodboardItem[];
         }
         return null;
     }
@@ -77,7 +77,7 @@ export class MoodboardService {
     // Update moodboard metadata (e.g. name)
     static async updateMoodboardName(userId: string, moodboardId: string, name: string) {
         const docRef = doc(db, 'users', userId, 'moodboards', moodboardId);
-        await updateDoc(docRef, { name, updatedAt: new Date() });
+        await setDoc(docRef, { name, updatedAt: new Date() }, { merge: true });
     }
 
     // File a saved reference into an inspiration and place it on that folder's canvas.
@@ -85,31 +85,58 @@ export class MoodboardService {
         const docRef = doc(db, 'users', userId, 'moodboards', moodboardId);
         return runTransaction(db, async transaction => {
             const snapshot = await transaction.get(docRef);
-            if (!snapshot.exists()) throw new Error('Moodboard not found');
+            let items: MoodboardItem[] = [];
+            let boardData: Record<string, any> = {};
 
-            const items = (snapshot.data().items || []) as MoodboardItem[];
+            if (snapshot.exists()) {
+                boardData = snapshot.data();
+                items = (boardData.items || []) as MoodboardItem[];
+            }
+
             const alreadySaved = items.some(item => item.videoId === video.id || item.videoData?.id === video.id);
             if (alreadySaved) return null;
 
             const mediaCount = items.filter(item => item.type === 'video' || item.type === 'image').length;
+            const thumb = video.thumbnailUrl || video.posterUrl || '';
+
+            const normalizedVideo: Record<string, any> = {
+                id: video.id,
+                title: video.title || 'Untitled Reference',
+                videoUrl: video.videoUrl || '',
+                thumbnailUrl: thumb,
+                posterUrl: video.posterUrl || thumb,
+                categories: video.categories || (video.category ? [video.category] : ['Reference']),
+                category: video.category || video.categories?.[0] || 'Reference',
+                tags: video.tags || [],
+                description: video.description || '',
+                sourceUrl: video.sourceUrl || '',
+                sourceAuthorName: video.sourceAuthorName || '',
+            };
+
             const item: MoodboardItem = {
                 id: `reference-${video.id}-${Date.now()}`,
                 type: 'video',
                 videoId: video.id,
-                videoData: JSON.parse(JSON.stringify(video)),
-                x: 120 + (mediaCount % 4) * 280,
-                y: 120 + Math.floor(mediaCount / 4) * 190,
-                width: 256,
-                height: 144,
+                videoData: JSON.parse(JSON.stringify(normalizedVideo)),
+                imageUrl: thumb,
+                x: 120 + (mediaCount % 4) * 300,
+                y: 120 + Math.floor(mediaCount / 4) * 200,
+                width: 280,
+                height: 160,
                 zIndex: items.length + 1,
             };
 
             const nextItems = [...items, item];
-            transaction.update(docRef, {
-                items: nextItems,
+            const updates: Record<string, unknown> = {
+                items: JSON.parse(JSON.stringify(nextItems)),
                 itemCount: nextItems.length,
                 updatedAt: new Date(),
-            });
+            };
+            if (thumb && !boardData.thumbnailUrl) {
+                updates.thumbnailUrl = thumb;
+            }
+
+            transaction.set(docRef, updates, { merge: true });
             return item;
         });
     }

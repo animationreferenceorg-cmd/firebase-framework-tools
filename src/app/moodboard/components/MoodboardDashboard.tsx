@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import type { Moodboard, Video } from '@/lib/types';
+import { useEffect, useMemo, useState } from 'react';
+import type { Moodboard, Video, MoodboardItem } from '@/lib/types';
+import { MoodboardService } from '@/lib/moodboard-service';
 import {
     ArrowUpRight,
     ChevronRight,
@@ -22,6 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 interface MoodboardDashboardProps {
     moodboards: Moodboard[];
     savedReferences: Video[];
+    userId?: string;
     onCreateBoard: () => Promise<string | void>;
     onOpenBoard: (boardId: string) => void;
     onRenameBoard: (boardId: string, name: string) => Promise<void>;
@@ -33,19 +35,40 @@ interface MoodboardDashboardProps {
 function getBoardImages(board: Moodboard) {
     const itemImages = (board.items || [])
         .filter(item => item.type === 'image' || item.type === 'video')
-        .map(item => item.imageUrl || item.videoData?.thumbnailUrl || item.videoData?.posterUrl)
+        .map(item => item.imageUrl || item.videoData?.thumbnailUrl || item.videoData?.posterUrl || (item as any).video?.thumbnailUrl)
         .filter(Boolean) as string[];
     return Array.from(new Set([board.thumbnailUrl, ...itemImages].filter(Boolean) as string[])).slice(0, 3);
 }
 
-function getFolderReferences(board?: Moodboard) {
+function getFolderReferences(board?: Moodboard): Video[] {
     if (!board) return [];
     const seen = new Set<string>();
     return (board.items || []).flatMap(item => {
-        const video = item.videoData;
-        if (!video || seen.has(video.id)) return [];
-        seen.add(video.id);
-        return [video];
+        const video = item.videoData || (item as any).video;
+        const id = video?.id || item.videoId || item.id;
+        if (!id || seen.has(id)) return [];
+        seen.add(id);
+
+        if (video && (video.thumbnailUrl || video.videoUrl || video.title)) {
+            return [{
+                ...video,
+                id: video.id || id,
+                title: video.title || item.title || 'Saved Reference',
+                thumbnailUrl: video.thumbnailUrl || video.posterUrl || item.imageUrl || '',
+                posterUrl: video.posterUrl || video.thumbnailUrl || item.imageUrl || '',
+                videoUrl: video.videoUrl || '',
+            }];
+        }
+
+        return [{
+            id: id,
+            title: item.title || 'Saved Reference',
+            thumbnailUrl: item.imageUrl || '',
+            posterUrl: item.imageUrl || '',
+            videoUrl: (item as any).videoUrl || '',
+            tags: [],
+            categories: [],
+        } as unknown as Video];
     });
 }
 
@@ -151,6 +174,7 @@ function ReferenceMasonry({
 export function MoodboardDashboard({
     moodboards,
     savedReferences,
+    userId,
     onCreateBoard,
     onOpenBoard,
     onRenameBoard,
@@ -162,9 +186,28 @@ export function MoodboardDashboard({
     const [selectedFolderId, setSelectedFolderId] = useState<string>('all');
     const [editingId, setEditingId] = useState<string | null>(null);
     const [draftName, setDraftName] = useState('');
+    const [boardItemsMap, setBoardItemsMap] = useState<Record<string, MoodboardItem[]>>({});
+
+    // When clicking a board, load its fresh items immediately so references pop up in the list
+    useEffect(() => {
+        if (!userId || !selectedFolderId || selectedFolderId === 'all') return;
+        MoodboardService.loadMoodboard(userId, selectedFolderId)
+            .then((freshItems) => {
+                if (freshItems) {
+                    setBoardItemsMap(prev => ({ ...prev, [selectedFolderId]: freshItems }));
+                }
+            })
+            .catch(err => console.error('Failed to load board references:', err));
+    }, [selectedFolderId, userId]);
+
     const normalizedQuery = query.trim().toLowerCase();
     const selectedFolder = moodboards.find(board => board.id === selectedFolderId);
-    const folderReferences = getFolderReferences(selectedFolder);
+    const currentFolderItems = selectedFolder
+        ? (boardItemsMap[selectedFolder.id] || selectedFolder.items || [])
+        : [];
+    const folderReferences = selectedFolder
+        ? getFolderReferences({ ...selectedFolder, items: currentFolderItems })
+        : [];
     const sourceReferences = selectedFolder ? folderReferences : savedReferences;
     const visibleReferences = useMemo(() => sourceReferences.filter(video =>
         !normalizedQuery || video.title?.toLowerCase().includes(normalizedQuery) ||

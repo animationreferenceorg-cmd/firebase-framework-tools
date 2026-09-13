@@ -134,21 +134,8 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                     await MoodboardService.saveMoodboard(user.uid, boardId, updatedItems);
                     toast({ title: 'Removed from board', description: `Removed from "${boardName}"` });
                 } else {
-                    // Add video item to board
-                    const newItem: MoodboardItem = {
-                        id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-                        type: 'video',
-                        videoId: video.id,
-                        videoData: video,
-                        imageUrl: video.thumbnailUrl || video.posterUrl || '',
-                        x: Math.floor(Math.random() * 200),
-                        y: Math.floor(Math.random() * 200),
-                        width: 320,
-                        height: 180,
-                    };
-                    updatedItems = [...items, newItem];
-                    const thumb = video.thumbnailUrl || video.posterUrl || '';
-                    await MoodboardService.saveMoodboard(user.uid, boardId, updatedItems, thumb);
+                    // Add video item to board using addReferenceToMoodboard so it's placed on canvas and inspiration list
+                    await MoodboardService.addReferenceToMoodboard(user.uid, boardId, video);
 
                     // All saves also save to all saves
                     if (!isAllSaved) {
@@ -156,7 +143,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                         await mutate();
                     }
 
-                    toast({ title: 'Saved to Board & All Saves! ✨', description: `Added to "${boardName}"` });
+                    toast({ title: 'Saved to Board & Canvas! ✨', description: `Added to "${boardName}"` });
 
                     // Auto-close after successful save
                     setTimeout(() => {
@@ -239,19 +226,8 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
             const thumb = video.thumbnailUrl || video.posterUrl || '';
             if (user?.uid) {
                 const newId = await MoodboardService.createMoodboard(user.uid, trimmed);
-                // Add video to new board
-                const newItem: MoodboardItem = {
-                    id: `item-${Date.now()}`,
-                    type: 'video',
-                    videoId: video.id,
-                    videoData: video,
-                    imageUrl: thumb,
-                    x: 50,
-                    y: 50,
-                    width: 320,
-                    height: 180,
-                };
-                await MoodboardService.saveMoodboard(user.uid, newId, [newItem], thumb);
+                // Add video to new board using addReferenceToMoodboard
+                await MoodboardService.addReferenceToMoodboard(user.uid, newId, video);
 
                 // All saves also save to all saves
                 if (!isAllSaved) {

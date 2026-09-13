@@ -33,7 +33,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
     const { userProfile, mutate } = useUser();
     const { toast } = useToast();
 
-    const [boards, setBoards] = useState<Array<{ id: string; name: string; hasVideo: boolean; items?: MoodboardItem[] }>>([]);
+    const [boards, setBoards] = useState<Array<{ id: string; name: string; hasVideo: boolean; items?: MoodboardItem[]; thumbnailUrl?: string }>>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [newBoardName, setNewBoardName] = useState('');
@@ -64,6 +64,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                             name: b.name || 'Untitled Moodboard',
                             hasVideo,
                             items: b.items || [],
+                            thumbnailUrl: b.thumbnailUrl || b.items?.[0]?.imageUrl || '',
                         };
                     });
                     setBoards(formatted);
@@ -81,6 +82,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                             id: lb.id,
                             name: lb.name,
                             hasVideo: lb.videoIds.includes(video.id),
+                            thumbnailUrl: lb.thumbnailUrl || '',
                         }))
                     );
                 }
@@ -155,6 +157,11 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                     }
 
                     toast({ title: 'Saved to Board & All Saves! ✨', description: `Added to "${boardName}"` });
+
+                    // Auto-close after successful save
+                    setTimeout(() => {
+                        onOpenChange(false);
+                    }, 650);
                 }
             } else {
                 // LocalStorage save
@@ -176,6 +183,9 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                     toast({ title: 'Removed from board', description: `Removed from "${boardName}"` });
                 } else {
                     toast({ title: 'Saved to Board! ✨', description: `Added to "${boardName}"` });
+                    setTimeout(() => {
+                        onOpenChange(false);
+                    }, 650);
                 }
             }
 
@@ -226,6 +236,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
 
         setIsCreating(true);
         try {
+            const thumb = video.thumbnailUrl || video.posterUrl || '';
             if (user?.uid) {
                 const newId = await MoodboardService.createMoodboard(user.uid, trimmed);
                 // Add video to new board
@@ -234,13 +245,13 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                     type: 'video',
                     videoId: video.id,
                     videoData: video,
-                    imageUrl: video.thumbnailUrl || video.posterUrl || '',
+                    imageUrl: thumb,
                     x: 50,
                     y: 50,
                     width: 320,
                     height: 180,
                 };
-                await MoodboardService.saveMoodboard(user.uid, newId, [newItem], video.thumbnailUrl || video.posterUrl);
+                await MoodboardService.saveMoodboard(user.uid, newId, [newItem], thumb);
 
                 // All saves also save to all saves
                 if (!isAllSaved) {
@@ -248,21 +259,25 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                     await mutate();
                 }
 
-                setBoards((prev) => [...prev, { id: newId, name: trimmed, hasVideo: true }]);
+                setBoards((prev) => [...prev, { id: newId, name: trimmed, hasVideo: true, thumbnailUrl: thumb }]);
             } else {
                 const newId = `mb-${Date.now()}`;
                 const stored = localStorage.getItem(LOCAL_STORAGE_BOARDS_KEY);
                 const localBoards: LocalBoard[] = stored ? JSON.parse(stored) : [];
 
-                const updated = [...localBoards, { id: newId, name: trimmed, videoIds: [video.id] }];
+                const updated = [...localBoards, { id: newId, name: trimmed, videoIds: [video.id], thumbnailUrl: thumb }];
                 localStorage.setItem(LOCAL_STORAGE_BOARDS_KEY, JSON.stringify(updated));
 
-                setBoards((prev) => [...prev, { id: newId, name: trimmed, hasVideo: true }]);
+                setBoards((prev) => [...prev, { id: newId, name: trimmed, hasVideo: true, thumbnailUrl: thumb }]);
             }
 
             toast({ title: 'Board Created & Saved! ✨', description: `Created "${trimmed}" and saved clip.` });
             setNewBoardName('');
             setShowCreateInput(false);
+
+            setTimeout(() => {
+                onOpenChange(false);
+            }, 650);
         } catch (err) {
             console.error('Failed to create board:', err);
             toast({ variant: 'destructive', title: 'Could not create moodboard' });
@@ -286,7 +301,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                         <DialogTitle className="text-xl font-black text-white tracking-tight">Save Reference</DialogTitle>
                     </div>
                     <DialogDescription className="text-xs text-zinc-400">
-                        Save to your boards or All Saves. All board saves automatically save to your library.
+                        Save to your boards or All Saves. Click a board to save immediately.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -315,7 +330,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                     </div>
                 )}
 
-                {/* All Saves Option (Quick Save) */}
+                {/* All Saves Option (Quick Master Save) */}
                 <div className="pt-1 pb-1">
                     <button
                         type="button"
@@ -367,7 +382,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                 )}
 
                 {/* Boards List */}
-                <div className="space-y-1.5 my-1 max-h-[220px] overflow-y-auto pr-1">
+                <div className="space-y-1.5 my-1 max-h-[250px] overflow-y-auto pr-1">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-1 pt-1">
                         Moodboards ({boards.length})
                     </p>
@@ -389,58 +404,88 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                         filteredBoards.map((board) => (
                             <div
                                 key={board.id}
+                                onClick={() => {
+                                    if (editingBoardId !== board.id) {
+                                        toggleBoardSave(board.id, board.hasVideo, board.name);
+                                    }
+                                }}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        if (editingBoardId !== board.id) {
+                                            toggleBoardSave(board.id, board.hasVideo, board.name);
+                                        }
+                                    }
+                                }}
                                 className={cn(
-                                    "w-full flex items-center justify-between p-2.5 rounded-2xl border transition-all group",
+                                    "w-full flex items-center justify-between p-2.5 rounded-2xl border transition-all cursor-pointer select-none group",
                                     board.hasVideo
-                                        ? "bg-purple-950/30 border-purple-600/40 text-white"
+                                        ? "bg-purple-950/25 border-purple-600/40 text-white hover:bg-purple-950/40"
                                         : "bg-zinc-900/40 border-white/5 text-zinc-300 hover:bg-zinc-900 hover:border-white/15 hover:text-white"
                                 )}
                             >
-                                {editingBoardId === board.id ? (
-                                    <form
-                                        onSubmit={(e) => handleRenameBoard(board.id, e)}
-                                        className="flex-1 flex items-center gap-1 mr-2"
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        <Input
-                                            autoFocus
-                                            value={editingBoardName}
-                                            onChange={(e) => setEditingBoardName(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Escape') setEditingBoardId(null);
-                                            }}
-                                            className="h-7 text-xs bg-black/60 border-purple-500/50 rounded-lg px-2 text-white"
-                                        />
-                                        <Button
-                                            type="submit"
-                                            size="sm"
-                                            className="h-7 px-2 bg-purple-600 hover:bg-purple-500 text-[10px] rounded-lg"
-                                        >
-                                            Save
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => setEditingBoardId(null)}
-                                            className="h-7 px-1 text-zinc-400 hover:text-white"
-                                        >
-                                            <X className="h-3.5 w-3.5" />
-                                        </Button>
-                                    </form>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        onClick={() => toggleBoardSave(board.id, board.hasVideo, board.name)}
-                                        className="flex-1 flex items-center justify-between text-left cursor-pointer min-w-0 mr-1"
-                                    >
-                                        <span className="text-xs font-bold truncate">
-                                            {board.name}
-                                        </span>
-                                    </button>
-                                )}
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-zinc-800">
+                                        {board.thumbnailUrl ? (
+                                            <img
+                                                src={board.thumbnailUrl}
+                                                alt=""
+                                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                            />
+                                        ) : (
+                                            <div className="flex h-full w-full items-center justify-center bg-zinc-800 text-zinc-400 group-hover:text-purple-300">
+                                                <Bookmark className="h-4 w-4" />
+                                            </div>
+                                        )}
+                                    </div>
 
-                                <div className="flex items-center gap-1 shrink-0">
+                                    {editingBoardId === board.id ? (
+                                        <form
+                                            onSubmit={(e) => handleRenameBoard(board.id, e)}
+                                            className="flex-1 flex items-center gap-1 mr-2"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <Input
+                                                autoFocus
+                                                value={editingBoardName}
+                                                onChange={(e) => setEditingBoardName(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Escape') setEditingBoardId(null);
+                                                }}
+                                                className="h-7 text-xs bg-black/60 border-purple-500/50 rounded-lg px-2 text-white"
+                                            />
+                                            <Button
+                                                type="submit"
+                                                size="sm"
+                                                className="h-7 px-2 bg-purple-600 hover:bg-purple-500 text-[10px] rounded-lg"
+                                            >
+                                                Save
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setEditingBoardId(null)}
+                                                className="h-7 px-1 text-zinc-400 hover:text-white"
+                                            >
+                                                <X className="h-3.5 w-3.5" />
+                                            </Button>
+                                        </form>
+                                    ) : (
+                                        <div className="min-w-0 flex-1">
+                                            <span className="text-xs font-bold block truncate">
+                                                {board.name}
+                                            </span>
+                                            <span className="text-[10px] text-zinc-400">
+                                                {board.items?.length || 0} items
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center gap-1 shrink-0 pl-1">
                                     {editingBoardId !== board.id && (
                                         <button
                                             type="button"
@@ -450,23 +495,23 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                                                 setEditingBoardName(board.name);
                                             }}
                                             title="Rename board"
-                                            className="h-6 w-6 rounded-lg flex items-center justify-center text-zinc-500 hover:text-purple-300 hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            className="h-7 w-7 rounded-lg flex items-center justify-center text-zinc-500 hover:text-purple-300 hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
                                         >
                                             <Pencil className="h-3 w-3" />
                                         </button>
                                     )}
-                                    <button
-                                        type="button"
-                                        onClick={() => toggleBoardSave(board.id, board.hasVideo, board.name)}
-                                        className={cn(
-                                            "h-6 w-6 rounded-full flex items-center justify-center transition-all cursor-pointer",
-                                            board.hasVideo
-                                                ? "bg-purple-600 text-white shadow-md shadow-purple-600/50"
-                                                : "bg-white/5 border border-white/10 text-transparent group-hover:text-zinc-500"
-                                        )}
-                                    >
-                                        <Check className="h-3 w-3 stroke-[3]" />
-                                    </button>
+
+                                    {board.hasVideo ? (
+                                        <div className="flex h-7 items-center gap-1 rounded-full border border-purple-500/40 bg-purple-900/40 px-2.5 text-[11px] font-bold text-purple-200 shadow-sm transition group-hover:border-red-500/40 group-hover:bg-red-950/30 group-hover:text-red-300">
+                                            <Check className="h-3 w-3 stroke-[3] group-hover:hidden" />
+                                            <span className="group-hover:hidden">Saved</span>
+                                            <span className="hidden group-hover:inline">Remove</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex h-7 items-center rounded-full bg-purple-600 px-3 text-[11px] font-bold text-white shadow-md shadow-purple-600/30 transition duration-200 group-hover:scale-105 group-hover:bg-purple-500">
+                                            Save
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))

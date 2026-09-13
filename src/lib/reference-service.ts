@@ -114,14 +114,23 @@ export async function getUserReferenceClips(creatorId: string, includePrivate = 
   return newestFirst(snaps.docs.map((item) => withId<ReferenceClip>(item)));
 }
 
-export async function saveClipToBoard(clipId: string, boardId: string, ownerId: string) {
+export async function saveClipToBoard(clipId: string, boardId: string, ownerId: string, clipThumbnailUrl?: string) {
   const saveId = `${boardId}_${clipId}`;
   await runTransaction(db, async (transaction) => {
     const saveRef = doc(db, SAVES, saveId);
     const existing = await transaction.get(saveRef);
     if (existing.exists()) return;
     transaction.set(saveRef, { boardId, clipId, ownerId, createdAt: serverTimestamp() });
-    transaction.update(doc(db, BOARDS, boardId), { clipCount: increment(1), updatedAt: serverTimestamp() });
+    const boardRef = doc(db, BOARDS, boardId);
+    const boardSnap = await transaction.get(boardRef);
+    const updates: Record<string, unknown> = {
+      clipCount: increment(1),
+      updatedAt: serverTimestamp(),
+    };
+    if (clipThumbnailUrl && boardSnap.exists() && !boardSnap.data()?.coverUrl) {
+      updates.coverUrl = clipThumbnailUrl;
+    }
+    transaction.update(boardRef, updates);
     transaction.update(doc(db, CLIPS, clipId), { saveCount: increment(1) });
   });
 }
@@ -135,6 +144,16 @@ export async function removeClipFromBoard(clipId: string, boardId: string) {
     transaction.update(doc(db, BOARDS, boardId), { clipCount: increment(-1), updatedAt: serverTimestamp() });
     transaction.update(doc(db, CLIPS, clipId), { saveCount: increment(-1) });
   });
+}
+
+export async function getClipSavedBoardIds(clipId: string, ownerId: string): Promise<string[]> {
+  try {
+    const snaps = await getDocs(query(collection(db, SAVES), where('clipId', '==', clipId), where('ownerId', '==', ownerId)));
+    return snaps.docs.map((item) => (item.data() as BoardSave).boardId);
+  } catch (err) {
+    console.error('Failed to query saved board IDs:', err);
+    return [];
+  }
 }
 
 export async function getBoardClips(boardId: string): Promise<ReferenceClip[]> {

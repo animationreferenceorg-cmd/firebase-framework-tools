@@ -1,87 +1,105 @@
 /**
- * Tracks how long someone actually spends watching reference, so the donate
- * prompt is earned by real viewing rather than by cursor movement.
+ * Video Watch Tracker for Animation Reference
  *
- * The previous version incremented a counter on every mouseenter, so sweeping
- * across a grid of cards could hit the limit in seconds without a single video
- * being watched. This measures elapsed playback instead.
+ * Free users get 30 video watches before a donate popup is displayed.
+ * A video watch (view) is counted only when the user watches for more than 3 seconds.
  */
 
-const WATCH_SECONDS_KEY = 'animref_watch_seconds';
-/** Legacy key from the count-based tracker; cleared on first run. */
-const LEGACY_COUNT_KEY = 'animref_watch_count';
+export const WATCH_COUNT_KEY = 'animref_video_watch_count';
 
-/** Genuine viewing time before the donate prompt is offered. */
+/** Number of video watches allowed for free users before the donate dialog pops up. */
+export const WATCH_COUNT_THRESHOLD = 30;
+
+/** Minimum watch duration (in seconds) required for a watch session to count as a view. */
+export const VIEW_MIN_SECONDS = 3;
+export const VIEW_MIN_DURATION_MS = VIEW_MIN_SECONDS * 1000;
+
+// Kept for backward compatibility with any legacy imports
+export const HOVER_GRACE_MS = VIEW_MIN_DURATION_MS;
 export const WATCH_MINUTES_BEFORE_DONATE_POPUP = 15;
-export const WATCH_SECONDS_BEFORE_DONATE_POPUP = WATCH_MINUTES_BEFORE_DONATE_POPUP * 60;
+export const WATCH_SECONDS_BEFORE_DONATE_POPUP = 15 * 60;
 
 /**
- * A hover preview has to run this long before any of it counts. Below this the
- * cursor was just passing over the card, which should contribute nothing.
- * Time is counted from the end of the grace period, not from zero.
+ * Get current number of counted video watches from localStorage.
  */
-export const HOVER_GRACE_MS = 3000;
-
-/** Ignore absurd jumps from a sleeping laptop or a backgrounded tab. */
-const MAX_SINGLE_FLUSH_SECONDS = 120;
-
-export function getWatchSeconds(): number {
+export function getWatchCount(): number {
   if (typeof window === 'undefined') return 0;
   try {
-    const raw = localStorage.getItem(WATCH_SECONDS_KEY);
-    const value = raw ? parseFloat(raw) : 0;
+    const raw = localStorage.getItem(WATCH_COUNT_KEY);
+    const value = raw ? parseInt(raw, 10) : 0;
     return Number.isFinite(value) && value > 0 ? value : 0;
   } catch {
     return 0;
   }
 }
 
-export function setWatchSeconds(seconds: number): void {
+/**
+ * Set the number of counted video watches in localStorage.
+ */
+export function setWatchCount(count: number): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(WATCH_SECONDS_KEY, String(Math.max(0, seconds)));
+    localStorage.setItem(WATCH_COUNT_KEY, String(Math.max(0, count)));
   } catch {
-    // Storage unavailable (private mode, blocked cookies) — tracking is
-    // best-effort and must never break playback.
-  }
-}
-
-export function resetWatchSeconds(): void {
-  setWatchSeconds(0);
-}
-
-/** One-time cleanup of the old count-based key. */
-export function clearLegacyWatchCount(): void {
-  if (typeof window === 'undefined') return;
-  try {
-    if (localStorage.getItem(LEGACY_COUNT_KEY) !== null) {
-      localStorage.removeItem(LEGACY_COUNT_KEY);
-    }
-  } catch {
-    // ignore
+    // Storage unavailable (private mode, blocked cookies)
   }
 }
 
 /**
- * Adds genuine viewing time to the running total.
- * Returns true when this is the moment the threshold is crossed — the caller
- * decides when to actually show the prompt, so it can wait for a natural pause.
+ * Reset the video watch count back to 0.
  */
+export function resetWatchCount(): void {
+  setWatchCount(0);
+}
+
+/**
+ * Increments the video watch count by 1 for free users.
+ * Returns the updated count and whether the 30-watch threshold was reached.
+ */
+export function recordVideoWatch(isPremium?: boolean): { count: number; reachedLimit: boolean } {
+  if (isPremium) {
+    return { count: 0, reachedLimit: false };
+  }
+  if (typeof window === 'undefined') {
+    return { count: 0, reachedLimit: false };
+  }
+
+  const previous = getWatchCount();
+  const next = previous + 1;
+  setWatchCount(next);
+
+  const reachedLimit = next >= WATCH_COUNT_THRESHOLD;
+  console.log(
+    `[Watch Tracker] Video view counted: ${next}/${WATCH_COUNT_THRESHOLD}${
+      reachedLimit ? ' — 30 watches reached, donate prompt queued!' : ''
+    }`
+  );
+
+  return { count: next, reachedLimit };
+}
+
+// Backward-compatibility helpers
+export function getWatchSeconds(): number {
+  return getWatchCount() * VIEW_MIN_SECONDS;
+}
+
+export function setWatchSeconds(seconds: number): void {
+  setWatchCount(Math.floor(seconds / VIEW_MIN_SECONDS));
+}
+
+export function resetWatchSeconds(): void {
+  resetWatchCount();
+}
+
+export function clearLegacyWatchCount(): void {
+  // Not needed, but preserved for backward compatibility
+}
+
 export function addWatchSeconds(seconds: number, isPremium?: boolean): boolean {
   if (isPremium) return false;
-  if (typeof window === 'undefined') return false;
-  if (!Number.isFinite(seconds) || seconds <= 0) return false;
-
-  const capped = Math.min(seconds, MAX_SINGLE_FLUSH_SECONDS);
-  const previous = getWatchSeconds();
-  const next = previous + capped;
-  setWatchSeconds(next);
-
-  const crossed = previous < WATCH_SECONDS_BEFORE_DONATE_POPUP && next >= WATCH_SECONDS_BEFORE_DONATE_POPUP;
-  if (crossed) {
-    console.log(
-      `[Watch Tracker] ${WATCH_MINUTES_BEFORE_DONATE_POPUP} minutes of viewing reached — prompt queued for the next pause.`
-    );
+  if (seconds >= VIEW_MIN_SECONDS) {
+    const { reachedLimit } = recordVideoWatch(isPremium);
+    return reachedLimit;
   }
-  return crossed;
+  return false;
 }

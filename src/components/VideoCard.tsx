@@ -21,6 +21,8 @@ import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
 import { VideoPlayer } from './VideoPlayer';
 import { SaveToBoardModal } from './SaveToBoardModal';
+import { SendToMayaModal, MayaIcon } from './SendToMayaModal';
+import { checkMayaConnection, sendVideoToMaya, setupMayaDragData } from '@/lib/animo-bridge';
 import Link from 'next/link';
 import type { Video } from '@/lib/types';
 
@@ -85,6 +87,32 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   const [showLimitDialog, setShowLimitDialog] = useState(false);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
   const [donateForceTimer, setDonateForceTimer] = useState(false);
+  const [showMayaModal, setShowMayaModal] = useState(false);
+  const [isSendingToMaya, setIsSendingToMaya] = useState(false);
+
+  const handleMayaClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsSendingToMaya(true);
+    const conn = await checkMayaConnection(1200);
+    if (conn.connected) {
+      const res = await sendVideoToMaya({
+        videoUrl: video.videoUrl,
+        title: video.title,
+        fps: video.fps || 24,
+      });
+      setIsSendingToMaya(false);
+      if (res.success) {
+        toast({
+          title: "Sent to Maya! 🎬",
+          description: `Importing "${video.title}" into Maya as Image Plane reference.`,
+        });
+        return;
+      }
+    }
+    setIsSendingToMaya(false);
+    setShowMayaModal(true);
+  };
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [cardInView, setCardInView] = useState(false);
@@ -341,7 +369,10 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
     return (
       <>
       <Link href={`/shorts/${video.id}`} className="w-full cursor-pointer group/card block">
-        <div ref={containerRef} onMouseEnter={() => {
+        <div ref={containerRef}
+          draggable={!!video.videoUrl}
+          onDragStart={(e) => setupMayaDragData(e, video)}
+          onMouseEnter={() => {
             beginWatch(hoverKey, 'hover');
             setIsHovered(true);
             if (videoRef.current) {
@@ -433,6 +464,11 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
         open={showSaveToBoard}
         onOpenChange={setShowSaveToBoard}
       />
+      <SendToMayaModal
+        video={video}
+        open={showMayaModal}
+        onOpenChange={setShowMayaModal}
+      />
       </>
     )
   }
@@ -449,6 +485,8 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
       <>
       <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
         <div ref={containerRef}
+          draggable={!!video.videoUrl}
+          onDragStart={(e) => setupMayaDragData(e, video)}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           onClick={handleCardClick}
@@ -646,6 +684,11 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
         open={showSaveToBoard}
         onOpenChange={setShowSaveToBoard}
       />
+      <SendToMayaModal
+        video={video}
+        open={showMayaModal}
+        onOpenChange={setShowMayaModal}
+      />
       </>
     );
   }
@@ -655,6 +698,8 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
     <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
       <div
         ref={containerRef}
+        draggable={!!video.videoUrl}
+        onDragStart={(e) => setupMayaDragData(e, video)}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onClick={handleCardClick}
@@ -766,6 +811,9 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
               <Button variant="ghost" size="icon" onClick={handleShare} className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Share Link">
                 <Share2 className="text-white h-3.5 w-3.5" />
               </Button>
+              <Button variant="ghost" size="icon" onClick={handleMayaClick} className="h-7 w-7 rounded-full bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-300 backdrop-blur-sm" title="Send to Maya (or drag into Maya viewport)">
+                <MayaIcon className={`h-3.5 w-3.5 ${isSendingToMaya ? 'animate-spin' : ''}`} />
+              </Button>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Fullscreen">
@@ -872,6 +920,11 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
         video={video}
         open={showSaveToBoard}
         onOpenChange={setShowSaveToBoard}
+      />
+      <SendToMayaModal
+        video={video}
+        open={showMayaModal}
+        onOpenChange={setShowMayaModal}
       />
     </>
   );

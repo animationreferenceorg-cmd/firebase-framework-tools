@@ -15,6 +15,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { likeVideo, unlikeVideo, saveVideo, unsaveVideo } from '@/lib/firestore';
 import { SaveToBoardModal } from '@/components/SaveToBoardModal';
+import { SendToMayaModal, MayaIcon } from '@/components/SendToMayaModal';
+import { checkMayaConnection, sendVideoToMaya, setupMayaDragData } from '@/lib/animo-bridge';
 
 interface VideoPlayerProps {
     video: Video;
@@ -101,6 +103,31 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
     };
 
     const [showSaveToBoard, setShowSaveToBoard] = React.useState(false);
+    const [showMayaModal, setShowMayaModal] = React.useState(false);
+    const [isSendingToMaya, setIsSendingToMaya] = React.useState(false);
+
+    const handleMayaClick = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsSendingToMaya(true);
+        const conn = await checkMayaConnection(1200);
+        if (conn.connected) {
+            const res = await sendVideoToMaya({
+                videoUrl: video.videoUrl,
+                title: video.title,
+                fps: video.fps || fps || 24,
+            });
+            setIsSendingToMaya(false);
+            if (res.success) {
+                toast({
+                    title: "Sent to Maya! 🎬",
+                    description: `Importing "${video.title}" into Maya as Image Plane reference.`,
+                });
+                return;
+            }
+        }
+        setIsSendingToMaya(false);
+        setShowMayaModal(true);
+    };
 
     const handleBookmarkToggle = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -621,6 +648,20 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                                 <PencilLine className="h-4 w-4 text-pink-300 hover:text-pink-200" />
                             </Link>
                         </Button>
+
+                        {/* Send to Maya Button */}
+                        <Button
+                            type="button"
+                            onClick={handleMayaClick}
+                            draggable
+                            onDragStart={(e) => setupMayaDragData(e, video)}
+                            variant="ghost"
+                            size="icon"
+                            title="Send to Maya (or drag into Maya viewport)"
+                            className="hover:bg-cyan-500/20 text-cyan-400 hover:text-cyan-200 rounded-full h-8 w-8 transition-colors cursor-grab active:cursor-grabbing shrink-0 ml-1 bg-black/40 border border-cyan-500/20 sm:bg-transparent"
+                        >
+                            <MayaIcon className={`h-4 w-4 ${isSendingToMaya ? 'animate-spin' : ''}`} />
+                        </Button>
                     </div>
 
                     {/* Right: Like, Save, Share, Timeline Toggle & Fullscreen */}
@@ -694,6 +735,11 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                 video={video}
                 open={showSaveToBoard}
                 onOpenChange={setShowSaveToBoard}
+            />
+            <SendToMayaModal
+                video={video}
+                open={showMayaModal}
+                onOpenChange={setShowMayaModal}
             />
         </div>
     );

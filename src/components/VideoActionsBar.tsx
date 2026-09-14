@@ -14,8 +14,6 @@ import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
 import { checkLimit } from '@/lib/limits';
 import { SaveToBoardModal } from '@/components/SaveToBoardModal';
-import { SendToMayaModal, MayaIcon } from '@/components/SendToMayaModal';
-import { checkMayaConnection, sendVideoToMaya, setupMayaDragData } from '@/lib/animo-bridge';
 
 interface VideoActionsBarProps {
   video: Video;
@@ -30,8 +28,6 @@ export function VideoActionsBar({ video, userProfile }: VideoActionsBarProps) {
   const [showLimitDialog, setShowLimitDialog] = useState(false);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
   const [showSaveToBoard, setShowSaveToBoard] = useState(false);
-  const [showMayaModal, setShowMayaModal] = useState(false);
-  const [isSendingToMaya, setIsSendingToMaya] = useState(false);
 
   const isLiked = useMemo(() => {
     return userProfile?.likedVideoIds?.includes(video.id) ?? false;
@@ -40,29 +36,6 @@ export function VideoActionsBar({ video, userProfile }: VideoActionsBarProps) {
   const isSaved = useMemo(() => {
     return userProfile?.savedVideoIds?.includes(video.id) ?? false;
   }, [userProfile, video.id]);
-
-  const handleMayaClick = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsSendingToMaya(true);
-    const conn = await checkMayaConnection(1200);
-    if (conn.connected) {
-      const res = await sendVideoToMaya({
-        videoUrl: video.videoUrl,
-        title: video.title,
-        fps: video.fps || 24,
-      });
-      setIsSendingToMaya(false);
-      if (res.success) {
-        toast({
-          title: "Sent to Maya! 🎬",
-          description: `Importing "${video.title}" into Maya as Image Plane reference.`,
-        });
-        return;
-      }
-    }
-    setIsSendingToMaya(false);
-    setShowMayaModal(true);
-  };
 
   const handleLikeToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -179,21 +152,6 @@ export function VideoActionsBar({ video, userProfile }: VideoActionsBarProps) {
           <span className="text-white text-xs font-semibold drop-shadow-md">Share</span>
         </div>
 
-        {/* Send to Maya Button */}
-        <div className="flex flex-col items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleMayaClick}
-            draggable
-            onDragStart={(e) => setupMayaDragData(e, video)}
-            className="h-12 w-12 rounded-full bg-black/30 text-cyan-400 hover:bg-cyan-950/50 hover:text-cyan-300 backdrop-blur-sm transition-all cursor-grab active:cursor-grabbing border border-cyan-500/20 hover:border-cyan-500/40"
-            title="Send to Maya (or drag into Maya viewport)"
-          >
-            <MayaIcon className={`h-6 w-6 ${isSendingToMaya ? 'animate-spin' : ''}`} />
-          </Button>
-          <span className="text-white text-xs font-semibold drop-shadow-md">Maya</span>
-        </div>
 
         {/* Draw on Frames Button */}
         <div className="flex flex-col items-center gap-1">
@@ -224,7 +182,6 @@ export function VideoActionsBar({ video, userProfile }: VideoActionsBarProps) {
         onOpenChange={setShowDonateDialog}
       />
       <SaveToBoardModal video={video} open={showSaveToBoard} onOpenChange={setShowSaveToBoard} />
-      <SendToMayaModal video={video} open={showMayaModal} onOpenChange={setShowMayaModal} />
     </>
   );
 }

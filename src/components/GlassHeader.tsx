@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import AuthHeader from '@/components/AuthHeader';
-import { Film, Sparkles, Plus, PlayCircle, Layers } from 'lucide-react';
+import { Film, Sparkles, Plus, PlayCircle, Layers, LayoutGrid, Scissors } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { UpdatesModal } from '@/components/UpdatesModal';
@@ -49,11 +49,13 @@ export function GlassHeader() {
                     </div>
                 </div>
 
-                {/* Center: Streamlined 3-Pillar Mode Navigation */}
-                <nav className="hidden md:flex items-center gap-1.5 bg-white/5 rounded-full p-1 border border-white/5 mx-2 md:mx-4">
+                {/* Center: Streamlined Navigation */}
+                <nav className="hidden md:flex items-center gap-1 bg-white/5 rounded-full p-1 border border-white/5 mx-2 md:mx-4">
                     {[
-                        { label: 'Discover Library', href: '/home', icon: Film },
-                        { label: 'Community & Crews', href: '/feed', icon: Sparkles },
+                        { label: 'Discover', href: '/home', icon: Film },
+                        { label: 'Categories', href: '/categories', icon: LayoutGrid },
+                        { label: 'Clips', href: '/references', icon: Scissors },
+                        { label: 'Community', href: '/feed', icon: Sparkles },
                     ].map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname === item.href || (item.href !== '/home' && pathname.startsWith(item.href));
@@ -62,19 +64,14 @@ export function GlassHeader() {
                                 key={item.label}
                                 href={item.href}
                                 className={cn(
-                                    "relative px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 flex items-center gap-2",
+                                    "relative px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 flex items-center gap-1.5",
                                     isActive
-                                        ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-950/50"
+                                        ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-950/50"
                                         : "text-zinc-400 hover:text-white hover:bg-white/10"
                                 )}
                             >
                                 <Icon className="h-3.5 w-3.5" />
                                 <span>{item.label}</span>
-                                {(item as any).isPro && (
-                                    <span className="px-1.5 py-0.2 rounded-full bg-purple-950 text-purple-300 border border-purple-700/50 text-[9px] font-mono font-bold">
-                                        PRO
-                                    </span>
-                                )}
                             </Link>
                         );
                     })}

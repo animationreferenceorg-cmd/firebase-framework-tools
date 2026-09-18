@@ -53,18 +53,18 @@ export function CreatorBadge({
         className
       )}
     >
-      {/* Expanding pill — expands when the parent CARD is hovered */}
+      {/* Expanding pill — expands when the parent CARD or badge is hovered */}
       <div className={cn(
-        'flex items-center overflow-hidden rounded-full',
-        'bg-black/55 backdrop-blur-md border border-white/20 shadow-md',
+        'flex items-center overflow-hidden rounded-full group/badge',
+        'bg-black/65 backdrop-blur-md border border-white/20 hover:border-purple-400/50 shadow-lg shadow-black/40',
         'transition-all duration-300 ease-in-out',
-        // Collapsed to just the circle width; expands on card hover
-        'max-w-[32px] group-hover/card:max-w-[200px]',
+        // Collapsed to just the circle width; expands on card hover or badge hover
+        'max-w-[32px] group-hover/card:max-w-[220px] hover:max-w-[220px]',
       )}>
         {/* Creator avatar image or initial */}
         <div className={cn(
           'flex-shrink-0 flex items-center justify-center rounded-full font-bold text-white overflow-hidden',
-          'bg-gradient-to-br from-violet-500 to-fuchsia-500',
+          'bg-gradient-to-br from-purple-600 to-indigo-600 shadow-inner',
           circleSize
         )}>
           {avatarUrl ? (
@@ -74,16 +74,16 @@ export function CreatorBadge({
           )}
         </div>
 
-        {/* Expanded content — fades in on card hover */}
-        <div className="flex items-center gap-1.5 pr-2 pl-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-          <span className={cn('text-white/90 font-medium max-w-[110px] truncate', textSize)}>
+        {/* Expanded content — fades in on card hover or badge hover */}
+        <div className="flex items-center gap-1.5 pr-2.5 pl-1.5 opacity-0 group-hover/card:opacity-100 group-hover/badge:opacity-100 hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+          <span className={cn('text-white font-medium max-w-[120px] truncate', textSize)}>
             @{displayName}
           </span>
           <div className="w-px h-3 bg-white/25 flex-shrink-0" />
           {isInstagram ? (
             <Instagram className={cn(iconSize, 'text-pink-400 flex-shrink-0')} />
           ) : (
-            <ExternalLink className={cn(iconSize, 'text-blue-400 flex-shrink-0')} />
+            <ExternalLink className={cn(iconSize, 'text-purple-300 flex-shrink-0')} />
           )}
         </div>
       </div>

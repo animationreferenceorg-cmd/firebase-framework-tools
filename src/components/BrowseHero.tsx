@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import type { Video } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Play, Info, Volume2, VolumeX } from 'lucide-react';
-import ReactPlayer from 'react-player';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
+
+const ReactPlayer = dynamic(() => import('react-player'), { ssr: false });
 
 interface BrowseHeroProps {
     video?: Video | null;
@@ -13,12 +15,14 @@ interface BrowseHeroProps {
 }
 
 export function BrowseHero({ video, children }: BrowseHeroProps) {
+    const [isMounted, setIsMounted] = useState(false);
     const [isMuted, setIsMuted] = useState(true);
     const [isPlaying, setIsPlaying] = useState(true);
     const [showVideo, setShowVideo] = useState(false);
 
-    // Delay showing the video to prevent initial flicker or layout shift
+    // Mount on client and delay video to prevent hydration mismatch
     useEffect(() => {
+        setIsMounted(true);
         const timer = setTimeout(() => {
             setShowVideo(true);
         }, 100);
@@ -45,7 +49,7 @@ export function BrowseHero({ video, children }: BrowseHeroProps) {
                 )}
 
                 {/* Video Player */}
-                {video?.videoUrl && (
+                {isMounted && video?.videoUrl && (
                     <div className={`absolute inset-0 transition-opacity duration-1000 ${showVideo ? 'opacity-100' : 'opacity-0'}`}>
                         <ReactPlayer
                             url={video.videoUrl}

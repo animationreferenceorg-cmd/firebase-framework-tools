@@ -36,11 +36,8 @@ import { HomeHeroBanner } from '@/components/home/HomeHeroBanner';
 import { HomeProductLaunchAnnouncement } from '@/components/home/HomeProductLaunchAnnouncement';
 import { ArtistStoriesRail } from '@/components/home/ArtistStoriesRail';
 import { CommunityFeedShelf } from '@/components/home/CommunityFeedShelf';
-import { CuratedCategoryPillsShelf } from '@/components/home/CuratedCategoryPillsShelf';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
-import { VideoPlayer } from '@/components/VideoPlayer';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import Link from 'next/link';
 
 const VIDEOS_PER_PAGE = 30;
@@ -49,11 +46,9 @@ export default function HomePage() {
   const { user } = useAuth();
   const { userProfile } = useUser();
   const [allVideos, setAllVideos] = useState<Video[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDonateDialog, setShowDonateDialog] = useState(false);
-  const [selectedPickVideo, setSelectedPickVideo] = useState<Video | null>(null);
 
   // Pagination & Filters
   const [visibleCount, setVisibleCount] = useState(VIDEOS_PER_PAGE);
@@ -269,61 +264,6 @@ export default function HomePage() {
     [allVideos]
   );
 
-  // Generate daily random top community animation picks (seeded by current date)
-  const dailyCommunityPicks = useMemo(() => {
-    if (!allVideos || allVideos.length === 0) return [];
-
-    const candidates = allVideos.filter(v => 
-      !v.isShort && (v.thumbnailUrl || v.posterUrl)
-    );
-
-    if (candidates.length === 0) return [];
-
-    const communityCandidates = candidates.filter(
-      v => v.type === 'social' || (v.type as string) === 'instagram' || !!v.uploader || (v.tags && v.tags.length > 0)
-    );
-    const pool = [...(communityCandidates.length >= 3 ? communityCandidates : candidates)];
-
-    // Seed hash from date (YYYY-MM-DD)
-    const todayStr = new Date().toISOString().slice(0, 10);
-    let seed = 0;
-    for (let i = 0; i < todayStr.length; i++) {
-      seed = ((seed << 5) - seed) + todayStr.charCodeAt(i);
-      seed |= 0;
-    }
-
-    const picks: Array<{
-      video: Video;
-      bgGradient: string;
-      tag: string;
-      creator: string;
-    }> = [];
-
-    const gradients = [
-      'from-[#0284c7] via-[#0369a1] to-[#024368]', // Sky Blue
-      'from-[#ea580c] via-[#c2410c] to-[#7c2d12]', // Coral Orange
-      'from-[#d97706] via-[#b45309] to-[#78350f]', // Cyber Gold
-    ];
-
-    for (let i = 0; i < Math.min(3, pool.length); i++) {
-      const idx = Math.abs((seed + (i * 997)) % pool.length);
-      const chosenVideo = pool[idx];
-      pool.splice(idx, 1);
-
-      const tag = (chosenVideo.tags?.[0] || chosenVideo.categories?.[0] || 'COMMUNITY').toUpperCase();
-      const creator = chosenVideo.uploader ? `by ${chosenVideo.uploader}` : chosenVideo.author_name ? `by ${chosenVideo.author_name}` : 'Community Artist';
-
-      picks.push({
-        video: chosenVideo,
-        bgGradient: gradients[i % gradients.length],
-        tag,
-        creator,
-      });
-    }
-
-    return picks;
-  }, [allVideos]);
-
   return (
     <div className="min-h-screen text-foreground space-y-12 pb-20 pt-2 text-left">
       {/* 1. Header Section (Clean, Breathable Title & Search) */}
@@ -339,21 +279,29 @@ export default function HomePage() {
 
         {/* Search Bar & Fast Actions */}
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-80">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+          <div className="relative flex-1 md:w-96 lg:w-[420px]">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search 10,000+ references, tags, shots..."
-              className="pl-10 pr-4 h-11 bg-white/[0.04] border-white/10 hover:border-white/20 focus:border-purple-500 rounded-2xl text-xs text-white placeholder:text-zinc-500 shadow-inner"
+              placeholder="Search 7,600+ references, tags, studios..."
+              className="pl-10 pr-14 h-11 bg-white/[0.05] border-white/10 hover:border-purple-400/40 focus:border-purple-500 rounded-2xl text-xs text-white placeholder:text-zinc-400 shadow-inner backdrop-blur-md transition-colors"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-zinc-400 hover:text-white transition-colors px-1.5 py-0.5 rounded bg-white/10"
+              >
+                Clear
+              </button>
+            )}
           </div>
 
           <Button
             size="icon"
             variant="outline"
             onClick={() => setShowDonateDialog(true)}
-            className="h-11 w-11 rounded-2xl bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-zinc-300 hover:text-white shrink-0"
+            className="h-11 w-11 rounded-2xl bg-white/[0.05] border-white/10 hover:bg-purple-600/20 hover:border-purple-400/40 text-zinc-300 hover:text-white shrink-0 transition-all cursor-pointer shadow-md"
             title="Supporter Tier"
           >
             <Heart className="w-4 h-4 text-pink-400 fill-pink-500/30" />
@@ -376,64 +324,7 @@ export default function HomePage() {
         <CommunityFeedShelf />
       )}
 
-      {/* 4. SHELF: Browse Reference Specialties (Interactive Category Cards) */}
-      {!searchQuery && (
-        <CuratedCategoryPillsShelf 
-          onSelectPill={(pill) => setActivePill(pill as PillOption)} 
-          categories={categories}
-          videos={allVideos}
-        />
-      )}
-
-      {/* 5. SHELF: "Our Picks" Daily Community Highlights */}
-      {!searchQuery && dailyCommunityPicks.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-lg md:text-xl font-black text-white tracking-tight flex items-center gap-2">
-              Our Picks
-            </h3>
-          </div>
-
-          <div className="flex touch-pan-x snap-x snap-mandatory gap-5 overflow-x-auto pb-2 scrollbar-none sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-3">
-            {dailyCommunityPicks.map((pick) => (
-              <div
-                key={pick.video.id}
-                onClick={() => setSelectedPickVideo(pick.video)}
-                className={`group relative flex min-h-[220px] w-[82vw] max-w-[340px] shrink-0 snap-start cursor-pointer flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br ${pick.bgGradient} p-6 shadow-2xl transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] sm:w-auto sm:max-w-none`}
-              >
-                <div className="absolute inset-0 opacity-50 group-hover:opacity-65 transition-opacity mix-blend-luminosity">
-                  <img
-                    src={pick.video.thumbnailUrl || pick.video.posterUrl}
-                    alt={pick.video.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent pointer-events-none" />
-
-                <div className="relative z-10 flex items-center justify-between">
-                  <span className="px-2.5 py-1 rounded-xl bg-black/45 backdrop-blur-md text-[10px] font-black uppercase tracking-wider text-white border border-white/10 shadow-sm">
-                    {pick.tag}
-                  </span>
-                  <div className="p-2 rounded-xl bg-black/40 text-white backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
-                  </div>
-                </div>
-
-                <div className="relative z-10 text-left space-y-1 mt-auto">
-                  <h4 className="text-xl md:text-2xl font-black text-white drop-shadow-md leading-tight line-clamp-2">
-                    {pick.video.title}
-                  </h4>
-                  <p className="text-xs text-white/80 font-semibold drop-shadow-sm truncate">
-                    {pick.creator}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 6. SHELF: Full Reference Discovery Catalog */}
+      {/* 4. SHELF: Full Reference Discovery Catalog */}
       <section className="space-y-4 pt-4">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
@@ -480,18 +371,6 @@ export default function HomePage() {
           </div>
         )}
       </section>
-
-      {/* Video Modal Player for Our Picks */}
-      {selectedPickVideo && (
-        <Dialog open={!!selectedPickVideo} onOpenChange={(open) => !open && setSelectedPickVideo(null)}>
-          <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/95 border border-white/10 rounded-2xl text-white">
-            <DialogTitle className="sr-only">{selectedPickVideo.title}</DialogTitle>
-            <div className="aspect-video w-full">
-              <VideoPlayer video={selectedPickVideo} startsPaused={false} muted={false} />
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
 
       <DonateDialog open={showDonateDialog} onOpenChange={setShowDonateDialog} />
     </div>

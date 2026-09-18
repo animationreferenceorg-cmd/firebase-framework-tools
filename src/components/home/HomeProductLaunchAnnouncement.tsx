@@ -48,6 +48,60 @@ function LaunchCardImage({ launch }: { launch: typeof launches[number] }) {
   const [hasError, setHasError] = useState(false);
   const Icon = launch.icon;
 
+  if (launch.title === 'Paint') {
+    return (
+      <div className="h-full w-full bg-[#0d0a17] relative overflow-hidden flex flex-col justify-between p-3.5 border-b border-purple-500/20 group-hover:scale-[1.03] transition-transform duration-500">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(192,38,211,0.25),transparent_70%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(99,102,241,0.25),transparent_70%)]" />
+        
+        {/* Mockup Paint Header */}
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/60 border border-white/10 backdrop-blur-md">
+            <div className="w-2 h-2 rounded-full bg-red-400/80" />
+            <div className="w-2 h-2 rounded-full bg-yellow-400/80" />
+            <div className="w-2 h-2 rounded-full bg-green-400/80" />
+            <span className="text-[10px] font-mono text-zinc-400 ml-1">canvas.studio</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="px-2 py-0.5 rounded-md bg-purple-500/20 border border-purple-400/30 text-[9px] font-bold text-purple-300">
+              Onion Skin
+            </span>
+          </div>
+        </div>
+
+        {/* Mockup Canvas Gesture & Arc Path */}
+        <div className="relative z-10 flex-1 flex items-center justify-center my-1">
+          <svg className="w-full h-16" viewBox="0 0 200 70" fill="none">
+            <path d="M20 55 Q 60 10, 100 40 T 180 18" stroke="url(#paintGrad1)" strokeWidth="3.5" strokeLinecap="round" />
+            <path d="M30 62 Q 70 20, 110 46 T 190 26" stroke="rgba(217,70,239,0.3)" strokeWidth="2" strokeDasharray="4 4" />
+            <circle cx="100" cy="40" r="4" fill="#a855f7" className="animate-pulse" />
+            <defs>
+              <linearGradient id="paintGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#8b5cf6" />
+                <stop offset="50%" stopColor="#d946ef" />
+                <stop offset="100%" stopColor="#38bdf8" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+
+        {/* Mockup Timeline Bar */}
+        <div className="relative z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/60 border border-white/10">
+          <div className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 animate-pulse" />
+          <div className="flex-1 flex items-center gap-1">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div 
+                key={i} 
+                className={`h-1.5 flex-1 rounded-sm ${i === 4 ? 'bg-purple-500' : i < 6 ? 'bg-purple-500/30' : 'bg-white/10'}`} 
+              />
+            ))}
+          </div>
+          <span className="text-[8px] font-mono text-zinc-400">F:04</span>
+        </div>
+      </div>
+    );
+  }
+
   if (hasError) {
     return (
       <div className={`h-full w-full flex items-center justify-center bg-gradient-to-tr ${launch.accent} bg-zinc-900`}>

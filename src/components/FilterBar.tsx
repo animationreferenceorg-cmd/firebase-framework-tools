@@ -106,12 +106,12 @@ export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, 
                     aria-pressed={activeTab === 'trending'}
                     className={cn(
                         "relative min-h-10 shrink-0 py-2 text-sm font-semibold transition-colors md:min-h-0 md:py-0",
-                        activeTab === 'trending' ? "text-cyan-400" : "text-zinc-500 hover:text-zinc-300"
+                        activeTab === 'trending' ? "text-purple-400" : "text-zinc-500 hover:text-zinc-300"
                     )}
                 >
                     Trending
                     {activeTab === 'trending' && (
-                        <span className="absolute -bottom-2 left-0 right-0 h-0.5 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)]" />
+                        <span className="absolute -bottom-2 left-0 right-0 h-0.5 bg-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.6)]" />
                     )}
                 </button>
                 <button
@@ -165,15 +165,15 @@ export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, 
                 )}
 
                 {/* 2D/3D Segmented Control */}
-                <div className="flex shrink-0 rounded-lg border border-white/5 bg-zinc-900/80 p-1">
+                <div className="flex shrink-0 rounded-xl border border-white/10 bg-zinc-900/90 p-1 backdrop-blur-md">
                     {(['all', '2D', '3D'] as TypeOption[]).map((type) => (
                         <button
                             key={type}
                             onClick={() => setActiveType(type)}
                             className={cn(
-                                "min-h-9 rounded-md px-3 py-1.5 text-xs font-semibold transition-all sm:px-4",
+                                "min-h-8 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all sm:px-4 select-none",
                                 activeType === type
-                                    ? "bg-cyan-500 text-black shadow-lg shadow-cyan-500/20"
+                                    ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-950/50"
                                     : "text-zinc-400 hover:text-zinc-200"
                             )}
                         >

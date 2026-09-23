@@ -17,10 +17,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Skeleton } from './ui/skeleton';
 import { cn } from '@/lib/utils';
-import { User, Settings, Bookmark, Zap, LogOut, Edit3, Heart } from 'lucide-react';
+import { User, Settings, Bookmark, Zap, LogOut, Edit3, Heart, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { DonateDialog } from './DonateDialog';
+import { PricingDialog } from './PricingDialog';
 import { useUser } from '@/hooks/use-user';
 
 export default function AuthHeader() {
@@ -124,11 +124,25 @@ export default function AuthHeader() {
     <div className="flex items-center gap-2 md:gap-4">
       {user ? (
         <>
-          <DonateDialog>
-            <div className="animated-gradient-border p-[2px] rounded-full">
-              <Button variant="outline" className="relative z-10 bg-background hover:bg-background/80 rounded-full h-9 px-4 text-xs font-bold">Donate</Button>
-            </div>
-          </DonateDialog>
+          <PricingDialog>
+            {isPremium ? (
+              <button 
+                type="button"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-purple-500/20 via-pink-500/15 to-purple-500/20 text-purple-300 border border-purple-500/35 hover:border-purple-400 transition-all cursor-pointer shadow-sm"
+                title="Your Pro subscription is active"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+                <span>Pro</span>
+              </button>
+            ) : (
+              <div className="animated-gradient-border p-[2px] rounded-full cursor-pointer">
+                <Button variant="outline" className="relative z-10 bg-background hover:bg-background/80 rounded-full h-9 px-3.5 text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                  <span>Upgrade to Pro</span>
+                </Button>
+              </div>
+            )}
+          </PricingDialog>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -233,11 +247,12 @@ export default function AuthHeader() {
         </>
       ) : (
         <div className="flex items-center gap-2 md:gap-4">
-          <DonateDialog>
-            <div className="animated-gradient-border p-[2px] rounded-full">
-              <Button variant="outline" className="relative z-10 bg-background hover:bg-background/80 rounded-full h-9 px-4 text-xs font-bold">Donate</Button>
-            </div>
-          </DonateDialog>
+          <PricingDialog>
+            <Button variant="ghost" className="rounded-full h-9 px-3.5 text-xs font-bold text-zinc-300 hover:text-white hover:bg-white/10 flex items-center gap-1.5 cursor-pointer">
+              <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+              <span>Pricing</span>
+            </Button>
+          </PricingDialog>
           <Button asChild className="rounded-full h-9 px-5 text-xs font-bold bg-white text-black hover:bg-white/90">
             <Link href="/login">Sign In</Link>
           </Button>

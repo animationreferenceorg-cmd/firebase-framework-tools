@@ -990,7 +990,7 @@ export default function ProfilePage() {
                         ) : (
                           <span className={userProfile?.isPremium ? "text-purple-400 font-black" : "text-emerald-400 font-bold"}>
                             {userProfile?.isPremium ? (
-                              userProfile?.tier === 'tier5' ? 'Anim.works Pro ($5/mo)' :
+                              userProfile?.tier === 'tier5' ? 'AnimationReference Pro' :
                               `Supporter (${userProfile?.tier})`
                             ) : 'Free Artist Account ($0/mo)'}
                           </span>
@@ -1003,9 +1003,9 @@ export default function ProfilePage() {
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Button variant="default" onClick={() => setShowDonateDialog(true)} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold">
+                      <Button variant="default" onClick={() => setShowDonateDialog(true)} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold cursor-pointer">
                         <CreditCard className="mr-2 h-4 w-4" />
-                        {isSjsuStudent ? 'SJSU Partner Access Active' : userProfile?.isPremium ? 'Manage Pro Plan' : 'Upgrade to Pro ($5/mo)'}
+                        {isSjsuStudent ? 'SJSU Partner Access Active' : userProfile?.isPremium ? 'Manage Pro Plan' : 'Upgrade to Pro'}
                       </Button>
                       
                       {userProfile?.isPremium && !isSjsuStudent && (

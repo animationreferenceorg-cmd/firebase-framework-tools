@@ -1,16 +1,21 @@
 import { db, storage } from './firebase';
 import { doc, setDoc, getDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, collection, getDocs, QueryDocumentSnapshot, DocumentData, runTransaction } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { MoodboardItem, Moodboard, Video } from './types';
 
 export class MoodboardService {
 
     // Upload image to Firebase Storage
-    static async uploadImage(userId: string, blob: Blob): Promise<string> {
+    static async uploadImage(userId: string, blob: Blob, onProgress?: (percent: number) => void): Promise<string> {
         const filename = `moodboard-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const storageRef = ref(storage, `users/${userId}/moodboard_uploads/${filename}`);
 
-        await uploadBytes(storageRef, blob);
+        const task = uploadBytesResumable(storageRef, blob);
+        await new Promise<void>((resolve, reject) => {
+            task.on('state_changed', snapshot => {
+                onProgress?.(snapshot.totalBytes ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100) : 0);
+            }, reject, () => resolve());
+        });
         const downloadURL = await getDownloadURL(storageRef);
         return downloadURL;
     }
@@ -80,6 +85,41 @@ export class MoodboardService {
         await setDoc(docRef, { name, updatedAt: new Date() }, { merge: true });
     }
 
+    static async updateMoodboardCover(userId: string, moodboardId: string, thumbnailUrl: string) {
+        const docRef = doc(db, 'users', userId, 'moodboards', moodboardId);
+        await setDoc(docRef, { thumbnailUrl, updatedAt: new Date() }, { merge: true });
+    }
+
+    static async removeReferencesFromMoodboard(userId: string, moodboardId: string, referenceIds: string[]) {
+        const docRef = doc(db, 'users', userId, 'moodboards', moodboardId);
+        return runTransaction(db, async transaction => {
+            const snapshot = await transaction.get(docRef);
+            if (!snapshot.exists()) return [] as MoodboardItem[];
+            const items = (snapshot.data().items || []) as MoodboardItem[];
+            const nextItems = items.filter(item => !referenceIds.includes(item.videoId || item.videoData?.id || item.id));
+            transaction.set(docRef, { items: nextItems, itemCount: nextItems.length, updatedAt: new Date() }, { merge: true });
+            return nextItems;
+        });
+    }
+
+    static async saveUploadedReference(userId: string, video: Video) {
+        const refId = video.id;
+        await setDoc(doc(db, 'users', userId, 'moodboard_references', refId), {
+            ...JSON.parse(JSON.stringify(video)),
+            id: refId,
+            createdAt: new Date(),
+        }, { merge: true });
+    }
+
+    static async getUploadedReferences(userId: string): Promise<Video[]> {
+        const snapshot = await getDocs(collection(db, 'users', userId, 'moodboard_references'));
+        return snapshot.docs.map(item => ({ id: item.id, ...item.data() } as Video));
+    }
+
+    static async deleteUploadedReferences(userId: string, referenceIds: string[]) {
+        await Promise.all(referenceIds.map(referenceId => deleteDoc(doc(db, 'users', userId, 'moodboard_references', referenceId))));
+    }
+
     // File a saved reference into an inspiration and place it on that folder's canvas.
     static async addReferenceToMoodboard(userId: string, moodboardId: string, video: Video): Promise<MoodboardItem | null> {
         const docRef = doc(db, 'users', userId, 'moodboards', moodboardId);
@@ -97,6 +137,7 @@ export class MoodboardService {
             if (alreadySaved) return null;
 
             const mediaCount = items.filter(item => item.type === 'video' || item.type === 'image').length;
+            const v = video as any;
             const thumb = video.thumbnailUrl || video.posterUrl || '';
 
             const normalizedVideo: Record<string, any> = {
@@ -105,12 +146,12 @@ export class MoodboardService {
                 videoUrl: video.videoUrl || '',
                 thumbnailUrl: thumb,
                 posterUrl: video.posterUrl || thumb,
-                categories: video.categories || (video.category ? [video.category] : ['Reference']),
-                category: video.category || video.categories?.[0] || 'Reference',
+                categories: video.categories || (v.category ? [v.category] : ['Reference']),
+                category: v.category || video.categories?.[0] || 'Reference',
                 tags: video.tags || [],
                 description: video.description || '',
-                sourceUrl: video.sourceUrl || '',
-                sourceAuthorName: video.sourceAuthorName || '',
+                sourceUrl: v.sourceUrl || '',
+                sourceAuthorName: v.sourceAuthorName || '',
             };
 
             const item: MoodboardItem = {

@@ -115,13 +115,13 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
     const clipId = await createReferenceClip({
       creatorId: user.uid,
       creatorName: userProfile?.displayName || userProfile?.username || user.displayName || 'Animator',
-      creatorUsername: userProfile?.username || null,
-      creatorAvatar: userProfile?.photoURL || user.photoURL || null,
+      creatorUsername: userProfile?.username || undefined,
+      creatorAvatar: userProfile?.photoURL || user.photoURL || undefined,
       sourceUrl: '',
       sourcePlatform: 'upload',
       storagePath,
       uploadedMediaUrl: mediaUrl,
-      thumbnailUrl: finalThumb || null,
+      thumbnailUrl: finalThumb || undefined,
       mediaType: isVideo ? 'video' : file.type === 'image/gif' ? 'gif' : 'image',
       mimeType: file.type,
       startTime: 0,
@@ -131,12 +131,12 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
       tags: cleanTags,
       isPrivate: Boolean(form.isPrivate),
       communityVisible: !form.isPrivate,
-      removedFromCreatorAt: null,
-      primaryBoardId: form.boardId || null,
+      removedFromCreatorAt: undefined,
+      primaryBoardId: form.boardId || undefined,
       captureStatus: 'ready',
       captureStage: 'Reference ready',
       captureProgress: 100,
-      bunnySyncStatus: null,
+      bunnySyncStatus: undefined,
     });
 
     if (form.boardId) {

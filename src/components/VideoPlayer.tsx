@@ -3,8 +3,7 @@
 
 import * as React from 'react';
 import type { Video } from '@/lib/types';
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Rewind, FastForward, Camera, ExternalLink, Instagram, Film, Share2, Heart, Bookmark, FlipHorizontal, PencilLine } from 'lucide-react';
-import Link from 'next/link';
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Rewind, FastForward, Camera, ExternalLink, Instagram, Film, Share2, Heart, Bookmark, FlipHorizontal } from 'lucide-react';
 import { CreatorBadge } from '@/components/CreatorBadge';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -129,7 +128,7 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
     const [videoError, setVideoError] = React.useState(false);
     const [fps, setFps] = React.useState<number>(video.fps || 24);
     const [isFlipped, setIsFlipped] = React.useState(false);
-        const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+    const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
     React.useEffect(() => {
         setFps(video.fps || 24);
@@ -606,20 +605,6 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
                             )}
                         >
                             <FlipHorizontal className="h-4 w-4" />
-                        </Button>
-
-                        {/* Draw on Frames Button */}
-                        <Button
-                            type="button"
-                            asChild
-                            variant="ghost"
-                            size="icon"
-                            title="Draw on Frames (Pencil Over Reference)"
-                            className="hover:bg-white/20 text-white rounded-full h-8 w-8 transition-colors cursor-pointer shrink-0 ml-1 bg-black/40 border border-white/5 sm:bg-transparent"
-                        >
-                            <Link href={`/paint?refVideoUrl=${encodeURIComponent(video.videoUrl)}&refTitle=${encodeURIComponent(video.title)}&pinned=true&fps=${video.fps || 24}`}>
-                                <PencilLine className="h-4 w-4 text-pink-300 hover:text-pink-200" />
-                            </Link>
                         </Button>
                     </div>
 

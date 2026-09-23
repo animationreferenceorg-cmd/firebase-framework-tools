@@ -1,11 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { collection, getDocs, query, limit, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { getSnapshotVideos } from '@/lib/videoSnapshot';
-import type { Video, Category } from '@/lib/types';
-import { findCategoryThumbnailMatch } from '@/lib/category-utils';
+import type { Video } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -31,7 +28,7 @@ import {
 import { FilterBar, TabOption, TypeOption, PillOption } from '@/components/FilterBar';
 import { VideoGrid } from '@/components/VideoGrid';
 import { VideoCard } from '@/components/VideoCard';
-import { DonateDialog } from '@/components/DonateDialog';
+import { PricingDialog } from '@/components/PricingDialog';
 import { HomeHeroBanner } from '@/components/home/HomeHeroBanner';
 import { HomeProductLaunchAnnouncement } from '@/components/home/HomeProductLaunchAnnouncement';
 import { ArtistStoriesRail } from '@/components/home/ArtistStoriesRail';
@@ -48,7 +45,7 @@ export default function HomePage() {
   const [allVideos, setAllVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showDonateDialog, setShowDonateDialog] = useState(false);
+  const [showPricingDialog, setShowPricingDialog] = useState(false);
 
   // Pagination & Filters
   const [visibleCount, setVisibleCount] = useState(VIDEOS_PER_PAGE);
@@ -62,27 +59,8 @@ export default function HomePage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const categoriesQuery = query(collection(db, "categories"), where("status", "==", "published"), limit(100));
-        const [videos, categorySnapshot] = await Promise.all([
-          getSnapshotVideos(),
-          getDocs(categoriesQuery)
-        ]);
-
-        const fetchedCategories = categorySnapshot.docs.map(doc => ({
-          id: doc.id,
-          href: `/categories?category=${doc.id}`,
-          ...doc.data()
-        } as Category));
-
-        fetchedCategories.forEach(cat => {
-          if (!cat.imageUrl || cat.imageUrl.includes('placehold.co')) {
-            const match = findCategoryThumbnailMatch(cat, videos);
-            if (match) cat.imageUrl = match.thumbnailUrl || match.posterUrl;
-          }
-        });
-
+        const videos = await getSnapshotVideos();
         setAllVideos(videos);
-        setCategories(fetchedCategories);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -298,13 +276,13 @@ export default function HomePage() {
           </div>
 
           <Button
-            size="icon"
             variant="outline"
-            onClick={() => setShowDonateDialog(true)}
-            className="h-11 w-11 rounded-2xl bg-white/[0.05] border-white/10 hover:bg-purple-600/20 hover:border-purple-400/40 text-zinc-300 hover:text-white shrink-0 transition-all cursor-pointer shadow-md"
-            title="Supporter Tier"
+            onClick={() => setShowPricingDialog(true)}
+            className="h-11 px-3.5 rounded-2xl bg-white/[0.05] border-white/10 hover:bg-purple-600/20 hover:border-purple-400/40 text-zinc-300 hover:text-white shrink-0 transition-all cursor-pointer shadow-md flex items-center gap-1.5 font-bold text-xs"
+            title="Animation Reference Pro Plans"
           >
-            <Heart className="w-4 h-4 text-pink-400 fill-pink-500/30" />
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span className="hidden sm:inline">Pricing</span>
           </Button>
         </div>
       </div>
@@ -372,7 +350,7 @@ export default function HomePage() {
         )}
       </section>
 
-      <DonateDialog open={showDonateDialog} onOpenChange={setShowDonateDialog} />
+      <PricingDialog open={showPricingDialog} onOpenChange={setShowPricingDialog} />
     </div>
   );
 }

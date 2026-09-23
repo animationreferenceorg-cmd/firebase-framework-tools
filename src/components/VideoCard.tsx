@@ -26,29 +26,31 @@ import type { Video } from '@/lib/types';
 
 function getPreviewUrl(url?: string): string | undefined {
   if (!url) return undefined;
-  let targetUrl: string | undefined = url;
-  if (url.includes('playlist.m3u8')) {
-    targetUrl = url.replace('playlist.m3u8', 'play_480p.mp4');
-  } else if (url.startsWith('<iframe')) {
-    const match = url.match(/src=["']([^"']+)["']/);
+  let targetUrl: string | undefined = url.trim();
+  if (targetUrl.includes('playlist.m3u8')) {
+    targetUrl = targetUrl.replace('playlist.m3u8', 'play_480p.mp4');
+  } else if (targetUrl.startsWith('<iframe')) {
+    const match = targetUrl.match(/src=["']([^"']+)["']/);
     targetUrl = match ? match[1] : undefined;
-  }
-  if (!targetUrl) return undefined;
-  if (targetUrl.includes('.mp4') && !targetUrl.includes('#t=')) {
-    return `${targetUrl}#t=0.1`;
   }
   return targetUrl;
 }
 
+function getYouTubeId(url?: string): string | null {
+  if (!url) return null;
+  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/i);
+  return match ? match[1] : null;
+}
+
 function isPlayableVideoUrl(url?: string): boolean {
   if (!url) return false;
-  // Direct video formats
-  if (url.includes('.mp4') || url.includes('.webm')) return true;
-  // Firebase Storage URLs (both firebasestorage.googleapis.com and storage.googleapis.com)
-  if (url.includes('firebasestorage.googleapis.com') || url.includes('storage.googleapis.com')) return true;
-  // Instagram and TikTok embed pages are not directly playable via <video>
-  if (url.includes('instagram.com') || url.includes('tiktok.com')) return false;
-  return true; // assume playable otherwise
+  const clean = url.toLowerCase();
+  if (clean.includes('youtube.com') || clean.includes('youtu.be') || clean.includes('vimeo.com') || clean.includes('instagram.com') || clean.includes('tiktok.com')) {
+    return false;
+  }
+  if (clean.includes('.mp4') || clean.includes('.webm') || clean.includes('playlist.m3u8')) return true;
+  if (clean.includes('firebasestorage.googleapis.com') || clean.includes('storage.googleapis.com') || clean.includes('b-cdn.net') || clean.includes('assets.reflix.dev')) return true;
+  return false;
 }
 
 import { useWatchTracker } from '@/hooks/use-watch-tracker';
@@ -131,23 +133,34 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   const [optimisticSaved, setOptimisticSaved] = useState<boolean | null>(null);
   const [likeCountDelta, setLikeCountDelta] = useState(0);
   const [showSaveToBoard, setShowSaveToBoard] = useState(false);
+  const youtubeId = useMemo(() => getYouTubeId(video.videoUrl), [video.videoUrl]);
 
   const isLiked = optimisticLiked !== null ? optimisticLiked : isLikedProp;
   const isSaved = optimisticSaved !== null ? optimisticSaved : isSavedProp;
   const displayLikeCount = Math.max(0, (video.likeCount ?? 0) + likeCountDelta);
 
   useEffect(() => {
+    const videoElem = videoRef.current;
+    if (!videoElem) return;
+
     if (isHovered) {
-      if (videoRef.current) {
-        const playPromise = videoRef.current.play();
+      const attemptPlay = () => {
+        const playPromise = videoElem.play();
         if (playPromise !== undefined) {
           playPromise.catch(() => {});
         }
+      };
+
+      if (videoElem.readyState >= 2) {
+        attemptPlay();
+      } else {
+        videoElem.addEventListener('canplay', attemptPlay, { once: true });
+        videoElem.load();
       }
-    } else if (!isHovered && videoRef.current) {
-      videoRef.current.pause();
+    } else {
+      videoElem.pause();
       try {
-        videoRef.current.currentTime = 0;
+        videoElem.currentTime = 0;
       } catch {}
     }
   }, [isHovered]);
@@ -168,13 +181,10 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   }, [isHovered]);
 
   const handleMouseEnter = () => {
-    // Timed, not counted: a hover only contributes once the preview has been
-    // running past the grace period.
+    setCardInView(true);
     beginWatch(hoverKey, 'hover');
     if (video.isShort || poster) return;
-    hoverTimeoutRef.current = setTimeout(() => {
-      setIsHovered(true);
-    }, 150);
+    setIsHovered(true);
   };
 
   const handleMouseLeave = () => {
@@ -711,43 +721,58 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
         {video.videoUrl && !video.isShort && !poster && isPlayableVideoUrl(video.videoUrl) && (
           <video
             ref={videoRef}
-            src={cardInView ? getPreviewUrl(video.videoUrl) : undefined}
+            src={cardInView || isHovered ? getPreviewUrl(video.videoUrl) : undefined}
             preload="metadata"
             muted
             loop
             playsInline
             className={cn(
-              "absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none z-[5]",
+              "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none z-[5]",
               isHovered && !isPlayerOpen ? "opacity-100 scale-110" : "opacity-0 scale-100"
             )}
           />
         )}
 
+        {/* YouTube hover preview for YouTube reference cards */}
+        {youtubeId && !video.isShort && !poster && isHovered && !isPlayerOpen && (
+          <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-[5]">
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeId}&modestbranding=1&playsinline=1`}
+              className="w-full h-full scale-125 object-cover pointer-events-none"
+              tabIndex={-1}
+              loading="lazy"
+              allow="autoplay"
+            />
+          </div>
+        )}
+
         {/* Subtle creator badge — top-left, always visible for any video with uploader/originalUrl */}
         <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} avatarUrl={video.authorAvatar || (video as any).author_avatar || (video as any).creatorAvatar} />
 
-        {/* Dark Overlay Gradient (deepens on hover for contrast) */}
+        {/* Dark Overlay Gradient (softens on hover so video is crystal clear) */}
         <div className={cn(
-          "absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent pointer-events-none transition-opacity duration-300 z-10",
-          isHovered ? "opacity-100" : "opacity-60"
+          "absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none transition-opacity duration-300 z-10",
+          isHovered ? "opacity-30" : "opacity-60"
         )} />
 
-        {/* Hover Center Play Circle Indicator */}
-        <div className={cn(
-          "absolute inset-0 flex items-center justify-center pointer-events-none z-20 transition-all duration-300",
-          isHovered ? "opacity-100 scale-100" : "opacity-0 scale-75"
-        )}>
-          <div className="w-12 h-12 rounded-full bg-purple-600/90 text-white flex items-center justify-center shadow-2xl backdrop-blur-md border border-white/20">
-            <Play className="w-5 h-5 fill-white ml-0.5" />
+        {/* Hover Center Play Circle Indicator (only for shorts/posters where video preview is disabled) */}
+        {(video.isShort || poster) && (
+          <div className={cn(
+            "absolute inset-0 flex items-center justify-center pointer-events-none z-20 transition-all duration-300",
+            isHovered ? "opacity-100 scale-100" : "opacity-0 scale-75"
+          )}>
+            <div className="w-12 h-12 rounded-full bg-purple-600/90 text-white flex items-center justify-center shadow-2xl backdrop-blur-md border border-white/20">
+              <Play className="w-5 h-5 fill-white ml-0.5" />
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Bottom Title & Action Controls Bar (Reveals on Hover) */}
-        <div className={cn(
-          "absolute bottom-0 left-0 right-0 p-3 transition-all duration-300 z-30 pointer-events-auto",
-          isHovered ? "opacity-100 translate-y-0" : "opacity-100 sm:opacity-90"
-        )}>
-          <h3 className="text-white font-bold text-xs sm:text-sm truncate drop-shadow-md mb-1.5">
+        {/* Bottom Title & Action Controls Bar */}
+        <div className="absolute bottom-0 left-0 right-0 p-3 transition-all duration-300 z-30 pointer-events-auto">
+          <h3 className={cn(
+            "text-white font-bold text-xs sm:text-sm truncate drop-shadow-md transition-all duration-300 ease-in-out",
+            isHovered ? "opacity-0 -translate-y-2 pointer-events-none h-0 overflow-hidden mb-0" : "opacity-100 translate-y-0 mb-1.5"
+          )}>
             {displayTitle}
           </h3>
 

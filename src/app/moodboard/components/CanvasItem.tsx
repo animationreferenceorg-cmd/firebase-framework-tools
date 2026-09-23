@@ -175,7 +175,10 @@ export const CanvasItem = React.memo(({
             case 'image':
             default:
                 return (
-                    <div className="w-full h-full pointer-events-auto rounded-xl overflow-hidden">
+                    <div
+                        className="moodboard-protected-media w-full h-full pointer-events-auto rounded-xl overflow-hidden select-none"
+                        onContextMenu={(e) => e.preventDefault()}
+                    >
                         <MoodboardItemCard
                             video={item.video!}
                             className="w-full h-full rounded-xl border-2 border-purple-500/0 hover:border-purple-500/50 transition-colors"

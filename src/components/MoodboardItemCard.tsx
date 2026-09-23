@@ -37,9 +37,10 @@ function Player({ playerRef, ...props }: any) {
 
 import { useWatchTracker } from '@/hooks/use-watch-tracker';
 
-export function MoodboardItemCard({ video, className, onMaximize, playbackSpeed = 1.0, hoverDelay = 0 }: MoodboardItemCardProps) {
+export function MoodboardItemCard({ video, className, onMaximize, playbackSpeed = 1.0, hoverDelay = 180 }: MoodboardItemCardProps) {
     const [isHovered, setIsHovered] = useState(false);
     const [isImageLoaded, setIsImageLoaded] = useState(false);
+    const [isPreviewReady, setIsPreviewReady] = useState(false);
     const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const { beginWatch, endWatch } = useWatchTracker();
@@ -60,6 +61,10 @@ export function MoodboardItemCard({ video, className, onMaximize, playbackSpeed 
             } catch {}
         }
     }, [isHovered]);
+
+    useEffect(() => {
+        setIsPreviewReady(false);
+    }, [video]);
 
     const handleMouseEnter = () => {
         beginWatch(hoverKey, 'hover');
@@ -87,9 +92,10 @@ export function MoodboardItemCard({ video, className, onMaximize, playbackSpeed 
 
     return (
         <div
-            className={cn("relative w-full h-full bg-black rounded-lg overflow-hidden group border border-white/10", className)}
+            className={cn("moodboard-protected-media relative w-full h-full bg-black rounded-lg overflow-hidden group border border-white/10 select-none", className)}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
+            onContextMenu={(e) => e.preventDefault()}
         >
             {!isImageLoaded && <Skeleton className="absolute inset-0 bg-zinc-800" />}
 
@@ -98,8 +104,10 @@ export function MoodboardItemCard({ video, className, onMaximize, playbackSpeed 
                 src={imageUrl}
                 alt={title || 'Moodboard Item'}
                 fill
+                draggable={false}
+                style={{ userSelect: 'none' }}
                 className={cn(
-                    "object-cover transition-opacity duration-300",
+                    "object-cover transition-opacity duration-300 pointer-events-none select-none",
                     !isImageLoaded && "opacity-0"
                 )}
                 onLoad={() => setIsImageLoaded(true)}
@@ -114,12 +122,18 @@ export function MoodboardItemCard({ video, className, onMaximize, playbackSpeed 
                     muted
                     loop
                     playsInline
+                    draggable={false}
+                    onCanPlay={() => setIsPreviewReady(true)}
+                    style={{ userSelect: 'none' }}
                     className={cn(
-                        "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none z-10",
-                        isHovered ? "opacity-100" : "opacity-0"
+                        "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none z-10 select-none",
+                        isHovered && isPreviewReady ? "opacity-100" : "opacity-0"
                     )}
                 />
             )}
+
+            {/* Transparent DRM Shield barrier preventing browser direct media grabs */}
+            <div className="absolute inset-0 z-[12] pointer-events-none select-none" />
 
             {/* Overlay Title */}
             {title && (

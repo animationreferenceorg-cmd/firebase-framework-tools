@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react
 import { useUser } from '@/hooks/use-user';
 import { collection, query, where, documentId, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { unlikeVideo, unsaveVideo } from '@/lib/firestore';
 import type { Video, LocalImage, Moodboard, MoodboardItem } from '@/lib/types';
 
 import { MoodboardService } from '@/lib/moodboard-service';
@@ -14,8 +15,8 @@ import { Button } from '@/components/ui/button';
 import { 
     ChevronLeft, Plus, Image as ImageIcon, ArrowLeft, Layout, Trash2, Search, X, ChevronDown,
     MousePointer, Hand, Type, StickyNote, Square, Circle, Triangle, 
-    ArrowUpRight, ArrowRight, Pen, Pencil, Eraser, ZoomIn, ZoomOut, Maximize2, 
-    MoreHorizontal, Sun, Moon 
+    ArrowRight, Pen, Pencil, Eraser, ZoomIn, ZoomOut, Maximize2, 
+    MoreHorizontal, Sun, Moon, Presentation, Upload
 } from 'lucide-react';
 
 import Link from 'next/link';
@@ -28,8 +29,9 @@ import { CanvasItem } from './components/CanvasItem';
 import { DraggableSidebarItem } from './components/DraggableSidebarItem';
 import { useMoodboardInteraction } from './hooks/useMoodboardInteraction';
 import { PropertyToolbar } from './components/PropertyToolbar';
-import { ConnectionLine } from './components/ConnectionLine';
-import { MoodboardDashboard } from './components/MoodboardDashboard';
+import { MoodboardDashboard, getFolderReferences } from './components/MoodboardDashboard';
+import { PitchDeckExportModal } from './components/PitchDeckExportModal';
+import { AntiScreenshotShield, AntiScreenshotBadge } from './components/AntiScreenshotShield';
 import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
@@ -73,6 +75,29 @@ const getConstrainedDimensions = (width: number, height: number, maxSize: number
     }
 };
 
+const getVideoPoster = (file: File): Promise<{ poster: Blob; width: number; height: number }> => new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    video.onloadeddata = () => { video.currentTime = Math.min(0.25, video.duration || 0); };
+    video.onseeked = () => {
+        const width = video.videoWidth || 1280;
+        const height = video.videoHeight || 720;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d')?.drawImage(video, 0, 0, width, height);
+        canvas.toBlob((poster) => {
+            URL.revokeObjectURL(url);
+            if (poster) resolve({ poster, width, height });
+            else reject(new Error('Could not create video poster'));
+        }, 'image/jpeg', 0.88);
+    };
+    video.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read video')); };
+    video.src = url;
+});
+
 function MoodboardContent() {
     const { user } = useAuth();
     const { userProfile } = useUser();
@@ -82,15 +107,33 @@ function MoodboardContent() {
     const { setOpen: setSidebarOpen } = useSidebar();
     const searchParams = useSearchParams();
     const boardParam = searchParams.get('board');
+    const uploadOnOpen = searchParams.get('upload') === '1';
     
     // Sync URL board parameter with local board state
     useEffect(() => {
         setCurrentBoardId(boardParam);
     }, [boardParam]);
+
+    useEffect(() => {
+        if (!uploadOnOpen || !boardParam) return;
+        const timer = window.setTimeout(() => {
+            fileInputRef.current?.click();
+            router.replace(`/moodboard?board=${boardParam}`, { scroll: false });
+        }, 500);
+        return () => window.clearTimeout(timer);
+    }, [uploadOnOpen, boardParam, router]);
     
     // Page & UI settings
     const [showLimitDialog, setShowLimitDialog] = useState(false);
     const [showDonateDialog, setShowDonateDialog] = useState(false);
+    const [showPitchDeckModal, setShowPitchDeckModal] = useState(false);
+    const [dashboardUploadBoardId, setDashboardUploadBoardId] = useState<string | null>(null);
+    const [isDashboardUploading, setIsDashboardUploading] = useState(false);
+    const [dashboardUploadProgress, setDashboardUploadProgress] = useState(0);
+    const [pitchDeckData, setPitchDeckData] = useState<{
+        boardName: string;
+        items: DraggableCanvasItem[];
+    } | null>(null);
     const [likedVideos, setLikedVideos] = useState<Video[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedLibraryTags, setSelectedLibraryTags] = useState<string[]>([]);
@@ -268,6 +311,8 @@ function MoodboardContent() {
     const libraryButtonRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const dashboardFileInputRef = useRef<HTMLInputElement>(null);
+    const dashboardUploadBoardIdRef = useRef<string | null>(null);
 
     // Context Menu State
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number, visible: boolean }>({ x: 0, y: 0, visible: false });
@@ -403,8 +448,9 @@ function MoodboardContent() {
             const combinedIds = Array.from(new Set([...savedIds, ...likedIds]));
 
             if (combinedIds.length === 0) {
-                setLikedVideos([]);
-                setAllSavedReferences([]);
+                const uploadedReferences = await MoodboardService.getUploadedReferences(userProfile.uid);
+                setLikedVideos(uploadedReferences);
+                setAllSavedReferences(uploadedReferences);
                 setLoading(false);
                 return;
             }
@@ -461,8 +507,10 @@ function MoodboardContent() {
                     if (video) allCombinedList.push(video);
                 });
 
-                setLikedVideos(likedList.length > 0 ? likedList : allCombinedList);
-                setAllSavedReferences(allCombinedList);
+                const uploadedReferences = await MoodboardService.getUploadedReferences(userProfile.uid);
+                const allReferences = [...allCombinedList, ...uploadedReferences.filter(upload => !allCombinedList.some(reference => reference.id === upload.id))];
+                setLikedVideos(likedList.length > 0 ? [...likedList, ...uploadedReferences.filter(upload => !likedList.some(reference => reference.id === upload.id))] : allReferences);
+                setAllSavedReferences(allReferences);
             } catch (e) {
                 console.error("Failed to fetch references", e);
             } finally {
@@ -487,7 +535,7 @@ function MoodboardContent() {
             try {
                 const items = await MoodboardService.loadMoodboard(userProfile.uid, currentBoardId);
                 if (items) {
-                    const mappedItems: DraggableCanvasItem[] = items.map((item, idx) => {
+                    const mappedItems: DraggableCanvasItem[] = items.filter(item => item.type !== 'connection').map((item, idx) => {
                         const videoObj = item.videoData || {
                             id: item.videoId || item.id,
                             title: (item as any).title || 'Saved Reference',
@@ -568,7 +616,8 @@ function MoodboardContent() {
                 if (item.type === 'video' || item.type === 'image') {
                     cleanItem.videoData = JSON.parse(JSON.stringify(item.video || {}));
                     cleanItem.videoId = item.video?.id || item.id;
-                    cleanItem.imageUrl = item.video?.thumbnailUrl || item.video?.posterUrl || (item.video as any)?.url || null;
+                    const vid = item.video as any;
+                    cleanItem.imageUrl = vid?.thumbnailUrl || vid?.posterUrl || vid?.url || null;
                 }
 
                 return cleanItem;
@@ -1201,7 +1250,7 @@ function MoodboardContent() {
         }
     };
 
-    // Handle manual image files upload selection
+    // Upload image and video references directly into the active board.
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!currentBoardId || !userProfile?.uid || !e.target.files) return;
 
@@ -1258,12 +1307,87 @@ function MoodboardContent() {
                         variant: "destructive"
                     });
                 }
+            } else if (file.type.startsWith('video/')) {
+                try {
+                    toast({ title: 'Uploading video reference...', description: `Preparing ${file.name}` });
+                    const { poster, width: naturalWidth, height: naturalHeight } = await getVideoPoster(file);
+                    const { width, height } = getConstrainedDimensions(naturalWidth, naturalHeight);
+                    const [videoUrl, posterUrl] = await Promise.all([
+                        MoodboardService.uploadImage(userProfile.uid, file),
+                        MoodboardService.uploadImage(userProfile.uid, poster),
+                    ]);
+                    const newId = `video-${Date.now()}-${idx}`;
+                    setCanvasItems(prev => [...prev, {
+                        id: newId,
+                        type: 'video',
+                        video: { id: newId, title: file.name, thumbnailUrl: posterUrl, posterUrl, videoUrl, description: 'Uploaded directly to this board', tags: [] } as Video,
+                        imageUrl: posterUrl,
+                        x: dropX - width / 2 + (idx * 30),
+                        y: dropY - height / 2 + (idx * 30),
+                        width,
+                        height,
+                        zIndex: getMaxZIndex() + 1,
+                    }]);
+                    toast({ title: 'Video added to board', description: file.name });
+                } catch {
+                    toast({ title: 'Video upload failed', description: `Failed to upload ${file.name}`, variant: 'destructive' });
+                }
             }
         });
 
         // Reset file input
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
+        }
+    };
+
+    // Dashboard uploads deliberately bypass the spatial canvas and save straight
+    // into the selected board's gallery.
+    const handleDashboardReferenceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const boardId = dashboardUploadBoardIdRef.current || dashboardUploadBoardId;
+        if (!boardId || !userProfile?.uid || !e.target.files) return;
+
+        try {
+            setIsDashboardUploading(true);
+            const files = Array.from(e.target.files);
+            for (const [index, file] of files.entries()) {
+                const setFileProgress = (percent: number) => setDashboardUploadProgress(Math.round(((index + percent / 100) / files.length) * 100));
+                const id = `upload-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+                let reference: Video;
+                if (file.type.startsWith('video/')) {
+                    const { poster } = await getVideoPoster(file);
+                    const videoUrl = await MoodboardService.uploadImage(userProfile.uid, file, percent => setFileProgress(percent * 0.7));
+                    const posterUrl = await MoodboardService.uploadImage(userProfile.uid, poster, percent => setFileProgress(70 + percent * 0.3));
+                    reference = { id, title: file.name, thumbnailUrl: posterUrl, posterUrl, videoUrl, description: 'Uploaded directly to this board', tags: [], categories: ['Reference'] } as Video;
+                } else if (file.type.startsWith('image/')) {
+                    const imageUrl = await MoodboardService.uploadImage(userProfile.uid, file, setFileProgress);
+                    reference = { id, title: file.name, thumbnailUrl: imageUrl, posterUrl: imageUrl, videoUrl: '', description: 'Uploaded directly to this board', tags: [], categories: ['Reference'] } as Video;
+                } else {
+                    continue;
+                }
+
+                const item = await MoodboardService.addReferenceToMoodboard(userProfile.uid, boardId, reference);
+                await MoodboardService.saveUploadedReference(userProfile.uid, reference);
+                if (item) {
+                    setMoodboards(prev => prev.map(board => board.id === boardId ? {
+                        ...board,
+                        items: [...(board.items || []), item],
+                        itemCount: (board.itemCount || 0) + 1,
+                        updatedAt: new Date(),
+                    } : board));
+                }
+                setAllSavedReferences(prev => prev.some(saved => saved.id === reference.id) ? prev : [reference, ...prev]);
+            }
+            toast({ title: 'References uploaded', description: 'Added directly to this board.' });
+        } catch (error) {
+            console.error('Board reference upload failed:', error);
+            toast({ title: 'Upload failed', description: 'Could not add the selected reference files.', variant: 'destructive' });
+        } finally {
+            setIsDashboardUploading(false);
+            setDashboardUploadProgress(0);
+            if (dashboardFileInputRef.current) dashboardFileInputRef.current.value = '';
+            dashboardUploadBoardIdRef.current = null;
+            setDashboardUploadBoardId(null);
         }
     };
 
@@ -1342,8 +1466,17 @@ function MoodboardContent() {
 
         // 1. Handle desktop file drops
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            const rect = canvasRef.current?.getBoundingClientRect();
-            if (!rect || !userProfile?.uid) return;
+            const rect = canvasRef.current?.getBoundingClientRect() || (e.currentTarget as HTMLElement).getBoundingClientRect();
+            if (!rect) return;
+
+            if (!userProfile?.uid) {
+                toast({
+                    title: "Sign in required",
+                    description: "Please sign in to upload dropped images to your board.",
+                    variant: "destructive"
+                });
+                return;
+            }
 
             const dropX = e.clientX - rect.left - viewport.x;
             const dropY = e.clientY - rect.top - viewport.y;
@@ -1397,19 +1530,23 @@ function MoodboardContent() {
         }
 
         // 2. Handle sidebar items dragging
-        const videoDataStr = e.dataTransfer.getData('application/json');
+        const videoDataStr = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
         if (videoDataStr) {
             try {
-                const { video, offsetX, offsetY } = JSON.parse(videoDataStr);
-                const rect = canvasRef.current?.getBoundingClientRect();
+                const parsed = JSON.parse(videoDataStr);
+                const video = parsed.video || parsed;
+                const offsetX = parsed.offsetX ?? 128;
+                const offsetY = parsed.offsetY ?? 72;
+
+                const rect = canvasRef.current?.getBoundingClientRect() || (e.currentTarget as HTMLElement).getBoundingClientRect();
                 if (!rect) return;
 
                 const dropX = e.clientX - rect.left - viewport.x;
                 const dropY = e.clientY - rect.top - viewport.y;
                 
                 // Position card keeping the exact pointer offset during drag!
-                const canvasX = dropX / viewport.scale - (offsetX || 128) / viewport.scale;
-                const canvasY = dropY / viewport.scale - (offsetY || 72) / viewport.scale;
+                const canvasX = dropX / viewport.scale - offsetX / viewport.scale;
+                const canvasY = dropY / viewport.scale - offsetY / viewport.scale;
 
                 const newItem: DraggableCanvasItem = {
                     id: `video-${Date.now()}`,
@@ -1424,32 +1561,7 @@ function MoodboardContent() {
                 setCanvasItems(prev => [...prev, newItem]);
                 setSelectedItemIds(new Set([newItem.id]));
             } catch (err) {
-                // Fallback for legacy drag-and-drop objects
-                try {
-                    const video = JSON.parse(videoDataStr);
-                    const rect = canvasRef.current?.getBoundingClientRect();
-                    if (!rect) return;
-
-                    const dropX = e.clientX - rect.left - viewport.x;
-                    const dropY = e.clientY - rect.top - viewport.y;
-                    const canvasX = dropX / viewport.scale - 128;
-                    const canvasY = dropY / viewport.scale - 72;
-
-                    const newItem: DraggableCanvasItem = {
-                        id: `video-${Date.now()}`,
-                        type: 'video',
-                        video: video,
-                        x: canvasX,
-                        y: canvasY,
-                        width: 256,
-                        height: 144,
-                        zIndex: getMaxZIndex() + 1
-                    };
-                    setCanvasItems(prev => [...prev, newItem]);
-                    setSelectedItemIds(new Set([newItem.id]));
-                } catch (e2) {
-                    console.error("Failed to parse dragged video data", e2);
-                }
+                console.error("Failed to parse dragged video data", err);
             }
         }
     };
@@ -1512,6 +1624,77 @@ function MoodboardContent() {
         }
     };
 
+    // Export active whiteboard canvas (or board references) to Director Pitch Deck PDF
+    const handleOpenWhiteboardPitchDeck = useCallback(() => {
+        const currentBoard = moodboards.find(b => b.id === currentBoardId);
+        const boardTitle = currentBoard?.name || 'Action Sequence Pitch';
+
+        // Check if canvas has any placed references, images, or media
+        const hasCanvasClips = canvasItems.some(i => 
+            (i.type === 'video' || i.type === 'image' || Boolean(i.video) || Boolean((i as any).videoData) || Boolean(i.imageUrl) || Boolean(i.videoId)) &&
+            i.type !== 'note' && i.type !== 'text' && i.type !== 'shape' && i.type !== 'drawing' && i.type !== 'connection'
+        );
+
+        let itemsForExport: DraggableCanvasItem[] = [];
+
+        if (hasCanvasClips) {
+            // Map and normalize all whiteboard canvas items (media + notes)
+            itemsForExport = canvasItems.map((item, idx) => {
+                const vid = (item.video || (item as any).videoData) as Video | undefined;
+                const thumb = vid?.thumbnailUrl || vid?.posterUrl || item.imageUrl || (vid as any)?.url || '';
+                const isMedia = (item.type === 'video' || item.type === 'image' || Boolean(vid) || Boolean(item.imageUrl)) && 
+                    item.type !== 'note' && item.type !== 'text' && item.type !== 'shape' && item.type !== 'drawing' && item.type !== 'connection';
+
+                const normalizedVideo: Video | undefined = isMedia ? {
+                    id: vid?.id || item.videoId || item.id,
+                    title: vid?.title || (item as any).title || item.text || `Reference #${idx + 1}`,
+                    thumbnailUrl: thumb,
+                    posterUrl: vid?.posterUrl || thumb,
+                    videoUrl: vid?.videoUrl || (item as any).videoUrl || '',
+                    description: vid?.description || (item as any).description || '',
+                    tags: vid?.tags || (item as any).tags || [],
+                    uploader: vid?.uploader || vid?.author_name || (item as any)?.creator || '',
+                    categories: vid?.categories || ['Reference'],
+                    isShort: vid?.isShort,
+                } as Video : undefined;
+
+                return {
+                    ...item,
+                    type: isMedia ? (item.type === 'image' ? 'image' : 'video') : item.type,
+                    video: normalizedVideo,
+                    imageUrl: isMedia ? (thumb || item.imageUrl) : undefined,
+                    text: item.text,
+                    title: isMedia ? ((item as any).title || vid?.title) : undefined,
+                };
+            });
+        } else {
+            // Canvas has no media references placed yet: check board folder references, or user's saved references
+            let folderRefs = currentBoard ? getFolderReferences(currentBoard) : [];
+            if (folderRefs.length === 0) {
+                folderRefs = allSavedReferences.length > 0 ? allSavedReferences : likedVideos;
+            }
+            const folderItems: DraggableCanvasItem[] = folderRefs.map((v, i) => ({
+                id: v.id || `ref-${i}`,
+                type: 'video',
+                video: v,
+                imageUrl: v.thumbnailUrl || v.posterUrl,
+                x: 0,
+                y: 0,
+                width: 280,
+                height: 160,
+                zIndex: i + 1,
+            }));
+            const canvasNotes = canvasItems.filter(i => i.type === 'note' || i.type === 'text');
+            itemsForExport = [...folderItems, ...canvasNotes];
+        }
+
+        setPitchDeckData({
+            boardName: boardTitle,
+            items: itemsForExport
+        });
+        setShowPitchDeckModal(true);
+    }, [currentBoardId, moodboards, canvasItems, allSavedReferences, likedVideos]);
+
     // Selected Items array for the property toolbar
     const selectedItemsList = canvasItems.filter(i => selectedItemIds.has(i.id));
 
@@ -1552,15 +1735,26 @@ function MoodboardContent() {
     const isDark = themeMode === 'dark';
 
     return (
-        <div
-            id="canvas-container"
-            className={`flex w-full h-full overflow-hidden relative font-sans touch-none select-none transition-colors duration-300 ${
-                isDark ? 'bg-[#050505] text-white' : 'bg-[#f4f5f7] text-zinc-900'
-            }`}
+        <AntiScreenshotShield
+            // The export dialog is an intentional, user-initiated capture surface.
+            // Disable the privacy curtain while it is open so it cannot cover the
+            // PDF preview or race the browser print dialog.
+            enabled={!showPitchDeckModal}
+            watermarkText={`ANIMATIONREFERENCE.ORG • PROTECTED • ${userProfile?.username || userProfile?.displayName || 'CREATOR'}`}
+            className="w-full h-full"
+        >
+            <div
+                id="canvas-container"
+                className={`flex w-full h-full overflow-hidden relative font-sans touch-none select-none transition-colors duration-300 ${
+                    isDark ? 'bg-[#050505] text-white' : 'bg-[#f4f5f7] text-zinc-900'
+                }`}
             onPointerDown={handleBackgroundPointerDown}
             onPointerMove={handleBackgroundPointerMove}
             onPointerUp={handleBackgroundPointerUp}
-            onDragOver={(e) => e.preventDefault()}
+            onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+            }}
             onDrop={handleCanvasDrop}
             onClick={handleCanvasClick}
             onContextMenu={(e) => {
@@ -1748,6 +1942,32 @@ function MoodboardContent() {
                         </div>
                     );
                 })()}
+
+                {/* Anti-Capture Badge & Export Pitch Deck (PDF) Button */}
+                {currentBoardId && (
+                    <div className="flex items-center gap-2">
+                        <AntiScreenshotBadge className="hidden sm:inline-flex" />
+                        <Button
+                            size="sm"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="backdrop-blur-md border border-indigo-400/30 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-100 font-bold text-xs h-9 px-3.5 rounded-full flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                            title="Upload image or video references to this board"
+                        >
+                            <Upload className="h-3.5 w-3.5 text-indigo-300" />
+                            <span>Upload references</span>
+                        </Button>
+                        <Button
+                            size="sm"
+                            onClick={handleOpenWhiteboardPitchDeck}
+                            className="backdrop-blur-md border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-xs h-9 px-3.5 rounded-full flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                            title="Export Moodboard to Director Pitch Deck / PDF (Pro)"
+                        >
+                            <Presentation className="h-3.5 w-3.5 text-amber-400" />
+                            <span>Pitch Deck</span>
+                            <span className="text-[9px] bg-amber-400 text-black px-1.5 py-0.2 rounded font-black font-mono">PDF</span>
+                        </Button>
+                    </div>
+                )}
             </div>
 
             {/* Savee-style dashboard. The spatial canvas below remains unchanged. */}
@@ -1790,6 +2010,20 @@ function MoodboardContent() {
                             await MoodboardService.deleteMoodboard(userProfile.uid, boardId);
                             setMoodboards(prev => prev.filter(board => board.id !== boardId));
                         }}
+                        onDeleteBoards={async (boardIds) => {
+                            if (!userProfile?.uid) return;
+                            await Promise.all(boardIds.map(boardId => MoodboardService.deleteMoodboard(userProfile.uid, boardId)));
+                            setMoodboards(prev => prev.filter(board => !boardIds.includes(board.id)));
+                            toast({ title: 'Boards deleted', description: `${boardIds.length} board${boardIds.length === 1 ? '' : 's'} removed.` });
+                        }}
+                        onRemoveReferencesFromAllSaves={async (referenceIds) => {
+                            if (!userProfile?.uid) return;
+                            await MoodboardService.deleteUploadedReferences(userProfile.uid, referenceIds);
+                            await Promise.all(referenceIds.flatMap(referenceId => [unsaveVideo(userProfile.uid, referenceId).catch(() => undefined), unlikeVideo(userProfile.uid, referenceId).catch(() => undefined)]));
+                            setAllSavedReferences(prev => prev.filter(reference => !referenceIds.includes(reference.id)));
+                            setLikedVideos(prev => prev.filter(reference => !referenceIds.includes(reference.id)));
+                            toast({ title: 'References removed from All saves' });
+                        }}
                         onOpenReference={(video) => setExpandedVideo(video)}
                         onAddReferenceToBoard={async (boardId, video) => {
                             if (!userProfile?.uid) return;
@@ -1805,6 +2039,98 @@ function MoodboardContent() {
                                 updatedAt: new Date(),
                             } : board));
                             toast({ title: 'Added to board', description: `${video.title || 'Reference'} is now in the board gallery and on its canvas.` });
+                        }}
+                        onUploadReferences={(boardId) => {
+                            dashboardUploadBoardIdRef.current = boardId;
+                            setDashboardUploadBoardId(boardId);
+                            window.setTimeout(() => dashboardFileInputRef.current?.click(), 0);
+                        }}
+                        isUploadingReferences={isDashboardUploading}
+                        uploadProgress={dashboardUploadProgress}
+                        onSetBoardCover={async (boardId, imageUrl) => {
+                            if (!userProfile?.uid) return;
+                            await MoodboardService.updateMoodboardCover(userProfile.uid, boardId, imageUrl);
+                            setMoodboards(prev => prev.map(board => board.id === boardId ? { ...board, thumbnailUrl: imageUrl, updatedAt: new Date() } : board));
+                            toast({ title: 'Board cover updated' });
+                        }}
+                        onRemoveReferencesFromBoard={async (boardId, referenceIds) => {
+                            if (!userProfile?.uid) return;
+                            const items = await MoodboardService.removeReferencesFromMoodboard(userProfile.uid, boardId, referenceIds);
+                            setMoodboards(prev => prev.map(board => board.id === boardId ? { ...board, items, itemCount: items.length, updatedAt: new Date() } : board));
+                            toast({ title: 'References removed from board', description: 'They remain available in All saves.' });
+                        }}
+                        onExportPitchDeck={async (boardId) => {
+                            if (boardId) {
+                                const targetBoard = moodboards.find(b => b.id === boardId);
+                                let items: DraggableCanvasItem[] = [];
+                                let rawItems = targetBoard?.items || [];
+                                if ((!rawItems || rawItems.length === 0) && userProfile?.uid) {
+                                    try {
+                                        const fresh = await MoodboardService.loadMoodboard(userProfile.uid, boardId);
+                                        if (fresh) rawItems = fresh;
+                                    } catch (err) {
+                                        console.error('Failed to load board items for pitch deck:', err);
+                                    }
+                                }
+                                if (rawItems && rawItems.length > 0) {
+                                    items = rawItems.map((item: any, idx: number) => {
+                                        const video = item.videoData || item.video || (item.type === 'video' || item.type === 'image' ? {
+                                            id: item.videoId || item.id,
+                                            title: item.title || item.text || 'Reference',
+                                            thumbnailUrl: item.imageUrl || item.thumbnailUrl || '',
+                                            posterUrl: item.imageUrl || item.posterUrl || '',
+                                            videoUrl: item.videoUrl || '',
+                                            creator: item.creator,
+                                            tags: item.tags || []
+                                        } : null);
+                                        return {
+                                            id: item.id || `item-${idx}`,
+                                            type: item.type || 'video',
+                                            video: video,
+                                            imageUrl: item.imageUrl,
+                                            text: item.text,
+                                            title: item.title,
+                                            noteColor: item.noteColor,
+                                            x: item.x || 0,
+                                            y: item.y || 0,
+                                            width: item.width || 256,
+                                            height: item.height || 144,
+                                            zIndex: idx + 1
+                                        } as DraggableCanvasItem;
+                                    });
+                                } else if (targetBoard) {
+                                    items = getFolderReferences(targetBoard).map((v, i) => ({
+                                        id: v.id,
+                                        type: 'video',
+                                        video: v,
+                                        x: 0,
+                                        y: 0,
+                                        width: 256,
+                                        height: 144,
+                                        zIndex: i + 1
+                                    } as DraggableCanvasItem));
+                                }
+                                setPitchDeckData({
+                                    boardName: targetBoard?.name || 'Action Sequence Pitch',
+                                    items
+                                });
+                            } else {
+                                const saves = allSavedReferences.length > 0 ? allSavedReferences : likedVideos;
+                                setPitchDeckData({
+                                    boardName: 'All Saved References',
+                                    items: saves.map((v, i) => ({
+                                        id: v.id,
+                                        type: 'video',
+                                        video: v,
+                                        x: 0,
+                                        y: 0,
+                                        width: 256,
+                                        height: 144,
+                                        zIndex: i + 1
+                                    } as DraggableCanvasItem))
+                                });
+                            }
+                            setShowPitchDeckModal(true);
                         }}
                     />
                 </div>
@@ -1947,6 +2273,11 @@ function MoodboardContent() {
                 <div
                     ref={canvasRef}
                     onContextMenu={handleContextMenu}
+                    onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'copy';
+                    }}
+                    onDrop={handleCanvasDrop}
                     className="absolute inset-0 z-0 overflow-hidden touch-none"
                 >
 
@@ -1997,32 +2328,6 @@ function MoodboardContent() {
                                 </marker>
                             </defs>
                             
-                            {canvasItems
-                                .filter(item => item.type === 'connection' && item.fromItem && item.toItem)
-                                .map(item => (
-                                    <ConnectionLine
-                                        key={item.id}
-                                        id={item.id}
-                                        fromItem={item.fromItem!}
-                                        toItem={item.toItem!}
-                                        color={item.color}
-                                        borderWidth={item.borderWidth}
-                                        canvasItems={canvasItems}
-                                    />
-                                ))}
-
-                            {/* Temporary connection preview */}
-                            {activeTool === 'connection' && startAnchor && tempConnectionLine && (
-                                <line
-                                    x1={startAnchor.x}
-                                    y1={startAnchor.y}
-                                    x2={tempConnectionLine.x}
-                                    y2={tempConnectionLine.y}
-                                    stroke={isDark ? '#6366f1' : '#4f46e5'}
-                                    strokeWidth={2}
-                                    strokeDasharray="4,4"
-                                />
-                            )}
                         </svg>
 
                         {/* Whiteboard Elements */}
@@ -2362,31 +2667,13 @@ function MoodboardContent() {
                             )}
                         </div>
 
-                        {/* Connection Tool */}
-                        <button
-                            onClick={() => {
-                                setActiveTool('connection');
-                                setSelectedItemIds(new Set());
-                                setConnectionStartId(null);
-                                setTempConnectionLine(null);
-                            }}
-                            className={`p-2.5 rounded-xl transition-all ${
-                                activeTool === 'connection'
-                                    ? 'bg-indigo-600 text-white shadow-lg scale-105'
-                                    : isDark ? 'text-zinc-400 hover:text-white hover:bg-white/5' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
-                            }`}
-                            title="Connection Line"
-                        >
-                            <ArrowUpRight className="h-5 w-5" />
-                        </button>
-
-                        {/* Image Upload Tool */}
+                        {/* Direct Reference Upload Tool */}
                         <button
                             onClick={() => fileInputRef.current?.click()}
                             className={`p-2.5 rounded-xl transition-all ${
                                 isDark ? 'text-zinc-400 hover:text-white hover:bg-white/5' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
                             }`}
-                            title="Upload Images"
+                            title="Upload Reference Files"
                         >
                             <ImageIcon className="h-5 w-5" />
                         </button>
@@ -2993,16 +3280,38 @@ function MoodboardContent() {
                 onOpenChange={setShowDonateDialog}
             />
 
-            {/* Hidden Input for Manual Image Uploads */}
+            {showPitchDeckModal && (
+                <PitchDeckExportModal
+                    isOpen={showPitchDeckModal}
+                    onClose={() => {
+                        setShowPitchDeckModal(false);
+                        setPitchDeckData(null);
+                    }}
+                    boardName={pitchDeckData?.boardName || moodboards.find(b => b.id === currentBoardId)?.name || 'Action Sequence Pitch'}
+                    canvasItems={pitchDeckData?.items || canvasItems}
+                    creatorName={userProfile?.displayName || userProfile?.username || 'Lead Animator'}
+                />
+            )}
+
+            {/* Hidden Input for Direct Board Reference Uploads */}
             <input
                 type="file"
                 ref={fileInputRef}
                 onChange={handleImageUpload}
-                accept="image/*"
+                accept="image/*,video/*"
+                multiple
+                className="hidden"
+            />
+            <input
+                type="file"
+                ref={dashboardFileInputRef}
+                onChange={handleDashboardReferenceUpload}
+                accept="image/*,video/*"
                 multiple
                 className="hidden"
             />
         </div>
+        </AntiScreenshotShield>
     );
 }
 

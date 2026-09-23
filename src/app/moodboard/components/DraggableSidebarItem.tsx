@@ -20,7 +20,9 @@ export function DraggableSidebarItem({
         const offsetX = e.clientX - rect.left;
         const offsetY = e.clientY - rect.top;
 
-        e.dataTransfer.setData('application/json', JSON.stringify({ video, offsetX, offsetY }));
+        const payload = JSON.stringify({ video, offsetX, offsetY });
+        e.dataTransfer.setData('application/json', payload);
+        e.dataTransfer.setData('text/plain', payload);
         e.dataTransfer.effectAllowed = 'copy';
     };
 

@@ -419,10 +419,10 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
   const [videoUrlInput, setVideoUrlInput] = useState('');
 
   // Tags & Software
-  const [selectedTags, setSelectedTags] = useState<string[]>(['Body Mechanics']);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTagInput, setCustomTagInput] = useState('');
   
-  const [selectedSoftware, setSelectedSoftware] = useState<string[]>(['Maya']);
+  const [selectedSoftware, setSelectedSoftware] = useState<string[]>([]);
   const [customSoftwareInput, setCustomSoftwareInput] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -613,7 +613,12 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
       setDescription('');
       setMediaFile(null);
       setThumbnailFile(null);
+      setAutoThumbPreview(null);
       setVideoUrlInput('');
+      setSelectedTags([]);
+      setSelectedSoftware([]);
+      setCustomTagInput('');
+      setCustomSoftwareInput('');
       setCurrentStep(1);
 
       onItemCreated(newItem);
@@ -631,8 +636,25 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
     }
   };
 
+  const handleDialogChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setTitle('');
+      setDescription('');
+      setMediaFile(null);
+      setThumbnailFile(null);
+      setAutoThumbPreview(null);
+      setVideoUrlInput('');
+      setSelectedTags([]);
+      setSelectedSoftware([]);
+      setCustomTagInput('');
+      setCustomSoftwareInput('');
+      setCurrentStep(1);
+    }
+    onOpenChange(nextOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogChange}>
       <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-2xl overflow-y-auto rounded-2xl border border-white/15 bg-zinc-950/90 p-4 text-white shadow-[0_30px_90px_rgba(0,0,0,0.85)] ring-1 ring-purple-500/20 backdrop-blur-2xl sm:max-h-[92vh] sm:w-[94vw] sm:rounded-3xl sm:p-6 md:rounded-[32px]">
         {/* Instagram-style Top Story Segmented Progress Bar */}
         <div className="space-y-3 pb-3 border-b border-white/10">
@@ -993,7 +1015,7 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={() => onOpenChange(false)}
+                  onClick={() => handleDialogChange(false)}
                   disabled={isSubmitting}
                   className="text-zinc-400 hover:text-white h-9 text-xs"
                 >

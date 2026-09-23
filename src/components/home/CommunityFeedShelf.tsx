@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { PortfolioItemCard } from '@/components/portfolio/PortfolioItemCard';
 import { getPublicPortfolioItems, toggleLikePortfolioItem, incrementPortfolioItemShares, portfolioItemToVideo } from '@/lib/portfolio-service';
 import { SaveToBoardModal } from '@/components/SaveToBoardModal';
+import { PortfolioItemDetailModal } from '@/components/portfolio/PortfolioItemDetailModal';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +21,8 @@ export function CommunityFeedShelf() {
   const [loading, setLoading] = useState(true);
   const [selectedSaveVideo, setSelectedSaveVideo] = useState<Video | null>(null);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [selectedDetailItem, setSelectedDetailItem] = useState<PortfolioItem | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   useEffect(() => {
     async function loadFeed() {
@@ -154,9 +157,12 @@ export function CommunityFeedShelf() {
             onSave={(e) => handleSaveItem(item, e)}
             onShare={(e) => handleShareItem(item, e)}
             onClick={() => {
-              if (item.userId) {
-                window.location.href = `/u/${item.userId}`;
-              }
+              setSelectedDetailItem(item);
+              setIsDetailOpen(true);
+            }}
+            onComment={() => {
+              setSelectedDetailItem(item);
+              setIsDetailOpen(true);
             }}
           />
         ))}
@@ -169,6 +175,14 @@ export function CommunityFeedShelf() {
           onOpenChange={setShowSaveModal}
         />
       )}
+
+      <PortfolioItemDetailModal
+        item={selectedDetailItem}
+        open={isDetailOpen}
+        onOpenChange={setIsDetailOpen}
+        currentUserId={user?.uid}
+        onItemDeleted={(itemId) => setItems((current) => current.filter((item) => item.id !== itemId))}
+      />
     </section>
   );
 }

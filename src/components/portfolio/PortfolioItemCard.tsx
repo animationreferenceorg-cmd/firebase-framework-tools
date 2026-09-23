@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { ArrowDown, ArrowUp, Eye, Heart, Bookmark, GripVertical, Layers, Play, Sparkles, Trash2, Pencil, MessageCircle, Share2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Eye, Heart, Bookmark, GripVertical, Play, Trash2, Pencil, MessageCircle, Share2 } from 'lucide-react';
 import type { PortfolioItem, WipStage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -104,20 +103,29 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
 
   const isLiked = isLikedProp || (currentUserId && item.likedBy ? item.likedBy.includes(currentUserId) : false);
   const isSaved = isSavedProp;
-  const stageInfo = item.wipStage ? STAGE_CONFIG[item.wipStage] : null;
 
   useEffect(() => {
-    if (isHovered && videoRef.current) {
-      const playPromise = videoRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {});
+    const v = videoRef.current;
+    if (!v) return;
+
+    if (isHovered) {
+      const attemptPlay = () => {
+        const playPromise = v.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {});
+        }
+      };
+
+      if (v.readyState >= 2) {
+        attemptPlay();
+      } else {
+        v.addEventListener('canplay', attemptPlay, { once: true });
+        v.load();
       }
-    } else if (!isHovered && videoRef.current) {
-      videoRef.current.pause();
+    } else {
+      v.pause();
       try {
-        // Seeking a fraction past zero makes browsers paint the first frame
-        // instead of briefly showing the video's black loading surface.
-        videoRef.current.currentTime = 0.1;
+        v.currentTime = 0.1;
       } catch {}
     }
   }, [isHovered]);
@@ -233,28 +241,8 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
       {/* Dark Gradient Overlay for Text & Badges */}
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between bg-gradient-to-t from-black via-black/50 to-black/30 p-3 transition-colors group-hover:via-black/40 sm:p-4">
         
-        {/* Top Badges (WIP / Stage) */}
-        <div className="flex items-center justify-between pointer-events-auto">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {item.type === 'wip' ? (
-              <Badge variant="outline" className="border-amber-500/50 bg-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-300 shadow backdrop-blur-md sm:text-xs">
-                <Layers className="h-3 w-3 mr-1" />
-                WIP
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="border-emerald-500/50 bg-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-300 shadow backdrop-blur-md sm:text-xs">
-                <Sparkles className="h-3 w-3 mr-1" />
-                Portfolio
-              </Badge>
-            )}
-
-            {stageInfo && (
-              <Badge variant="outline" className={cn("px-2 py-0.5 text-[10px] font-semibold shadow backdrop-blur-md sm:text-xs", stageInfo.bg, stageInfo.color)}>
-                {stageInfo.label}
-              </Badge>
-            )}
-          </div>
-
+        {/* Top Area (Clean: only Edit/Delete buttons if available) */}
+        <div className="flex items-center justify-end pointer-events-auto">
           {/* Action Buttons on Outside of Post Card */}
           {!isReordering && (onEdit || onDelete) && (
             <div className="flex items-center gap-1.5 z-30">
@@ -290,24 +278,32 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
         </div>
 
         {/* Bottom Text Overlaid DIRECTLY Over Video */}
-        <div className="space-y-1.5 pointer-events-auto z-20 pt-8">
-          <h3 className="line-clamp-1 font-extrabold text-base md:text-lg text-white drop-shadow-md group-hover:text-primary transition-colors">
+        <div className="space-y-1 pointer-events-auto z-20 pt-8">
+          <h3 className={cn(
+            "line-clamp-1 font-extrabold text-base md:text-lg text-white drop-shadow-md transition-all duration-300 ease-in-out",
+            isHovered ? "opacity-0 -translate-y-2 pointer-events-none h-0 overflow-hidden mb-0" : "opacity-100 translate-y-0"
+          )}>
             {item.title}
           </h3>
+          {item.authorName && (
+            <p className={cn(
+              "text-xs text-zinc-400 font-medium truncate drop-shadow-sm transition-all duration-300",
+              isHovered ? "opacity-0 pointer-events-none h-0 overflow-hidden" : "opacity-100"
+            )}>
+              by {item.authorName}
+            </p>
+          )}
 
-          {/* Software Chips & Animation Tags Overlaid */}
-          <div className="flex flex-wrap gap-1.5 items-center">
-            {item.software?.slice(0, 2).map((sw) => (
-              <span key={sw} className="rounded bg-purple-950/80 px-2 py-0.5 text-[10px] font-bold text-purple-200 border border-purple-800/40 shadow">
-                {sw}
-              </span>
-            ))}
-            {item.tags?.slice(0, 2).map((tag) => (
-              <span key={tag} className="rounded bg-primary/20 px-2 py-0.5 text-[10px] font-semibold text-white border border-primary/30 shadow">
-                #{tag}
-              </span>
-            ))}
-          </div>
+          {/* Software Chips (No hashtags, clean subtle badges) */}
+          {item.software && item.software.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 items-center pt-0.5">
+              {item.software.slice(0, 2).map((sw) => (
+                <span key={sw} className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold text-zinc-300 backdrop-blur-sm border border-white/10 shadow">
+                  {sw}
+                </span>
+              ))}
+            </div>
+          )}
 
           {/* Likes & Views Counter Bar */}
           <div className="flex items-center justify-between gap-1 border-t border-white/10 pt-1 text-xs text-zinc-400">

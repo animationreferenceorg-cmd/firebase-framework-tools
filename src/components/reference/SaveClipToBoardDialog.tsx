@@ -167,21 +167,20 @@ export function SaveClipToBoardDialog({
         });
       } else {
         // Automatic 1-Click Save
-        const thumb = clip.thumbnailUrl || clip.posterUrl || clip.videoUrl;
+        const videoMediaUrl = clip.uploadedMediaUrl || clip.sourceUrl || (clip as any).videoUrl || '';
+        const thumb = clip.thumbnailUrl || (clip as any).posterUrl || videoMediaUrl;
         const clipAsVideo: Video = {
           id: clip.id,
           title: clip.title,
-          videoUrl: clip.videoUrl,
+          videoUrl: videoMediaUrl,
           thumbnailUrl: thumb,
-          posterUrl: clip.posterUrl || thumb,
-          category: clip.category,
-          categories: [clip.category],
+          posterUrl: (clip as any).posterUrl || thumb,
+          categories: clip.category ? [clip.category] : [],
           tags: clip.tags || [],
           description: clip.sourceDescription || '',
-          sourceUrl: clip.sourceUrl || '',
-          sourceAuthorName: clip.sourceAuthorName || '',
-          sourceAuthorUrl: clip.sourceAuthorUrl || '',
-          sourceAuthorAvatar: clip.sourceAuthorAvatar || '',
+          originalUrl: clip.sourceUrl || '',
+          author_name: clip.sourceAuthorName || '',
+          authorAvatar: clip.sourceAuthorAvatar || '',
         };
 
         await saveClipToBoard(clip.id, board.id, user.uid, thumb);
@@ -235,21 +234,20 @@ export function SaveClipToBoardDialog({
         isPrivate,
       });
 
-      const thumb = clip.thumbnailUrl || clip.posterUrl || clip.videoUrl;
+      const videoMediaUrl = clip.uploadedMediaUrl || clip.sourceUrl || (clip as any).videoUrl || '';
+      const thumb = clip.thumbnailUrl || (clip as any).posterUrl || videoMediaUrl;
       const clipAsVideo: Video = {
         id: clip.id,
         title: clip.title,
-        videoUrl: clip.videoUrl,
+        videoUrl: videoMediaUrl,
         thumbnailUrl: thumb,
-        posterUrl: clip.posterUrl || thumb,
-        category: clip.category,
-        categories: [clip.category],
+        posterUrl: (clip as any).posterUrl || thumb,
+        categories: clip.category ? [clip.category] : [],
         tags: clip.tags || [],
         description: clip.sourceDescription || '',
-        sourceUrl: clip.sourceUrl || '',
-        sourceAuthorName: clip.sourceAuthorName || '',
-        sourceAuthorUrl: clip.sourceAuthorUrl || '',
-        sourceAuthorAvatar: clip.sourceAuthorAvatar || '',
+        originalUrl: clip.sourceUrl || '',
+        author_name: clip.sourceAuthorName || '',
+        authorAvatar: clip.sourceAuthorAvatar || '',
       };
 
       await saveClipToBoard(clip.id, boardId, userProfile.uid, thumb);
@@ -333,9 +331,9 @@ export function SaveClipToBoardDialog({
             {clip && (
               <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-zinc-900/70 p-3 shadow-inner">
                 <div className="relative h-13 w-20 shrink-0 overflow-hidden rounded-xl bg-black border border-white/10">
-                  {clip.thumbnailUrl || clip.posterUrl ? (
+                  {clip.thumbnailUrl || (clip as any).posterUrl ? (
                     <img
-                      src={clip.thumbnailUrl || clip.posterUrl}
+                      src={clip.thumbnailUrl || (clip as any).posterUrl}
                       alt={clip.title}
                       className="h-full w-full object-cover"
                     />
@@ -486,7 +484,9 @@ export function SaveClipToBoardDialog({
                                 {board.title}
                               </span>
                               {board.isPrivate && (
-                                <Lock className="h-3 w-3 shrink-0 text-amber-400" title="Private board" />
+                                <span title="Private board" className="inline-flex items-center">
+                                  <Lock className="h-3 w-3 shrink-0 text-amber-400" />
+                                </span>
                               )}
                             </div>
                             <span className="text-[11px] text-zinc-400">

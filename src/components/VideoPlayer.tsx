@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import type { Video } from '@/lib/types';
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Rewind, FastForward, Camera, ExternalLink, Instagram, Film, Share2, Heart, Bookmark, FlipHorizontal } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Rewind, FastForward, Camera, ExternalLink, Instagram, Film, Share2, Heart, Bookmark, FlipHorizontal, NotebookPen } from 'lucide-react';
 import { CreatorBadge } from '@/components/CreatorBadge';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -30,6 +30,7 @@ interface VideoPlayerProps {
     onToggleTimeline?: () => void;
     isTimelineVisible?: boolean;
     hideLibraryActions?: boolean;
+    hideStudyAction?: boolean;
 }
 
 export interface VideoPlayerHandle {
@@ -71,7 +72,7 @@ function Player({ playerRef, video, ...props }: any) {
 }
 
 
-export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>(({ video, onCapture, showCaptureButton = false, startsPaused = false, muted = true, hideFullscreenControl = false, hidePlayControl = false, onEnded, autoPlay, loop = false, alwaysShowControls = true, onToggleTimeline, isTimelineVisible = true, hideLibraryActions = false }, ref) => {
+export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>(({ video, onCapture, showCaptureButton = false, startsPaused = false, muted = true, hideFullscreenControl = false, hidePlayControl = false, onEnded, autoPlay, loop = false, alwaysShowControls = true, onToggleTimeline, isTimelineVisible = true, hideLibraryActions = false, hideStudyAction = false }, ref) => {
     const playerRef = React.useRef<ReactPlayer>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
     const { toast } = useToast();
@@ -624,6 +625,23 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
 
                     {/* Right: Like, Save, Share, Timeline Toggle & Fullscreen */}
                     <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                        {!hideStudyAction && (
+                            <Button
+                                type="button"
+                                onClick={() => {
+                                    if (document.fullscreenElement) void document.exitFullscreen();
+                                    window.location.assign(`/video/${video.id}`);
+                                }}
+                                variant="ghost"
+                                size="sm"
+                                title="Open Study Workspace"
+                                className="h-8 gap-1.5 rounded-full border border-purple-400/30 bg-purple-500/20 px-2.5 text-[11px] font-bold text-purple-100 hover:bg-purple-500/35 hover:text-white"
+                            >
+                                <NotebookPen className="h-3.5 w-3.5" />
+                                <span className="hidden md:inline">Study</span>
+                            </Button>
+                        )}
+
                         {/* Reference clips use their own Save to Board action outside the player. */}
                         {!hideLibraryActions && <Button
                             type="button"

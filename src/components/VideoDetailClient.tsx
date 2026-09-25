@@ -93,7 +93,7 @@ export function VideoDetailClient({ id, initialData }: VideoDetailClientProps) {
                 <div className="max-w-6xl mx-auto space-y-8">
                     {/* Main Player */}
                     <div className="relative aspect-video w-full rounded-2xl overflow-hidden shadow-[0_0_50px_-10px_rgba(124,58,237,0.3)] bg-black border border-white/10">
-                        <VideoPlayer ref={playerRef} video={video} startsPaused={false} muted={false} />
+                        <VideoPlayer ref={playerRef} video={video} startsPaused={false} muted={false} hideStudyAction />
                         <VideoActionsBar video={video} userProfile={userProfile} />
                     </div>
 

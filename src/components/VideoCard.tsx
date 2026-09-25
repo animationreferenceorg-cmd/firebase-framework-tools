@@ -208,13 +208,13 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   }, [isHovered, video.id]);
 
   const openVideoPlayer = () => {
-    setIsPlayerOpen(true);
-    // Deliberate playback — counts from the first second, no grace period.
-    beginWatch(playKey, 'playback');
     if (!countedVideoViewRef.current && video.id) {
       countedVideoViewRef.current = true;
       incrementVideoViewCount(video.id).catch(() => {});
     }
+    // The dedicated video route is the full-screen study workspace. Opening a
+    // reference goes there directly so notes and board tools are always shown.
+    window.location.assign(`/video/${video.id}`);
   };
 
   const handleCardClick = (e: React.MouseEvent) => {

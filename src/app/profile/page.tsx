@@ -12,6 +12,7 @@ import { getSnapshotVideos } from '@/lib/videoSnapshot';
 import { getUserPortfolioItems, getDatabaseVideosAsPortfolioItems, updateUserProfileData, deletePortfolioItem, toggleLikePortfolioItem, incrementPortfolioItemShares } from '@/lib/portfolio-service';
 import type { PortfolioItem, WipStage, Video } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { FREE_FEATURES, PRO_FEATURES, describeAccess, formatUsd, getEntitlements, getProOffers } from '@/lib/plans';
 import { VideoCard } from '@/components/VideoCard';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -100,7 +101,9 @@ export default function ProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const isStudioMaster = userProfile?.isPremium && userProfile?.tier === 'tier5';
+  const planSummary = describeAccess(userProfile);
+  const planAccess = getEntitlements(userProfile).access;
+  const hasStripePlan = planAccess === 'pro' || planAccess === 'tier1' || planAccess === 'tier2';
   const isSjsuStudent = Boolean(
     userProfile?.isStudent || 
     userProfile?.tier === 'student_unlimited' || 
@@ -988,27 +991,24 @@ export default function ProfilePage() {
                             SJSU Student Unlimited VIP Pass ($0.00 / Free)
                           </span>
                         ) : (
-                          <span className={userProfile?.isPremium ? "text-purple-400 font-black" : "text-emerald-400 font-bold"}>
-                            {userProfile?.isPremium ? (
-                              userProfile?.tier === 'tier5' ? 'AnimationReference Pro' :
-                              `Supporter (${userProfile?.tier})`
-                            ) : 'Free Artist Account ($0/mo)'}
+                          <span className={hasStripePlan ? "text-purple-400 font-black" : "text-emerald-400 font-bold"}>
+                            {planSummary.title} ({planSummary.price})
                           </span>
                         )}
                       </div>
                       <p className="text-zinc-400 text-xs mt-1 font-medium">
                         {isSjsuStudent
                           ? `San José State University Verified Student Perk linked to ${userProfile?.studentEmail || userProfile?.school || 'Verified SJSU Account'}`
-                          : !userProfile?.isPremium ? 'All portfolio posting & WIP tracking features are unlocked for free.' : 'Thank you for supporting the platform!'}
+                          : hasStripePlan ? 'Thank you for supporting the platform!' : planSummary.description}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button variant="default" onClick={() => setShowDonateDialog(true)} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold cursor-pointer">
                         <CreditCard className="mr-2 h-4 w-4" />
-                        {isSjsuStudent ? 'SJSU Partner Access Active' : userProfile?.isPremium ? 'Manage Pro Plan' : 'Upgrade to Pro'}
+                        {isSjsuStudent ? 'SJSU Partner Access Active' : hasStripePlan ? 'Manage Plan' : 'Upgrade to Pro'}
                       </Button>
                       
-                      {userProfile?.isPremium && !isSjsuStudent && (
+                      {hasStripePlan && !isSjsuStudent && (
                         <Button variant="secondary" onClick={handlePortal} disabled={isPortalLoading} className="bg-white/10 hover:bg-white/20 text-white border-0">
                           {isPortalLoading ? 'Loading...' : 'Stripe Portal'}
                         </Button>
@@ -1055,68 +1055,40 @@ export default function ProfilePage() {
                     </div>
                   )}
 
-                  {/* Plan Feature Comparison Table (ArtStation Style) */}
+                  {/* Plan comparison — copy comes from src/lib/plans.ts */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Free Plan Box */}
                     <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/10 space-y-4">
                       <div className="space-y-1">
-                        <span className="text-xs font-mono font-bold text-emerald-400 uppercase">FREE FOREVER</span>
-                        <h4 className="text-xl font-black text-white">Artist Free Tier</h4>
-                        <p className="text-xs text-zinc-400">Everything needed to host your work and connect with the community.</p>
+                        <span className="text-xs font-mono font-bold text-emerald-400 uppercase">Free forever</span>
+                        <h4 className="text-xl font-black text-white">Free</h4>
+                        <p className="text-xs text-zinc-400">Discover motion and start your first study.</p>
                       </div>
-
                       <ul className="space-y-2 text-xs font-medium text-zinc-300">
-                        <li className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-                          <span>Unlimited 4K Animation & WIP Shot Hosting</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-                          <span>Blocking, Splining, & Polish Stage Badges</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-                          <span>Community Feed Exposure & Showreel Embeds</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-                          <span>Custom Profile Link (anim.works/u/username)</span>
-                        </li>
+                        {FREE_FEATURES.map((feature) => (
+                          <li key={feature} className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
                       </ul>
                     </div>
 
-                    {/* Pro Plan Box */}
                     <div className="p-6 rounded-2xl bg-gradient-to-br from-purple-950/60 via-zinc-950 to-black border border-purple-500/40 space-y-4 shadow-xl">
                       <div className="space-y-1">
-                        <span className="text-xs font-mono font-bold text-amber-400 uppercase">PRO MONETIZATION ($5/MO)</span>
+                        <span className="text-xs font-mono font-bold text-amber-400 uppercase">Pro · {formatUsd(getProOffers().pro_monthly.amountCents)}/mo</span>
                         <h4 className="text-xl font-black text-white flex items-center gap-2">
-                          <span>ArtStation Pro Suite</span>
+                          <span>AnimationReference Pro</span>
                           <Sparkles className="h-4 w-4 text-amber-400" />
                         </h4>
-                        <p className="text-xs text-zinc-300">Monetize your rigs, assets, and get recruiter priority.</p>
+                        <p className="text-xs text-zinc-300">Keep every reference for every shot.</p>
                       </div>
-
                       <ul className="space-y-2 text-xs font-medium text-zinc-200">
-                        <li className="flex items-center gap-2">
-                          <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
-                          <span><strong>Custom Domain:</strong> yourname.anim.works website</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
-                          <span><strong>Digital Storefront:</strong> Sell Maya/Blender Rigs & Pickers (Keep 95%)</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
-                          <span><strong>Recruiter Priority:</strong> Highlighted "Open for Work" Recruiter Banner</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
-                          <span><strong>Password Protected Reels:</strong> Private client review links</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
-                          <span><strong>Studio Analytics:</strong> Recruiter view counts & showreel watch data</span>
-                        </li>
+                        {PRO_FEATURES.map((feature) => (
+                          <li key={feature} className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
                       </ul>
                     </div>
                   </div>

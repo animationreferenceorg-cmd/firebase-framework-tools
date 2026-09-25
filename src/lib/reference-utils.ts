@@ -1,4 +1,5 @@
 import type { ClipSourcePlatform } from './types';
+import { getEntitlements, type EntitlementProfile } from './plans';
 
 export function normalizeHttpUrl(value: string): string {
   const url = new URL(value);
@@ -21,8 +22,8 @@ export function slugifyReference(value: string): string {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 72) || 'untitled';
 }
 
-export function isProProfile(profile: { role?: string; tier?: string; isPremium?: boolean; isVIP?: boolean; unlimitedAccess?: boolean } | null | undefined): boolean {
-  return profile?.role === 'admin' || profile?.isVIP === true || profile?.unlimitedAccess === true || profile?.tier === 'student_unlimited' || (profile?.isPremium === true && profile?.tier === 'tier5');
+export function isProProfile(profile: EntitlementProfile | null | undefined): boolean {
+  return getEntitlements(profile).isPro;
 }
 
 export function secondsLabel(seconds: number): string {

@@ -67,7 +67,11 @@ export interface UserProfile {
   savedVideoIds?: string[];
   recentlyViewedShortIds?: string[];
   isPremium?: boolean;
-  tier?: 'free' | 'tier1' | 'tier2' | 'tier5' | 'admin' | 'student_unlimited'; // Added tier
+  /** Legacy mirror of the plan (tier5 = any Pro). Written only by the server; see src/lib/plans.ts. */
+  tier?: 'free' | 'tier1' | 'tier2' | 'tier5' | 'admin' | 'student_unlimited' | null;
+  /** Canonical plan from Stripe: pro_monthly, pro_annual, legacy tier1/2/5, or free. */
+  plan?: 'free' | 'pro_monthly' | 'pro_annual' | 'tier1' | 'tier2' | 'tier5';
+  subscriptionStatus?: string;
   isStudent?: boolean;
   isVIP?: boolean;
   unlimitedAccess?: boolean;

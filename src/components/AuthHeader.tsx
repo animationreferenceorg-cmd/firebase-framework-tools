@@ -21,6 +21,7 @@ import { User, Settings, Bookmark, Zap, LogOut, Edit3, Heart, Sparkles } from 'l
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { PricingDialog } from './PricingDialog';
+import { describeAccess, getEntitlements } from '@/lib/plans';
 import { useUser } from '@/hooks/use-user';
 
 export default function AuthHeader() {
@@ -30,66 +31,13 @@ export default function AuthHeader() {
   const { userProfile, loading: userProfileLoading } = useUser();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  const isPremium = userProfile?.isPremium;
-  const isSjsuStudent = Boolean(
-    userProfile?.isStudent || 
-    userProfile?.tier === 'student_unlimited' || 
-    userProfile?.school?.includes('SJSU') || 
-    userProfile?.unlimitedAccess || 
-    (userProfile?.studentEmail && userProfile.studentEmail.endsWith('@sjsu.edu'))
-  );
+  const access = getEntitlements(userProfile).access;
+  const hasPlan = access !== 'free';
   const likedCount = userProfile?.likedVideoIds?.length || 0;
   const savedCategoriesCount = userProfile?.likedCategoryIds?.length || 0;
 
-  const tierInfo = (() => {
-    if (isSjsuStudent) {
-      return {
-        badge: 'SJSU VIP',
-        title: 'SJSU Unlimited Pass',
-        price: '$0/mo (Free)',
-        description: 'Unlimited SJSU Spartan VIP Partner Access.'
-      };
-    }
-    if (!isPremium) {
-      return {
-        badge: 'BASIC',
-        title: 'Basic Plan',
-        price: 'Free',
-        description: 'Basic access with 1 Moodboard and 5 Likes.'
-      };
-    }
-    switch (userProfile?.tier) {
-      case 'student_unlimited':
-        return {
-          badge: 'SJSU VIP',
-          title: 'SJSU Unlimited Pass',
-          price: '$0/mo (Free)',
-          description: 'Unlimited SJSU Spartan VIP Partner Access.'
-        };
-      case 'tier5':
-        return {
-          badge: 'PRO',
-          title: 'Pro Plan',
-          price: '$5/mo',
-          description: 'Unlimited Moodboards, Unlimited Likes & Reel Editor Studio.'
-        };
-      case 'tier2':
-        return {
-          badge: 'SUPER FAN',
-          title: 'Super Fan Plan',
-          price: '$2/mo',
-          description: '6 Moodboards, 20 Likes & Priority Support.'
-        };
-      case 'tier1':
-      default:
-        return {
-          badge: 'SUPPORTER',
-          title: 'Supporter Plan',
-          price: '$1/mo',
-          description: '3 Moodboards, 10 Likes & Supporter Badge.'
-        };
-    }
-  })();
+  // Plan name, price and description all come from src/lib/plans.ts.
+  const tierInfo = describeAccess(userProfile);
 
   const handlePortal = async () => {
     if (isCheckingOut) return;
@@ -125,14 +73,14 @@ export default function AuthHeader() {
       {user ? (
         <>
           <PricingDialog>
-            {isPremium ? (
+            {hasPlan ? (
               <button 
                 type="button"
                 className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-purple-500/20 via-pink-500/15 to-purple-500/20 text-purple-300 border border-purple-500/35 hover:border-purple-400 transition-all cursor-pointer shadow-sm"
-                title="Your Pro subscription is active"
+                title={`${tierInfo.title} · ${tierInfo.price}`}
               >
                 <Sparkles className="h-3.5 w-3.5 text-purple-400" />
-                <span>Pro</span>
+                <span>{access === 'pro' ? 'Pro' : tierInfo.badge}</span>
               </button>
             ) : (
               <div className="animated-gradient-border p-[2px] rounded-full cursor-pointer">

@@ -1,151 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
-import { getAdminApp } from '@/lib/firebase-admin';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirebaseAuth, getFirestore } from '@/lib/firebase-admin';
 import { apiErrorResponse, requireFirebaseUser } from '@/lib/api-auth';
+import { syncUserFromStripe } from '@/lib/stripe-sync';
+import { planLabel } from '@/lib/plans';
 
+/**
+ * Re-reads the caller's subscriptions from Stripe and updates their profile.
+ * Admins may pass `userId` to sync someone else.
+ */
 export async function POST(req: NextRequest) {
     try {
         const identity = await requireFirebaseUser(req);
         const body = await req.json().catch(() => ({}));
-        const adminApp = getAdminApp();
-        const db = getFirestore(adminApp);
-        const requester = await db.collection('users').doc(identity.uid).get();
-        const requestedUserId = typeof body.userId === 'string' ? body.userId : identity.uid;
-        const userId = requestedUserId !== identity.uid && requester.data()?.role === 'admin' ? requestedUserId : identity.uid;
-        const target = await db.collection('users').doc(userId).get();
-        const email = target.data()?.email || identity.email;
+        const db = getFirestore();
 
-        if (!userId || !email) {
-            return NextResponse.json({ error: 'Missing userId or email' }, { status: 400 });
-        }
+        let userId = identity.uid;
+        let verifiedEmail = identity.email_verified ? identity.email ?? null : null;
 
-        console.log(`[Sync Stripe API] Syncing for user: ${userId}, email: ${email}`);
-
-        const stripe = getStripe();
-        
-        let customerIdsToTry = new Set<string>();
-
-        // 1. Try to get stripeId from customers/{uid}
-        try {
-            const customerDoc = await db.collection('customers').doc(userId).get();
-            if (customerDoc.exists && customerDoc.data()?.stripeId) {
-                customerIdsToTry.add(customerDoc.data()!.stripeId);
+        if (typeof body.userId === 'string' && body.userId !== identity.uid) {
+            const requester = await db.collection('users').doc(identity.uid).get();
+            if (requester.data()?.role !== 'admin') {
+                return NextResponse.json({ error: 'FORBIDDEN', message: 'Only admins can sync another account.' }, { status: 403 });
             }
-        } catch (e) {}
-
-        // 2. Try to get stripeCustomerId from users/{uid}
-        try {
-            const userDoc = await db.collection('users').doc(userId).get();
-            if (userDoc.exists && userDoc.data()?.stripeCustomerId) {
-                customerIdsToTry.add(userDoc.data()!.stripeCustomerId);
-            }
-        } catch (e) {}
-
-        // 3. Search Stripe by firebaseUID metadata
-        try {
-            const searchResult = await stripe.customers.search({
-                query: `metadata['firebaseUID']:'${userId}'`,
-                limit: 5
-            });
-            searchResult.data.forEach(c => customerIdsToTry.add(c.id));
-        } catch (e) {
-            console.log("[Sync Stripe API] Search by metadata failed or not supported", e);
+            userId = body.userId;
+            // For an admin-initiated sync, trust the email Firebase Auth has verified for that user.
+            const target = await getFirebaseAuth().getUser(userId).catch(() => null);
+            verifiedEmail = target?.emailVerified ? target.email ?? null : null;
         }
 
-        // 4. Search Stripe by email
-        try {
-            const emailCustomers = await stripe.customers.list({
-                email: email,
-                limit: 5,
-            });
-            emailCustomers.data.forEach(c => customerIdsToTry.add(c.id));
-        } catch (e) {}
+        const { billing, customerIds } = await syncUserFromStripe(getStripe(), db, userId, { verifiedEmail });
 
-        if (customerIdsToTry.size === 0) {
-            console.log(`[Sync Stripe API] No customer found in Stripe for ${email} or ${userId}`);
-            return NextResponse.json({ 
-                success: false, 
-                message: 'No Stripe customer found. Make sure you completed the checkout process.' 
+        if (!customerIds.length) {
+            return NextResponse.json({
+                success: false,
+                message: 'No Stripe customer found for this account. If you just paid, wait a minute and try again.',
             });
         }
 
-        // Search through customers for an active or trialing subscription
-        let activeSub = null;
-        let customerId = '';
-
-        for (const cid of Array.from(customerIdsToTry)) {
-            console.log(`[Sync Stripe API] Checking subscriptions for customer: ${cid}`);
-            try {
-                const subscriptions = await stripe.subscriptions.list({
-                    customer: cid,
-                    status: 'all', // Fetch all to filter manually
-                    limit: 10,
-                });
-
-                // Find an active or trialing subscription
-                const foundSub = subscriptions.data.find(sub => 
-                    sub.status === 'active' || sub.status === 'trialing'
-                );
-
-                if (foundSub) {
-                    activeSub = foundSub;
-                    customerId = cid;
-                    console.log(`[Sync Stripe API] Found ${foundSub.status} subscription: ${foundSub.id}`);
-                    break;
-                }
-            } catch (e) {
-                console.log(`[Sync Stripe API] Failed to fetch subs for ${cid}`, e);
-            }
-        }
-
-        if (!activeSub) {
-            console.log(`[Sync Stripe API] No active or trialing subscriptions found in Stripe for ${email}. Deactivating premium status.`);
-            // Update Firestore to clear premium status
-            await db.collection('users').doc(userId).set({
-                isPremium: false,
-                tier: null,
-                subscriptionStatus: 'canceled',
-                updatedAt: new Date().toISOString(),
-            }, { merge: true });
-
-            return NextResponse.json({ 
-                success: false, 
-                message: 'No active subscription found. Your subscription status has been synced as inactive.' 
+        if (!billing.isPremium) {
+            return NextResponse.json({
+                success: false,
+                status: billing.subscriptionStatus,
+                message: 'No active subscription found. Your plan has been synced as inactive.',
             });
         }
 
-        const priceId = activeSub.items.data[0].price.id;
-        console.log(`[Sync Stripe API] Syncing subscription with PriceId: ${priceId}`);
-
-        // Map price ID to tier (Matching the IDs in .env.local)
-        let tier = 'tier1';
-        if (priceId === 'price_1SFgiV59QHehw05fc0lPRRf7') tier = 'tier2';
-        else if (priceId === 'price_1SFgiq59QHehw05fy017h1gR') tier = 'tier5';
-        else if (priceId === 'price_1SFgUc59QHehw05fROtqwkLN') tier = 'tier1';
-
-        // 3. Update Firestore users collection using Admin SDK
-        // (db is already initialized above)
-        
-        await db.collection('users').doc(userId).set({
-            isPremium: true,
-            tier: tier,
-            stripeCustomerId: customerId,
-            updatedAt: new Date().toISOString(),
-        }, { merge: true });
-
-        console.log(`[Sync Stripe API] Successfully updated user ${userId} to ${tier}`);
-
-        return NextResponse.json({ 
-            success: true, 
-            message: `Successfully synced! Your ${tier === 'tier1' ? 'Supporter' : tier === 'tier2' ? 'Super Fan' : 'Pro'} plan is now active.`,
-            tier 
+        return NextResponse.json({
+            success: true,
+            plan: billing.plan,
+            tier: billing.tier,
+            status: billing.subscriptionStatus,
+            message: `Synced! Your ${planLabel(billing.plan)} plan is active.`,
         });
     } catch (err: any) {
         if (err?.status) return apiErrorResponse(err);
         console.error('Sync Stripe Error:', err);
-        return NextResponse.json({ 
-            error: err.message || 'Internal Server Error' 
-        }, { status: 500 });
+        return NextResponse.json({ error: 'Could not sync your subscription.' }, { status: 500 });
     }
 }

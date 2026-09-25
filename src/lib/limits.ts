@@ -1,69 +1,23 @@
 import { UserProfile } from "./types";
+import { getEntitlements, resolveAccessLevel, type AccessLevel } from "./plans";
 
-export type UserTier = 'free' | 'tier1' | 'tier2' | 'tier5' | 'admin' | 'student_unlimited';
+// Limits and tier rules live in src/lib/plans.ts; this keeps the older
+// checkLimit() call sites working.
 
-export interface TierLimits {
-    maxMoodboards: number;
-    maxLikes: number;
-}
-
-export const TIER_LIMITS: Record<UserTier, TierLimits> = {
-    'free': {
-        maxMoodboards: 1,
-        maxLikes: 5
-    },
-    'tier1': { // $1 Supporter
-        maxMoodboards: 3,
-        maxLikes: 10
-    },
-    'tier2': { // $2 Super Fan
-        maxMoodboards: 6,
-        maxLikes: 20
-    },
-    'tier5': { // $5 Pro
-        maxMoodboards: Infinity,
-        maxLikes: Infinity
-    },
-    'student_unlimited': { // SJSU Student VIP
-        maxMoodboards: Infinity,
-        maxLikes: Infinity
-    },
-    'admin': {
-        maxMoodboards: Infinity,
-        maxLikes: Infinity
-    }
-};
+export type UserTier = AccessLevel;
 
 export function getUserTier(user: UserProfile | null): UserTier {
-    if (!user) return 'free';
-
-    // Explicit tier takes precedence if it's a valid tier
-    if (user.tier && ['free', 'tier1', 'tier2', 'tier5', 'student_unlimited'].includes(user.tier)) {
-        return user.tier as UserTier;
-    }
-
-    if (user.role === 'admin') return 'admin';
-    return user.tier || ('free' as UserTier); // Default to free if undefined
+    return resolveAccessLevel(user);
 }
 
 export function checkLimit(user: UserProfile | null, type: 'moodboards' | 'likes', currentCount: number): { allowed: boolean, limit: number, nextTier?: UserTier } {
-    const tier = getUserTier(user);
-    const limits = TIER_LIMITS[tier];
-
-    let limit = 0;
-    if (type === 'moodboards') limit = limits.maxMoodboards;
-    if (type === 'likes') limit = limits.maxLikes;
+    const { access, limits } = getEntitlements(user);
+    const limit = type === 'moodboards' ? limits.maxBoards : limits.maxSavedReferences;
 
     return {
         allowed: currentCount < limit,
         limit,
-        nextTier: getNextTier(tier)
+        // Every upgrade path now leads to Pro; legacy tiers are not sold.
+        nextTier: limit === Infinity ? undefined : access === 'free' || access === 'tier1' || access === 'tier2' ? 'pro' : undefined,
     };
-}
-
-function getNextTier(current: UserTier): UserTier | undefined {
-    if (current === 'free') return 'tier1';
-    if (current === 'tier1') return 'tier2';
-    if (current === 'tier2') return 'tier5';
-    return undefined;
 }

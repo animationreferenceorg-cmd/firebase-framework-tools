@@ -1,91 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
-import { getAdminApp } from '@/lib/firebase-admin';
-import { getFirestore } from 'firebase-admin/firestore';
-import Stripe from 'stripe';
+import { getFirestore } from '@/lib/firebase-admin';
 import { apiErrorResponse, requireFirebaseUser } from '@/lib/api-auth';
+import { syncUserFromStripe } from '@/lib/stripe-sync';
 
+/**
+ * Called before checkout to avoid double-subscribing: if the caller already
+ * has a subscription that grants access, the client sends them to the
+ * billing portal instead. Also refreshes their stored plan as a side effect.
+ */
 export async function POST(req: NextRequest) {
     try {
         const identity = await requireFirebaseUser(req);
-        const email = identity.email;
-        const userId = identity.uid;
+        const verifiedEmail = identity.email_verified ? identity.email ?? null : null;
 
-        if (!email) {
-            return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+        const { billing, customerId } = await syncUserFromStripe(getStripe(), getFirestore(), identity.uid, { verifiedEmail });
+
+        if (billing.isPremium) {
+            return NextResponse.json({ hasActiveSubscription: true, customerId, plan: billing.plan, tier: billing.tier });
         }
-
-        const stripe = getStripe();
-        const adminApp = getAdminApp();
-        const db = getFirestore(adminApp);
-
-        console.log(`[Check Subscription API] Checking for email: ${email}`);
-
-        // Search Stripe for customer by email
-        const customers = await stripe.customers.list({
-            email: email,
-            limit: 5
-        });
-
-        let activeSub = null;
-        let customerId = '';
-
-        for (const customer of customers.data) {
-            const subscriptions = await stripe.subscriptions.list({
-                customer: customer.id,
-                status: 'all',
-                limit: 10
-            });
-
-            // Find any active or trialing subscriptions
-            const foundSub = subscriptions.data.find(sub => 
-                sub.status === 'active' || sub.status === 'trialing'
-            );
-
-            if (foundSub) {
-                activeSub = foundSub;
-                customerId = customer.id;
-                console.log(`[Check Subscription API] Found active subscription ${foundSub.id} for customer ${customer.id}`);
-                break;
-            }
-        }
-
-        if (activeSub) {
-            const priceId = activeSub.items.data[0].price.id;
-            
-            // Map price ID to tier
-            let tier = 'tier1';
-            if (priceId === 'price_1SFgiV59QHehw05fc0lPRRf7') tier = 'tier2';
-            else if (priceId === 'price_1SFgiq59QHehw05fy017h1gR') tier = 'tier5';
-            else if (priceId === 'price_1SFgUc59QHehw05fROtqwkLN') tier = 'tier1';
-
-            // Proactively update Firestore user collection to link customer and set tier
-            if (userId) {
-                await db.collection('users').doc(userId).set({
-                    isPremium: true,
-                    tier: tier,
-                    stripeCustomerId: customerId,
-                    subscriptionStatus: activeSub.status,
-                    updatedAt: new Date().toISOString()
-                }, { merge: true });
-                console.log(`[Check Subscription API] Proactively linked stripeCustomerId ${customerId} and activated ${tier} for user ${userId}`);
-            }
-
-            return NextResponse.json({ 
-                hasActiveSubscription: true, 
-                customerId,
-                tier 
-            });
-        }
-
         return NextResponse.json({ hasActiveSubscription: false });
-
     } catch (error: any) {
         if (error?.status) return apiErrorResponse(error);
         console.error('Error checking subscription:', error);
-        return NextResponse.json(
-            { error: error.message || 'Internal Server Error' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Could not check your subscription.' }, { status: 500 });
     }
 }

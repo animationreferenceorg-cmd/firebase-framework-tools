@@ -3,6 +3,7 @@ import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, add
 import { db, auth } from "./firebase";
 import type { User } from "firebase/auth";
 import type { Category, UserProfile } from "./types";
+import { legacyTierForPlan, planFromPriceId } from "./plans";
 
 // Firestore collection reference
 const USERS_COLLECTION = "users";
@@ -171,16 +172,14 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       
       console.log(`[Subscription Check] Found priceId: ${priceId}`);
 
-      let detectedTier: UserProfile['tier'] = 'tier1'; 
-      if (priceId === 'price_1SFgiV59QHehw05fc0lPRRf7') detectedTier = 'tier2';
-      else if (priceId === 'price_1SFgiq59QHehw05fy017h1gR') detectedTier = 'tier5';
-      else if (priceId === 'price_1SFgUc59QHehw05fROtqwkLN' || priceId?.includes('1SFgUc')) detectedTier = 'tier1';
-      else {
-          console.warn(`[Subscription Check] Unknown Price ID: ${priceId}. Defaulting to tier1.`);
-          detectedTier = 'tier1';
-      }
+      // Unknown prices grant nothing; see planFromPriceId in src/lib/plans.ts.
+      const detectedPlan = planFromPriceId(priceId);
+      if (!detectedPlan) console.warn(`[Subscription Check] Unknown Price ID: ${priceId}. Not granting a plan.`);
+      const detectedTier: UserProfile['tier'] = detectedPlan ? legacyTierForPlan(detectedPlan) : null;
 
-      if (profile) {
+      if (!detectedPlan) {
+        // Nothing to reflect; the server-side sync remains the source of truth.
+      } else if (profile) {
         if (!profile.isPremium || profile.tier !== detectedTier) {
           console.log(`[Subscription Check] Syncing detected tier: ${detectedTier}`);
           // Reflect the detected tier for this render immediately, but persist it
@@ -190,6 +189,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
           // can't self-grant premium access.
           profile.isPremium = true;
           profile.tier = detectedTier;
+          profile.plan = detectedPlan;
           if (profile.email) {
             auth.currentUser.getIdToken().then((idToken) => fetch('/api/sync-stripe', {
               method: 'POST',
@@ -207,6 +207,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
           role: 'user',
           isPremium: true,
           tier: detectedTier,
+          plan: detectedPlan,
           subscriptionStatus: subData.status,
           likedVideoIds: [],
           likedCategoryTitles: [],

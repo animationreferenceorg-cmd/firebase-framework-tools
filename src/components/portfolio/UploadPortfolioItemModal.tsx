@@ -9,6 +9,7 @@ import {
   DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
+import { getEntitlements } from '@/lib/plans';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -515,17 +516,16 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
       return;
     }
 
-    const hasUnlimitedPortfolioPosts = userProfile?.role === 'admin' ||
-      (userProfile?.isPremium === true && userProfile.tier === 'tier5');
-    if (!hasUnlimitedPortfolioPosts) {
+    const { maxPortfolioPosts } = getEntitlements(userProfile).limits;
+    if (maxPortfolioPosts !== Infinity) {
       try {
         const q = query(collection(db, 'portfolio_items'), where('userId', '==', userId));
         const timeoutPromise = new Promise<any>((_, reject) => setTimeout(() => reject(new Error("Limit check timeout")), 1800));
         const existingPosts = await Promise.race([getDocs(q), timeoutPromise]);
-        if (existingPosts && existingPosts.size >= 3) {
+        if (existingPosts && existingPosts.size >= maxPortfolioPosts) {
           toast({
             title: 'Free portfolio limit reached',
-            description: 'Free members can publish 3 portfolio posts. Upgrade to Pro for unlimited posts, private projects, and recruiter analytics.',
+            description: `Free members can publish ${maxPortfolioPosts} portfolio posts. Upgrade to Pro for unlimited posts and private reference boards.`,
             variant: 'destructive',
           });
           return;

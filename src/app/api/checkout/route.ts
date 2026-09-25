@@ -1,40 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
+import { getFirestore } from '@/lib/firebase-admin';
 import { apiErrorResponse, requireFirebaseUser } from '@/lib/api-auth';
+import { buildCheckoutSessionParams, CheckoutPlanError, priceForCheckout } from '@/lib/checkout';
 
-
-const PLANS: Record<string, string> = {
-    tier1: 'price_1SFgUc59QHehw05fc0lPRRf7',
-    tier2: 'price_1SFgiV59QHehw05fc0lPRRf7',
-    tier5: 'price_1SFgiq59QHehw05fy017h1gR',
-};
-
+/**
+ * Starts a Stripe Checkout session for `{ plan: 'pro_monthly' | 'pro_annual' }`.
+ * The price is chosen here from src/lib/plans.ts — the client never sends one.
+ */
 export async function POST(req: NextRequest) {
     try {
-        const stripe = getStripe();
         const identity = await requireFirebaseUser(req);
-        const { plan } = await req.json();
-        const price = PLANS[plan];
-        if (!price) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
-        const origin = req.nextUrl.origin;
+        const { plan } = await req.json().catch(() => ({}));
+        // Validate before touching Stripe.
+        priceForCheckout(plan);
 
-        const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            client_reference_id: identity.uid,
-            metadata: { userId: identity.uid },
-            line_items: [{ price, quantity: 1 }],
-            mode: 'subscription',
-            success_url: `${origin}/profile?success=true`,
-            cancel_url: `${origin}/profile?canceled=true`,
-        });
+        const stripe = getStripe();
+        const db = getFirestore();
+        const userRef = db.collection('users').doc(identity.uid);
+        const profile = (await userRef.get()).data() ?? {};
+
+        // Reuse the account's Stripe customer so every subscription lands on
+        // one customer that the webhook can map back to this user.
+        let customerId: string | undefined = typeof profile.stripeCustomerId === 'string' ? profile.stripeCustomerId : undefined;
+        if (!customerId) {
+            const customer = await stripe.customers.create({
+                email: identity.email ?? undefined,
+                metadata: { firebaseUID: identity.uid },
+            });
+            customerId = customer.id;
+            await userRef.set({ stripeCustomerId: customerId }, { merge: true });
+        }
+
+        const session = await stripe.checkout.sessions.create(
+            buildCheckoutSessionParams({ plan, uid: identity.uid, customerId, origin: req.nextUrl.origin })
+        );
 
         return NextResponse.json({ url: session.url });
     } catch (err: any) {
+        if (err instanceof CheckoutPlanError) {
+            return NextResponse.json({ error: err.code, message: err.message }, { status: err.code === 'INVALID_PLAN' ? 400 : 409 });
+        }
         if (err?.status) return apiErrorResponse(err);
         console.error('Stripe Checkout Error:', err);
-        return NextResponse.json(
-            { error: err.message || 'Internal Server Error' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'CHECKOUT_FAILED', message: 'Could not start checkout.' }, { status: 500 });
     }
 }

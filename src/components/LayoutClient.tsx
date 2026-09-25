@@ -229,9 +229,9 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                             <CreditCard className="w-3 h-3" /> Simulate Tier
                                         </h4>
                                         <div className="grid grid-cols-3 gap-2 mb-2">
-                                            <SimulateTierButton tier="tier1" label="$1" />
-                                            <SimulateTierButton tier="tier2" label="$2" />
-                                            <SimulateTierButton tier="tier5" label="$5" />
+                                            <SimulateTierButton tier="tier1" label="Legacy $1" />
+                                            <SimulateTierButton tier="tier2" label="Legacy $2" />
+                                            <SimulateTierButton tier="tier5" label="Pro" />
                                         </div>
                                         <SimulateTierButton tier="reset" label="Reset (Admin)" fullWidth />
                                     </div>

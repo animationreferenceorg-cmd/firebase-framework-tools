@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
-import { getFirestore } from 'firebase-admin/firestore';
-import { getAdminApp } from '@/lib/firebase-admin';
+import { getFirestore } from '@/lib/firebase-admin';
 import { apiErrorResponse, requireFirebaseUser } from '@/lib/api-auth';
 
 
@@ -15,8 +14,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
         }
 
-        const adminApp = getAdminApp(); // Initialize Firebase Admin
-        const db = getFirestore(adminApp);
+        const db = getFirestore();
 
         // Get the user's Stripe Customer ID from Firestore
         const userDoc = await db.collection('users').doc(userId).get();

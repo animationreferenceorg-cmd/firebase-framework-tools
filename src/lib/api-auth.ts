@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { getFirebaseAuth, getFirestore } from './firebase-admin';
+import { getEntitlements } from './plans';
 
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string) {
@@ -25,8 +26,9 @@ export async function getTrustedProfile(uid: string) {
   return snap.exists ? snap.data() || {} : {};
 }
 
+/** Pro check for a profile read with the Admin SDK (never from client input). */
 export function profileHasPro(profile: FirebaseFirestore.DocumentData) {
-  return profile.role === 'admin' || profile.isVIP === true || profile.unlimitedAccess === true || profile.tier === 'student_unlimited' || (profile.isPremium === true && profile.tier === 'tier5');
+  return getEntitlements(profile).isPro;
 }
 
 export function apiErrorResponse(error: unknown) {

@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { planLabel } from '@/lib/plans';
 
 interface User {
   id: string;
@@ -26,6 +27,7 @@ interface User {
   role?: string;
   isPremium?: boolean;
   tier?: string;
+  plan?: string;
   subscriptionStatus?: string;
   updatedAt?: string;
   createdAt?: string;
@@ -78,9 +80,9 @@ export default function UsersAdminPage() {
       });
       const data = await response.json();
       if (data.success) {
-        toast({ title: 'Synced', description: `User ${email} synced: ${data.tier}` });
+        toast({ title: 'Synced', description: `User ${email} synced: ${planLabel(data.plan)}` });
         // Update local state
-        setUsers(users.map(u => u.id === userId ? { ...u, isPremium: true, tier: data.tier } : u));
+        setUsers(users.map(u => u.id === userId ? { ...u, isPremium: true, tier: data.tier, plan: data.plan, subscriptionStatus: data.status } : u));
       } else {
         toast({ title: 'Status', description: data.message });
       }
@@ -160,7 +162,7 @@ export default function UsersAdminPage() {
                     <TableCell>
                       {user.tier ? (
                         <span className="capitalize text-foreground font-medium">
-                          {user.tier === 'tier1' ? '$1 Supporter' : user.tier === 'tier2' ? '$2 Super Fan' : user.tier === 'tier5' ? '$5 Pro' : user.tier}
+                          {planLabel(user.plan || user.tier)}
                         </span>
                       ) : (
                         <span className="text-muted-foreground">-</span>

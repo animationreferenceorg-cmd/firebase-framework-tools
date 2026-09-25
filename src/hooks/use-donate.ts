@@ -1,110 +1,80 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { useFirebase } from '@/firebase';
-import { collection, addDoc, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { track } from '@/lib/analytics';
+import type { CheckoutPlanId } from '@/lib/plans';
 
+/**
+ * Starts Pro checkout. The server picks the Stripe price for the requested
+ * plan (see src/lib/plans.ts); the client only says monthly or annual.
+ */
 export function useDonate() {
     const { user } = useAuth();
-    const { db } = useFirebase();
     const { toast } = useToast();
     const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-    const handleDonate = async (priceId: string | undefined) => {
+    const openPortal = async (idToken: string) => {
+        const portalRes = await fetch('/api/portal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+            body: JSON.stringify({}),
+        });
+        const portalData = await portalRes.json();
+        if (!portalData.url) throw new Error(portalData.error || 'Failed to open billing portal');
+        window.location.assign(portalData.url);
+    };
+
+    const startCheckout = async (plan: CheckoutPlanId, source = 'pricing_dialog') => {
         if (isCheckingOut) return;
 
-        if (!user || !db) {
+        if (!user) {
             toast({
                 variant: 'destructive',
-                title: 'Not signed in',
-                description: 'You must be signed in to make a donation.',
-            });
-            return;
-        }
-
-        if (!priceId) {
-            toast({
-                variant: 'destructive',
-                title: 'Configuration Error',
-                description: 'Price ID is missing for this selection.',
+                title: 'Sign in first',
+                description: 'Sign in to your account to upgrade to Pro.',
             });
             return;
         }
 
         setIsCheckingOut(true);
-        toast({ title: 'Checking subscription status...', description: 'Verifying with Stripe...' });
-
         try {
             const idToken = await user.getIdToken();
-            // Check for duplicate subscription first
-            if (user.email) {
-                const checkRes = await fetch('/api/check-subscription', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-                    body: JSON.stringify({ email: user.email, userId: user.uid })
+
+            // Avoid double-subscribing: existing subscribers manage their plan in the portal.
+            const checkRes = await fetch('/api/check-subscription', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+                body: JSON.stringify({}),
+            });
+            const checkData = await checkRes.json().catch(() => ({}));
+            if (checkData.hasActiveSubscription) {
+                toast({
+                    title: 'You already have a subscription',
+                    description: 'Opening your billing portal to manage it…',
                 });
-                const checkData = await checkRes.json();
-                if (checkData.hasActiveSubscription) {
-                    toast({
-                        title: "Subscription Detected",
-                        description: "You already have an active subscription under this email! Redirecting to your Billing Portal...",
-                    });
-                    
-                    // Redirect to Billing Portal
-                    const portalRes = await fetch('/api/portal', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-                        body: JSON.stringify({ userId: user.uid }),
-                    });
-                    const portalData = await portalRes.json();
-                    if (portalData.url) {
-                        window.location.assign(portalData.url);
-                    } else {
-                        throw new Error(portalData.error || 'Failed to open billing portal');
-                    }
-                    return;
-                }
+                await openPortal(idToken);
+                return;
             }
 
-            toast({ title: 'Starting checkout...', description: 'Redirecting to Stripe...' });
-
-            // Create a checkout session in Firestore (Stripe Extension listens to this)
-            const collectionRef = collection(db, 'customers', user.uid, 'checkout_sessions');
-
-            const docRef = await addDoc(collectionRef, {
-                price: priceId, // The extension expects 'price' (Price ID) or 'line_items'
-                success_url: window.location.origin + '/?success=true',
-                cancel_url: window.location.origin + '/?canceled=true',
-                mode: 'subscription',
-                allow_promotion_codes: true,
+            track('checkout_started', { plan, source });
+            const res = await fetch('/api/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+                body: JSON.stringify({ plan }),
             });
-
-            // Wait for the extension to attach the URL
-            const unsubscribe = onSnapshot(docRef, (snap) => {
-                const { error, url } = snap.data() || {};
-                if (error) {
-                    const errorMessage = error.message || JSON.stringify(error);
-                    console.error('Stripe Extension Error:', errorMessage);
-                    toast({ variant: 'destructive', title: 'Checkout Error', description: errorMessage });
-                    setIsCheckingOut(false);
-                    unsubscribe();
-                }
-                if (url) {
-                    window.location.assign(url);
-                    unsubscribe();
-                }
-            });
-
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.url) throw new Error(data.message || 'Could not start checkout.');
+            window.location.assign(data.url);
         } catch (error: any) {
-            console.error("Error creating checkout session:", error);
+            console.error('Error starting checkout:', error);
             toast({
                 variant: 'destructive',
-                title: 'Error',
+                title: 'Checkout unavailable',
                 description: error.message || 'Could not start checkout.',
             });
             setIsCheckingOut(false);
         }
     };
 
-    return { handleDonate, isCheckingOut };
+    return { startCheckout, isCheckingOut };
 }

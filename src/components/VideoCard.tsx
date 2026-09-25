@@ -4,10 +4,9 @@
 import * as React from 'react';
 import { useState, useRef, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { Heart, Maximize, Share2, PlayCircle, Play, ArrowLeft, ExternalLink, Instagram, Bookmark } from 'lucide-react';
+import { Heart, Maximize, Share2, PlayCircle, Play, Bookmark } from 'lucide-react';
 
 import { CreatorBadge } from '@/components/CreatorBadge';
-import { VideoActionsBar } from '@/components/VideoActionsBar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
@@ -15,13 +14,12 @@ import { Skeleton } from './ui/skeleton';
 import { useUser } from '@/hooks/use-user';
 import { likeVideo, unlikeVideo, saveVideo, unsaveVideo, incrementVideoViewCount } from '@/lib/firestore';
 import { useAuth } from '@/hooks/use-auth';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
-import { VideoPlayer, type VideoPlayerHandle } from './VideoPlayer';
 import { SaveToBoardModal } from './SaveToBoardModal';
-import { StudyNotesPanel } from './StudyNotesPanel';
+import { VideoStudyWorkspace } from './VideoStudyWorkspace';
 import Link from 'next/link';
 import type { Video } from '@/lib/types';
 
@@ -93,8 +91,6 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   const [cardInView, setCardInView] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const studyPlayerRef = useRef<VideoPlayerHandle>(null);
-  const [socialAccessible, setSocialAccessible] = useState(true);
 
   useEffect(() => {
     const node = containerRef.current;
@@ -459,9 +455,6 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   // A video is "social" if it has a social type, a social originalUrl, OR has an uploader (community submitted)
 
 
-  // Best link to use: prefer originalUrl, fall back to videoUrl (for older imports)
-  const communityLinkUrl = video.originalUrl || (video.uploader ? video.videoUrl : null);
-
   if (isCommunityVideo) {
     return (
       <>
@@ -599,62 +592,20 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
             </div>
           </div>
 
-          <DialogContent className="w-screen h-screen max-w-none m-0 p-0 rounded-none border-0 bg-[#0f0c1d]/95 backdrop-blur-xl overflow-y-auto">
+          <DialogContent className="h-[100dvh] w-screen max-w-none gap-0 overflow-hidden rounded-none border-0 bg-[#080611] p-0 [&>button]:hidden">
             {/* Radix requires a title on every dialog so screen readers can
                 announce it. The design has no visible heading here, so it is
                 positioned off-screen rather than hidden with display:none,
                 which would remove it from the accessibility tree too. */}
             <DialogTitle className="sr-only">{displayTitle}</DialogTitle>
+            <VideoStudyWorkspace
+              video={video}
+              title={displayTitle}
+              description={displayDescription}
+              isPro={isProStudyUser}
+              onClose={() => setIsPlayerOpen(false)}
+            />
 
-            {/* Back button — top RIGHT so it doesn't cover the top-left social link */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsPlayerOpen(false)}
-              className="absolute top-4 right-4 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md h-10 w-10 z-[200]"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-
-            {/* Creator badge — top left of the fullscreen dialog */}
-            <div className="absolute top-4 left-4 z-[200]">
-              <CreatorBadge
-                uploader={video.uploader}
-                originalUrl={communityLinkUrl || video.originalUrl}
-                videoUrl={video.videoUrl}
-                avatarUrl={video.authorAvatar || (video as any).author_avatar || (video as any).creatorAvatar}
-              />
-            </div>
-
-            <div className="flex min-h-full flex-col items-center justify-center p-4 xl:pr-[410px]">
-              <div className="w-full max-w-6xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl relative mb-6">
-                 <VideoPlayer ref={studyPlayerRef} video={video} hideStudyAction />
-              </div>
-              <div className="w-full max-w-6xl flex items-center gap-4">
-                <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-white">
-                  {displayTitle}
-                </h1>
-                {video.originalUrl && (
-                  <span className="text-zinc-400 text-sm">← Click the icon above to view original post</span>
-                )}
-              </div>
-              <div className="w-full max-w-6xl xl:hidden mt-6">
-                <StudyNotesPanel
-                  videoId={video.id}
-                  getCurrentTime={() => studyPlayerRef.current?.getCurrentTime() || 0}
-                  onSeek={(seconds) => studyPlayerRef.current?.seekTo(seconds)}
-                  isPro={isProStudyUser}
-                />
-              </div>
-            </div>
-            <aside className="absolute bottom-4 right-4 top-20 hidden w-[380px] overflow-y-auto xl:block z-[190]">
-              <StudyNotesPanel
-                videoId={video.id}
-                getCurrentTime={() => studyPlayerRef.current?.getCurrentTime() || 0}
-                onSeek={(seconds) => studyPlayerRef.current?.seekTo(seconds)}
-                isPro={isProStudyUser}
-              />
-            </aside>
           </DialogContent>
         </div>
       </Dialog>
@@ -824,96 +775,16 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           </div>
         </div>
       </div>
-      <DialogContent className="w-screen h-screen max-w-none m-0 p-0 rounded-none border-0 bg-[#0f0c1d]/40 backdrop-blur-xl overflow-y-auto">
-        <DialogHeader className="hidden">
-          <DialogTitle className="sr-only">{displayTitle}</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="h-[100dvh] w-screen max-w-none gap-0 overflow-hidden rounded-none border-0 bg-[#080611] p-0 [&>button]:hidden">
+        <DialogTitle className="sr-only">{displayTitle}</DialogTitle>
+        <VideoStudyWorkspace
+          video={video}
+          title={displayTitle}
+          description={displayDescription}
+          isPro={isProStudyUser}
+          onClose={() => setIsPlayerOpen(false)}
+        />
 
-        {isPlayerOpen ? (
-          <div className="min-h-screen w-full relative">
-            {/* Content Container - Centered like VideoPage */}
-            <main className="container mx-auto px-4 pt-10 pb-12 xl:pr-[410px]">
-              <div className="max-w-6xl mx-auto space-y-6">
-                {/* Back Button */}
-                <div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setIsPlayerOpen(false)}
-                    className="rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md h-10 w-10 transition-colors"
-                  >
-                    <ArrowLeft className="h-5 w-5" />
-                  </Button>
-                </div>
-
-                {/* Main Player Container */}
-                <div className="relative aspect-video w-full rounded-2xl overflow-hidden shadow-[0_0_50px_-10px_rgba(124,58,237,0.3)] bg-black border border-white/10">
-                  <VideoPlayer ref={studyPlayerRef} video={video} muted={false} hideStudyAction />
-                </div>
-
-                {/* Meta Info */}
-                <div className="space-y-4 text-white">
-                  <div className="flex items-center gap-4">
-                    <h1 className="text-3xl md:text-5xl font-bold tracking-tight">
-                      {displayTitle}
-                    </h1>
-                    {video.originalUrl && (socialAccessible ? (
-  <a
-    href={video.originalUrl}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="flex items-center justify-center w-12 h-12 bg-gradient-to-tr from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-full text-white shadow-xl hover:shadow-[0_0_20px_rgba(236,72,153,0.6)] transition-all duration-300 group/link animate-bounce hover:animate-none hover:scale-110"
-    title="View Original Post"
-  >
-    {video.originalUrl.toLowerCase().includes('instagram.com') ? (
-      <Instagram className="w-6 h-6" />
-    ) : (
-      <ExternalLink className="w-6 h-6" />
-    )}
-  </a>
-) : (
-  <span className="flex items-center justify-center w-12 h-12 bg-gray-600 rounded-full text-white opacity-50" title="Link disabled after free limit reached">
-    <ExternalLink className="w-6 h-6" />
-  </span>
-))}
-                  </div>
-                  {displayDescription && (
-                    <p className="text-zinc-400 text-lg leading-relaxed max-w-3xl">{displayDescription}</p>
-                  )}
-
-                  {/* Tags */}
-                  {video.tags && video.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      {video.tags.map((tag: string) => (
-                        <span key={tag} className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-sm text-zinc-300">
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="xl:hidden pt-4">
-                    <StudyNotesPanel
-                      videoId={video.id}
-                      getCurrentTime={() => studyPlayerRef.current?.getCurrentTime() || 0}
-                      onSeek={(seconds) => studyPlayerRef.current?.seekTo(seconds)}
-                      isPro={isProStudyUser}
-                    />
-                  </div>
-                </div>
-              </div>
-            </main>
-            <aside className="absolute bottom-4 right-4 top-20 hidden w-[380px] overflow-y-auto xl:block z-[190]">
-              <StudyNotesPanel
-                videoId={video.id}
-                getCurrentTime={() => studyPlayerRef.current?.getCurrentTime() || 0}
-                onSeek={(seconds) => studyPlayerRef.current?.seekTo(seconds)}
-                isPro={isProStudyUser}
-              />
-            </aside>
-          </div>
-        ) : (
-          <div className="h-screen w-full flex items-center justify-center bg-black text-white">Loading player...</div>
-        )}
       </DialogContent>
     </Dialog>
 

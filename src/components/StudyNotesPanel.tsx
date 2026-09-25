@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PricingDialog } from '@/components/PricingDialog';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 type StudyNote = {
     id: string;
@@ -20,6 +21,7 @@ type Props = {
     getCurrentTime: () => number;
     onSeek: (seconds: number) => void;
     isPro: boolean;
+    variant?: 'card' | 'sidebar';
 };
 
 const FREE_NOTE_LIMIT = 5;
@@ -32,7 +34,7 @@ function formatTimestamp(seconds: number) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-export function StudyNotesPanel({ videoId, getCurrentTime, onSeek, isPro }: Props) {
+export function StudyNotesPanel({ videoId, getCurrentTime, onSeek, isPro, variant = 'card' }: Props) {
     const { toast } = useToast();
     const storageKey = `animref:study-notes:${videoId}`;
     const [notes, setNotes] = useState<StudyNote[]>([]);
@@ -103,8 +105,18 @@ export function StudyNotesPanel({ videoId, getCurrentTime, onSeek, isPro }: Prop
     };
 
     return (
-        <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5 md:p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <section className={cn(
+            "border border-white/10 bg-white/[0.025]",
+            variant === 'sidebar'
+                ? "min-h-full rounded-none border-0 bg-transparent p-5"
+                : "rounded-2xl p-5 md:p-6"
+        )}>
+            <div className={cn(
+                "flex gap-4",
+                variant === 'sidebar'
+                    ? "flex-col"
+                    : "flex-col sm:flex-row sm:items-center sm:justify-between"
+            )}>
                 <div>
                     <div className="flex items-center gap-2">
                         <Clock3 className="h-5 w-5 text-purple-300" />
@@ -113,7 +125,7 @@ export function StudyNotesPanel({ videoId, getCurrentTime, onSeek, isPro }: Prop
                     </div>
                     <p className="mt-1 text-xs text-zinc-400">Capture a playback moment, record what matters, and return to it instantly.</p>
                 </div>
-                <Button onClick={beginNote} className="gap-2 rounded-xl bg-purple-600 text-white hover:bg-purple-500">
+                <Button onClick={beginNote} className={cn("gap-2 rounded-xl bg-purple-600 text-white hover:bg-purple-500", variant === 'sidebar' && "w-full")}>
                     <MessageSquarePlus className="h-4 w-4" />
                     Note current moment
                 </Button>

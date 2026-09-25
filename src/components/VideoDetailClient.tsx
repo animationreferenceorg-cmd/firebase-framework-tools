@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Video } from '@/lib/types';
-import { VideoPlayer } from '@/components/VideoPlayer';
+import { VideoPlayer, type VideoPlayerHandle } from '@/components/VideoPlayer';
 import { VideoActionsBar } from '@/components/VideoActionsBar';
+import { StudyNotesPanel } from '@/components/StudyNotesPanel';
 import { useUser } from '@/hooks/use-user';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,8 @@ export function VideoDetailClient({ id, initialData }: VideoDetailClientProps) {
     const [loading, setLoading] = useState(!initialData);
     const { userProfile } = useUser();
     const { beginWatch, endWatch } = useWatchTracker();
+    const playerRef = useRef<VideoPlayerHandle>(null);
+    const isPro = Boolean(userProfile?.isPremium || userProfile?.role === 'admin' || userProfile?.tier === 'student_unlimited');
 
     // Opening a video page is deliberate viewing: it counts from the first
     // second, and leaving the page is the natural pause that can surface a
@@ -90,9 +93,16 @@ export function VideoDetailClient({ id, initialData }: VideoDetailClientProps) {
                 <div className="max-w-6xl mx-auto space-y-8">
                     {/* Main Player */}
                     <div className="relative aspect-video w-full rounded-2xl overflow-hidden shadow-[0_0_50px_-10px_rgba(124,58,237,0.3)] bg-black border border-white/10">
-                        <VideoPlayer video={video} startsPaused={false} muted={false} />
+                        <VideoPlayer ref={playerRef} video={video} startsPaused={false} muted={false} />
                         <VideoActionsBar video={video} userProfile={userProfile} />
                     </div>
+
+                    <StudyNotesPanel
+                        videoId={video.id}
+                        getCurrentTime={() => playerRef.current?.getCurrentTime() || 0}
+                        onSeek={(seconds) => playerRef.current?.seekTo(seconds)}
+                        isPro={isPro}
+                    />
 
                     {/* Meta Info */}
                     <div className="space-y-4">

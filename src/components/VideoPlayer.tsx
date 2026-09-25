@@ -32,6 +32,12 @@ interface VideoPlayerProps {
     hideLibraryActions?: boolean;
 }
 
+export interface VideoPlayerHandle {
+    handlePlayPause: () => void;
+    getCurrentTime: () => number;
+    seekTo: (seconds: number) => void;
+}
+
 // Client-side only component to wrap ReactPlayer
 function Player({ playerRef, video, ...props }: any) {
     const [hasMounted, setHasMounted] = React.useState(false);
@@ -65,7 +71,7 @@ function Player({ playerRef, video, ...props }: any) {
 }
 
 
-export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onCapture, showCaptureButton = false, startsPaused = false, muted = true, hideFullscreenControl = false, hidePlayControl = false, onEnded, autoPlay, loop = false, alwaysShowControls = true, onToggleTimeline, isTimelineVisible = true, hideLibraryActions = false }, ref) => {
+export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>(({ video, onCapture, showCaptureButton = false, startsPaused = false, muted = true, hideFullscreenControl = false, hidePlayControl = false, onEnded, autoPlay, loop = false, alwaysShowControls = true, onToggleTimeline, isTimelineVisible = true, hideLibraryActions = false }, ref) => {
     const playerRef = React.useRef<ReactPlayer>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
     const { toast } = useToast();
@@ -181,7 +187,15 @@ export const VideoPlayer = React.forwardRef<any, VideoPlayerProps>(({ video, onC
 
     React.useImperativeHandle(ref, () => ({
         handlePlayPause,
-    }));
+        getCurrentTime: () => played * duration,
+        seekTo: (seconds: number) => {
+            if (!playerRef.current || !Number.isFinite(seconds)) return;
+            const safeTime = Math.max(0, Math.min(duration || seconds, seconds));
+            playerRef.current.seekTo(safeTime, 'seconds');
+            if (duration > 0) setPlayed(safeTime / duration);
+            setIsPlaying(false);
+        },
+    }), [handlePlayPause, played, duration]);
 
     React.useEffect(() => {
         const onFullScreenChange = () => {

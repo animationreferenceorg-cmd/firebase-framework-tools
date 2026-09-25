@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, LayoutGrid, Paintbrush, Scissors, Sparkles, UserPlus } from 'lucide-react';
 
-const launches = [
+export const launches = [
   {
     title: 'Paint',
     badge: 'Beta',

@@ -121,6 +121,16 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(18px) scale(0.97)' },
           '100%': { opacity: '1', transform: 'none' },
         },
+        // Billboard slide timer: a bar filling left to right.
+        progress: {
+          from: { transform: 'scaleX(0)' },
+          to: { transform: 'scaleX(1)' },
+        },
+        // Ken Burns settle: an image arriving slightly large and easing in.
+        'ken-burns': {
+          from: { transform: 'scale(1.12) translate3d(1.5%, 1%, 0)' },
+          to: { transform: 'scale(1.02) translate3d(0, 0, 0)' },
+        },
         shimmer: {
           from: { backgroundPosition: '-200% 0' },
           to: { backgroundPosition: '200% 0' },

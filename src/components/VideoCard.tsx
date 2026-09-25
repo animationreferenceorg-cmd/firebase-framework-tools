@@ -19,8 +19,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
-import { VideoPlayer } from './VideoPlayer';
+import { VideoPlayer, type VideoPlayerHandle } from './VideoPlayer';
 import { SaveToBoardModal } from './SaveToBoardModal';
+import { StudyNotesPanel } from './StudyNotesPanel';
 import Link from 'next/link';
 import type { Video } from '@/lib/types';
 
@@ -92,6 +93,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   const [cardInView, setCardInView] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const studyPlayerRef = useRef<VideoPlayerHandle>(null);
   const [socialAccessible, setSocialAccessible] = useState(true);
 
   useEffect(() => {
@@ -208,14 +210,25 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   }, [isHovered, video.id]);
 
   const openVideoPlayer = () => {
+    setIsPlayerOpen(true);
+    beginWatch(playKey, 'playback');
     if (!countedVideoViewRef.current && video.id) {
       countedVideoViewRef.current = true;
       incrementVideoViewCount(video.id).catch(() => {});
     }
-    // The dedicated video route is the full-screen study workspace. Opening a
-    // reference goes there directly so notes and board tools are always shown.
-    window.location.assign(`/video/${video.id}`);
   };
+
+  const handlePlayClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openVideoPlayer();
+  };
+
+  const isProStudyUser = Boolean(
+    userProfile?.isPremium ||
+    userProfile?.role === 'admin' ||
+    userProfile?.tier === 'student_unlimited'
+  );
 
   const handleCardClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('a')) {
@@ -452,10 +465,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   if (isCommunityVideo) {
     return (
       <>
-      {/* Legacy theater markup stays temporarily for a low-risk migration, but
-          it must never open: every reference now uses /video/[id] as its
-          full-screen study workspace. */}
-      <Dialog open={false} onOpenChange={(open) => { if (open) openVideoPlayer(); }}>
+      <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
         <div ref={containerRef}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
@@ -578,14 +588,12 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
 
               <div className="flex items-center gap-2">
                 <Button
-                  asChild
                   variant="ghost"
                   size="icon"
+                  onClick={handlePlayClick}
                   className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
                 >
-                  <Link href={`/video/${video.id}`} onClick={(event) => event.stopPropagation()} title="Open Study Workspace">
-                    <Maximize className="text-white h-4 w-4" />
-                  </Link>
+                  <Maximize className="text-white h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -618,9 +626,9 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
               />
             </div>
 
-            <div className="flex flex-col h-full items-center justify-center p-4">
+            <div className="flex min-h-full flex-col items-center justify-center p-4 xl:pr-[410px]">
               <div className="w-full max-w-6xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl relative mb-6">
-                 <VideoPlayer video={video} />
+                 <VideoPlayer ref={studyPlayerRef} video={video} hideStudyAction />
               </div>
               <div className="w-full max-w-6xl flex items-center gap-4">
                 <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-white">
@@ -630,7 +638,23 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
                   <span className="text-zinc-400 text-sm">← Click the icon above to view original post</span>
                 )}
               </div>
+              <div className="w-full max-w-6xl xl:hidden mt-6">
+                <StudyNotesPanel
+                  videoId={video.id}
+                  getCurrentTime={() => studyPlayerRef.current?.getCurrentTime() || 0}
+                  onSeek={(seconds) => studyPlayerRef.current?.seekTo(seconds)}
+                  isPro={isProStudyUser}
+                />
+              </div>
             </div>
+            <aside className="absolute bottom-4 right-4 top-20 hidden w-[380px] overflow-y-auto xl:block z-[190]">
+              <StudyNotesPanel
+                videoId={video.id}
+                getCurrentTime={() => studyPlayerRef.current?.getCurrentTime() || 0}
+                onSeek={(seconds) => studyPlayerRef.current?.seekTo(seconds)}
+                isPro={isProStudyUser}
+              />
+            </aside>
           </DialogContent>
         </div>
       </Dialog>
@@ -662,8 +686,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
 
   return (
     <>
-    {/* Standard cards use the same dedicated full-screen study route. */}
-    <Dialog open={false} onOpenChange={(open) => { if (open) openVideoPlayer(); }}>
+    <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
       <div
         ref={containerRef}
         onMouseEnter={handleMouseEnter}
@@ -794,10 +817,8 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <Button asChild variant="ghost" size="icon" className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm">
-                <Link href={`/video/${video.id}`} onClick={(event) => event.stopPropagation()} title="Open Study Workspace">
-                  <Maximize className="text-white h-3.5 w-3.5" />
-                </Link>
+              <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Open Study Workspace">
+                <Maximize className="text-white h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
@@ -811,7 +832,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
         {isPlayerOpen ? (
           <div className="min-h-screen w-full relative">
             {/* Content Container - Centered like VideoPage */}
-            <main className="container mx-auto px-4 pt-10 pb-12">
+            <main className="container mx-auto px-4 pt-10 pb-12 xl:pr-[410px]">
               <div className="max-w-6xl mx-auto space-y-6">
                 {/* Back Button */}
                 <div>
@@ -827,7 +848,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
 
                 {/* Main Player Container */}
                 <div className="relative aspect-video w-full rounded-2xl overflow-hidden shadow-[0_0_50px_-10px_rgba(124,58,237,0.3)] bg-black border border-white/10">
-                  <VideoPlayer video={video} muted={false} />
+                  <VideoPlayer ref={studyPlayerRef} video={video} muted={false} hideStudyAction />
                 </div>
 
                 {/* Meta Info */}
@@ -870,9 +891,25 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
                       ))}
                     </div>
                   )}
+                  <div className="xl:hidden pt-4">
+                    <StudyNotesPanel
+                      videoId={video.id}
+                      getCurrentTime={() => studyPlayerRef.current?.getCurrentTime() || 0}
+                      onSeek={(seconds) => studyPlayerRef.current?.seekTo(seconds)}
+                      isPro={isProStudyUser}
+                    />
+                  </div>
                 </div>
               </div>
             </main>
+            <aside className="absolute bottom-4 right-4 top-20 hidden w-[380px] overflow-y-auto xl:block z-[190]">
+              <StudyNotesPanel
+                videoId={video.id}
+                getCurrentTime={() => studyPlayerRef.current?.getCurrentTime() || 0}
+                onSeek={(seconds) => studyPlayerRef.current?.seekTo(seconds)}
+                isPro={isProStudyUser}
+              />
+            </aside>
           </div>
         ) : (
           <div className="h-screen w-full flex items-center justify-center bg-black text-white">Loading player...</div>

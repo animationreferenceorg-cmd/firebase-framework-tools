@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Video } from '@/lib/types';
-import { VideoStudyWorkspace } from '@/components/VideoStudyWorkspace';
-import { useUser } from '@/hooks/use-user';
+import { VideoFullscreenViewer } from '@/components/VideoFullscreenViewer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -22,9 +21,7 @@ export function VideoDetailClient({ id, initialData }: VideoDetailClientProps) {
     const router = useRouter();
     const [video, setVideo] = useState<Video | null>(initialData || null);
     const [loading, setLoading] = useState(!initialData);
-    const { userProfile } = useUser();
     const { beginWatch, endWatch } = useWatchTracker();
-    const isPro = Boolean(userProfile?.isPremium || userProfile?.role === 'admin' || userProfile?.tier === 'student_unlimited');
 
     // Opening a video page is deliberate viewing: it counts from the first
     // second, and leaving the page is the natural pause that can surface a
@@ -78,11 +75,10 @@ export function VideoDetailClient({ id, initialData }: VideoDetailClientProps) {
     }
 
     return (
-        <VideoStudyWorkspace
+        <VideoFullscreenViewer
             video={video}
             title={video.title}
             description={video.description}
-            isPro={isPro}
             onClose={() => {
                 if (window.history.length > 1) router.back();
                 else router.push('/home');

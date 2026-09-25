@@ -19,7 +19,7 @@ import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
 import { SaveToBoardModal } from './SaveToBoardModal';
-import { VideoStudyWorkspace } from './VideoStudyWorkspace';
+import { VideoFullscreenViewer } from './VideoFullscreenViewer';
 import Link from 'next/link';
 import type { Video } from '@/lib/types';
 
@@ -219,12 +219,6 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
     e.stopPropagation();
     openVideoPlayer();
   };
-
-  const isProStudyUser = Boolean(
-    userProfile?.isPremium ||
-    userProfile?.role === 'admin' ||
-    userProfile?.tier === 'student_unlimited'
-  );
 
   const handleCardClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('a')) {
@@ -598,11 +592,10 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
                 positioned off-screen rather than hidden with display:none,
                 which would remove it from the accessibility tree too. */}
             <DialogTitle className="sr-only">{displayTitle}</DialogTitle>
-            <VideoStudyWorkspace
+            <VideoFullscreenViewer
               video={video}
               title={displayTitle}
               description={displayDescription}
-              isPro={isProStudyUser}
               onClose={() => setIsPlayerOpen(false)}
             />
 
@@ -768,7 +761,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Open Study Workspace">
+              <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Open Fullscreen">
                 <Maximize className="text-white h-3.5 w-3.5" />
               </Button>
             </div>
@@ -777,11 +770,10 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
       </div>
       <DialogContent className="h-[100dvh] w-screen max-w-none gap-0 overflow-hidden rounded-none border-0 bg-[#080611] p-0 [&>button]:hidden">
         <DialogTitle className="sr-only">{displayTitle}</DialogTitle>
-        <VideoStudyWorkspace
+        <VideoFullscreenViewer
           video={video}
           title={displayTitle}
           description={displayDescription}
-          isPro={isProStudyUser}
           onClose={() => setIsPlayerOpen(false)}
         />
 

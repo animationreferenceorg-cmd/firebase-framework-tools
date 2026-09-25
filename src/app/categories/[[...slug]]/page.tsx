@@ -85,6 +85,7 @@ export async function generateMetadata(
     if (!category) {
         return {
             title: 'Category Not Found - Animation Reference',
+            robots: { index: false, follow: false },
         };
     }
 
@@ -96,6 +97,9 @@ export async function generateMetadata(
             description: category.description,
             url: `https://animationreference.org/categories/${categorySlug}`,
             images: [category.imageUrl || '/logo.png'],
+        },
+        alternates: {
+            canonical: `https://animationreference.org/category/${categorySlug}`,
         },
     };
 }

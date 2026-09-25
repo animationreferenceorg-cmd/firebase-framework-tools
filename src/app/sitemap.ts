@@ -93,6 +93,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 0.9,
         },
         {
+            url: `${BASE_URL}/resources`,
+            lastModified: new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.9,
+        },
+        ...[
+            'walk-cycle-animation-reference',
+            'run-cycle-animation-reference',
+            'punch-animation-reference',
+            'facial-acting-animation-reference',
+            'body-mechanics-animation-reference',
+            'creature-locomotion-animation-reference',
+            'animation-timing-and-spacing-reference',
+            'fx-animation-reference',
+        ].map(slug => ({
+            url: `${BASE_URL}/resources/${slug}`,
+            lastModified: new Date(),
+            changeFrequency: 'monthly' as const,
+            priority: 0.9,
+        })),
+        {
             url: `${BASE_URL}/resources/foundations-of-life`,
             lastModified: new Date(),
             changeFrequency: 'monthly',
@@ -154,7 +175,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
         // 4b. Dynamic Videos — from the static snapshot, so Googlebot fetching
         // the sitemap never triggers a full Firestore collection read.
-        const videoRoutes: MetadataRoute.Sitemap = getAllSnapshotVideos().map((video) => {
+        const videoRoutes: MetadataRoute.Sitemap = getAllSnapshotVideos()
+            .filter((video) => Boolean(video.title && (video.thumbnailUrl || video.posterUrl) && video.videoUrl))
+            .map((video) => {
             const iso = toIsoDate((video as { createdAt?: unknown }).createdAt);
             return {
                 url: `${BASE_URL}/video/${video.id}`,
@@ -162,10 +185,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                 changeFrequency: 'monthly' as const,
                 priority: 0.6,
             };
-        });
+            });
 
         // 5. Tag landing pages (English)
-        const tagRoutes: MetadataRoute.Sitemap = [...getTagIndex().bySlug.keys()].map((slug) => ({
+        const index = getTagIndex();
+        const indexableTags = [...index.bySlug.entries()].filter(([, entry]) => entry.videos.length >= 8);
+        const tagRoutes: MetadataRoute.Sitemap = indexableTags.map(([slug]) => ({
             url: `${BASE_URL}/tags/${slug}`,
             lastModified: new Date(),
             changeFrequency: 'weekly' as const,
@@ -179,7 +204,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         });
 
         // 6. Spanish tag landing pages (for SEO in Spanish-speaking countries)
-        const spanishTagRoutes: MetadataRoute.Sitemap = [...getTagIndex().bySlug.keys()].map((slug) => ({
+        const spanishTagRoutes: MetadataRoute.Sitemap = indexableTags.map(([slug]) => ({
             url: `${BASE_URL}/es/tags/${slug}`,
             lastModified: new Date(),
             changeFrequency: 'weekly' as const,

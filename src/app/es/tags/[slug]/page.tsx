@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic';
 
 const BASE_URL = 'https://animationreference.org';
 const PER_PAGE = 48;
+const MIN_INDEXABLE_VIDEOS = 8;
 
 type Props = {
     params: Promise<{ slug: string }>;
@@ -57,10 +58,10 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
             }
         },
         robots: {
-            index: true,
+            index: entry.videos.length >= MIN_INDEXABLE_VIDEOS,
             follow: true,
             googleBot: {
-                index: true,
+                index: entry.videos.length >= MIN_INDEXABLE_VIDEOS,
                 follow: true,
                 'max-image-preview': 'large',
                 'max-snippet': -1,

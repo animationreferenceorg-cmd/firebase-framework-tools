@@ -19,7 +19,7 @@ export async function GET() {
     const videos = getAllSnapshotVideos();
 
     const entries = videos
-        .filter(v => v.thumbnailUrl && v.videoUrl && v.title)
+        .filter(v => v.thumbnailUrl && v.videoUrl && v.title && (v.tags?.length || v.description))
         .map(v => {
             const description = v.description
                 || `${v.duration ? `${v.duration.toFixed(1)}s ` : ''}animation reference clip${v.tags?.length ? ` — ${v.tags.slice(0, 5).join(', ')}` : ''}. Frame-by-frame study for animators.`;

@@ -458,7 +458,10 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   if (isCommunityVideo) {
     return (
       <>
-      <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
+      {/* Legacy theater markup stays temporarily for a low-risk migration, but
+          it must never open: every reference now uses /video/[id] as its
+          full-screen study workspace. */}
+      <Dialog open={false} onOpenChange={(open) => { if (open) openVideoPlayer(); }}>
         <div ref={containerRef}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
@@ -663,7 +666,8 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
 
   return (
     <>
-    <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
+    {/* Standard cards use the same dedicated full-screen study route. */}
+    <Dialog open={false} onOpenChange={(open) => { if (open) openVideoPlayer(); }}>
       <div
         ref={containerRef}
         onMouseEnter={handleMouseEnter}

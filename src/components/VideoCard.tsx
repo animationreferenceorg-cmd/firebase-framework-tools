@@ -243,12 +243,6 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
     openVideoPlayer();
   };
 
-  const handlePlayClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    openVideoPlayer();
-  };
-
   const handleOpenPlayerChange = (open: boolean) => {
     setIsPlayerOpen(open);
     if (open) {
@@ -584,12 +578,14 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
 
               <div className="flex items-center gap-2">
                 <Button
+                  asChild
                   variant="ghost"
                   size="icon"
-                  onClick={handlePlayClick}
                   className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
                 >
-                  <Maximize className="text-white h-4 w-4" />
+                  <Link href={`/video/${video.id}`} onClick={(event) => event.stopPropagation()} title="Open Study Workspace">
+                    <Maximize className="text-white h-4 w-4" />
+                  </Link>
                 </Button>
               </div>
             </div>
@@ -798,8 +794,10 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Fullscreen">
-                <Maximize className="text-white h-3.5 w-3.5" />
+              <Button asChild variant="ghost" size="icon" className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm">
+                <Link href={`/video/${video.id}`} onClick={(event) => event.stopPropagation()} title="Open Study Workspace">
+                  <Maximize className="text-white h-3.5 w-3.5" />
+                </Link>
               </Button>
             </div>
           </div>

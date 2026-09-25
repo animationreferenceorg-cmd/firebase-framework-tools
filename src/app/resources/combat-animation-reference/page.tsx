@@ -3,8 +3,8 @@ import { ResourceHub } from '@/components/ResourceHub';
 import { getResourceHubVideos } from '@/lib/resource-hub';
 
 export const metadata: Metadata = {
-    title: 'Combat Animation Reference: Attacks, Hits & Reactions',
-    description: 'Study curated combat animation references for anticipation, contact poses, impact, hit reactions, blocks, and follow-through.',
+    title: 'Combat Animation Reference: Punches, Fights & Action',
+    description: 'Study combat animation references for punches, fights, attacks, anticipation, impact, hit reactions, blocks, and follow-through frame by frame.',
     keywords: 'combat animation reference, fighting animation reference, attack animation, hit reaction reference, impact frames',
     alternates: { canonical: 'https://animationreference.org/resources/combat-animation-reference' },
 };

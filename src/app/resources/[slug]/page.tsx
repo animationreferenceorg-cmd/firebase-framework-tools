@@ -92,6 +92,33 @@ const TOPICS: Record<string, Topic> = {
     related: [{ label: 'FX animation reference guide', href: '/resources/fx-animation-reference' }, { label: 'Animation timing and spacing', href: '/resources/animation-timing-and-spacing-reference' }],
     faqs: [{ question: 'What should I look for in FX reference?', answer: 'Study the effect’s phases, silhouette, directional flow, rhythm, scale changes, and how it reacts to its environment.' }, { question: 'How do you animate believable smoke?', answer: 'Use overlapping shapes with varied timing, clear upward or directional flow, and gradual breakup rather than moving one uniform mass.' }],
   },
+  'speech-animation-reference': {
+    slug: 'speech-animation-reference', title: 'Speech Animation Reference',
+    description: 'Study speech animation reference for lip sync, mouth shapes, dialogue timing, facial acting, eye focus, pauses, and readable character performances.',
+    intro: 'Speech animation is more than matching mouth shapes to sound. Use these references to study thought, breath, eye focus, facial transitions, and the pauses that make dialogue feel intentional.',
+    sections: [{ heading: 'Follow the thought', body: 'Watch for eye focus, blinks, head turns, and expression changes around important words. These choices often communicate the character’s intention more clearly than the mouth itself.' }, { heading: 'Use dialogue rhythm', body: 'Mark stressed words, consonant accents, breaths, holds, and pauses. A readable lip sync prioritizes the important beats instead of animating every sound with equal emphasis.' }],
+    tags: [{ label: 'Speech', slug: 'speech' }, { label: 'Acting', slug: 'acting' }, { label: 'Lip Sync', slug: 'lip-sync' }],
+    related: [{ label: 'Facial acting animation reference', href: '/resources/facial-acting-animation-reference' }, { label: 'Character acting reference', href: '/resources/character-acting-animation-reference' }],
+    faqs: [{ question: 'What should I study in speech animation reference?', answer: 'Study mouth shapes, eye focus, blinks, breath, head movement, expression changes, and the timing of pauses and stressed words.' }, { question: 'Does every spoken sound need a different mouth pose?', answer: 'No. Prioritize readable phoneme groups and the key accents of the dialogue rather than changing the mouth for every sound.' }],
+  },
+  'moving-hold-animation-reference': {
+    slug: 'moving-hold-animation-reference', title: 'Moving Hold Animation Reference',
+    description: 'Learn moving hold animation from reference clips. Study subtle breathing, balance shifts, eye movement, secondary action, and held poses that stay alive.',
+    intro: 'A moving hold keeps a character alive without making them perform unnecessarily. These references help you study subtle shifts in balance, breathing, eye focus, and secondary motion inside a held pose.',
+    sections: [{ heading: 'Keep the pose alive', body: 'Look for small changes in the eyes, chest, hands, shoulders, and balance. The movement should support the character’s thought or physical state rather than distract from it.' }, { heading: 'Control the scale of motion', body: 'Use larger movement for effort, agitation, or instability and smaller movement for listening, waiting, or quiet concentration. Vary timing so every part does not move at once.' }],
+    tags: [{ label: 'Moving Hold', slug: 'moving-hold' }, { label: 'Acting', slug: 'acting' }, { label: 'Idle', slug: 'idle' }],
+    related: [{ label: 'Facial acting animation reference', href: '/resources/facial-acting-animation-reference' }, { label: 'Animation timing and spacing', href: '/resources/animation-timing-and-spacing-reference' }],
+    faqs: [{ question: 'What is a moving hold in animation?', answer: 'A moving hold preserves a readable pose while adding subtle, purposeful motion such as breathing, eye movement, balance shifts, or secondary action.' }, { question: 'How do you avoid a moving hold feeling repetitive?', answer: 'Offset the timing of different parts, vary the amount of movement, and connect each change to the character’s thought or physical condition.' }],
+  },
+  'sword-swing-animation-reference': {
+    slug: 'sword-swing-animation-reference', title: 'Sword Swing Animation Reference',
+    description: 'Study sword swing animation reference for anticipation, arcs, footwork, weight, impact, recovery, and readable action choreography.',
+    intro: 'Sword swings combine weapon arcs, body mechanics, footwork, and clear changes of direction. Use these references to study how the weapon leads the action while the body supplies the force.',
+    sections: [{ heading: 'Track the weapon arc', body: 'Find the preparation, launch, fastest part of the swing, contact or passing point, and recovery. A clear arc and controlled spacing help the audience read the blade even at high speed.' }, { heading: 'Connect the feet to the strike', body: 'Study how the feet and hips establish balance before the swing and how the body recovers afterward. The strongest action has a clear relationship between the weapon path and the character’s center of gravity.' }],
+    tags: [{ label: 'Sword', slug: 'sword' }, { label: 'Combat', slug: 'combat' }, { label: 'Swing', slug: 'swing' }],
+    related: [{ label: 'Combat animation reference', href: '/resources/combat-animation-reference' }, { label: 'Body mechanics animation reference', href: '/resources/body-mechanics-animation-reference' }],
+    faqs: [{ question: 'What makes a sword swing readable?', answer: 'A readable preparation, clear weapon arc, strong directional spacing, grounded footwork, and a recovery that shows where the force went.' }, { question: 'Should the sword lead or follow the body?', answer: 'It depends on the action, but the weapon and body should have a clear relationship. Often the body initiates force while the weapon reaches the fastest spacing later in the arc.' }],
+  },
 };
 
 export function generateStaticParams() {

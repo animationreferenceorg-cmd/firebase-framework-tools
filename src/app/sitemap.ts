@@ -107,6 +107,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             'creature-locomotion-animation-reference',
             'animation-timing-and-spacing-reference',
             'fx-animation-reference',
+            'speech-animation-reference',
+            'moving-hold-animation-reference',
+            'sword-swing-animation-reference',
         ].map(slug => ({
             url: `${BASE_URL}/resources/${slug}`,
             lastModified: new Date(),

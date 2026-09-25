@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Browse Animation References | Animation Reference',
-  description: 'Browse thousands of curated animation reference clips by category, tag, and type. Study body mechanics, combat, acting, locomotion and more, then build your animator portfolio.',
+  title: 'Animation Reference Videos | Frame-by-Frame Study Library',
+  description: 'Browse animation reference videos for body mechanics, combat, acting, locomotion, timing, and effects. Study movement frame by frame with a free reference library for animators.',
   alternates: {
     canonical: '/home',
   },

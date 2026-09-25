@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Check, Star, ArrowRight, ShieldCheck, Zap, Globe, Trophy, Play, X, Video } from 'lucide-react';
 
 export const metadata: Metadata = {
-    title: '10 Best Animation Reference Websites for Professionals (2024)',
-    description: 'The ultimate list of animation reference websites for professional artists. Compare libraries, players, and features to find the best reference for your next shot.',
+    title: 'Best Animation Reference Websites and Free Libraries',
+    description: 'Compare the best animation reference websites, free animation reference sites, video libraries, and tools for 2D, 3D, game, and film animators.',
     keywords: 'animation reference websites, best animation reference, reference library, 2d animation reference, 3d animation reference',
     alternates: { canonical: 'https://animationreference.org/resources/best-animation-reference-websites' },
 };

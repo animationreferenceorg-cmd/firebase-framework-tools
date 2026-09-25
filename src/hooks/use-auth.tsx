@@ -25,6 +25,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // @ts-expect-error: Ignoring potential type mismatch for auth instance
   const [user, loading] = useAuthState(firebaseConfigured ? (auth as Auth) : undefined);
 
+  const userId = user?.uid;
+  // Hooks must run before the early return below.
+  const value = useMemo(() => ({ user: user ?? null, loading }), [user, userId, loading]);
+
   if (!firebaseConfigured) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background p-4">
@@ -39,9 +43,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       </div>
     );
   }
-
-  const userId = user?.uid;
-  const value = useMemo(() => ({ user: user ?? null, loading }), [user, userId, loading]);
 
   return (
     <AuthContext.Provider value={value}>

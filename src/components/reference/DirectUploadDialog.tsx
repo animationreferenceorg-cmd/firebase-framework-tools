@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { CheckCircle2, Film, Image as ImageIcon, Loader2, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -235,7 +236,7 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
             <h3 className="font-bold text-white">Sign in to upload reference</h3>
             <p className="mt-2 text-sm text-zinc-400">Join the community library to upload your videos, photos, and GIF references.</p>
             <Button asChild className="mt-4 bg-purple-600 hover:bg-purple-500 font-bold">
-              <a href="/login?redirect=/references">Sign in to Upload</a>
+              <Link href="/login?redirect=/references">Sign in to Upload</Link>
             </Button>
           </div>
         ) : (

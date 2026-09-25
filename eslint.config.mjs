@@ -15,6 +15,17 @@ const eslintConfig = [
     ignores: [
       "node_modules/**",
       ".next/**",
+      // Stale build copies and scratch output kept around locally.
+      ".next*/**",
+      "scratch/**",
+      "temp_downloader/**",
+      ".firebase/**",
+      "functions/node_modules/**",
+      "extension/**",
+      "integrations/**",
+      "public/**",
+      "playwright-report/**",
+      "test-results/**",
       "out/**",
       "build/**",
       "next-env.d.ts",

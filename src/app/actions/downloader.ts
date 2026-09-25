@@ -423,7 +423,7 @@ export async function downloadSocialVideo(
                     ...(externalBunnyId ? { externalBunnyId } : {})
                 };
 
-                let videoId = `sakugabooru-${postInfo.id}`;
+                const videoId = `sakugabooru-${postInfo.id}`;
                 if (saveToFirestore) {
                     const db = getFirestore();
                     await db.collection('videos').doc(videoId).set(videoData, { merge: true });

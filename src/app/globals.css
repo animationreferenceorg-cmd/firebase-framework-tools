@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 252 24% 9%; /* Deep Muted Violet #13111c */
+    --background: 250 30% 4%; /* Ink ground #08070d — matches the ambient backdrop */
     --foreground: 0 0% 100%;
     --card: 248 30% 13%; /* Console Card #1a182e */
     --card-foreground: 0 0% 100%;
@@ -23,13 +23,13 @@
     --border: 248 20% 18%;
     --input: 248 20% 18%;
     --ring: 263 90% 66%;
-    --sidebar-background: 248 28% 12%; /* Console Sidebar #171529 */
+    --sidebar-background: 250 30% 6% / 0.72; /* Glass: lets the ambient light read through */
     --sidebar-foreground: 0 0% 98%;
     --sidebar-primary: 263 90% 66%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 248 25% 18%;
+    --sidebar-accent: 263 70% 60% / 0.12;
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 248 20% 18%;
+    --sidebar-border: 250 30% 100% / 0.06;
     --sidebar-ring: 263 90% 66%;
   }
 
@@ -118,6 +118,33 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Display headings pick up the grotesque automatically; body copy stays Inter. */
+  h1, h2 {
+    font-family: var(--font-display), Inter, sans-serif;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background: rgba(139, 92, 246, 0.35);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid rgba(167, 139, 250, 0.9);
+    outline-offset: 3px;
+  }
+}
+
+/* Motion is decoration here, never information — honour the OS setting. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -225,6 +252,86 @@
   .glow-purple-border {
     border-color: rgba(168, 85, 247, 0.4);
     box-shadow: 0 0 20px -3px rgba(168, 85, 247, 0.3);
+  }
+
+  /* ---------------------------------------------------------------------
+     Motion language
+     --------------------------------------------------------------------- */
+
+  /* Squash & stretch on press — principle #1 of animation. The element
+     flattens and widens on contact, then springs back past rest. */
+  .squash {
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    will-change: transform;
+  }
+  .squash:active {
+    transform: scale(1.06, 0.9);
+    transition-duration: 0.08s;
+  }
+
+  /* A light sweep across a surface on hover, like a key light passing. */
+  .shine {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .shine::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.16) 50%, transparent 65%);
+    transform: translateX(-120%);
+    transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .shine:hover::after {
+    transform: translateX(120%);
+  }
+
+  /* Loading placeholder that reads as "footage loading", not a flat pulse. */
+  .skeleton-shimmer {
+    background-color: rgba(255, 255, 255, 0.04);
+    background-image: linear-gradient(90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.07) 50%,
+        rgba(255, 255, 255, 0) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.8s linear infinite;
+  }
+
+  /* Timecode / frame-counter chip. */
+  .timecode {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+
+  /* Section eyebrow: small caps label above a heading. */
+  .eyebrow {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.66rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(196, 181, 253, 0.75);
+  }
+
+  /* Hairline border that brightens toward the top-left, like a lit edge. */
+  .edge-lit {
+    position: relative;
+  }
+  .edge-lit::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    background: linear-gradient(140deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04) 40%, rgba(139, 92, 246, 0.18));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
   }
 
   /* Custom dark scrollbar */

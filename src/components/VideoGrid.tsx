@@ -27,13 +27,25 @@ export function VideoGrid({ title, videos, columns = 4 }: VideoGridProps) {
 
   return (
     <section>
-      {title && <h2 className="text-xl md:text-2xl font-bold mb-4 text-white">{title}</h2>}
+      {title && <h2 className="font-display text-xl md:text-2xl font-bold tracking-tight mb-4 text-white">{title}</h2>}
       <div className={cn(
         "grid gap-2.5 sm:gap-4",
         getGridClass()
       )}>
         {videos.map((video, index) => (
-          <VideoCard key={video.id} video={video} priority={index < 4} />
+          // Staggered entrance. A CSS animation rather than a motion component:
+          // this grid can hold hundreds of cards, and each one mounting its own
+          // JS animation would cost far more than a keyframe the browser runs
+          // on the compositor. Delay cycles every 12 cards so each batch loaded
+          // by infinite scroll gets its own short cascade instead of waiting
+          // behind the previous one.
+          <div
+            key={video.id}
+            className="animate-card-in"
+            style={{ animationDelay: `${(index % 12) * 35}ms` }}
+          >
+            <VideoCard video={video} priority={index < 4} />
+          </div>
         ))}
       </div>
     </section>

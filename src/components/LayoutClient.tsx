@@ -128,7 +128,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                     </SidebarHeader>
                     <SidebarContent>
                         <SidebarGroup>
-                            <SidebarGroupLabel>Discover</SidebarGroupLabel>
+                            <SidebarGroupLabel className="eyebrow !text-[0.6rem] !text-violet-200/50">Discover</SidebarGroupLabel>
                             <SidebarMenu>
                                 <SidebarMenuItem>
                                     <SidebarLink href="/home" icon={Compass} tooltip="Browse References">
@@ -159,7 +159,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                             </SidebarMenu>
                         </SidebarGroup>
                         <SidebarGroup>
-                            <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+                            <SidebarGroupLabel className="eyebrow !text-[0.6rem] !text-violet-200/50">Workspace</SidebarGroupLabel>
                             <SidebarMenu>
                                 <SidebarMenuItem>
                                     <SidebarLink href="/list" icon={List} tooltip="Saved References">
@@ -179,7 +179,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                             </SidebarMenu>
                         </SidebarGroup>
                         <SidebarGroup>
-                            <SidebarGroupLabel>Profile & Learn</SidebarGroupLabel>
+                            <SidebarGroupLabel className="eyebrow !text-[0.6rem] !text-violet-200/50">Profile & Learn</SidebarGroupLabel>
                             <SidebarMenu>
                                 <SidebarMenuItem>
                                     <SidebarLink href="/profile" icon={User} tooltip="Portfolio">
@@ -199,7 +199,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                             </SidebarMenu>
                         </SidebarGroup>
                         <SidebarGroup>
-                            <SidebarGroupLabel>Feedback</SidebarGroupLabel>
+                            <SidebarGroupLabel className="eyebrow !text-[0.6rem] !text-violet-200/50">Feedback</SidebarGroupLabel>
                             <SidebarMenu>
                                 <SidebarMenuItem>
                                     <UserFeedbackPanel />
@@ -210,7 +210,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                             <>
                                 <SidebarSeparator />
                                 <SidebarGroup>
-                                    <SidebarGroupLabel>Admin</SidebarGroupLabel>
+                                    <SidebarGroupLabel className="eyebrow !text-[0.6rem] !text-violet-200/50">Admin</SidebarGroupLabel>
                                     <SidebarMenu>
                                         <SidebarMenuItem>
                                             <SidebarLink href="/admin" icon={Shield} tooltip="Admin Dashboard">
@@ -252,11 +252,17 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                             "flex-1 transition-all duration-300 ease-in-out",
                             (!isMoodboardPage && !isProfilePage && !isCategoriesPage) && "px-4 md:px-8 pb-8"
                         )}>
-                            {children}
+                            {/* Each route fades in rather than cutting. Opacity
+                                only, deliberately: a transform here would make this
+                                wrapper the containing block for every position:fixed
+                                element on every page, breaking toolbars and overlays. */}
+                            <div key={pathname} className="animate-fade-in">
+                                {children}
+                            </div>
                         </main>
                             
                         {!isMoodboardPage && (
-                            <footer className="mt-auto py-8 px-4 border-t border-white/5 flex flex-col items-center gap-4 text-center">
+                            <footer className="mt-auto py-10 px-4 border-t border-white/[0.06] bg-gradient-to-b from-transparent to-black/30 flex flex-col items-center gap-4 text-center">
                                 <div className="max-w-md space-y-2">
                                     <h3 className="text-sm font-semibold text-white/90">Have thoughts on the platform?</h3>
                                     <p className="text-xs text-white/50">Your feedback helps us build the best reference tool for animators.</p>

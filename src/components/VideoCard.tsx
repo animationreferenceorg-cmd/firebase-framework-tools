@@ -364,7 +364,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
             }
           }}
           className={cn(
-            "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lg transform-gpu transition-all duration-300 ease-in-out",
+            "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lift transform-gpu transition-[transform,box-shadow] duration-500 ease-out-expo group-hover/card:-translate-y-1.5 group-hover/card:shadow-onion",
             aspectRatio
           )}
         >
@@ -458,8 +458,8 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           onMouseLeave={handleMouseLeave}
           onClick={handleCardClick}
           className={cn(
-            "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lg transform-gpu transition-all duration-300 ease-in-out group/card cursor-pointer touch-manipulation",
-            isHovered && !isPlayerOpen ? "scale-105 z-[100] shadow-2xl ring-2 ring-purple-500/50" : "z-0",
+            "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lift transform-gpu transition-[transform,box-shadow] duration-500 ease-out-expo group/card cursor-pointer touch-manipulation",
+            isHovered && !isPlayerOpen ? "-translate-y-1.5 scale-[1.03] z-[100] shadow-onion ring-1 ring-white/15" : "z-0",
             aspectRatio
           )}
         >
@@ -475,7 +475,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
                 unoptimized={isExternalCdn}
                 className={cn(
                   "w-full h-full object-cover transition-transform duration-500",
-                  isHovered && !isPlayerOpen ? "scale-110" : "scale-100",
+                  isHovered && !isPlayerOpen ? "scale-[1.06]" : "scale-100",
                   !isImageLoaded && "opacity-0"
                 )}
                 data-ai-hint={video.dataAiHint}
@@ -495,7 +495,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
               onLoadedData={() => setIsImageLoaded(true)}
               className={cn(
                 "w-full h-full object-cover transition-transform duration-500",
-                isHovered && !isPlayerOpen ? "scale-110" : "scale-100",
+                isHovered && !isPlayerOpen ? "scale-[1.06]" : "scale-100",
                 !isImageLoaded && "opacity-0"
               )}
             />
@@ -518,7 +518,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
               playsInline
               className={cn(
                 "absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none z-[5]",
-                isHovered && !isPlayerOpen ? "opacity-100 scale-110" : "opacity-0 scale-100"
+                isHovered && !isPlayerOpen ? "opacity-100 scale-[1.06]" : "opacity-0 scale-100"
               )}
             />
           )}
@@ -548,7 +548,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
                   variant="ghost"
                   size="icon"
                   onClick={handleLikeToggle}
-                  className="h-8 px-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm gap-1 w-auto"
+                  className="h-8 px-2 squash rounded-full bg-black/35 hover:bg-white/25 ring-1 ring-white/15 backdrop-blur-md gap-1 w-auto"
                   title="Like Video"
                 >
                   <Heart className={cn("text-white h-4 w-4", isLiked && "fill-red-500 text-red-500")} />
@@ -558,7 +558,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
                   variant="ghost"
                   size="icon"
                   onClick={handleBookmarkToggle}
-                  className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+                  className="h-8 w-8 squash rounded-full bg-black/35 hover:bg-white/25 ring-1 ring-white/15 backdrop-blur-md"
                   title="Save Video"
                 >
                   <Bookmark className={cn("h-4 w-4", isSaved ? "fill-purple-400 text-purple-400" : "text-purple-300 fill-purple-400/30 hover:fill-purple-400")} />
@@ -567,7 +567,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
                   variant="ghost"
                   size="icon"
                   onClick={handleShare}
-                  className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+                  className="h-8 w-8 squash rounded-full bg-black/35 hover:bg-white/25 ring-1 ring-white/15 backdrop-blur-md"
                 >
                   <Share2 className="text-white h-4 w-4" />
                 </Button>
@@ -578,7 +578,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
                   variant="ghost"
                   size="icon"
                   onClick={handlePlayClick}
-                  className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+                  className="h-8 w-8 squash rounded-full bg-black/35 hover:bg-white/25 ring-1 ring-white/15 backdrop-blur-md"
                 >
                   <Maximize className="text-white h-4 w-4" />
                 </Button>
@@ -637,8 +637,8 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
         onMouseLeave={handleMouseLeave}
         onClick={handleCardClick}
         className={cn(
-          "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lg transform-gpu transition-all duration-300 ease-in-out group/card cursor-pointer touch-manipulation",
-          isHovered && !isPlayerOpen && !video.isShort && !poster ? "scale-110 z-[100] shadow-2xl ring-2 ring-purple-500/50" : "z-0",
+          "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lift transform-gpu transition-[transform,box-shadow] duration-500 ease-out-expo group/card cursor-pointer touch-manipulation",
+          isHovered && !isPlayerOpen && !video.isShort && !poster ? "-translate-y-1.5 scale-[1.03] z-[100] shadow-onion ring-1 ring-white/15" : "z-0",
           aspectRatio
         )}>
         {!isImageLoaded && <Skeleton className="absolute inset-0" />}
@@ -694,8 +694,8 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
             loop
             playsInline
             className={cn(
-              "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none z-[5]",
-              isHovered && !isPlayerOpen ? "opacity-100 scale-110" : "opacity-0 scale-100"
+              "absolute inset-0 w-full h-full object-cover transition-[opacity,transform] duration-700 ease-out-expo pointer-events-none z-[5]",
+              isHovered && !isPlayerOpen ? "opacity-100 scale-[1.06]" : "opacity-0 scale-100"
             )}
           />
         )}
@@ -749,19 +749,19 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
             isHovered ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none h-0 sm:h-auto"
           )}>
             <div className="flex items-center gap-1.5">
-              <Button variant="ghost" size="icon" onClick={handleLikeToggle} className="h-7 px-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm gap-1 w-auto" title="Like Video">
+              <Button variant="ghost" size="icon" onClick={handleLikeToggle} className="h-7 px-2 squash rounded-full bg-black/35 hover:bg-white/25 ring-1 ring-white/15 backdrop-blur-md gap-1 w-auto" title="Like Video">
                 <Heart className={cn("text-white h-3.5 w-3.5", isLiked && "fill-red-500 text-red-500")} />
                 <span className="text-white text-[11px] font-semibold">{displayLikeCount}</span>
               </Button>
-              <Button variant="ghost" size="icon" onClick={handleBookmarkToggle} className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Save Video">
+              <Button variant="ghost" size="icon" onClick={handleBookmarkToggle} className="h-7 w-7 squash rounded-full bg-black/35 hover:bg-white/25 ring-1 ring-white/15 backdrop-blur-md" title="Save Video">
                 <Bookmark className={cn("h-3.5 w-3.5", isSaved ? "fill-purple-400 text-purple-400" : "text-purple-300 fill-purple-400/30 hover:fill-purple-400")} />
               </Button>
-              <Button variant="ghost" size="icon" onClick={handleShare} className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Share Link">
+              <Button variant="ghost" size="icon" onClick={handleShare} className="h-7 w-7 squash rounded-full bg-black/35 hover:bg-white/25 ring-1 ring-white/15 backdrop-blur-md" title="Share Link">
                 <Share2 className="text-white h-3.5 w-3.5" />
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm" title="Open Fullscreen">
+              <Button variant="ghost" size="icon" onClick={handlePlayClick} className="h-7 w-7 squash rounded-full bg-black/35 hover:bg-white/25 ring-1 ring-white/15 backdrop-blur-md" title="Open Fullscreen">
                 <Maximize className="text-white h-3.5 w-3.5" />
               </Button>
             </div>

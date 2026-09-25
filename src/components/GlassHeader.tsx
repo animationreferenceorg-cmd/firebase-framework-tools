@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { UpdatesModal } from '@/components/UpdatesModal';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { BrandMark } from '@/components/motion/BrandMark';
 
 export function GlassHeader() {
     const { state } = useSidebar();
@@ -27,13 +29,13 @@ export function GlassHeader() {
                 : "sticky top-6 mb-8"
         )}>
             <div className={cn(
-                "backdrop-blur-xl border rounded-full pl-4 pr-6 py-3 flex items-center justify-between shadow-2xl w-full max-w-6xl pointer-events-auto transition-all duration-300",
-                isBoardOpen 
-                    ? "bg-white/10 border-black/5 hover:bg-white/20 hover:border-black/10" 
-                    : "bg-[#1a1625]/80 border-white/10 hover:bg-[#1a1625]/90 hover:border-white/20 hover:shadow-[0_0_40px_-10px_rgba(124,58,237,0.3)]"
+                "edge-lit backdrop-blur-2xl backdrop-saturate-150 border rounded-full pl-2.5 pr-2.5 md:pr-3 py-2 flex items-center justify-between shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)] w-full max-w-6xl pointer-events-auto transition-all duration-500 ease-out-expo",
+                isBoardOpen
+                    ? "bg-white/10 border-black/5 hover:bg-white/20 hover:border-black/10"
+                    : "bg-[#110f1a]/70 border-white/[0.07] hover:bg-[#110f1a]/85 hover:shadow-[0_20px_60px_-20px_rgba(124,58,237,0.45)]"
             )}>
-                {/* Left: Sidebar Trigger */}
-                <div className="flex items-center gap-3">
+                {/* Left: Sidebar Trigger + brand */}
+                <div className="flex items-center gap-2.5">
                     <div className={cn(
                         "rounded-full p-1 transition-all duration-300",
                         state === 'collapsed' 
@@ -47,10 +49,13 @@ export function GlassHeader() {
                                 : "text-zinc-400 hover:text-white hover:bg-white/10"
                         )} />
                     </div>
+                    <Link href="/home" aria-label="Animation Reference home" className="squash rounded-xl">
+                        <BrandMark />
+                    </Link>
                 </div>
 
                 {/* Center: Streamlined Navigation */}
-                <nav className="hidden md:flex items-center gap-1 bg-white/5 rounded-full p-1 border border-white/5 mx-2 md:mx-4">
+                <nav className="hidden md:flex items-center gap-0.5 bg-black/25 rounded-full p-1 border border-white/[0.06] mx-2 md:mx-4">
                     {[
                         { label: 'Discover', href: '/home', icon: Film },
                         { label: 'Categories', href: '/categories', icon: LayoutGrid },
@@ -64,12 +69,20 @@ export function GlassHeader() {
                                 key={item.label}
                                 href={item.href}
                                 className={cn(
-                                    "relative px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 flex items-center gap-1.5",
-                                    isActive
-                                        ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-950/50"
-                                        : "text-zinc-400 hover:text-white hover:bg-white/10"
+                                    "squash relative px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors duration-200 flex items-center gap-1.5",
+                                    isActive ? "text-white" : "text-zinc-400 hover:text-white"
                                 )}
                             >
+                                {/* One shared pill that glides between tabs, like a
+                                    streaming app's nav, instead of each tab snapping
+                                    its own background on and off. */}
+                                {isActive && (
+                                    <motion.span
+                                        layoutId="header-nav-pill"
+                                        className="absolute inset-0 -z-10 rounded-full bg-gradient-to-b from-violet-500 to-indigo-600 shadow-[0_6px_18px_-6px_rgba(124,58,237,0.9),inset_0_1px_0_rgba(255,255,255,0.25)]"
+                                        transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                                    />
+                                )}
                                 <Icon className="h-3.5 w-3.5" />
                                 <span>{item.label}</span>
                             </Link>
@@ -83,7 +96,7 @@ export function GlassHeader() {
                     <Link href="/profile?tab=studio&upload=true">
                         <Button
                             size="sm"
-                            className="hidden sm:flex items-center gap-1.5 rounded-full h-9 px-4 text-xs font-bold bg-gradient-to-r from-purple-600 via-purple-500 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-md shadow-purple-900/40 hover:shadow-purple-700/50 transition-all border border-purple-400/30"
+                            className="squash shine hidden sm:flex items-center gap-1.5 rounded-full h-9 px-4 text-xs font-bold bg-white text-[#12101c] hover:bg-white shadow-[0_8px_24px_-10px_rgba(255,255,255,0.6)] transition-shadow"
                         >
                             <Plus className="w-3.5 h-3.5" />
                             <span>Upload Shot</span>

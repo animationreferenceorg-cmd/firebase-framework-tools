@@ -36,6 +36,9 @@ import { CommunityFeedShelf } from '@/components/home/CommunityFeedShelf';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import Link from 'next/link';
+import { motion, useReducedMotion } from 'framer-motion';
+import { Reveal } from '@/components/motion/Reveal';
+import { SectionHeading } from '@/components/motion/SectionHeading';
 
 const VIDEOS_PER_PAGE = 30;
 
@@ -54,6 +57,23 @@ export default function HomePage() {
   const [activePill, setActivePill] = useState<PillOption>('all');
   const [columns, setColumns] = useState<number>(4);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const reduceMotion = useReducedMotion();
+
+  // "/" or Cmd/Ctrl+K jumps to search, the convention in streaming and
+  // design apps. Ignored while typing in another field.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+      const isShortcut = (e.key === 'k' && (e.metaKey || e.ctrlKey)) || (e.key === '/' && !typing);
+      if (!isShortcut) return;
+      e.preventDefault();
+      searchInputRef.current?.focus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -246,75 +266,118 @@ export default function HomePage() {
     <div className="min-h-screen text-foreground space-y-12 pb-20 pt-2 text-left">
       {/* 1. Header Section (Clean, Breathable Title & Search) */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 px-1">
-        <div className="space-y-1.5 max-w-2xl">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
-            Discover References
-          </h1>
-          <p className="text-xs sm:text-sm text-zinc-400 font-medium leading-relaxed">
-            High-speed curated motion & animation references for artists and studios.
+        <div className="space-y-3 max-w-2xl">
+          <p className="eyebrow flex items-center gap-2">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            </span>
+            Live library
+            {allVideos.length > 0 && (
+              <span className="timecode text-violet-200/60">· {allVideos.length.toLocaleString()} refs</span>
+            )}
           </p>
+          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-[-0.035em] text-white leading-[0.95]">
+            {/* Word-by-word entrance: each word rises on its own beat, like
+                keys landing in sequence on a timing chart. */}
+            {['Discover', 'references'].map((word, i) => (
+              <motion.span
+                key={word}
+                className="inline-block pr-[0.22em]"
+                initial={reduceMotion ? false : { opacity: 0, y: '0.45em', rotate: 2 }}
+                animate={{ opacity: 1, y: 0, rotate: 0 }}
+                transition={{ duration: 0.8, delay: 0.08 + i * 0.12, ease: [0.16, 1, 0.3, 1] }}
+              >
+                {i === 1 ? (
+                  <span className="bg-gradient-to-r from-violet-300 via-fuchsia-200 to-amber-200 bg-clip-text text-transparent">
+                    {word}
+                  </span>
+                ) : word}
+              </motion.span>
+            ))}
+          </h1>
+          <motion.p
+            className="text-sm sm:text-base text-zinc-400 leading-relaxed max-w-lg"
+            initial={reduceMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+          >
+            Curated motion reference for animators — find it, step through it frame by frame, and keep it for the shot.
+          </motion.p>
         </div>
 
         {/* Search Bar & Fast Actions */}
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-96 lg:w-[420px]">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400" />
+          <div className="group/search relative flex-1 md:w-96 lg:w-[420px]">
+            {/* Soft glow that blooms behind the field when it takes focus. */}
+            <div className="pointer-events-none absolute -inset-1 rounded-[20px] bg-gradient-to-r from-violet-600/0 via-violet-500/0 to-amber-400/0 opacity-0 blur-lg transition-all duration-500 ease-out-expo group-focus-within/search:from-violet-600/40 group-focus-within/search:via-fuchsia-500/25 group-focus-within/search:to-amber-400/20 group-focus-within/search:opacity-100" />
+            <Search className="absolute left-3.5 top-1/2 z-10 -translate-y-1/2 w-4 h-4 text-violet-300 transition-transform duration-300 ease-overshoot group-focus-within/search:scale-110" />
             <Input
+              ref={searchInputRef}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search 7,600+ references, tags, studios..."
-              className="pl-10 pr-14 h-11 bg-white/[0.05] border-white/10 hover:border-purple-400/40 focus:border-purple-500 rounded-2xl text-xs text-white placeholder:text-zinc-400 shadow-inner backdrop-blur-md transition-colors"
+              placeholder="Search references, tags, studios…"
+              className="relative pl-10 pr-16 h-12 bg-[#110f1a]/80 border-white/10 hover:border-white/20 focus:border-violet-400/60 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-2xl text-sm text-white placeholder:text-zinc-500 backdrop-blur-xl transition-colors"
             />
-            {searchQuery && (
+            {searchQuery ? (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-zinc-400 hover:text-white transition-colors px-1.5 py-0.5 rounded bg-white/10"
+                className="squash absolute right-3 top-1/2 z-10 -translate-y-1/2 text-[11px] font-semibold text-zinc-300 hover:text-white transition-colors px-2 py-1 rounded-lg bg-white/10"
               >
                 Clear
               </button>
+            ) : (
+              <kbd className="timecode pointer-events-none absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] text-zinc-400">
+                /
+              </kbd>
             )}
           </div>
 
           <Button
             variant="outline"
             onClick={() => setShowPricingDialog(true)}
-            className="h-11 px-3.5 rounded-2xl bg-white/[0.05] border-white/10 hover:bg-purple-600/20 hover:border-purple-400/40 text-zinc-300 hover:text-white shrink-0 transition-all cursor-pointer shadow-md flex items-center gap-1.5 font-bold text-xs"
-            title="Animation Reference Pro Plans"
+            className="squash shine h-12 px-4 rounded-2xl bg-gradient-to-b from-amber-300/15 to-amber-500/5 border-amber-300/25 hover:border-amber-300/50 hover:bg-amber-400/10 text-amber-100 hover:text-white shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 font-bold text-xs"
+            title="Animation Reference Pro"
           >
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <span className="hidden sm:inline">Pricing</span>
+            <Sparkles className="w-4 h-4 text-amber-300" />
+            <span className="hidden sm:inline">Go Pro</span>
           </Button>
         </div>
       </div>
 
       {/* 2. Full-Page Creator Discovery Hero Banner */}
       {!searchQuery && (
-        <HomeHeroBanner video={heroVideo} />
+        <Reveal distance={16}>
+          <HomeHeroBanner video={heroVideo} />
+        </Reveal>
       )}
 
       {/* New product launch announcement */}
       {!searchQuery && (
-        <HomeProductLaunchAnnouncement />
+        <Reveal>
+          <HomeProductLaunchAnnouncement />
+        </Reveal>
       )}
 
       {/* 3. SHELF: Community Portfolio Feed */}
       {!searchQuery && (
-        <CommunityFeedShelf />
+        <Reveal>
+          <CommunityFeedShelf />
+        </Reveal>
       )}
 
       {/* 4. SHELF: Full Reference Discovery Catalog */}
-      <section className="space-y-4 pt-4">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-2">
-            <Film className="w-4 h-4 text-purple-400" />
-            <h2 className="text-lg md:text-xl font-black text-white tracking-tight">
-              All Reference Clips
-            </h2>
-            <Badge variant="outline" className="bg-purple-950/60 text-purple-300 border-purple-800/40 text-xs font-bold">
-              {filteredVideos.length} Clips
-            </Badge>
-          </div>
-        </div>
+      <section className="space-y-5 pt-4">
+        <SectionHeading
+          eyebrow={searchQuery ? 'Search results' : 'The library'}
+          title={searchQuery ? <>Results for “{searchQuery}”</> : 'All reference clips'}
+          aside={
+            <span className="timecode rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-violet-200">
+              <Film className="mr-1.5 inline h-3 w-3 -translate-y-px" />
+              {filteredVideos.length.toLocaleString()}
+            </span>
+          }
+        />
 
         {/* Filter Bar with Quick Pills */}
         <FilterBar
@@ -332,7 +395,11 @@ export default function HomePage() {
         {loading && allVideos.length === 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-8">
             {Array.from({ length: 12 }).map((_, idx) => (
-              <div key={idx} className="aspect-[3/4] md:aspect-video rounded-2xl bg-white/5 animate-pulse" />
+              <div
+                key={idx}
+                className="skeleton-shimmer aspect-[3/4] md:aspect-video rounded-[15px] ring-1 ring-white/[0.04]"
+                style={{ animationDelay: `${(idx % 4) * 120}ms` }}
+              />
             ))}
           </div>
         ) : (
@@ -342,9 +409,14 @@ export default function HomePage() {
         {/* Infinite Scroll Indicator */}
         {hasMore && (
           <div ref={loadMoreRef} className="flex justify-center py-8">
-            <div className="flex items-center gap-2 text-zinc-400 text-sm font-semibold">
-              <Sparkles className="h-5 w-5 animate-spin text-purple-500" />
-              <span>Loading more reference inspiration...</span>
+            {/* The bouncing ball as a loader — squash on contact, stretch on
+                the way up. Reads as "working" and as animation at once. */}
+            <div className="flex flex-col items-center gap-3 text-zinc-500">
+              <div className="relative h-8 w-8">
+                <span className="absolute bottom-0 left-1/2 h-1 w-4 -translate-x-1/2 rounded-full bg-violet-400/30 animate-shadow-pulse" />
+                <span className="absolute bottom-1 left-1/2 -ml-2 h-4 w-4 origin-bottom rounded-full bg-gradient-to-b from-violet-300 to-violet-500 shadow-[0_0_14px_rgba(167,139,250,0.7)] animate-ball-bounce" />
+              </div>
+              <span className="timecode text-[11px] tracking-wider">LOADING NEXT REEL</span>
             </div>
           </div>
         )}

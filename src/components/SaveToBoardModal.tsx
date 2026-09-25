@@ -21,6 +21,15 @@ interface SaveToBoardModalProps {
 
 const LOCAL_STORAGE_BOARDS_KEY = 'animation_ref_local_moodboards';
 
+const BOARD_TEMPLATES = [
+    'Shot Reference',
+    'Character Acting',
+    'Combat Choreography',
+    'Walk / Run Cycle',
+    'Creature Study',
+    'FX Timing',
+] as const;
+
 interface LocalBoard {
     id: string;
     name: string;
@@ -277,7 +286,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                         <DialogTitle className="text-xl font-black text-white tracking-tight">Save Reference</DialogTitle>
                     </div>
                     <DialogDescription className="text-xs text-zinc-400">
-                        Save to your boards or All Saves. Click a board to save immediately.
+                        Turn this clip into usable shot reference. Save it to a board or your reference library.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -328,8 +337,8 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                                 <Bookmark className={cn("h-4 w-4", isAllSaved ? "fill-black text-black" : "fill-amber-400/20 text-amber-400")} />
                             </div>
                             <div className="min-w-0">
-                                <span className="text-xs font-bold block truncate">All Saves (Library Vault)</span>
-                                <span className="text-[10px] text-zinc-400">Master saved collection</span>
+                                <span className="text-xs font-bold block truncate">Saved References</span>
+                                <span className="text-[10px] text-zinc-400">Your reusable reference library</span>
                             </div>
                         </div>
                         <div className={cn(
@@ -360,7 +369,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                 {/* Boards List */}
                 <div className="space-y-1.5 my-1 max-h-[250px] overflow-y-auto pr-1">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-1 pt-1">
-                        Moodboards ({boards.length})
+                        Shot Boards ({boards.length})
                     </p>
 
                     {loading ? (
@@ -370,7 +379,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                         </div>
                     ) : boards.length === 0 ? (
                         <div className="py-5 text-center text-zinc-500 text-xs border border-dashed border-white/10 rounded-2xl">
-                            No moodboards yet. Create your first board below!
+                            No boards yet. Start with a guided template below.
                         </div>
                     ) : filteredBoards.length === 0 ? (
                         <div className="py-4 text-center text-zinc-500 text-xs">
@@ -498,9 +507,29 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                 <div className="pt-2 border-t border-white/10">
                     {showCreateInput ? (
                         <form onSubmit={handleCreateBoard} className="space-y-2.5">
+                            <div>
+                                <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Start with a template</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {BOARD_TEMPLATES.map((template) => (
+                                        <button
+                                            key={template}
+                                            type="button"
+                                            onClick={() => setNewBoardName(template)}
+                                            className={cn(
+                                                "rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors",
+                                                newBoardName === template
+                                                    ? "border-purple-400/60 bg-purple-500/20 text-purple-200"
+                                                    : "border-white/10 bg-white/5 text-zinc-400 hover:border-purple-400/40 hover:text-white"
+                                            )}
+                                        >
+                                            {template}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                             <Input
                                 type="text"
-                                placeholder="Moodboard Name (e.g. Walk Cycles, Smears)"
+                                placeholder="Board name (e.g. Shot 12 — Sword Fight)"
                                 value={newBoardName}
                                 onChange={(e) => setNewBoardName(e.target.value)}
                                 autoFocus
@@ -533,7 +562,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                             className="w-full h-9 rounded-2xl border-dashed border-white/20 bg-black/40 hover:bg-white/5 text-xs font-bold text-purple-300 hover:text-white flex items-center justify-center gap-2 cursor-pointer transition-all"
                         >
                             <FolderPlus className="h-4 w-4 text-purple-400" />
-                            Create New Moodboard
+                            Create a Shot Board
                         </Button>
                     )}
                 </div>

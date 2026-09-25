@@ -4,7 +4,7 @@ import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, 
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Film, Home, LayoutGrid, List, Rss, Shield, BookCopy, Camera, User, Box, ShoppingBag, CreditCard, MessageSquare, Paintbrush, Scissors } from 'lucide-react';
+import { Film, LayoutGrid, List, Rss, Shield, BookCopy, Camera, User, Box, ShoppingBag, CreditCard, MessageSquare, Paintbrush, Scissors, Compass } from 'lucide-react';
 import { useUser } from '@/hooks/use-user';
 import { useAuth } from '@/hooks/use-auth';
 import { Suspense, useEffect, useState } from 'react';
@@ -131,8 +131,8 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                             <SidebarGroupLabel>Discover</SidebarGroupLabel>
                             <SidebarMenu>
                                 <SidebarMenuItem>
-                                    <SidebarLink href="/home" icon={Home} tooltip="Home">
-                                        Home
+                                    <SidebarLink href="/home" icon={Compass} tooltip="Browse References">
+                                        Browse References
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
@@ -141,8 +141,8 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <SidebarLink href="/references" icon={Scissors} tooltip="Reference Clips">
-                                        Reference Clips
+                                    <SidebarLink href="/references" icon={Scissors} tooltip="Clip Library">
+                                        Clip Library
                                     </SidebarLink>
                                 </SidebarMenuItem>
 
@@ -152,29 +152,18 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <SidebarLink href="/feed" icon={Rss} tooltip="Community">
-                                        Community
+                                    <SidebarLink href="/feed" icon={Rss} tooltip="Animator Progress">
+                                        Animator Progress
                                     </SidebarLink>
                                 </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarLink href="https://anim.works/" icon={ShoppingBag} tooltip="Marketplace (anim.works)">
-                                        Marketplace
-                                    </SidebarLink>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarLink href="/blog" icon={BookCopy} tooltip="Resources">
-                                        Resources
-                                    </SidebarLink>
-                                </SidebarMenuItem>
-
                             </SidebarMenu>
                         </SidebarGroup>
                         <SidebarGroup>
-                            <SidebarGroupLabel>My Library</SidebarGroupLabel>
+                            <SidebarGroupLabel>Workspace</SidebarGroupLabel>
                             <SidebarMenu>
                                 <SidebarMenuItem>
-                                    <SidebarLink href="/list" icon={List} tooltip="My List">
-                                        My List
+                                    <SidebarLink href="/list" icon={List} tooltip="Saved References">
+                                        Saved References
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
@@ -183,8 +172,28 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <SidebarLink href="/paint" icon={Paintbrush} tooltip="Paint (Beta)">
-                                        Paint <span className="ml-auto text-[9px] font-black uppercase tracking-wider text-fuchsia-300">Beta</span>
+                                    <SidebarLink href="/paint" icon={Paintbrush} tooltip="Drawovers (Beta)">
+                                        Drawovers <span className="ml-auto text-[9px] font-black uppercase tracking-wider text-fuchsia-300">Beta</span>
+                                    </SidebarLink>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                        </SidebarGroup>
+                        <SidebarGroup>
+                            <SidebarGroupLabel>Profile & Learn</SidebarGroupLabel>
+                            <SidebarMenu>
+                                <SidebarMenuItem>
+                                    <SidebarLink href="/profile" icon={User} tooltip="Portfolio">
+                                        Portfolio
+                                    </SidebarLink>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarLink href="/resources" icon={BookCopy} tooltip="Animation Guides">
+                                        Animation Guides
+                                    </SidebarLink>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarLink href="https://anim.works/" icon={ShoppingBag} tooltip="Workflow Tools">
+                                        Workflow Tools
                                     </SidebarLink>
                                 </SidebarMenuItem>
                             </SidebarMenu>

@@ -147,7 +147,7 @@ export function PricingDialog({ children, open, onOpenChange }: PricingDialogPro
                             Upgrade to AnimationReference Pro
                         </DialogTitle>
                         <DialogDescription className="text-zinc-400 text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
-                            Unlock unlimited project moodboards, spatial canvas, unlimited reference bookmarks, and high-resolution exports.
+                            Build a reusable reference workspace for every shot with unlimited boards, saved references, drawovers, and high-resolution exports.
                         </DialogDescription>
                     </div>
 
@@ -203,7 +203,7 @@ export function PricingDialog({ children, open, onOpenChange }: PricingDialogPro
                                         <span className="text-3xl font-black text-white">$0</span>
                                         <span className="text-xs text-zinc-500 font-medium">/ forever</span>
                                     </div>
-                                    <p className="text-xs text-zinc-400 mt-1">For student exploration and casual reference search</p>
+                                    <p className="text-xs text-zinc-400 mt-1">Discover motion and start your first animation study</p>
                                 </div>
 
                                 <ul className="space-y-2.5 mb-6 text-xs text-zinc-300">
@@ -217,11 +217,11 @@ export function PricingDialog({ children, open, onOpenChange }: PricingDialogPro
                                     </li>
                                     <li className="flex items-center gap-2">
                                         <Check className="h-4 w-4 text-zinc-500 shrink-0" />
-                                        <span>1 Active Project Moodboard</span>
+                                        <span>1 Active Shot Board</span>
                                     </li>
                                     <li className="flex items-center gap-2">
                                         <Check className="h-4 w-4 text-zinc-500 shrink-0" />
-                                        <span>5 Saved Video Bookmarks</span>
+                                        <span>5 Saved References</span>
                                     </li>
                                     <li className="flex items-center gap-2 text-zinc-500">
                                         <span className="h-4 w-4 flex items-center justify-center">✕</span>
@@ -288,15 +288,15 @@ export function PricingDialog({ children, open, onOpenChange }: PricingDialogPro
                                 <ul className="space-y-2 mb-6 text-xs text-zinc-200">
                                     <li className="flex items-center gap-2">
                                         <Check className="h-4 w-4 text-emerald-400 shrink-0 font-bold" />
-                                        <span className="font-semibold text-white">Unlimited Project Moodboards & Spatial Canvas</span>
+                                        <span className="font-semibold text-white">Unlimited Shot Boards & Guided Templates</span>
                                     </li>
                                     <li className="flex items-center gap-2">
                                         <Check className="h-4 w-4 text-emerald-400 shrink-0 font-bold" />
-                                        <span className="font-semibold text-white">Unlimited Reference Bookmarks & Saves</span>
+                                        <span className="font-semibold text-white">Unlimited Saved References for Every Project</span>
                                     </li>
                                     <li className="flex items-center gap-2">
                                         <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                                        <span>High-Resolution Moodboard & PDF Exporter</span>
+                                        <span>High-Resolution Board, Contact Sheet & PDF Exports</span>
                                     </li>
                                     <li className="flex items-center gap-2">
                                         <Check className="h-4 w-4 text-emerald-400 shrink-0" />
@@ -336,7 +336,7 @@ export function PricingDialog({ children, open, onOpenChange }: PricingDialogPro
                                         'Switch to Pro'
                                     ) : (
                                         <>
-                                            <span>Upgrade to Pro — Instant Access</span>
+                                            <span>Build Your Pro Workspace</span>
                                             <ArrowRight className="h-4 w-4" />
                                         </>
                                     )}

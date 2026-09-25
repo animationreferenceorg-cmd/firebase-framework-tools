@@ -106,7 +106,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             'body-mechanics-animation-reference',
             'creature-locomotion-animation-reference',
             'animation-timing-and-spacing-reference',
-            'fx-animation-reference',
             'speech-animation-reference',
             'moving-hold-animation-reference',
             'sword-swing-animation-reference',

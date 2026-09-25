@@ -20,7 +20,7 @@ export default function BestReferenceWebsites() {
                 <div className="container mx-auto px-6 text-center">
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8">
                         <Trophy className="h-4 w-4 text-yellow-500" />
-                        <span className="text-sm font-medium">Industry Guide 2024</span>
+                        <span className="text-sm font-medium">Updated Industry Guide</span>
                     </div>
                     <h1 className="text-5xl md:text-8xl font-black tracking-tight mb-8 leading-[1.1]">
                         The 10 Best <br />

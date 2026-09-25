@@ -83,15 +83,6 @@ const TOPICS: Record<string, Topic> = {
     related: [{ label: 'How to analyze animation reference', href: '/resources/how-to-analyze-animation-reference' }, { label: '12 principles of animation', href: '/resources/12-principles-of-animation-reference' }],
     faqs: [{ question: 'What is the difference between timing and spacing?', answer: 'Timing is the duration of an action. Spacing is the distance traveled between frames. Changing either one changes how movement feels.' }, { question: 'How can reference improve timing?', answer: 'Scrub several examples, count frames between important poses, and compare where each action holds, accelerates, and settles.' }],
   },
-  'fx-animation-reference': {
-    slug: 'fx-animation-reference', title: 'FX Animation Reference',
-    description: 'Study FX animation reference for fire, smoke, water, explosions, sparks, magic, and energy. Analyze shape, flow, timing, and dissipation.',
-    intro: 'Effects are often abstract, but they still need rhythm, force, and a clear visual cause. Use these references to study how an effect appears, develops, peaks, breaks apart, and disappears.',
-    sections: [{ heading: 'Break the effect into phases', body: 'Identify the birth, growth, peak, breakup, and dissipation of the effect. Each phase can use a different rhythm, from a sharp ignition to a slower drifting settle.' }, { heading: 'Follow the flow', body: 'Track the direction of motion through smoke, flame, water, or energy. Strong silhouettes and directional flow make effects readable even when the shapes are changing quickly.' }],
-    tags: [{ label: 'FX', slug: 'fx' }, { label: 'Fire', slug: 'fire' }, { label: 'Smoke', slug: 'smoke' }],
-    related: [{ label: 'FX animation reference guide', href: '/resources/fx-animation-reference' }, { label: 'Animation timing and spacing', href: '/resources/animation-timing-and-spacing-reference' }],
-    faqs: [{ question: 'What should I look for in FX reference?', answer: 'Study the effect’s phases, silhouette, directional flow, rhythm, scale changes, and how it reacts to its environment.' }, { question: 'How do you animate believable smoke?', answer: 'Use overlapping shapes with varied timing, clear upward or directional flow, and gradual breakup rather than moving one uniform mass.' }],
-  },
   'speech-animation-reference': {
     slug: 'speech-animation-reference', title: 'Speech Animation Reference',
     description: 'Study speech animation reference for lip sync, mouth shapes, dialogue timing, facial acting, eye focus, pauses, and readable character performances.',

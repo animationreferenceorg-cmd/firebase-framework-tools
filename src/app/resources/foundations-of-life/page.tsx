@@ -129,7 +129,7 @@ export default function FoundationsOfLife() {
                             </p>
                         </div>
                         <div className="flex gap-2">
-                            <div className="px-4 py-2 bg-white rounded-full text-xs font-bold border border-slate-200">2024 UPDATE</div>
+                            <div className="px-4 py-2 bg-white rounded-full text-xs font-bold border border-slate-200">UPDATED GUIDE</div>
                             <div className="px-4 py-2 bg-blue-600 text-white rounded-full text-xs font-bold shadow-md">VERIFIED</div>
                         </div>
                     </div>

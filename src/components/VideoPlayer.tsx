@@ -2,6 +2,7 @@
 
 
 import * as React from 'react';
+import Link from 'next/link';
 import type { Video } from '@/lib/types';
 import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Rewind, FastForward, Camera, ExternalLink, Instagram, Film, Share2, Heart, Bookmark, FlipHorizontal, NotebookPen } from 'lucide-react';
 import { CreatorBadge } from '@/components/CreatorBadge';
@@ -627,18 +628,16 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                     <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                         {!hideStudyAction && (
                             <Button
-                                type="button"
-                                onClick={() => {
-                                    if (document.fullscreenElement) void document.exitFullscreen();
-                                    window.location.assign(`/video/${video.id}`);
-                                }}
+                                asChild
                                 variant="ghost"
                                 size="sm"
                                 title="Open Study Workspace"
                                 className="h-8 gap-1.5 rounded-full border border-purple-400/30 bg-purple-500/20 px-2.5 text-[11px] font-bold text-purple-100 hover:bg-purple-500/35 hover:text-white"
                             >
-                                <NotebookPen className="h-3.5 w-3.5" />
-                                <span className="hidden md:inline">Study</span>
+                                <Link href={`/video/${video.id}`} onClick={(event) => event.stopPropagation()}>
+                                    <NotebookPen className="h-3.5 w-3.5" />
+                                    <span className="hidden md:inline">Study</span>
+                                </Link>
                             </Button>
                         )}
 

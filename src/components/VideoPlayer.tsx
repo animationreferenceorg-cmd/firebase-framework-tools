@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import ReactPlayer from 'react-player';
+import FilePlayer from 'react-player/file';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
@@ -40,8 +41,10 @@ export interface VideoPlayerHandle {
     seekTo: (seconds: number) => void;
 }
 
-// Client-side only component to wrap ReactPlayer
-function Player({ playerRef, video, ...props }: any) {
+// Direct files use the statically bundled file player. The default ReactPlayer
+// lazy-loads this implementation in a separate browser chunk, which can leave
+// the fullscreen study view black when that chunk is stale or unavailable.
+function Player({ playerRef, video, url, config, ...props }: any) {
     const [hasMounted, setHasMounted] = React.useState(false);
 
     React.useEffect(() => {
@@ -52,18 +55,30 @@ function Player({ playerRef, video, ...props }: any) {
         return <div className="w-full h-full bg-black flex items-center justify-center text-white">Loading Player...</div>;
     }
 
+    const PlayerComponent: React.ElementType = typeof url === 'string' && FilePlayer.canPlay(url)
+        ? FilePlayer
+        : ReactPlayer;
+    const poster = video.posterUrl || video.thumbnailUrl;
+    const fileConfig = config?.file || {};
+
     return (
-        <ReactPlayer
+        <PlayerComponent
             ref={playerRef}
+            url={url}
             width="100%"
             height="100%"
             style={{ position: 'absolute', top: 0, left: 0 }}
             controls={false} // We are using our own controls
+            playsinline
             config={{
+                ...config,
                 file: {
+                    ...fileConfig,
                     attributes: {
                         preload: 'auto',
                         playsInline: true,
+                        poster,
+                        ...fileConfig.attributes,
                     }
                 }
             }}
@@ -134,6 +149,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
     const [showControls, setShowControls] = React.useState(true);
     const [playbackRate, setPlaybackRate] = React.useState(1);
     const [videoError, setVideoError] = React.useState(false);
+    const [playerReloadToken, setPlayerReloadToken] = React.useState(0);
     const [fps, setFps] = React.useState<number>(video.fps || 24);
     const [isFlipped, setIsFlipped] = React.useState(false);
     const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -141,6 +157,11 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
     React.useEffect(() => {
         setFps(video.fps || 24);
     }, [video.fps]);
+
+    React.useEffect(() => {
+        setVideoError(false);
+        setPlayerReloadToken(0);
+    }, [video.videoUrl]);
 
     const stepFrame = React.useCallback((direction: 'forward' | 'backward') => {
         if (!playerRef.current) return;
@@ -366,6 +387,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
         >
             <div className={cn("relative w-full aspect-video max-w-full max-h-full transition-transform duration-200", isFlipped && "-scale-x-100")}>
                 <Player
+                    key={`${video.id}-${playerReloadToken}`}
                     playerRef={playerRef}
                     url={video.videoUrl}
                     video={video}
@@ -382,16 +404,9 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                         if (onEnded) onEnded();
                     }}
                     onError={(e: any) => {
-                        // HLS/CORS errors are expected for Instagram/TikTok CDN links
-                        const isSocialUrl = video.videoUrl && (
-                            video.videoUrl.includes('instagram.com') ||
-                            video.videoUrl.includes('tiktok.com')
-                        );
-                        if (isSocialUrl) {
-                            setVideoError(true); // Show friendly fallback
-                        } else {
-                            console.warn("Video Player Error:", e);
-                        }
+                        console.warn("Video Player Error:", e);
+                        setIsPlaying(false);
+                        setVideoError(true);
                     }}
                     loop={loop}
                     config={{
@@ -403,28 +418,46 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                     }}
                 />
 
-                {/* Fallback overlay when social video can't be played due to CORS */}
-                {videoError && video.originalUrl && (
+                {/* Never strand the user on a black player when a source fails. */}
+                {videoError && (
                     <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm rounded-lg gap-4 p-6 text-center">
                         <div className="w-16 h-16 bg-gradient-to-tr from-pink-500 to-purple-500 rounded-full flex items-center justify-center shadow-xl animate-bounce">
-                            {video.originalUrl.toLowerCase().includes('instagram.com') ? (
+                            {video.originalUrl?.toLowerCase().includes('instagram.com') ? (
                                 <Instagram className="w-8 h-8 text-white" />
                             ) : (
                                 <ExternalLink className="w-8 h-8 text-white" />
                             )}
                         </div>
                         <div>
-                            <p className="text-white font-bold text-lg mb-1">View on Original Platform</p>
-                            <p className="text-zinc-400 text-sm mb-4">This video can only be played on the original platform.</p>
-                            <a
-                                href={video.originalUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 text-white font-semibold px-6 py-2.5 rounded-full transition-all hover:scale-105 shadow-lg"
-                            >
-                                <ExternalLink className="w-4 h-4" />
-                                Open Original Post
-                            </a>
+                            <p className="text-white font-bold text-lg mb-1">Video couldn't load</p>
+                            <p className="text-zinc-400 text-sm mb-4">
+                                {video.originalUrl ? 'Retry the player or open the original post.' : 'Retry the player to load this reference.'}
+                            </p>
+                            <div className="flex flex-wrap items-center justify-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        setVideoError(false);
+                                        setPlayerReloadToken((token) => token + 1);
+                                    }}
+                                    className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-white/20"
+                                >
+                                    Retry video
+                                </button>
+                                {video.originalUrl && (
+                                    <a
+                                        href={video.originalUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(event) => event.stopPropagation()}
+                                        className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 text-white font-semibold px-6 py-2.5 rounded-full transition-all hover:scale-105 shadow-lg"
+                                    >
+                                        <ExternalLink className="w-4 h-4" />
+                                        Open Original Post
+                                    </a>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}

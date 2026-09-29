@@ -21,9 +21,7 @@ runConfig:
       value: pk_live_51SFfWk59QHehw05fAQmlkaJZ6ys02e7g5EwfG44sUIkSvC0F6fos5TyfIzMvCHAoMrI7piuOdUfwglN7jh2CFAuK00pBgZ4uI7
       availability: [BUILD, RUNTIME]
     - variable: STRIPE_SECRET_KEY
-      secret: STRIPE_SECRET_KEY
     - variable: STRIPE_WEBHOOK_SECRET
-      secret: STRIPE_WEBHOOK_SECRET
     # Social auto-poster (see /admin/social) — set these via Secret Manager
     # once you have credentials for each platform. Missing ones just show
     # "Needs Env Setup" in the admin UI and are skipped by the daily bot.

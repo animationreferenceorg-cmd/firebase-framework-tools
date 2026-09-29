@@ -20,19 +20,22 @@ export function GlassHeader() {
     const isMoodboardPage = pathname === '/moodboard';
     const isBoardOpen = isMoodboardPage && searchParams.get('board') !== null;
     const isProfilePage = pathname.startsWith('/profile');
+    const isHomePage = pathname === '/home';
 
     return (
         <header className={cn(
             "z-50 flex justify-center px-4 pointer-events-none transition-all duration-300",
-            isMoodboardPage || isProfilePage
+            isMoodboardPage || isProfilePage || isHomePage
                 ? "absolute top-6 left-0 right-0 z-50 mb-0" 
                 : "sticky top-6 mb-8"
         )}>
             <div className={cn(
-                "edge-lit backdrop-blur-2xl backdrop-saturate-150 border rounded-full pl-2.5 pr-2.5 md:pr-3 py-2 flex items-center justify-between shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)] w-full max-w-6xl pointer-events-auto transition-all duration-500 ease-out-expo",
+                "backdrop-blur-2xl backdrop-saturate-150 rounded-full pl-2.5 pr-2.5 md:pr-3 py-2 flex items-center justify-between w-full max-w-6xl pointer-events-auto transition-all duration-500 ease-out-expo",
                 isBoardOpen
-                    ? "bg-white/10 border-black/5 hover:bg-white/20 hover:border-black/10"
-                    : "bg-[#110f1a]/70 border-white/[0.07] hover:bg-[#110f1a]/85 hover:shadow-[0_20px_60px_-20px_rgba(124,58,237,0.45)]"
+                    ? "edge-lit border bg-white/10 border-black/5 hover:bg-white/20 hover:border-black/10 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)]"
+                    : isHomePage
+                        ? "bg-black/25 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.9)] hover:bg-black/40"
+                        : "edge-lit border bg-[#110f1a]/70 border-white/[0.07] hover:bg-[#110f1a]/85 hover:shadow-[0_20px_60px_-20px_rgba(124,58,237,0.45)] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)]"
             )}>
                 {/* Left: Sidebar Trigger + brand */}
                 <div className="flex items-center gap-2.5">

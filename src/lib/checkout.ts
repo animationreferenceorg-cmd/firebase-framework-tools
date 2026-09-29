@@ -22,12 +22,13 @@ export interface CheckoutSessionInput {
   customerId: string;
   origin: string;
   env?: PriceEnv;
+  embedded?: boolean;
 }
 
 /** Parameters for stripe.checkout.sessions.create. */
-export function buildCheckoutSessionParams({ plan, uid, customerId, origin, env }: CheckoutSessionInput) {
+export function buildCheckoutSessionParams({ plan, uid, customerId, origin, env, embedded }: CheckoutSessionInput) {
   const resolved = priceForCheckout(plan, env);
-  return {
+  const base = {
     mode: 'subscription' as const,
     customer: customerId,
     client_reference_id: uid,
@@ -35,6 +36,18 @@ export function buildCheckoutSessionParams({ plan, uid, customerId, origin, env 
     subscription_data: { metadata: { firebaseUID: uid, plan: resolved.plan } },
     line_items: [{ price: resolved.priceId, quantity: 1 }],
     allow_promotion_codes: true,
+  };
+
+  if (embedded) {
+    return {
+      ...base,
+      ui_mode: 'embedded' as const,
+      return_url: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+    };
+  }
+
+  return {
+    ...base,
     // The profile page syncs from Stripe on ?sync=true, so access appears
     // even if the webhook is slow.
     success_url: `${origin}/profile?sync=true&checkout=success`,

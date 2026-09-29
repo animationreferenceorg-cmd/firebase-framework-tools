@@ -16,12 +16,29 @@ describe('checkout pricing', () => {
     expect(params.line_items).toEqual([{ price: 'price_pro_monthly_9', quantity: 1 }]);
     expect(params).toMatchObject({ mode: 'subscription', customer: 'cus_1', client_reference_id: 'u1' });
     expect(params.subscription_data.metadata.firebaseUID).toBe('u1');
-    expect(params.success_url).toBe('https://x.test/profile?sync=true&checkout=success');
+    expect((params as any).success_url).toBe('https://x.test/profile?sync=true&checkout=success');
   });
 
   it('annual checkout charges the annual price', () => {
     const params = buildCheckoutSessionParams({ plan: 'pro_annual', uid: 'u1', customerId: 'cus_1', origin: 'https://x.test', env: ENV });
     expect(params.line_items[0].price).toBe('price_pro_annual_79');
+  });
+
+  it('embedded checkout sets ui_mode embedded and return_url without success_url', () => {
+    const params = buildCheckoutSessionParams({
+      plan: 'pro_monthly',
+      uid: 'u1',
+      customerId: 'cus_1',
+      origin: 'https://x.test',
+      env: ENV,
+      embedded: true,
+    });
+    expect(params).toMatchObject({
+      ui_mode: 'embedded',
+      return_url: 'https://x.test/checkout/return?session_id={CHECKOUT_SESSION_ID}',
+    });
+    expect((params as any).success_url).toBeUndefined();
+    expect((params as any).cancel_url).toBeUndefined();
   });
 
   it('refuses annual checkout when no annual price exists', () => {

@@ -11,7 +11,7 @@ import { buildCheckoutSessionParams, CheckoutPlanError, priceForCheckout } from 
 export async function POST(req: NextRequest) {
     try {
         const identity = await requireFirebaseUser(req);
-        const { plan } = await req.json().catch(() => ({}));
+        const { plan, embedded } = await req.json().catch(() => ({}));
         // Validate before touching Stripe.
         priceForCheckout(plan);
 
@@ -33,10 +33,23 @@ export async function POST(req: NextRequest) {
         }
 
         const session = await stripe.checkout.sessions.create(
-            buildCheckoutSessionParams({ plan, uid: identity.uid, customerId, origin: req.nextUrl.origin })
+            buildCheckoutSessionParams({
+                plan,
+                uid: identity.uid,
+                customerId,
+                origin: req.nextUrl.origin,
+                embedded: Boolean(embedded),
+            })
         );
 
-        return NextResponse.json({ url: session.url });
+        const responseData: Record<string, any> = { url: session.url };
+        if (session.client_secret) {
+            responseData.clientSecret = session.client_secret;
+        }
+        if (session.id) {
+            responseData.sessionId = session.id;
+        }
+        return NextResponse.json(responseData);
     } catch (err: any) {
         if (err instanceof CheckoutPlanError) {
             return NextResponse.json({ error: err.code, message: err.message }, { status: err.code === 'INVALID_PLAN' ? 400 : 409 });

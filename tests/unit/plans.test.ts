@@ -10,24 +10,24 @@ import {
 } from '@/lib/plans';
 
 const CONFIGURED: PriceEnv = {
-  NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY: 'price_pro_monthly_9',
-  NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL: 'price_pro_annual_79',
+  NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY: 'price_pro_monthly_5',
+  NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL: 'price_pro_annual_45',
 };
 
 describe('getProOffers', () => {
-  it('offers $9 monthly and $79 annual when both prices are configured', () => {
+  it('offers $5 monthly and $45 annual when both prices are configured', () => {
     const offers = getProOffers(CONFIGURED);
-    expect(offers.pro_monthly).toMatchObject({ priceId: 'price_pro_monthly_9', amountCents: 900, available: true, legacyFallback: false });
-    expect(offers.pro_annual).toMatchObject({ priceId: 'price_pro_annual_79', amountCents: 7900, interval: 'year', available: true });
+    expect(offers.pro_monthly).toMatchObject({ priceId: 'price_pro_monthly_5', amountCents: 500, available: true, legacyFallback: false });
+    expect(offers.pro_annual).toMatchObject({ priceId: 'price_pro_annual_45', amountCents: 4500, interval: 'year', available: true });
   });
 
   it('never lets annual silently reuse the monthly price', () => {
-    const offers = getProOffers({ NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY: 'price_pro_monthly_9' });
+    const offers = getProOffers({ NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY: 'price_pro_monthly_5' });
     expect(offers.pro_annual.available).toBe(false);
     expect(offers.pro_annual.priceId).toBeNull();
   });
 
-  it('falls back to the legacy $5 price and shows $5 until $9 is configured', () => {
+  it('falls back to the legacy $5 price and shows $5 until custom price is configured', () => {
     const offers = getProOffers({});
     expect(offers.pro_monthly).toMatchObject({ priceId: LEGACY_PRICE_IDS.tier5, amountCents: 500, legacyFallback: true });
   });
@@ -40,8 +40,8 @@ describe('getProOffers', () => {
 
 describe('planFromPriceId', () => {
   it('maps configured and legacy prices', () => {
-    expect(planFromPriceId('price_pro_monthly_9', CONFIGURED)).toBe('pro_monthly');
-    expect(planFromPriceId('price_pro_annual_79', CONFIGURED)).toBe('pro_annual');
+    expect(planFromPriceId('price_pro_monthly_5', CONFIGURED)).toBe('pro_monthly');
+    expect(planFromPriceId('price_pro_annual_45', CONFIGURED)).toBe('pro_annual');
     expect(planFromPriceId(LEGACY_PRICE_IDS.tier1, CONFIGURED)).toBe('tier1');
     expect(planFromPriceId(LEGACY_PRICE_IDS.tier2, CONFIGURED)).toBe('tier2');
     expect(planFromPriceId(LEGACY_PRICE_IDS.tier5, CONFIGURED)).toBe('tier5');
@@ -99,8 +99,8 @@ describe('entitlements', () => {
 
 describe('describeAccess', () => {
   it('shows what each account is actually billed', () => {
-    expect(describeAccess({ isPremium: true, plan: 'pro_monthly', tier: 'tier5' }).price).toBe('$9/mo');
-    expect(describeAccess({ isPremium: true, plan: 'pro_annual', tier: 'tier5' }).price).toBe('$79/yr');
+    expect(describeAccess({ isPremium: true, plan: 'pro_monthly', tier: 'tier5' }).price).toBe('$5/mo');
+    expect(describeAccess({ isPremium: true, plan: 'pro_annual', tier: 'tier5' }).price).toBe('$45/yr');
     expect(describeAccess({ isPremium: true, tier: 'tier5' }).price).toBe('$5/mo');
     expect(describeAccess({ tier: 'student_unlimited' }).price).toBe('$0/mo');
     expect(describeAccess(null).title).toBe('Free');

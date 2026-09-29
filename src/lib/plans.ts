@@ -34,8 +34,8 @@ export const LEGACY_PRICE_IDS: Record<LegacyTier, string> = {
 
 const LEGACY_PRICE_CENTS: Record<LegacyTier, number> = { tier1: 100, tier2: 200, tier5: 500 };
 
-export const PRO_MONTHLY_CENTS = 900;
-export const PRO_ANNUAL_CENTS = 7900;
+export const PRO_MONTHLY_CENTS = 500;
+export const PRO_ANNUAL_CENTS = 4500;
 
 export interface PriceEnv {
   NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY?: string;
@@ -236,11 +236,13 @@ export const FREE_FEATURES = [
 ] as const;
 
 export const PRO_FEATURES = [
-  'Unlimited shot boards',
-  'Unlimited saved references',
-  'Private reference boards and private clip uploads',
-  'Reference-to-shot breakdown pages',
-  'Unlimited portfolio posts',
+  'Unlimited shot boards & saved references',
+  'Private boards & private video uploads',
+  'Side-by-side synchronized playblast compare',
+  'High-resolution contact sheets & PDF export',
+  'Watermark-free downloads & clean exports',
+  'Pitch deck & director presentation exports',
+  'Unlimited portfolio posts & shot breakdowns',
 ] as const;
 
 export interface PlanSummary {

@@ -11,6 +11,15 @@ runConfig:
   # `gcloud secrets add-iam-policy-binding <secret> --project=<project> --role=roles/secretmanager.secretAccessor --member=serviceAccount:<service-account-email>`
   # You can find your service account email in the Firebase console settings.
   env:
+    - variable: NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY
+      value: price_1UJczS59QHehw05fbqoQC0Po
+      availability: [BUILD, RUNTIME]
+    - variable: NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL
+      value: price_1UJd4X59QHehw05fqbQ2qZLs
+      availability: [BUILD, RUNTIME]
+    - variable: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+      value: pk_live_51SFfWk59QHehw05fAQmlkaJZ6ys02e7g5EwfG44sUIkSvC0F6fos5TyfIzMvCHAoMrI7piuOdUfwglN7jh2CFAuK00pBgZ4uI7
+      availability: [BUILD, RUNTIME]
     - variable: STRIPE_SECRET_KEY
     - variable: STRIPE_WEBHOOK_SECRET
     # Social auto-poster (see /admin/social) — set these via Secret Manager

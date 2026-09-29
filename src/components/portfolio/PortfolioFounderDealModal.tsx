@@ -12,8 +12,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, CheckCircle2, ShieldCheck, Heart, ArrowRight, Lock, Users, Film } from 'lucide-react';
-import { useDonate } from '@/hooks/use-donate';
 import { ACCESS_LIMITS, formatUsd, getProOffers } from '@/lib/plans';
+import { CustomCheckoutModal } from '@/components/checkout/CustomCheckoutModal';
 
 interface PortfolioFounderDealModalProps {
   open: boolean;
@@ -26,15 +26,17 @@ export const PortfolioFounderDealModal: React.FC<PortfolioFounderDealModalProps>
   onOpenChange,
   onProceedFree,
 }) => {
-  const { startCheckout, isCheckingOut } = useDonate();
+  const [showCheckout, setShowCheckout] = React.useState(false);
   const proPrice = `${formatUsd(getProOffers().pro_monthly.amountCents)}/mo`;
 
   const handleClaimDeal = () => {
-    startCheckout('pro_monthly', 'portfolio_upsell');
+    onOpenChange(false);
+    setShowCheckout(true);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl w-[94vw] bg-zinc-950/95 backdrop-blur-2xl border border-purple-500/40 text-white rounded-3xl p-6 md:p-8 shadow-[0_0_60px_-10px_rgba(168,85,247,0.4)]">
         <DialogHeader className="space-y-2 text-center pb-2">
           <div className="flex justify-center">
@@ -92,11 +94,10 @@ export const PortfolioFounderDealModal: React.FC<PortfolioFounderDealModalProps>
           <Button
             type="button"
             onClick={handleClaimDeal}
-            disabled={isCheckingOut}
             className="w-full h-12 rounded-2xl text-sm font-bold bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-xl shadow-purple-600/30 gap-2 cursor-pointer hover:scale-[1.02] transition-all"
           >
             <Sparkles className="h-4 w-4 fill-white animate-pulse" />
-            {isCheckingOut ? 'Opening Checkout...' : `Upgrade to Pro · ${proPrice}`}
+            Upgrade to Pro · {proPrice}
           </Button>
 
           {onProceedFree && (
@@ -114,5 +115,13 @@ export const PortfolioFounderDealModal: React.FC<PortfolioFounderDealModalProps>
         </div>
       </DialogContent>
     </Dialog>
+
+    <CustomCheckoutModal
+      open={showCheckout}
+      onOpenChange={setShowCheckout}
+      initialPlan="pro_monthly"
+      source="portfolio_upsell"
+    />
+    </>
   );
 };

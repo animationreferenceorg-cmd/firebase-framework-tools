@@ -4,7 +4,7 @@ import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, 
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Film, LayoutGrid, List, Rss, Shield, BookCopy, Camera, User, Box, ShoppingBag, CreditCard, MessageSquare, Paintbrush, Scissors, Compass } from 'lucide-react';
+import { Film, LayoutGrid, List, Rss, Shield, BookCopy, Camera, User, Box, ShoppingBag, CreditCard, MessageSquare, Paintbrush, Scissors, Compass, Sparkles } from 'lucide-react';
 import { useUser } from '@/hooks/use-user';
 import { useAuth } from '@/hooks/use-auth';
 import { Suspense, useEffect, useState } from 'react';
@@ -152,8 +152,8 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <SidebarLink href="/feed" icon={Rss} tooltip="Animator Progress">
-                                        Animator Progress
+                                    <SidebarLink href="/feed" icon={Sparkles} tooltip="Community">
+                                        Community
                                     </SidebarLink>
                                 </SidebarMenuItem>
                             </SidebarMenu>

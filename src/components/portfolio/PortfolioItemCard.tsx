@@ -42,6 +42,11 @@ const STAGE_CONFIG: Record<WipStage, { label: string; color: string; bg: string 
   completed: { label: 'Completed', color: 'text-emerald-400 border-emerald-500/30', bg: 'bg-emerald-500/10' },
 };
 
+/**
+ * In-memory client cache for extracted video frame thumbnails so they never re-render or re-fetch.
+ */
+const clientThumbCache = new Map<string, string>();
+
 export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
   item,
   onClick,
@@ -61,9 +66,33 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
   canMoveDown = false,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [cardInView, setCardInView] = useState(false);
   const [viewsCount, setViewsCount] = useState(item.viewsCount || 0);
   const viewTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Lazy-load card media when nearing viewport
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setCardInView(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setCardInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '300px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     setViewsCount(item.viewsCount || 0);
@@ -104,6 +133,54 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
   const isLiked = isLikedProp || (currentUserId && item.likedBy ? item.likedBy.includes(currentUserId) : false);
   const isSaved = isSavedProp;
 
+  const computedThumbnail = (() => {
+    const directThumb = item.thumbnailUrl || (item as any).posterUrl;
+    if (directThumb) return directThumb;
+    if (!item.mediaUrl) return null;
+    const url = item.mediaUrl.trim();
+    const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]{11})/i);
+    if (ytMatch && ytMatch[1]) return `https://i.ytimg.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+    const vimeoMatch = url.match(/(?:vimeo\.com\/(?:video\/|channels\/\w+\/)?|player\.vimeo\.com\/video\/)(\d+)/i);
+    if (vimeoMatch && vimeoMatch[1]) return `https://vumbnail.com/${vimeoMatch[1]}.jpg`;
+    if (/\.(png|jpg|jpeg|webp|gif|svg|avif)($|\?)/i.test(url) || url.startsWith('data:image/')) return url;
+    return null;
+  })();
+
+  const [dynamicThumb, setDynamicThumb] = useState<string | null>(
+    () => (item.mediaUrl ? clientThumbCache.get(item.mediaUrl) || null : null)
+  );
+
+  const effectiveThumbnail = computedThumbnail || dynamicThumb;
+
+  const isDirectVideoFile = Boolean(
+    item.mediaUrl &&
+    (item.mediaType === 'video_file' || /\.(mp4|webm|mov|m4v)($|\?)/i.test(item.mediaUrl) || item.mediaUrl.includes('firebasestorage')) &&
+    !item.mediaUrl.includes('youtube.com') &&
+    !item.mediaUrl.includes('youtu.be') &&
+    !item.mediaUrl.includes('vimeo.com')
+  );
+
+  const handleVideoLoadedData = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const vid = e.currentTarget;
+    if (!vid || vid.videoWidth === 0 || effectiveThumbnail) return;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.min(vid.videoWidth, 640);
+      canvas.height = Math.min(vid.videoHeight, 360);
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        if (dataUrl && dataUrl.length > 200) {
+          if (item.mediaUrl) clientThumbCache.set(item.mediaUrl, dataUrl);
+          setDynamicThumb(dataUrl);
+        }
+      }
+    } catch {
+      // Ignored for CORS / tainted canvas
+    }
+  };
+
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -112,7 +189,9 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
       const attemptPlay = () => {
         const playPromise = v.play();
         if (playPromise !== undefined) {
-          playPromise.catch(() => {});
+          playPromise
+            .then(() => setIsVideoPlaying(true))
+            .catch(() => {});
         }
       };
 
@@ -124,34 +203,16 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
       }
     } else {
       v.pause();
+      setIsVideoPlaying(false);
       try {
-        v.currentTime = 0.1;
+        v.currentTime = 0.001;
       } catch {}
     }
   }, [isHovered]);
 
-  const computedThumbnail = (() => {
-    if (item.thumbnailUrl) return item.thumbnailUrl;
-    if (!item.mediaUrl) return null;
-    const url = item.mediaUrl.trim();
-    const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]{11})/i);
-    if (ytMatch && ytMatch[1]) return `https://i.ytimg.com/vi/${ytMatch[1]}/hqdefault.jpg`;
-    const vimeoMatch = url.match(/(?:vimeo\.com\/(?:video\/|channels\/\w+\/)?|player\.vimeo\.com\/video\/)(\d+)/i);
-    if (vimeoMatch && vimeoMatch[1]) return `https://vumbnail.com/${vimeoMatch[1]}.jpg`;
-    if (/\.(png|jpg|jpeg|webp|gif)($|\?)/i.test(url) || url.startsWith('data:image/')) return url;
-    return null;
-  })();
-
-  const isDirectVideoFile = Boolean(
-    item.mediaUrl &&
-    item.mediaType === 'video_file' &&
-    !item.mediaUrl.includes('youtube.com') &&
-    !item.mediaUrl.includes('youtu.be') &&
-    !item.mediaUrl.includes('vimeo.com')
-  );
-
   return (
     <div
+      ref={containerRef}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleCardClick}
@@ -202,36 +263,38 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
 
       {/* Background Video Media / Thumbnail Image */}
       <div className="absolute inset-0 w-full h-full bg-black">
-        {computedThumbnail && !isDirectVideoFile ? (
+        {effectiveThumbnail ? (
           <img
-            src={computedThumbnail}
+            src={effectiveThumbnail}
             alt={item.title}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className={cn(
+              "h-full w-full object-cover transition-transform duration-500",
+              isHovered ? "scale-105" : "scale-100",
+              isVideoPlaying && isHovered && "opacity-0"
+            )}
             loading="lazy"
+            decoding="async"
           />
-        ) : !isDirectVideoFile ? (
+        ) : (
           <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-purple-950 via-zinc-950 to-black">
             <Play className="h-12 w-12 text-primary/70" />
           </div>
-        ) : null}
+        )}
 
-        {/* Keep the first frame visible; hover only controls playback. */}
-        {isDirectVideoFile && (
+        {/* Video Player for hover playback or direct video file initial frame preview */}
+        {isDirectVideoFile && cardInView && (isHovered || !effectiveThumbnail) && (
           <video
             ref={videoRef}
-            src={item.mediaUrl}
-            poster={computedThumbnail || undefined}
-            preload="metadata"
+            src={item.mediaUrl ? `${item.mediaUrl}#t=0.001` : undefined}
+            poster={effectiveThumbnail || undefined}
+            preload={isHovered ? "auto" : "metadata"}
             muted
             loop
             playsInline
-            onLoadedMetadata={(event) => {
-              try {
-                event.currentTarget.currentTime = 0.1;
-              } catch {}
-            }}
+            onLoadedData={handleVideoLoadedData}
             className={cn(
-              "absolute inset-0 w-full h-full object-cover transition-transform duration-500 pointer-events-none z-0",
+              "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none z-0",
+              isHovered || !effectiveThumbnail ? "opacity-100" : "opacity-0",
               isHovered ? "scale-105" : "scale-100"
             )}
           />

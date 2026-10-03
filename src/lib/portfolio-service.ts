@@ -89,8 +89,60 @@ export async function generateAutoThumbnail(
       return `https://vumbnail.com/${vimeoMatch[1]}.jpg`;
     }
     // Direct image URL
-    if (/\.(png|jpg|jpeg|webp|gif)($|\?)/i.test(url)) {
+    if (/\.(png|jpg|jpeg|webp|gif|svg|avif)($|\?)/i.test(url)) {
       return url;
+    }
+    // Direct video URL (MP4, WebM, MOV, or cloud storage video)
+    if (/\.(mp4|webm|mov|m4v)($|\?)/i.test(url) || url.includes('/o/media%2F') || url.includes('firebasestorage')) {
+      return new Promise((resolve) => {
+        try {
+          const video = document.createElement('video');
+          video.crossOrigin = 'anonymous';
+          video.preload = 'metadata';
+          video.muted = true;
+          video.playsInline = true;
+          video.src = `${url}#t=0.001`;
+
+          const cleanup = () => {
+            video.remove();
+          };
+
+          const timeout = setTimeout(() => {
+            cleanup();
+            resolve(null);
+          }, 4000);
+
+          video.onloadeddata = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = Math.min(video.videoWidth || 640, 800);
+              canvas.height = Math.min(video.videoHeight || 360, 450);
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+                clearTimeout(timeout);
+                cleanup();
+                resolve(dataUrl);
+                return;
+              }
+            } catch {
+              // CORS tainted canvas
+            }
+            clearTimeout(timeout);
+            cleanup();
+            resolve(null);
+          };
+
+          video.onerror = () => {
+            clearTimeout(timeout);
+            cleanup();
+            resolve(null);
+          };
+        } catch {
+          resolve(null);
+        }
+      });
     }
     return null;
   }

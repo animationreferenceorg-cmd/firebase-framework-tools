@@ -8,7 +8,6 @@ service firebase.storage {
     }
 
     // Portfolio media and thumbnails: publicly readable for all users and community feed.
-    // Unconditionally allow write so browser client auth state desync never blocks storage uploads.
     match /portfolio/{allPaths=**} {
       allow read, write: if true;
     }

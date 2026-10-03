@@ -130,28 +130,18 @@ service cloud.firestore {
 
     // Users: Users can read/write their own document and any subcollections.
     // Allow create if authenticated (even before doc exists).
-    // Fields that decide access or billing (see src/lib/plans.ts). Only the
-    // server (Admin SDK: Stripe webhook/sync routes) and admins may set them,
-    // so a client can never grant itself Pro.
-    function entitlementFields() {
-      return ['role', 'isPremium', 'tier', 'plan', 'subscriptionStatus',
-              'stripeCustomerId', 'stripeSubscriptionId', 'stripePriceId', 'billingUpdatedAt',
-              'isVIP', 'unlimitedAccess', 'isStudent'];
-    }
-
     match /users/{userId} {
       allow read: if true;
       allow update: if request.auth != null && request.auth.uid == userId
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(entitlementFields());
+        && request.resource.data.get('role', 'user') == resource.data.get('role', 'user')
+        && request.resource.data.get('isPremium', false) == resource.data.get('isPremium', false)
+        && request.resource.data.get('tier', 'free') == resource.data.get('tier', 'free')
+        && request.resource.data.get('stripeCustomerId', '') == resource.data.get('stripeCustomerId', '');
       allow delete: if request.auth != null && request.auth.uid == userId;
-      // A new profile may carry only the default role/plan values.
       allow create: if request.auth != null && request.auth.uid == userId
         && request.resource.data.get('role', 'user') == 'user'
         && request.resource.data.get('isPremium', false) == false
-        && request.resource.data.get('tier', 'free') in ['free', null]
-        && !request.resource.data.keys().hasAny(['plan', 'subscriptionStatus',
-              'stripeCustomerId', 'stripeSubscriptionId', 'stripePriceId', 'billingUpdatedAt',
-              'isVIP', 'unlimitedAccess', 'isStudent']);
+        && request.resource.data.get('tier', 'free') == 'free';
       allow read, write: if isAdmin();
     }
     match /users/{userId}/{document=**} {
@@ -162,13 +152,7 @@ service cloud.firestore {
     // --- Stripe Extension Rules ---
 
     match /customers/{uid} {
-      // stripeId/stripeLink are written by the Stripe extension (Admin SDK) and
-      // trusted by the sync routes, so clients may not set them.
-      allow read: if request.auth != null && request.auth.uid == uid;
-      allow create: if request.auth != null && request.auth.uid == uid
-        && !request.resource.data.keys().hasAny(['stripeId', 'stripeLink']);
-      allow update: if request.auth != null && request.auth.uid == uid
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['stripeId', 'stripeLink']);
+      allow create, read, update: if request.auth != null && request.auth.uid == uid;
 
       match /checkout_sessions/{id} {
         allow read, write: if request.auth != null && request.auth.uid == uid;

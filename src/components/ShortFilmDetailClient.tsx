@@ -235,6 +235,122 @@ export function ShortFilmDetailClient({ id }: { id: string }) {
             </div>
           </div>
         </div>
+
+        {/* ─── BEHIND THE SCENES & EXTRAS ─── */}
+        {video.behindTheScenes && video.behindTheScenes.length > 0 ? (
+          <div className="mt-12 rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    Behind the Scenes & Extras
+                  </h2>
+                  <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-bold text-emerald-400">
+                    Verified Craftsmanship
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Exclusive production materials, rigs, pitch decks, and visual development from the creators.
+                </p>
+              </div>
+              {video.author_name && (
+                <div className="text-xs text-zinc-400">
+                  Directed by <span className="font-semibold text-white">{video.author_name}</span>
+                  {video.submissionProof?.directorRole && ` (${video.submissionProof.directorRole})`}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {video.behindTheScenes.map((extra) => (
+                <Dialog key={extra.id}>
+                  <DialogTrigger asChild>
+                    <div className="group relative cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-black/40 transition-all duration-300 hover:-translate-y-1 hover:border-purple-500/50 hover:shadow-xl hover:shadow-purple-900/20">
+                      <div className="relative aspect-video w-full overflow-hidden bg-zinc-900">
+                        {extra.mediaType === 'image' || extra.thumbnailUrl ? (
+                          <img
+                            src={extra.thumbnailUrl || extra.mediaUrl}
+                            alt={extra.title}
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                        ) : extra.mediaType === 'video' ? (
+                          <video
+                            src={`${extra.mediaUrl}#t=0.5`}
+                            preload="metadata"
+                            muted
+                            playsInline
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-zinc-900 text-zinc-600">
+                            <span className="text-xs font-bold uppercase tracking-wider text-purple-400">
+                              PDF Document
+                            </span>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                        <span className="absolute top-2 left-2 rounded-md bg-black/70 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-300 border border-white/10">
+                          {extra.type.replace('_', ' ')}
+                        </span>
+                      </div>
+                      <div className="p-3">
+                        <h3 className="text-xs font-bold text-white group-hover:text-purple-300 transition-colors line-clamp-1">
+                          {extra.title}
+                        </h3>
+                        {extra.description && (
+                          <p className="text-[11px] text-zinc-400 line-clamp-2 mt-0.5">
+                            {extra.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl border-white/10 bg-[#0c0d14] p-4 text-white">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400">
+                            {extra.type.replace('_', ' ')}
+                          </span>
+                          <h3 className="text-lg font-bold text-white">{extra.title}</h3>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-center overflow-hidden rounded-xl bg-black max-h-[75vh]">
+                        {extra.mediaType === 'image' ? (
+                          <img
+                            src={extra.mediaUrl}
+                            alt={extra.title}
+                            className="max-h-[72vh] w-auto object-contain"
+                          />
+                        ) : extra.mediaType === 'video' ? (
+                          <video
+                            src={extra.mediaUrl}
+                            controls
+                            autoPlay
+                            playsInline
+                            className="max-h-[72vh] w-full"
+                          />
+                        ) : (
+                          <iframe
+                            src={extra.mediaUrl}
+                            className="h-[70vh] w-full border-0"
+                            title={extra.title}
+                          />
+                        )}
+                      </div>
+                      {extra.description && (
+                        <p className="text-xs text-zinc-300 leading-relaxed pt-1">
+                          {extra.description}
+                        </p>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         <div className="mt-16">
           {relatedVideos.length > 0 && (
             <VideoRow title="You Might Also Like" videos={relatedVideos} isPoster />

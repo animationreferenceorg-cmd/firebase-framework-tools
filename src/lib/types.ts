@@ -1,5 +1,25 @@
 
 
+export interface BehindTheScenesExtra {
+  id: string;
+  type: 'rig' | 'concept_art' | 'pitch_deck' | 'animatic' | 'model_sheet' | 'other';
+  title: string;
+  description?: string;
+  mediaUrl: string;
+  mediaType: 'image' | 'video' | 'pdf';
+  thumbnailUrl?: string;
+}
+
+export interface VideoSubmissionProof {
+  directorRole: string;
+  contactEmail: string;
+  statement?: string;
+  acceptedTerms: boolean;
+  submittedAt: any;
+  submittedByUid?: string;
+  submittedByName?: string;
+}
+
 export interface Video {
   id: string;
   type?: 'video' | 'social'; // 'social' covers Instagram, TikTok, etc.
@@ -13,7 +33,7 @@ export interface Video {
   categoryIds?: string[]; // For main videos
   categories?: string[]; // For short films
   isShort?: boolean;
-  status?: 'draft' | 'published';
+  status?: 'draft' | 'published' | 'pending_review' | 'rejected';
   folderId?: string;
   uploader?: string;
   originalUrl?: string;
@@ -28,6 +48,8 @@ export interface Video {
   likeCount?: number;
   viewCount?: number;
   isPortfolio?: boolean;
+  behindTheScenes?: BehindTheScenesExtra[];
+  submissionProof?: VideoSubmissionProof;
 }
 
 export interface Folder {

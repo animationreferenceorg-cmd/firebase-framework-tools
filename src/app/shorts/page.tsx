@@ -14,9 +14,12 @@ import {
   Film,
   Heart,
   Eye,
+  Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { VideoCard } from '@/components/VideoCard';
+import { SubmitShortFilmDialog } from '@/components/shorts/SubmitShortFilmDialog';
 
 /* ─── Helpers ─── */
 
@@ -169,8 +172,11 @@ export default function ShortFilmsStreamingPage() {
           </div>
           <h1 className="text-2xl font-bold text-white">No short films yet</h1>
           <p className="text-sm text-zinc-400">
-            Published short films will appear here. Add one from the admin dashboard to get started.
+            Published short films will appear here. Are you an animator or director with a film?
           </p>
+          <div className="pt-2">
+            <SubmitShortFilmDialog />
+          </div>
         </div>
       </div>
     );
@@ -178,6 +184,27 @@ export default function ShortFilmsStreamingPage() {
 
   return (
     <div className="min-h-screen space-y-8 pb-24">
+
+      {/* ──────────────── HEADER ACTION BAR ──────────────── */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5 backdrop-blur-xl">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg sm:text-xl font-black text-white tracking-tight">
+              Short Animated Films
+            </h1>
+            <span className="rounded-full bg-purple-500/10 border border-purple-500/30 px-2.5 py-0.5 text-[10px] font-bold text-purple-300">
+              Curated Theater
+            </span>
+          </div>
+          <p className="text-xs text-zinc-400 max-w-xl">
+            Stream independent animated short films with exclusive behind-the-scenes rigs, pitch decks, and visual development from verified creators.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          <SubmitShortFilmDialog />
+        </div>
+      </div>
 
       {/* ──────────────── HERO SPOTLIGHT ──────────────── */}
       {hero && (

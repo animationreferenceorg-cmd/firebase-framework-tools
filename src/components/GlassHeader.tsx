@@ -62,7 +62,7 @@ export function GlassHeader() {
                     {[
                         { label: 'Discover', href: '/home', icon: Film },
                         { label: 'Categories', href: '/categories', icon: LayoutGrid },
-                        { label: 'Clips', href: '/references', icon: Scissors },
+
                         { label: 'Community', href: '/feed', icon: Sparkles },
                     ].map((item) => {
                         const Icon = item.icon;

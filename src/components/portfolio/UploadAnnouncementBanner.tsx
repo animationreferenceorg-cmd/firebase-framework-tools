@@ -85,12 +85,12 @@ export const UploadAnnouncementBanner: React.FC<UploadAnnouncementBannerProps> =
           </div>
 
           <h3 className="text-lg sm:text-xl font-black text-white tracking-tight flex items-center gap-2">
-            <span>Portfolio & Community Uploads Are Back!</span>
+            <span>Community Uploads Are Back!</span>
             <Sparkles className="w-4 h-4 text-amber-300 shrink-0 hidden sm:inline" />
           </h3>
 
           <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-medium">
-            We fixed the storage permission errors. You can now publish your WIP animation passes, blocking reels, and finished portfolio pieces directly to your profile and community showcase.
+            We fixed the storage permission errors. You can now publish your animation references, WIP blocking passes, and reels directly to the community showcase.
             <span className="text-zinc-400 block sm:inline sm:ml-1">
               (Free accounts include 3 submissions; Pro accounts enjoy unlimited uploads!)
             </span>
@@ -105,7 +105,7 @@ export const UploadAnnouncementBanner: React.FC<UploadAnnouncementBannerProps> =
               className="flex-1 md:flex-initial h-10 sm:h-11 px-5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-purple-600 hover:from-emerald-400 hover:to-purple-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-emerald-950/50 gap-2 cursor-pointer transition-transform hover:scale-[1.02]"
             >
               <UploadCloud className="w-4 h-4" />
-              <span>Submit Portfolio Piece</span>
+              <span>Submit Reference / Reel</span>
             </Button>
           ) : (
             <Button
@@ -114,7 +114,7 @@ export const UploadAnnouncementBanner: React.FC<UploadAnnouncementBannerProps> =
             >
               <a href={source === 'feed' ? '#upload' : '/feed'}>
                 <UploadCloud className="w-4 h-4" />
-                <span>Submit Work Now</span>
+                <span>Submit Reference / Reel</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </a>
             </Button>

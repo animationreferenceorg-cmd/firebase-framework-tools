@@ -1,5 +1,5 @@
 import { db, storage } from './firebase';
-import { doc, setDoc, getDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, collection, getDocs, QueryDocumentSnapshot, DocumentData, runTransaction } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, collection, collectionGroup, getDocs, QueryDocumentSnapshot, DocumentData, runTransaction } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { MoodboardItem, Moodboard, Video } from './types';
 
@@ -186,5 +186,27 @@ export class MoodboardService {
     static async deleteMoodboard(userId: string, moodboardId: string) {
         const docRef = doc(db, 'users', userId, 'moodboards', moodboardId);
         await deleteDoc(docRef);
+    }
+
+    // Get aggregate global moodboard stats for admin dashboard
+    static async getGlobalStats(): Promise<{ totalBoards: number; totalItems: number; uniqueUsers: number }> {
+        try {
+            const snap = await getDocs(collectionGroup(db, 'moodboards'));
+            let totalItems = 0;
+            const userSet = new Set<string>();
+            snap.docs.forEach((d) => {
+                const data = d.data();
+                if (data.userId) userSet.add(data.userId);
+                totalItems += (data.itemCount || (data.items ? data.items.length : 0));
+            });
+            return {
+                totalBoards: snap.size,
+                totalItems,
+                uniqueUsers: userSet.size,
+            };
+        } catch (e) {
+            console.error("Failed to load moodboard global stats:", e);
+            return { totalBoards: 0, totalItems: 0, uniqueUsers: 0 };
+        }
     }
 }

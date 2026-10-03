@@ -140,11 +140,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                         Categories
                                     </SidebarLink>
                                 </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarLink href="/references" icon={Scissors} tooltip="Clip Library">
-                                        Clip Library
-                                    </SidebarLink>
-                                </SidebarMenuItem>
+
 
                                 <SidebarMenuItem>
                                     <SidebarLink href="/shorts" icon={Film} tooltip="Short Films">
@@ -182,8 +178,8 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                             <SidebarGroupLabel className="eyebrow !text-[0.6rem] !text-violet-200/50">Profile & Learn</SidebarGroupLabel>
                             <SidebarMenu>
                                 <SidebarMenuItem>
-                                    <SidebarLink href="/profile" icon={User} tooltip="Portfolio">
-                                        Portfolio
+                                    <SidebarLink href="/profile" icon={User} tooltip="Profile">
+                                        Profile
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>

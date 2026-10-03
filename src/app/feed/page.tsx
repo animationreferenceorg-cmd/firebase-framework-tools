@@ -10,6 +10,7 @@ import { SaveToBoardModal } from '@/components/SaveToBoardModal';
 import { UploadPortfolioItemModal } from '@/components/portfolio/UploadPortfolioItemModal';
 import { UploadAnnouncementBanner } from '@/components/portfolio/UploadAnnouncementBanner';
 import { FilterBar, TabOption, TypeOption, PillOption } from '@/components/FilterBar';
+import { CaptureClipDialog } from '@/components/reference/CaptureClipDialog';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
@@ -220,20 +221,21 @@ export default function CommunityFeedPage() {
           </div>
 
           <h1 className="text-3xl font-black leading-tight tracking-tight text-white sm:text-4xl md:text-5xl">
-            Community Submissions
+            Community References & WIPs
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 font-medium leading-relaxed">
-            Explore work-in-progress passes, blocking reels, and polished shots uploaded directly by community animators.
+            Explore community-submitted reference clips, motion breakdowns, blocking passes, and finished shots.
           </p>
         </div>
 
-        <div className="flex w-full items-center gap-3 md:w-auto">
+        <div className="flex w-full flex-wrap items-center gap-2.5 sm:gap-3 md:w-auto">
+          <CaptureClipDialog />
           <Button 
             onClick={handleOpenUploadModal}
-            className="h-12 w-full justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-500 to-rose-600 px-5 text-xs font-bold text-white shadow-xl shadow-purple-950/60 transition-all hover:from-purple-500 hover:to-rose-500 md:h-11 md:w-auto md:px-6 md:hover:scale-105"
+            className="h-11 w-full justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-500 to-rose-600 px-5 text-xs font-bold text-white shadow-xl shadow-purple-950/60 transition-all hover:from-purple-500 hover:to-rose-500 sm:w-auto hover:scale-105"
           >
             <Plus className="w-4 h-4" />
-            <span>Submit Work to Portfolio</span>
+            <span>Upload Reference / Reel</span>
           </Button>
         </div>
       </div>
@@ -255,12 +257,12 @@ export default function CommunityFeedPage() {
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white leading-tight tracking-tight">
               Share Your Motion. <br />
               <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-amber-300 bg-clip-text text-transparent">
-                Build Your Professional Portfolio.
+                Community Uploads Are Back!
               </span>
             </h2>
 
             <p className="text-xs sm:text-sm text-zinc-300 font-medium leading-relaxed">
-              Showcase your blocking passes, splining iterations, and final polish reels. Get peer feedback, tag your rigs & software, and let studios discover your work.
+              Showcase your animation references, blocking passes, splining iterations, and final polish reels. Get peer feedback, tag your rigs & software, and study motion together.
             </p>
 
             <div className="grid grid-cols-3 gap-2 pt-2 sm:gap-3">
@@ -274,7 +276,7 @@ export default function CommunityFeedPage() {
               </div>
               <div className="flex min-w-0 flex-col items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] p-2 text-center text-[10px] font-semibold leading-tight text-zinc-300 sm:flex-row sm:gap-2 sm:p-2.5 sm:text-left sm:text-xs">
                 <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Featured Profile</span>
+                <span>Community Showcase</span>
               </div>
             </div>
           </div>
@@ -286,7 +288,7 @@ export default function CommunityFeedPage() {
               className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-purple-600 px-6 text-sm font-black text-white shadow-[0_0_30px_rgba(168,85,247,0.4)] transition-all hover:bg-purple-500 hover:shadow-[0_0_40px_rgba(168,85,247,0.6)] sm:h-14 sm:px-8 lg:w-auto lg:hover:scale-105"
             >
               <UploadCloud className="w-5 h-5" />
-              <span>Start Submitting Shots</span>
+              <span>Submit Reference / Reel</span>
             </Button>
 
             <Link href="/profile">
@@ -295,7 +297,7 @@ export default function CommunityFeedPage() {
                 size="lg"
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border-white/15 bg-white/[0.05] px-6 text-sm font-bold text-white transition-all hover:bg-white/10 sm:h-14 sm:px-8"
               >
-                <span>View Portfolio Profile</span>
+                <span>View My Profile</span>
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import { db, storage } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
@@ -390,7 +391,9 @@ export function SubmitShortFilmDialog({ children }: { children?: React.ReactNode
         tags: cleanTags,
         duration: filmDuration || 60,
         author_name: creatorName.trim(),
-        uploader: user?.uid || 'creator_submission',
+        uploader: user.uid,
+        uploaderId: user.uid,
+        userId: user.uid,
         behindTheScenes: uploadedBtsExtras,
         submissionProof,
         createdAt: serverTimestamp(),
@@ -443,7 +446,33 @@ export function SubmitShortFilmDialog({ children }: { children?: React.ReactNode
       </DialogTrigger>
 
       <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto border-white/10 bg-[#0c0d14] p-0 text-white shadow-2xl backdrop-blur-2xl">
-        {submittedSuccess ? (
+        {!user ? (
+          <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center space-y-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-500/20 text-purple-400">
+              <Film className="h-8 w-8" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-white">Sign In to Submit Your Film</h2>
+            <p className="max-w-md text-xs sm:text-sm text-zinc-300 leading-relaxed font-normal">
+              To verify original ownership and attribute the film to your creator profile, you must be signed in to an AnimationReference account.
+            </p>
+            <div className="pt-3 flex flex-col sm:flex-row items-center gap-3">
+              <Button
+                asChild
+                className="h-10 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-6 shadow-lg shadow-purple-600/30"
+              >
+                <Link href="/login">Sign In / Register</Link>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsOpen(false)}
+                className="h-10 text-xs text-zinc-400 hover:text-white"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : submittedSuccess ? (
           <div className="flex flex-col items-center justify-center p-10 text-center">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400">
               <CheckCircle2 className="h-10 w-10" />

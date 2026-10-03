@@ -230,13 +230,13 @@ export function formatUsd(cents: number): string {
 export const FREE_FEATURES = [
   'Browse the complete public reference library',
   'Frame-by-frame playback and speed controls',
-  `${ACCESS_LIMITS.free.maxBoards} active shot board`,
-  `${ACCESS_LIMITS.free.maxSavedReferences} saved references`,
+  `${ACCESS_LIMITS.free.maxBoards} visual reference board`,
+  'Save clips directly to your boards',
   `${ACCESS_LIMITS.free.maxPortfolioPosts} portfolio posts`,
 ] as const;
 
 export const PRO_FEATURES = [
-  'Unlimited shot boards & saved references',
+  'Unlimited visual reference boards',
   'Private boards & private video uploads',
   'Side-by-side synchronized playblast compare',
   'High-resolution contact sheets & PDF export',
@@ -261,16 +261,16 @@ export function describeAccess(profile: EntitlementProfile | null | undefined): 
     case 'student_unlimited':
       return { badge: 'SJSU VIP', title: 'SJSU Unlimited Pass', price: '$0/mo', description: 'Complimentary Pro access for verified SJSU students.' };
     case 'pro': {
-      if (profile?.plan === 'pro_annual') return { badge: 'PRO', title: 'Pro (annual)', price: `${formatUsd(PRO_ANNUAL_CENTS)}/yr`, description: 'Unlimited shot boards, saved references and private workspaces.' };
-      if (profile?.plan === 'pro_monthly') return { badge: 'PRO', title: 'Pro', price: `${formatUsd(PRO_MONTHLY_CENTS)}/mo`, description: 'Unlimited shot boards, saved references and private workspaces.' };
-      return { badge: 'PRO', title: 'Pro (original)', price: `${formatUsd(LEGACY_PRICE_CENTS.tier5)}/mo`, description: 'Unlimited shot boards, saved references and private workspaces.' };
+      if (profile?.plan === 'pro_annual') return { badge: 'PRO', title: 'Pro (annual)', price: `${formatUsd(PRO_ANNUAL_CENTS)}/yr`, description: 'Unlimited reference boards and private workspaces.' };
+      if (profile?.plan === 'pro_monthly') return { badge: 'PRO', title: 'Pro', price: `${formatUsd(PRO_MONTHLY_CENTS)}/mo`, description: 'Unlimited reference boards and private workspaces.' };
+      return { badge: 'PRO', title: 'Pro (original)', price: `${formatUsd(LEGACY_PRICE_CENTS.tier5)}/mo`, description: 'Unlimited reference boards and private workspaces.' };
     }
     case 'tier2':
-      return { badge: 'SUPER FAN', title: 'Super Fan (legacy)', price: `${formatUsd(LEGACY_PRICE_CENTS.tier2)}/mo`, description: `${ACCESS_LIMITS.tier2.maxBoards} shot boards and ${ACCESS_LIMITS.tier2.maxSavedReferences} saved references.` };
+      return { badge: 'SUPER FAN', title: 'Super Fan (legacy)', price: `${formatUsd(LEGACY_PRICE_CENTS.tier2)}/mo`, description: `${ACCESS_LIMITS.tier2.maxBoards} reference boards.` };
     case 'tier1':
-      return { badge: 'SUPPORTER', title: 'Supporter (legacy)', price: `${formatUsd(LEGACY_PRICE_CENTS.tier1)}/mo`, description: `${ACCESS_LIMITS.tier1.maxBoards} shot boards and ${ACCESS_LIMITS.tier1.maxSavedReferences} saved references.` };
+      return { badge: 'SUPPORTER', title: 'Supporter (legacy)', price: `${formatUsd(LEGACY_PRICE_CENTS.tier1)}/mo`, description: `${ACCESS_LIMITS.tier1.maxBoards} reference boards.` };
     default:
-      return { badge: 'FREE', title: 'Free', price: '$0', description: `${ACCESS_LIMITS.free.maxBoards} shot board and ${ACCESS_LIMITS.free.maxSavedReferences} saved references.` };
+      return { badge: 'FREE', title: 'Free', price: '$0', description: `${ACCESS_LIMITS.free.maxBoards} active visual reference board.` };
   }
 }
 

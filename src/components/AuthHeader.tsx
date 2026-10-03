@@ -138,21 +138,11 @@ export default function AuthHeader() {
                   </DropdownMenuItem>
                 </Link>
 
-                <Link href="/list">
+                <Link href="/moodboard">
                   <DropdownMenuItem className="w-full flex items-center justify-between gap-2 p-2.5 rounded-2xl text-xs font-bold text-zinc-200 hover:text-white hover:bg-white/10 cursor-pointer transition-colors">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <Bookmark className="h-4 w-4 text-amber-400 fill-amber-400/20 shrink-0" />
-                      <span className="truncate">Saved Items & Moodboards</span>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {likedCount > 0 && (
-                        <Badge className="bg-rose-950/80 text-rose-300 border border-rose-800/40 font-mono text-[9px] px-1.5 py-0 rounded-full font-bold">
-                          ❤️ {likedCount}
-                        </Badge>
-                      )}
-                      <Badge className="bg-purple-600 text-white font-mono text-[9px] px-1.5 py-0 rounded-full font-bold">
-                        📌 {savedCategoriesCount}
-                      </Badge>
+                      <Bookmark className="h-4 w-4 text-purple-400 fill-purple-400/20 shrink-0" />
+                      <span className="truncate">Boards & Workspace</span>
                     </div>
                   </DropdownMenuItem>
                 </Link>

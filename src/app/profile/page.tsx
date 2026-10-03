@@ -595,19 +595,17 @@ export default function ProfilePage() {
 
                 {/* Profile Stats Bar (Likes, Saves & Shots) */}
                 <div className="flex flex-wrap items-center gap-2.5 pt-2">
-                  <Link href="/list">
-                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900/90 border border-white/10 hover:border-rose-500/50 text-xs font-bold text-zinc-200 transition-colors cursor-pointer shadow-md">
-                      <Heart className="h-3.5 w-3.5 text-rose-400 fill-rose-500/20" />
-                      <span>{userProfile?.likedVideoIds?.length || 0} Liked Clips</span>
+                  <Link href="/moodboard">
+                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900/90 border border-white/10 hover:border-purple-500/50 text-xs font-bold text-zinc-200 transition-colors cursor-pointer shadow-md">
+                      <Bookmark className="h-3.5 w-3.5 text-purple-400 fill-purple-400/20" />
+                      <span>Reference Boards & Saves</span>
                     </div>
                   </Link>
 
-                  <Link href="/list">
-                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900/90 border border-white/10 hover:border-amber-500/50 text-xs font-bold text-zinc-200 transition-colors cursor-pointer shadow-md">
-                      <Bookmark className="h-3.5 w-3.5 text-amber-400 fill-amber-400/20" />
-                      <span>{userProfile?.likedCategoryIds?.length || 0} Saved Collections</span>
-                    </div>
-                  </Link>
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900/90 border border-white/10 text-xs font-bold text-zinc-200 shadow-md">
+                    <Heart className="h-3.5 w-3.5 text-rose-400 fill-rose-500/20" />
+                    <span>{userProfile?.likedVideoIds?.length || 0} Liked Clips</span>
+                  </div>
 
                   <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900/90 border border-white/10 text-xs font-bold text-zinc-200 shadow-md">
                     <Sparkles className="h-3.5 w-3.5 text-purple-400" />

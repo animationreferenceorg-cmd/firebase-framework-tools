@@ -158,11 +158,6 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                             <SidebarGroupLabel className="eyebrow !text-[0.6rem] !text-violet-200/50">Workspace</SidebarGroupLabel>
                             <SidebarMenu>
                                 <SidebarMenuItem>
-                                    <SidebarLink href="/list" icon={List} tooltip="Saved References">
-                                        Saved References
-                                    </SidebarLink>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
                                     <SidebarLink href="/moodboard" icon={Box} tooltip="Boards">
                                         Boards
                                     </SidebarLink>

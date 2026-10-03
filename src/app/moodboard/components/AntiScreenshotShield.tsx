@@ -253,7 +253,7 @@ export function AntiScreenshotShield({
       `}</style>
       {/* Underlying Content */}
       <div
-        className={`anti-screenshot-content w-full h-full transition-all duration-150 ${
+        className={`anti-screenshot-content w-full h-full flex flex-col flex-1 transition-all duration-150 ${
           isShielded ? 'filter blur-2xl opacity-0 pointer-events-none select-none' : ''
         }`}
       >

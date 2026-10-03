@@ -183,8 +183,8 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <SidebarLink href="https://anim.works/" icon={ShoppingBag} tooltip="Workflow Tools">
-                                        Workflow Tools
+                                    <SidebarLink href="/marketplace" icon={ShoppingBag} tooltip="Marketplace">
+                                        Marketplace
                                     </SidebarLink>
                                 </SidebarMenuItem>
                             </SidebarMenu>

@@ -75,25 +75,25 @@ export function ProductCard({ product }: ProductCardProps) {
                 <Button
                     onClick={(e) => {
                         e.preventDefault();
-                        if (product.type === 'affiliate' && product.linkUrl) {
-                            window.open(product.linkUrl, '_blank');
+                        if (product.linkUrl) {
+                            window.open(product.linkUrl, '_blank', 'noopener,noreferrer');
                         } else {
                             toast({
                                 title: "Coming Soon!",
-                                description: "Marketplace checkout is under development.",
+                                description: "Marketplace direct checkout is launching soon.",
                             });
                         }
                     }}
-                    className="w-full mt-2 bg-white/5 hover:bg-purple-600 hover:text-white border border-white/10 transition-all duration-300 group-hover:border-purple-500/50"
+                    className="w-full mt-2 bg-purple-600/20 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-500/30 transition-all duration-300 font-semibold text-xs h-9 cursor-pointer"
                 >
-                    {product.type === 'affiliate' ? (
+                    {product.linkUrl ? (
                         <>
-                            <ExternalLink className="mr-2 h-4 w-4" />
-                            Details
+                            <ExternalLink className="mr-2 h-3.5 w-3.5" />
+                            {product.type === 'affiliate' ? 'View on Partner Store' : 'Get Asset'}
                         </>
                     ) : (
                         <>
-                            <ShoppingCart className="mr-2 h-4 w-4" />
+                            <ShoppingCart className="mr-2 h-3.5 w-3.5" />
                             Add to Cart
                         </>
                     )}

@@ -189,3 +189,50 @@ export async function sendCrewAcceptedEmail({ toEmail, applicantName, projectTit
     return { success: false, error: error.message || error };
   }
 }
+
+/** Sends the one-time code that proves a student controls their SJSU inbox. */
+export async function sendSjsuVerificationCode({ toEmail, code }: { toEmail: string; code: string }) {
+  if (!resendApiKey || !resend) {
+    console.warn("RESEND_API_KEY missing in environment variables. Email simulation mode.");
+    return { success: false, message: "RESEND_API_KEY not configured" };
+  }
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #09090b; color: #ffffff; margin: 0; padding: 20px; }
+          .container { max-width: 580px; margin: 0 auto; background-color: #121215; border-radius: 20px; border: 1px solid rgba(229,168,35,0.4); padding: 32px; }
+          h1 { font-size: 22px; font-weight: 900; margin-bottom: 12px; }
+          p { font-size: 14px; line-height: 1.6; color: #d4d4d8; margin-bottom: 20px; }
+          .code { font-family: 'SFMono-Regular', Menlo, monospace; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #E5A823; background: rgba(229,168,35,0.1); border-radius: 14px; padding: 16px; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>Your SJSU Student Pass code</h1>
+          <p>Enter this code on animationreference.org/sjsu to activate your free unlimited pass. It expires in 15 minutes.</p>
+          <div class="code">${code}</div>
+          <p style="font-size: 12px; color: #71717a; margin-top: 24px;">If you didn't request this, you can ignore this email.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const fromAddress = process.env.RESEND_FROM_EMAIL || 'AnimationReference <onboarding@resend.dev>';
+  try {
+    const data = await resend.emails.send({
+      from: fromAddress,
+      to: [toEmail],
+      subject: `${code} is your SJSU Student Pass code`,
+      html: htmlContent,
+    });
+    if (data.error) return { success: false, error: data.error.message };
+    return { success: true, data };
+  } catch (error: any) {
+    console.error("Resend email failed:", error);
+    return { success: false, error: error.message || error };
+  }
+}

@@ -444,38 +444,27 @@ export async function deleteCategory(categoryId: string, isShort: boolean): Prom
 }
 
 /**
- * Grants unlimited student VIP access to an SJSU student account.
+ * SJSU Student Pass, step 1: emails a one-time code to the student's SJSU inbox.
+ * The grant itself happens server-side in /api/sjsu; clients can't write entitlements.
  */
-export async function grantSjsuStudentAccess(uid: string, sjsuEmail: string, accountEmail: string): Promise<void> {
-  const userRef = doc(db, USERS_COLLECTION, uid);
-  await setDoc(
-    userRef,
-    {
-      isStudent: true,
-      isVIP: true,
-      isPremium: true,
-      school: 'San José State University (SJSU)',
-      studentEmail: sjsuEmail.trim().toLowerCase(),
-      tier: 'student_unlimited',
-      unlimitedAccess: true,
-      grantedAt: new Date().toISOString(),
-    },
-    { merge: true }
-  );
+export async function requestSjsuVerificationCode(user: { getIdToken(): Promise<string> }, sjsuEmail: string): Promise<void> {
+  await callSjsuApi(user, { action: 'send', sjsuEmail });
+}
 
-  try {
-    const auditRef = doc(db, 'sjsu_verifications', uid);
-    await setDoc(auditRef, {
-      uid,
-      accountEmail: accountEmail.trim().toLowerCase(),
-      sjsuEmail: sjsuEmail.trim().toLowerCase(),
-      school: 'San José State University (SJSU)',
-      grantedAt: new Date().toISOString(),
-      status: 'verified_active',
-    });
-  } catch (err) {
-    console.warn('[SJSU Verification] Warning creating verification document:', err);
-  }
+/** SJSU Student Pass, step 2: redeems the emailed code and grants unlimited access. */
+export async function confirmSjsuVerificationCode(user: { getIdToken(): Promise<string> }, code: string): Promise<{ sjsuEmail: string }> {
+  return callSjsuApi(user, { action: 'verify', code });
+}
+
+async function callSjsuApi(user: { getIdToken(): Promise<string> }, body: Record<string, string>) {
+  const res = await fetch('/api/sjsu', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'SJSU verification failed.');
+  return data;
 }
 
 /**

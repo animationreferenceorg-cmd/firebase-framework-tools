@@ -28,7 +28,7 @@ import {
   Film,
   Shuffle
 } from 'lucide-react';
-import { createUserProfile, grantSjsuStudentAccess } from '@/lib/firestore';
+import { confirmSjsuVerificationCode, createUserProfile, requestSjsuVerificationCode } from '@/lib/firestore';
 import Link from 'next/link';
 
 // Expanded Default Animation Reference Video Pool
@@ -136,6 +136,9 @@ export default function SjsuStudentPage() {
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [verifiedDetails, setVerifiedDetails] = useState<{ sjsuEmail: string; accountEmail: string } | null>(null);
+  // Step 2: the account is signed in and a code was emailed to the SJSU inbox.
+  const [pendingUser, setPendingUser] = useState<User | null>(null);
+  const [verificationCode, setVerificationCode] = useState('');
 
   // Real Database Animation Reference Videos State
   const [bgVideos, setBgVideos] = useState<string[]>(DEFAULT_ANIMATION_VIDEOS);
@@ -203,8 +206,8 @@ export default function SjsuStudentPage() {
     const cleanSjsuEmail = sjsuEmail.trim().toLowerCase();
     const cleanAccountEmail = accountEmail.trim().toLowerCase();
 
-    // 1. Validate SJSU Email
-    if (!cleanSjsuEmail || (!cleanSjsuEmail.endsWith('@sjsu.edu') && !cleanSjsuEmail.includes('.sjsu.edu'))) {
+    // 1. Validate SJSU Email (the server re-checks and emails a code to prove ownership)
+    if (!cleanSjsuEmail || !/^[a-z0-9._%+-]+@([a-z0-9-]+\.)?sjsu\.edu$/.test(cleanSjsuEmail)) {
       toast({
         variant: "destructive",
         title: "Invalid SJSU Email Address",
@@ -269,18 +272,14 @@ export default function SjsuStudentPage() {
       // Ensure profile exists in Firestore
       await createUserProfile(user);
 
-      // Grant SJSU Student Unlimited Access
-      await grantSjsuStudentAccess(user.uid, cleanSjsuEmail, cleanAccountEmail);
-
-      setVerifiedDetails({
-        sjsuEmail: cleanSjsuEmail,
-        accountEmail: cleanAccountEmail,
-      });
-      setIsSuccess(true);
+      // Email a one-time code to the SJSU inbox; access is granted once it's entered.
+      await requestSjsuVerificationCode(user, cleanSjsuEmail);
+      setPendingUser(user);
+      setVerificationCode('');
 
       toast({
-        title: "🎓 SJSU Student Access Activated!",
-        description: `Welcome Spartan! Unlimited free access granted for ${cleanSjsuEmail}.`,
+        title: "Check your SJSU inbox",
+        description: `We sent a 6-digit code to ${cleanSjsuEmail}.`,
       });
 
     } catch (err: any) {
@@ -289,6 +288,34 @@ export default function SjsuStudentPage() {
         variant: "destructive",
         title: "Qualification Error",
         description: err.message || "Failed to process SJSU student qualification.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingUser) return;
+
+    setLoading(true);
+    try {
+      const { sjsuEmail: verifiedEmail } = await confirmSjsuVerificationCode(pendingUser, verificationCode.trim());
+      setVerifiedDetails({
+        sjsuEmail: verifiedEmail,
+        accountEmail: pendingUser.email || accountEmail.trim().toLowerCase(),
+      });
+      setIsSuccess(true);
+
+      toast({
+        title: "🎓 SJSU Student Access Activated!",
+        description: `Welcome Spartan! Unlimited free access granted for ${verifiedEmail}.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Verification Failed",
+        description: err.message || "That code could not be verified.",
       });
     } finally {
       setLoading(false);
@@ -432,6 +459,50 @@ export default function SjsuStudentPage() {
               </Link>
             </div>
           </div>
+        ) : pendingUser ? (
+          /* ──────────────── CODE ENTRY STATE ──────────────── */
+          <div className="p-6 sm:p-8 rounded-[32px] bg-[#0c1424]/95 border border-blue-500/50 backdrop-blur-2xl shadow-[0_25px_60px_rgba(0,0,0,0.9)] space-y-6 relative overflow-hidden">
+            <div className="absolute top-0 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-[#E5A823] to-transparent pointer-events-none" />
+
+            <div className="space-y-1 text-left border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2 text-[#E5A823] text-xs font-bold font-mono">
+                <Mail className="h-4 w-4" />
+                <span>CONFIRM YOUR SJSU EMAIL</span>
+              </div>
+              <p className="text-xs text-zinc-300">
+                Enter the 6-digit code we sent to <span className="text-amber-300 font-bold">{sjsuEmail.trim().toLowerCase()}</span>. It expires in 15 minutes.
+              </p>
+            </div>
+
+            <form onSubmit={handleConfirmCode} className="space-y-4 text-left">
+              <Input
+                id="sjsu-code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                required
+                placeholder="000000"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                className="h-12 rounded-xl bg-white/5 border-amber-500/40 text-white placeholder:text-zinc-600 focus:border-amber-400 focus:ring-2 focus:ring-amber-500/30 text-center text-2xl font-mono font-bold tracking-[0.5em]"
+              />
+              <Button
+                type="submit"
+                disabled={loading || verificationCode.length !== 6}
+                className="w-full h-12 rounded-xl bg-gradient-to-r from-[#0055A2] via-blue-600 to-[#E5A823] hover:from-blue-600 hover:to-amber-400 text-white font-extrabold text-sm shadow-xl shadow-blue-900/50 cursor-pointer gap-2"
+              >
+                {loading ? 'Verifying Code...' : 'Activate SJSU Free Unlimited Pass'}
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              <button
+                type="button"
+                onClick={() => setPendingUser(null)}
+                className="w-full text-xs text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              >
+                Use a different SJSU email or resend the code
+              </button>
+            </form>
+          </div>
         ) : (
           /* ──────────────── FORM STATE ──────────────── */
           <div className="p-6 sm:p-8 rounded-[32px] bg-[#0c1424]/95 border border-blue-500/50 backdrop-blur-2xl shadow-[0_25px_60px_rgba(0,0,0,0.9)] space-y-6 relative overflow-hidden">
@@ -517,7 +588,7 @@ export default function SjsuStudentPage() {
                 disabled={loading || !auth} 
                 className="w-full h-12 rounded-xl bg-gradient-to-r from-[#0055A2] via-blue-600 to-[#E5A823] hover:from-blue-600 hover:to-amber-400 text-white font-extrabold text-sm shadow-xl shadow-blue-900/50 cursor-pointer gap-2 mt-2"
               >
-                {loading ? 'Verifying SJSU Credentials...' : 'Activate SJSU Free Unlimited Pass'}
+                {loading ? 'Sending Verification Code...' : 'Email My SJSU Verification Code'}
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </form>

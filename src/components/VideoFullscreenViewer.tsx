@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { SideBySideCompareModal } from '@/components/reference/SideBySideCompareModal';
 import { ContactSheetModal } from '@/components/reference/ContactSheetModal';
+import { ProDownloadButton } from '@/components/ProDownloadButton';
 import { SaveToBoardModal } from '@/components/SaveToBoardModal';
 import { PricingDialog } from '@/components/PricingDialog';
 import { useUser } from '@/hooks/use-user';
@@ -76,6 +77,7 @@ export function VideoFullscreenViewer({ video, title, description, onClose }: Vi
 
                 {/* Studio Tools Header Actions */}
                 <div className="flex items-center gap-2 shrink-0">
+                    <ProDownloadButton videoId={video.id} variant="labeled" className="h-9 px-2.5 sm:px-3" />
                     <Button
                         variant="ghost"
                         size="sm"

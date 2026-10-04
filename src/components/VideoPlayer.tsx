@@ -15,6 +15,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { likeVideo, unlikeVideo, saveVideo, unsaveVideo } from '@/lib/firestore';
 import { SaveToBoardModal } from '@/components/SaveToBoardModal';
+import { ProDownloadButton } from '@/components/ProDownloadButton';
 
 interface VideoPlayerProps {
     video: Video;
@@ -681,6 +682,9 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                         >
                             <Bookmark className={cn("h-4 w-4", isSaved ? "fill-purple-400 text-purple-400" : "text-purple-300 fill-purple-400/20 hover:fill-purple-400")} />
                         </Button>}
+
+                        {/* Pro-only clean MP4 download */}
+                        {video.id && <ProDownloadButton videoId={video.id} />}
 
                         {/* Share Button */}
                         <Button

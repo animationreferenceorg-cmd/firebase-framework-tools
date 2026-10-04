@@ -33,6 +33,7 @@ import { MoodboardDashboard, getFolderReferences } from './components/MoodboardD
 import { PitchDeckExportModal } from './components/PitchDeckExportModal';
 import { AntiScreenshotShield, AntiScreenshotBadge } from './components/AntiScreenshotShield';
 import { checkLimit } from '@/lib/limits';
+import { getEntitlements } from '@/lib/plans';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
 import { useToast } from '@/hooks/use-toast';
@@ -101,6 +102,7 @@ const getVideoPoster = (file: File): Promise<{ poster: Blob; width: number; heig
 function MoodboardContent() {
     const { user } = useAuth();
     const { userProfile } = useUser();
+    const isPro = getEntitlements(userProfile).isPro;
     const { board_id } = useParams();
     const router = useRouter();
     const { toast } = useToast();
@@ -1626,6 +1628,15 @@ function MoodboardContent() {
 
     // Export active whiteboard canvas (or board references) to Director Pitch Deck PDF
     const handleOpenWhiteboardPitchDeck = useCallback(() => {
+        if (!isPro) {
+            toast({
+                title: 'Pro Feature',
+                description: 'Exporting references to director pitch decks and PDF sheets is a Pro feature ($5/mo).',
+            });
+            setShowDonateDialog(true);
+            return;
+        }
+
         const currentBoard = moodboards.find(b => b.id === currentBoardId);
         const boardTitle = currentBoard?.name || 'Action Sequence Pitch';
 
@@ -1693,7 +1704,7 @@ function MoodboardContent() {
             items: itemsForExport
         });
         setShowPitchDeckModal(true);
-    }, [currentBoardId, moodboards, canvasItems, allSavedReferences, likedVideos]);
+    }, [currentBoardId, moodboards, canvasItems, allSavedReferences, likedVideos, isPro, toast]);
 
     // Selected Items array for the property toolbar
     const selectedItemsList = canvasItems.filter(i => selectedItemIds.has(i.id));
@@ -2060,6 +2071,14 @@ function MoodboardContent() {
                             toast({ title: 'References removed from board', description: 'They remain available in All saves.' });
                         }}
                         onExportPitchDeck={async (boardId) => {
+                            if (!isPro) {
+                                toast({
+                                    title: 'Pro Feature',
+                                    description: 'Exporting references to director pitch decks and PDF sheets is a Pro feature ($5/mo).',
+                                });
+                                setShowDonateDialog(true);
+                                return;
+                            }
                             if (boardId) {
                                 const targetBoard = moodboards.find(b => b.id === boardId);
                                 let items: DraggableCanvasItem[] = [];

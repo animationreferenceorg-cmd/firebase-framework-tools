@@ -46,9 +46,9 @@ const COMPARISON: { group: string; rows: { label: string; free: Cell; pro: Cell 
   {
     group: 'Export',
     rows: [
-      { label: 'High-resolution contact sheets & PDF export', free: false, pro: true },
-      { label: 'Watermark-free downloads & exports', free: 'Watermarked', pro: 'Clean' },
-      { label: 'Pitch deck & director presentation exports', free: false, pro: true },
+      { label: 'Reference MP4 video downloads & exports', free: false, pro: true },
+      { label: 'High-resolution contact sheets & PureRef export', free: false, pro: true },
+      { label: 'Pitch deck & director presentation PDF export', free: false, pro: true },
     ],
   },
   {

@@ -241,9 +241,9 @@ export const PRO_FEATURES = [
   'Unlimited visual reference boards',
   'Private boards & private video uploads',
   'Side-by-side synchronized playblast compare',
-  'High-resolution contact sheets & PDF export',
-  'Watermark-free downloads & clean exports',
-  'Pitch deck & director presentation exports',
+  'High-resolution contact sheets & PureRef export',
+  'Reference MP4 video downloads & exports',
+  'Pitch deck & director presentation PDF exports',
   'Unlimited portfolio posts & shot breakdowns',
 ] as const;
 

@@ -5,6 +5,9 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/hooks/use-user';
+import { getEntitlements } from '@/lib/plans';
+import { PricingDialog } from '@/components/PricingDialog';
 import { 
   Download, 
   FileText, 
@@ -40,8 +43,12 @@ export function PitchDeckExportModal({
   canvasItems,
   creatorName = 'Animator',
 }: PitchDeckExportModalProps) {
+  const { userProfile } = useUser();
+  const entitlements = getEntitlements(userProfile);
+  const isPro = entitlements.isPro;
   const { toast } = useToast();
   const printContainerRef = useRef<HTMLDivElement>(null);
+  const [showPricing, setShowPricing] = useState(false);
 
   // Deck configuration state
   const [projectTitle, setProjectTitle] = useState(boardName || 'Action Sequence Pitch');
@@ -103,6 +110,14 @@ export function PitchDeckExportModal({
 
   // Export as high-res PNG image
   const handleExportPNG = async () => {
+    if (!isPro) {
+      setShowPricing(true);
+      toast({
+        title: 'Pro Required',
+        description: 'Exporting pitch deck PNGs and PDF sheets requires a Pro subscription ($5/mo).',
+      });
+      return;
+    }
     document.body.dataset.moodboardExporting = 'true';
     window.dispatchEvent(new Event('moodboard-export-start'));
     setIsExportingPng(true);
@@ -266,6 +281,14 @@ export function PitchDeckExportModal({
 
   // Copy Markdown summary for Slack/Notion/Discord
   const handleCopyMarkdown = () => {
+    if (!isPro) {
+      setShowPricing(true);
+      toast({
+        title: 'Pro Required',
+        description: 'Exporting pitch breakdown markdown requires a Pro subscription ($5/mo).',
+      });
+      return;
+    }
     let md = `# ${projectTitle}\n`;
     md += `**Prepared by:** ${directorName} | **Date:** ${new Date().toLocaleDateString()}\n\n`;
     if (logline) {
@@ -935,6 +958,7 @@ export function PitchDeckExportModal({
           }
         `}</style>
 
+        <PricingDialog open={showPricing} onOpenChange={setShowPricing} />
       </DialogContent>
     </Dialog>
   );

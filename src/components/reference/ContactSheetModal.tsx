@@ -11,6 +11,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/hooks/use-user';
+import { getEntitlements } from '@/lib/plans';
+import { PricingDialog } from '@/components/PricingDialog';
 import {
   Download,
   Copy,
@@ -44,6 +47,9 @@ export function ContactSheetModal({
   fps = 24,
 }: ContactSheetModalProps) {
   const { toast } = useToast();
+  const { userProfile } = useUser();
+  const isPro = getEntitlements(userProfile).isPro;
+  const [showPricing, setShowPricing] = useState(false);
   const [frameCount, setFrameCount] = useState<FrameCountOption>(6);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -263,6 +269,14 @@ export function ContactSheetModal({
 
   const handleDownloadSheet = () => {
     if (!sheetDataUrl) return;
+    if (!isPro) {
+      setShowPricing(true);
+      toast({
+        title: 'Pro Required',
+        description: 'Exporting contact sheets requires a Pro subscription ($5/mo).',
+      });
+      return;
+    }
     const a = document.createElement('a');
     a.href = sheetDataUrl;
     a.download = `${cleanTitle.toLowerCase().replace(/\s+/g, '-')}-contact-sheet.png`;
@@ -277,6 +291,14 @@ export function ContactSheetModal({
 
   const handleCopySheet = async () => {
     if (!sheetDataUrl) return;
+    if (!isPro) {
+      setShowPricing(true);
+      toast({
+        title: 'Pro Required',
+        description: 'Copying reference sheets to PureRef requires a Pro subscription ($5/mo).',
+      });
+      return;
+    }
     try {
       const blob = await (await fetch(sheetDataUrl)).blob();
       await navigator.clipboard.write([
@@ -297,6 +319,14 @@ export function ContactSheetModal({
 
   const handleExportTaggedMp4 = async () => {
     if (!directUrl) return;
+    if (!isPro) {
+      setShowPricing(true);
+      toast({
+        title: 'Pro Required',
+        description: 'Exporting tagged reference MP4s requires a Pro subscription ($5/mo).',
+      });
+      return;
+    }
     setIsDownloadingMp4(true);
     try {
       const videoEl = document.createElement('video');
@@ -396,6 +426,14 @@ export function ContactSheetModal({
 
   const handleDownloadCleanMp4 = async () => {
     if (!directUrl) return;
+    if (!isPro) {
+      setShowPricing(true);
+      toast({
+        title: 'Pro Required',
+        description: 'Downloading reference MP4s requires a Pro subscription ($5/mo).',
+      });
+      return;
+    }
     setIsDownloadingMp4(true);
     try {
       const response = await fetch(directUrl);
@@ -510,7 +548,12 @@ export function ContactSheetModal({
             ) : (
               <>
                 <FileVideo className="w-3.5 h-3.5 mr-2 text-purple-400" /> 
-                {includeCreatorTag ? `Export MP4 (${creatorTag})` : 'Download Clean MP4'}
+                <span>{includeCreatorTag ? `Export MP4 (${creatorTag})` : 'Download Clean MP4'}</span>
+                {!isPro && (
+                  <span className="ml-1 text-[9px] font-black text-amber-300 bg-amber-400/20 px-1 py-0.5 rounded border border-amber-400/30">
+                    PRO
+                  </span>
+                )}
               </>
             )}
           </Button>
@@ -572,6 +615,11 @@ export function ContactSheetModal({
               className="border-white/10 text-xs font-bold rounded-xl h-9 hover:bg-white/10 text-zinc-300 hover:text-white cursor-pointer"
             >
               <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy Image (PureRef)
+              {!isPro && (
+                <span className="ml-1 text-[9px] font-black text-amber-300 bg-amber-400/20 px-1 py-0.5 rounded border border-amber-400/30">
+                  PRO
+                </span>
+              )}
             </Button>
             <Button
               onClick={handleDownloadSheet}
@@ -579,10 +627,16 @@ export function ContactSheetModal({
               className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl h-9 shadow-[0_0_20px_rgba(168,85,247,0.4)] cursor-pointer"
             >
               <Download className="w-3.5 h-3.5 mr-1.5" /> Download Contact Sheet (PNG)
+              {!isPro && (
+                <span className="ml-1 text-[9px] font-black text-amber-300 bg-amber-400/20 px-1 py-0.5 rounded border border-amber-400/30">
+                  PRO
+                </span>
+              )}
             </Button>
           </div>
         </div>
       </DialogContent>
+      <PricingDialog open={showPricing} onOpenChange={setShowPricing} />
     </Dialog>
   );
 }

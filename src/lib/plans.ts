@@ -102,6 +102,8 @@ export function planFromPriceId(priceId: string | null | undefined, env: PriceEn
   const annual = clean(env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL);
   if (monthly && priceId === monthly) return 'pro_monthly';
   if (annual && priceId === annual) return 'pro_annual';
+  if (priceId === 'price_1UJd4X59QHehw05fqbQ2qZLs' || priceId === 'price_1UMth959QHehw05fBF5a7UHD') return 'pro_annual';
+  if (priceId === 'price_1UJczS59QHehw05fbqoQC0Po') return 'pro_monthly';
   for (const tier of Object.keys(LEGACY_PRICE_IDS) as LegacyTier[]) {
     if (LEGACY_PRICE_IDS[tier] === priceId) return tier;
   }

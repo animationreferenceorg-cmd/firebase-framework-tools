@@ -2,63 +2,63 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Helper function to check for admin privileges
+    // Admins have either the custom claim or role == 'admin' on their profile,
+    // matching isAdmin() in firestore.rules.
     function isAdmin() {
-      return request.auth != null && request.auth.token.admin == true;
+      return request.auth != null && (
+        request.auth.token.admin == true ||
+        (firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+         firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('role', 'user') == 'admin')
+      );
     }
 
-    // Portfolio media and thumbnails: publicly readable for all users and community feed.
-    match /portfolio/{allPaths=**} {
-      allow read, write: if true;
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
     }
 
-    // Reference uploads and clips: fully accessible for uploads like social media platforms
-    match /reference-uploads/{allPaths=**} {
-      allow read, write: if true;
-    }
-    match /reference_clips/{allPaths=**} {
-      allow read, write: if true;
-    }
-    match /references/{allPaths=**} {
-      allow read, write: if true;
-    }
-    match /clips/{allPaths=**} {
-      allow read, write: if true;
-    }
-    match /private-reference/{allPaths=**} {
-      allow read, write: if true;
-    }
+    // --- User-owned uploads: public read, the owner (or an admin) writes ---
+    // Clients always upload under their own uid; see portfolio-service.ts,
+    // DirectUploadDialog.tsx, SubmitShortFilmDialog.tsx and moodboard-service.ts.
 
-    // General media and social uploads
-    match /uploads/{allPaths=**} {
-      allow read, write: if true;
-    }
-    match /shorts/{allPaths=**} {
-      allow read, write: if true;
-    }
-    match /videos/{allPaths=**} {
-      allow read, write: if true;
-    }
-    match /thumbnails/{allPaths=**} {
-      allow read, write: if true;
-    }
-    match /posters/{allPaths=**} {
-      allow read, write: if true;
-    }
-    match /users/{allPaths=**} {
-      allow read, write: if true;
-    }
-    match /avatars/{allPaths=**} {
-      allow read, write: if true;
-    }
-    match /moodboard_uploads/{allPaths=**} {
-      allow read, write: if true;
-    }
-
-    // Catch-all: allow public read and authenticated write
-    match /{allPaths=**} {
+    match /portfolio/{uid}/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isOwner(uid) || isAdmin();
+    }
+    match /reference-uploads/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isOwner(uid) || isAdmin();
+    }
+    match /shorts/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isOwner(uid) || isAdmin();
+    }
+    match /users/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isOwner(uid) || isAdmin();
+    }
+    match /avatars/{uid} {
+      allow read: if true;
+      allow write: if isAdmin() || (isOwner(uid) && (
+        request.resource == null ||
+        (request.resource.contentType.matches('image/.*') && request.resource.size < 10 * 1024 * 1024)
+      ));
+    }
+
+    // Private clips are written by /api/clips/upload (Admin SDK) and streamed
+    // through signed URLs from /api/clips/[id]/playback.
+    match /private-reference/{uid}/{allPaths=**} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // --- Site media: public read, admin (or server) writes ---
+    // Covers videos/, thumbnails/, posters/, uploads/, clips/, references/,
+    // reference_clips/, moodboard_uploads/, marketplace/ and anything new.
+    // Every matching rule is OR'd, so this catch-all must not grant read on
+    // private-reference/.
+    match /{folder}/{allPaths=**} {
+      allow read: if folder != 'private-reference';
+      allow write: if isAdmin();
     }
   }
 }

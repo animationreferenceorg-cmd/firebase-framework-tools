@@ -1,11 +1,23 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminApp, getFirebaseStorage } from '@/lib/firebase-admin';
+import { apiErrorResponse, getTrustedProfile, requireFirebaseUser } from '@/lib/api-auth';
 
 // Ensure the Firebase Admin SDK is initialized
 getAdminApp();
 
 export async function POST(req: NextRequest) {
+  // Admin SDK writes bypass storage.rules, so this route must authorize itself.
+  try {
+    const identity = await requireFirebaseUser(req);
+    const profile = await getTrustedProfile(identity.uid);
+    if (identity.admin !== true && profile.role !== 'admin') {
+      return NextResponse.json({ error: 'Admin access required.' }, { status: 403 });
+    }
+  } catch (error) {
+    return apiErrorResponse(error);
+  }
+
   try {
     const data = await req.formData();
     const file = data.get("file") as File | null;
@@ -16,7 +28,9 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const filePath = `${folder || 'uploads'}/${Date.now()}_${file.name}`;
+    const cleanFolder = (folder || 'uploads').replace(/[^a-zA-Z0-9_-]/g, '');
+    const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = `${cleanFolder || 'uploads'}/${Date.now()}_${cleanName}`;
     const bucket = getFirebaseStorage().bucket();
     const fileRef = bucket.file(filePath);
 

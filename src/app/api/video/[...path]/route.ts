@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminApp, getFirebaseStorage } from '@/lib/firebase-admin';
 
+const PUBLIC_PREFIXES = ['videos/', 'thumbnails/', 'posters/', 'shorts/', 'portfolio/', 'reference-uploads/', 'uploads/'];
+
 async function getSignedUrl(filePath: string) {
     getAdminApp(); // Ensure app is initialized
     const bucket = getFirebaseStorage().bucket();
@@ -32,9 +34,15 @@ export async function GET(
     }
 
     const filePath = path.join('/');
-    
+
     if (!filePath) {
         return new NextResponse('File path is required', { status: 400 });
+    }
+
+    // Signed URLs bypass storage.rules, so only hand them out for public media.
+    // Private clips go through /api/clips/[id]/playback, which checks ownership.
+    if (path.some((segment: string) => segment === '..' || segment === '.') || !PUBLIC_PREFIXES.some((prefix) => filePath.startsWith(prefix))) {
+        return new NextResponse('File not found', { status: 404 });
     }
 
     try {

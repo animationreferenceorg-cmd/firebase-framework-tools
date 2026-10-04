@@ -62,8 +62,13 @@ export async function deleteReferenceBoard(boardId: string) {
 }
 
 export async function getReferenceBoard(boardId: string): Promise<ReferenceBoard | null> {
-  const snap = await getDoc(doc(db, BOARDS, boardId));
-  return snap.exists() ? withId<ReferenceBoard>(snap) : null;
+  try {
+    const snap = await getDoc(doc(db, BOARDS, boardId));
+    return snap.exists() ? withId<ReferenceBoard>(snap) : null;
+  } catch {
+    // Another user's private board is unreadable under the rules; treat it as missing.
+    return null;
+  }
 }
 
 export async function getUserReferenceBoards(ownerId: string, includePrivate = false): Promise<ReferenceBoard[]> {

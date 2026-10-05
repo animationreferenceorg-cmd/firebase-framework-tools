@@ -34,7 +34,7 @@ export function VideoFullscreenViewer({ video, title, description, onClose }: Vi
     const { userProfile } = useUser();
     const entitlements = getEntitlements(userProfile);
     const isPro = entitlements.isPro;
-    const { unlockedCount, limit, isVideoUnlocked } = useViewingQuota();
+    const quota = useViewingQuota();
 
     const [showCompareModal, setShowCompareModal] = useState(false);
     const [showContactSheetModal, setShowContactSheetModal] = useState(false);
@@ -76,13 +76,13 @@ export function VideoFullscreenViewer({ video, title, description, onClose }: Vi
 
                     <h1 className="min-w-0 truncate text-sm font-semibold text-white sm:text-base">{title}</h1>
 
-                    {!isPro && (
+                    {quota.ready && !quota.unlimited && (
                         <div
-                            className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-zinc-300 shrink-0"
-                            title="Free plan includes 25 reference unlocks. Previously unlocked clips remain playable anytime."
+                            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-zinc-300 shrink-0"
+                            title={`Your plan includes ${quota.limit} reference unlocks. References you've opened stay playable anytime.`}
                         >
-                            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-                            <span>{unlockedCount}/{limit} Unlocked</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                            <span>{Math.min(quota.unlockedCount, quota.limit)}/{quota.limit} unlocked</span>
                         </div>
                     )}
                 </div>
@@ -151,7 +151,7 @@ export function VideoFullscreenViewer({ video, title, description, onClose }: Vi
             <main className="min-h-0 flex-1 overflow-y-auto">
                 <div className="mx-auto flex min-h-full w-full max-w-[1500px] flex-col justify-center px-3 py-4 sm:px-6 sm:py-6 lg:px-10">
                     <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-[0_24px_80px_-24px_rgba(124,58,237,0.45)] sm:rounded-2xl">
-                        <VideoPlayer video={video} startsPaused={false} muted />
+                        <VideoPlayer video={video} startsPaused={false} muted enforceViewingQuota />
                     </div>
 
                     {/* Animator Studio Production Quick Bar */}

@@ -69,8 +69,8 @@ const FAQ = [
     a: 'Nothing is deleted. Your boards and saved references stay in your account; you just can’t add past the free limits until you upgrade again.',
   },
   {
-    q: 'Is the reference library still free?',
-    a: 'Yes. Browsing, watching and frame-stepping through the public library is free for everyone. Pro is for organizing, comparing and exporting reference for your own shots.',
+    q: 'What does the free plan include?',
+    a: `You can open ${ACCESS_LIMITS.free.maxUnlockedReferences} references from the library with full frame-by-frame study tools, and every reference you've opened stays playable forever. Pro unlocks the entire library plus downloads, exports and unlimited boards.`,
   },
   {
     q: 'How is payment handled?',
@@ -161,9 +161,9 @@ export function PricingPageClient() {
         <div className="mx-auto inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-purple-300">
           <Sparkles className="h-3 w-3" /> Pricing
         </div>
-        <h1 className="text-3xl font-black tracking-tight md:text-5xl">Study motion free. Build your shot library with Pro.</h1>
+        <h1 className="text-3xl font-black tracking-tight md:text-5xl">Start studying free. Unlock the whole library with Pro.</h1>
         <p className="mx-auto max-w-2xl text-sm text-zinc-400 md:text-base">
-          The reference library is free for everyone. Pro is {formatUsd(offers.pro_monthly.amountCents)}/month for unlimited boards, private uploads, playblast compare and clean exports.
+          Your first {ACCESS_LIMITS.free.maxUnlockedReferences} references are free, and stay playable forever. Pro is {formatUsd(offers.pro_monthly.amountCents)}/month for the full library, unlimited boards, MP4 downloads, playblast compare and clean exports.
         </p>
       </header>
 

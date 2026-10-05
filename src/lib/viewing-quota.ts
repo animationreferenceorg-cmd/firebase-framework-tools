@@ -3,6 +3,8 @@ import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 
 export const FREE_UNLOCKED_LIMIT = 25;
 const STORAGE_KEY = 'animref_unlocked_references';
+/** Fired on window after this tab unlocks a reference; `storage` events only reach other tabs. */
+export const QUOTA_CHANGED_EVENT = 'animref:quota-changed';
 
 let memoryStorage: string[] = [];
 
@@ -94,6 +96,7 @@ export async function unlockReference(
 
   const updated = [...current, videoId];
   saveLocalUnlockedIds(updated);
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(QUOTA_CHANGED_EVENT));
 
   // Sync to Firestore if authenticated
   if (uid && db) {

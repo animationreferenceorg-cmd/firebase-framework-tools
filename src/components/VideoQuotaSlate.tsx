@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Lock, Sparkles, Check, Film, ArrowRight, Play } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Lock, Sparkles, Check, Film, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PricingDialog } from '@/components/PricingDialog';
+import { track } from '@/lib/analytics';
+import { formatUsd, getProOffers } from '@/lib/plans';
 
 interface VideoQuotaSlateProps {
   posterUrl?: string;
@@ -21,6 +23,17 @@ export function VideoQuotaSlate({
   className = '',
 }: VideoQuotaSlateProps) {
   const [showPricing, setShowPricing] = useState(false);
+  const price = formatUsd(getProOffers().pro_monthly.amountCents);
+
+  useEffect(() => {
+    track('upgrade_prompt_viewed', { trigger: 'reference_quota', source: 'quota_slate' });
+  }, []);
+
+  const openPricing = () => {
+    // The pricing dialog renders in a portal, which is invisible inside native fullscreen.
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    setShowPricing(true);
+  };
 
   return (
     <div
@@ -80,11 +93,11 @@ export function VideoQuotaSlate({
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full justify-center">
           <Button
             size="lg"
-            onClick={() => setShowPricing(true)}
+            onClick={openPricing}
             className="w-full sm:w-auto h-11 px-6 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-[0_0_25px_rgba(168,85,247,0.35)] transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300" />
-            <span>Unlock Pro — $5/month</span>
+            <span>Unlock Pro — {price}/month</span>
             <ArrowRight className="w-4 h-4 ml-0.5" />
           </Button>
 

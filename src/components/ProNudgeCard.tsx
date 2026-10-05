@@ -32,7 +32,7 @@ export function ProNudgeCard({ onDismiss }: { onDismiss: () => void }) {
         <div className="space-y-1">
           <p className="text-sm font-bold">Studying for a shot?</p>
           <p className="text-xs leading-relaxed text-zinc-400">
-            Watching stays free. Pro adds unlimited boards, clean MP4 downloads and playblast compare for {price}/mo.
+            Pro unlocks the full reference library, unlimited boards, clean MP4 downloads and playblast compare for {price}/mo.
           </p>
         </div>
       </div>

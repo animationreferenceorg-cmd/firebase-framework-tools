@@ -21,7 +21,7 @@ export function SidebarUpgradeCard() {
         <Sparkles className="h-3.5 w-3.5" /> Pro
       </div>
       <p className="mt-1 text-xs leading-snug text-zinc-300">
-        Unlimited boards, MP4 downloads &amp; playblast compare.
+        The full library, unlimited boards &amp; MP4 downloads.
       </p>
       <p className="mt-2 flex items-center gap-1 text-xs font-bold text-white">
         Upgrade for {price}/mo

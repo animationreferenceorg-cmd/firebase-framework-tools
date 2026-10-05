@@ -41,6 +41,11 @@ interface VideoPlayerProps {
     onToggleTimeline?: () => void;
     isTimelineVisible?: boolean;
     hideLibraryActions?: boolean;
+    /**
+     * Apply the free-plan reference quota. Only the library viewer opts in;
+     * card previews, portfolios, boards and admin previews never count or block.
+     */
+    enforceViewingQuota?: boolean;
 }
 
 export interface VideoPlayerHandle {
@@ -96,7 +101,7 @@ function Player({ playerRef, video, url, config, ...props }: any) {
 }
 
 
-export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>(({ video, onCapture, showCaptureButton = false, startsPaused = false, muted = true, hideFullscreenControl = false, hidePlayControl = false, onEnded, autoPlay, loop = false, alwaysShowControls = true, onToggleTimeline, isTimelineVisible = true, hideLibraryActions = false }, ref) => {
+export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>(({ video, onCapture, showCaptureButton = false, startsPaused = false, muted = true, hideFullscreenControl = false, hidePlayControl = false, onEnded, autoPlay, loop = false, alwaysShowControls = true, onToggleTimeline, isTimelineVisible = true, hideLibraryActions = false, enforceViewingQuota = false }, ref) => {
     const playerRef = React.useRef<ReactPlayer>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
     const { toast } = useToast();
@@ -177,16 +182,16 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
     const onionRef = React.useRef<OnionSkinHandle>(null);
     const playerIdRef = React.useRef(Symbol('video-player'));
     const isPro = getEntitlements(userProfile).isPro;
-    const { isVideoUnlocked, attemptUnlock, unlockedCount, limit, hasReachedLimit } = useViewingQuota();
+    const quota = useViewingQuota();
+    const isBlockedByQuota = enforceViewingQuota && quota.hasReachedLimit && !quota.isVideoUnlocked(video.id);
 
-    // Automatically attempt unlock when video mounts
-    React.useEffect(() => {
-        if (video?.id && !isPro) {
-            attemptUnlock(video.id);
-        }
-    }, [video?.id, isPro, attemptUnlock]);
-
-    const isBlockedByQuota = !isPro && hasReachedLimit && !isVideoUnlocked(video.id);
+    // A reference is "unlocked" when it actually starts playing in the library viewer.
+    const recordQuotaView = () => {
+        if (!enforceViewingQuota || !video.id) return;
+        quota.attemptUnlock(video.id).then(({ allowed }) => {
+            if (!allowed) setIsPlaying(false);
+        });
+    };
 
     // Onion skin decodes frames from the file itself, so embeds (YouTube etc.) can't use it.
     const onionSupported = mediaEl !== null && typeof video.videoUrl === 'string' && video.videoUrl.length > 0;
@@ -276,12 +281,6 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
         playerRef.current.seekTo(t, 'seconds');
         if (duration > 0) setPlayed(t / duration);
     }, [duration]);
-
-    React.useImperativeHandle(ref, () => ({
-        handlePlayPause,
-        getCurrentTime: () => getTimeNow(),
-        seekTo: (seconds: number) => seekToTime(seconds),
-    }), [handlePlayPause, getTimeNow, seekToTime]);
 
     const loopRange = React.useMemo(() => resolveLoop(loopIn, loopOut, duration, fps), [loopIn, loopOut, duration, fps]);
     const { start: loopStart, end: loopEnd, active: loopActive } = loopRange;
@@ -534,8 +533,8 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
             >
                 <VideoQuotaSlate
                     posterUrl={video.thumbnailUrl || video.posterUrl}
-                    unlockedCount={unlockedCount}
-                    limit={limit}
+                    unlockedCount={quota.unlockedCount}
+                    limit={quota.limit}
                 />
             </div>
         );
@@ -584,7 +583,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                     playbackRate={playbackRate}
                     onProgress={handleProgress}
                     onDuration={setDuration}
-                    onPlay={() => { setIsPlaying(true); setVideoError(false); }}
+                    onPlay={() => { setIsPlaying(true); setVideoError(false); recordQuotaView(); }}
                     onPause={() => setIsPlaying(false)}
                     onReady={(player: any) => {
                         const el = player?.getInternalPlayer?.();
@@ -736,20 +735,6 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                             ONION ±{onionSettings.frames}{isPlaying ? ' · pause to view' : ''}
                         </span>
                     )}
-                </div>
-            )}
-
-            {/* Transparent quota status pill for free tier users */}
-            {!isPro && (
-                <div
-                    className={cn(
-                        "absolute top-3 left-3 z-50 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-white/15 text-[10px] font-bold text-zinc-300 transition-opacity duration-300 pointer-events-auto",
-                        showControls ? "opacity-100" : "opacity-0"
-                    )}
-                    title={`Free plan includes ${limit} reference unlocks. Previously viewed references remain playable anytime.`}
-                >
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                    <span>{unlockedCount}/{limit} Unlocked</span>
                 </div>
             )}
 

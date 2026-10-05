@@ -3,90 +3,74 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUser } from './use-user';
 import { getEntitlements } from '@/lib/plans';
-import {
-  FREE_UNLOCKED_LIMIT,
-  getUnlockedReferenceIds,
-  isReferenceUnlocked,
-  unlockReference,
-} from '@/lib/viewing-quota';
+import { QUOTA_CHANGED_EVENT, getUnlockedReferenceIds, unlockReference } from '@/lib/viewing-quota';
 
+const STORAGE_KEY = 'animref_unlocked_references';
+
+/**
+ * Free-plan reference quota: each plan can open a limited number of distinct
+ * library references, and anything already opened stays playable forever.
+ * The limit comes from the account's entitlements (Pro, SJSU and admin are
+ * unlimited). Until the profile has loaded nothing is blocked or counted, so
+ * a Pro member never sees the slate flash while their plan is still loading.
+ */
 export function useViewingQuota() {
   const { userProfile, loading } = useUser();
-  const entitlements = getEntitlements(userProfile);
-  const isPro = !loading && entitlements.isPro;
+  const ready = !loading;
+  const limit = getEntitlements(userProfile).limits.maxUnlockedReferences;
+  const unlimited = !Number.isFinite(limit);
+  const profileList = (userProfile as { unlockedReferences?: string[] } | null)?.unlockedReferences;
+  const uid = userProfile?.uid;
 
-  const [unlockedIds, setUnlockedIds] = useState<string[]>(() => {
-    return getUnlockedReferenceIds((userProfile as any)?.unlockedReferences);
-  });
+  // Start empty and read storage after mount: the server render has no
+  // localStorage, so reading it during the first render would mismatch.
+  const [unlockedIds, setUnlockedIds] = useState<string[]>([]);
 
-  // Sync when user profile updates
   useEffect(() => {
-    const ids = getUnlockedReferenceIds((userProfile as any)?.unlockedReferences);
-    setUnlockedIds(ids);
-  }, [userProfile]);
+    setUnlockedIds(getUnlockedReferenceIds(profileList));
+  }, [profileList]);
 
-  // Sync across tabs
+  // Keep every counter in sync: other tabs (storage) and other components in this tab.
   useEffect(() => {
+    const refresh = () => setUnlockedIds(getUnlockedReferenceIds(profileList));
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'animref_unlocked_references') {
-        setUnlockedIds(getUnlockedReferenceIds((userProfile as any)?.unlockedReferences));
-      }
+      if (e.key === STORAGE_KEY) refresh();
     };
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, [userProfile]);
+    window.addEventListener(QUOTA_CHANGED_EVENT, refresh);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener(QUOTA_CHANGED_EVENT, refresh);
+    };
+  }, [profileList]);
 
   const unlockedCount = unlockedIds.length;
-  const remaining = Math.max(0, FREE_UNLOCKED_LIMIT - unlockedCount);
-  const hasReachedLimit = !isPro && unlockedCount >= FREE_UNLOCKED_LIMIT;
+  const remaining = unlimited ? Infinity : Math.max(0, limit - unlockedCount);
+  const hasReachedLimit = ready && !unlimited && unlockedCount >= limit;
 
   const isVideoUnlocked = useCallback(
-    (videoId: string) => {
-      if (isPro) return true;
-      if (!videoId) return true;
-      return unlockedIds.includes(videoId);
-    },
-    [isPro, unlockedIds]
+    (videoId: string) => unlimited || !videoId || unlockedIds.includes(videoId),
+    [unlimited, unlockedIds]
   );
 
+  /** Records a deliberate view. Returns allowed=false only when the quota is used up. */
   const attemptUnlock = useCallback(
     async (videoId: string): Promise<{ allowed: boolean; alreadyUnlocked: boolean }> => {
-      if (isPro) {
-        return { allowed: true, alreadyUnlocked: true };
-      }
-      if (!videoId) {
-        return { allowed: true, alreadyUnlocked: true };
-      }
-      if (unlockedIds.includes(videoId)) {
-        return { allowed: true, alreadyUnlocked: true };
-      }
-      if (unlockedIds.length >= FREE_UNLOCKED_LIMIT) {
-        return { allowed: false, alreadyUnlocked: false };
-      }
-
-      const res = await unlockReference(
-        videoId,
-        userProfile?.uid,
-        (userProfile as any)?.unlockedReferences,
-        FREE_UNLOCKED_LIMIT
-      );
-
-      if (res.success) {
-        setUnlockedIds(res.ids);
-        return { allowed: true, alreadyUnlocked: res.alreadyUnlocked };
-      }
-
-      return { allowed: false, alreadyUnlocked: false };
+      if (!ready || unlimited || !videoId) return { allowed: true, alreadyUnlocked: true };
+      const res = await unlockReference(videoId, uid, profileList, limit);
+      if (res.success) setUnlockedIds(res.ids);
+      return { allowed: res.success, alreadyUnlocked: res.alreadyUnlocked };
     },
-    [isPro, unlockedIds, userProfile]
+    [ready, unlimited, uid, profileList, limit]
   );
 
   return {
-    isPro,
+    ready,
+    unlimited,
     loading,
     unlockedIds,
     unlockedCount,
-    limit: FREE_UNLOCKED_LIMIT,
+    limit,
     remaining,
     hasReachedLimit,
     isVideoUnlocked,

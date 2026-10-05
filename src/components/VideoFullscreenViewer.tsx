@@ -20,6 +20,7 @@ import { SaveToBoardModal } from '@/components/SaveToBoardModal';
 import { PricingDialog } from '@/components/PricingDialog';
 import { useUser } from '@/hooks/use-user';
 import { getEntitlements } from '@/lib/plans';
+import { useViewingQuota } from '@/hooks/use-viewing-quota';
 
 type VideoFullscreenViewerProps = {
     video: Video;
@@ -33,6 +34,7 @@ export function VideoFullscreenViewer({ video, title, description, onClose }: Vi
     const { userProfile } = useUser();
     const entitlements = getEntitlements(userProfile);
     const isPro = entitlements.isPro;
+    const { unlockedCount, limit, isVideoUnlocked } = useViewingQuota();
 
     const [showCompareModal, setShowCompareModal] = useState(false);
     const [showContactSheetModal, setShowContactSheetModal] = useState(false);
@@ -73,6 +75,16 @@ export function VideoFullscreenViewer({ video, title, description, onClose }: Vi
                     </Button>
 
                     <h1 className="min-w-0 truncate text-sm font-semibold text-white sm:text-base">{title}</h1>
+
+                    {!isPro && (
+                        <div
+                            className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-zinc-300 shrink-0"
+                            title="Free plan includes 25 reference unlocks. Previously unlocked clips remain playable anytime."
+                        >
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                            <span>{unlockedCount}/{limit} Unlocked</span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Studio Tools Header Actions */}

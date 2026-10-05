@@ -36,6 +36,8 @@ export function ProDownloadButton({ videoId, variant = 'icon', className, stopPr
     if (stopPropagation) e.stopPropagation();
     if (busy) return;
     if (!user || !isPro) {
+      // The pricing dialog renders in a portal, which is invisible inside native fullscreen.
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
       track('upgrade_prompt_viewed', { trigger: 'mp4_download', source: 'download_button' });
       setShowPricing(true);
       return;
@@ -49,6 +51,7 @@ export function ProDownloadButton({ videoId, variant = 'icon', className, stopPr
       });
       const data = await res.json().catch(() => ({}));
       if (res.status === 402) {
+        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
         setShowPricing(true);
         return;
       }

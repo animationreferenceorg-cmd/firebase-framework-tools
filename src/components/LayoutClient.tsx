@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { doc, updateDoc } from 'firebase/firestore';
 import { FeedbackModal } from '@/components/FeedbackModal';
 import { UpdatesModal } from '@/components/UpdatesModal';
+import { SidebarUpgradeCard } from '@/components/SidebarUpgradeCard';
 import { UserFeedbackPanel } from '@/components/UserFeedbackPanel';
 import { MobileInstallBanner } from '@/components/reference/MobileInstallBanner';
 import { isAppInstalled, isMobileInstallCandidate } from '@/lib/pwa';
@@ -231,6 +232,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                         )}
                     </SidebarContent>
                     <SidebarFooter className="p-4 border-t border-white/5 space-y-1">
+                        <SidebarUpgradeCard />
                         <UpdatesModal />
                     </SidebarFooter>
                 </Sidebar>

@@ -30,7 +30,7 @@ const COMPARISON: { group: string; rows: { label: string; free: Cell; pro: Cell 
   {
     group: 'Motion study',
     rows: [
-      { label: 'Public reference library', free: true, pro: true },
+      { label: 'Reference library studies', free: `${ACCESS_LIMITS.free.maxUnlockedReferences} references (re-watch anytime)`, pro: 'Unlimited 7,800+' },
       { label: 'Frame-by-frame playback & speed controls', free: true, pro: true },
       { label: 'Side-by-side synchronized playblast compare', free: false, pro: true },
     ],

@@ -10,6 +10,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Heart, Layout, Sparkles, Check, ArrowRight } from 'lucide-react';
+import { useEffect } from 'react';
+import { useUser } from '@/hooks/use-user';
+import { track } from '@/lib/analytics';
+import { formatUsd, getEntitlements, getProOffers } from '@/lib/plans';
 
 interface LimitReachedDialogProps {
     open: boolean;
@@ -26,9 +30,19 @@ export function LimitReachedDialog({
     onDonateClick,
     onUpgradeClick 
 }: LimitReachedDialogProps) {
+    const { userProfile } = useUser();
     const isLikes = feature === 'likes';
-    const title = isLikes ? 'Keep Building Your Reference Library' : 'Keep Building Your Shot Workspace';
+    const { access, limits } = getEntitlements(userProfile);
+    const limit = isLikes ? limits.maxSavedReferences : limits.maxBoards;
+    const noun = isLikes ? (limit === 1 ? 'saved reference' : 'saved references') : (limit === 1 ? 'board' : 'boards');
+    const planName = access === 'free' ? 'free plan' : 'current plan';
+    const price = formatUsd(getProOffers().pro_monthly.amountCents);
+    const title = isLikes ? 'Your reference library is full' : 'You’ve reached your board limit';
     const Icon = isLikes ? Heart : Layout;
+
+    useEffect(() => {
+        if (open) track('upgrade_prompt_viewed', { trigger: isLikes ? 'saved_reference_limit' : 'board_limit', source: 'limit_dialog' });
+    }, [open, isLikes]);
 
     const handleAction = () => {
         onOpenChange(false);
@@ -57,9 +71,10 @@ export function LimitReachedDialog({
                     </DialogTitle>
 
                     <DialogDescription className="text-center text-zinc-400 pt-2 text-xs leading-relaxed">
+                        Your {planName} includes {Number.isFinite(limit) ? limit : 'unlimited'} {noun}.{' '}
                         {isLikes
-                            ? <>You have saved five references. Upgrade to <strong className="text-purple-300">AnimationReference Pro</strong> to organize unlimited references across every shot and project.</>
-                            : <>You have started your free board. Upgrade to <strong className="text-purple-300">AnimationReference Pro</strong> to create unlimited shot boards, studies, and private workspaces.</>}
+                            ? <>Upgrade to <strong className="text-purple-300">Pro</strong> to save unlimited references across every shot and project. Everything you’ve saved stays put.</>
+                            : <>Upgrade to <strong className="text-purple-300">Pro</strong> for unlimited boards and private production workspaces. Your existing boards stay put.</>}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -87,7 +102,7 @@ export function LimitReachedDialog({
                         onClick={handleAction}
                         className="w-full h-11 bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
                     >
-                        <span>Upgrade to Pro — Keep Building</span>
+                        <span>Upgrade to Pro — {price}/mo</span>
                         <ArrowRight className="h-4 w-4" />
                     </Button>
                 </DialogFooter>

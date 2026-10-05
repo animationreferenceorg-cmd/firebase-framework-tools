@@ -127,6 +127,7 @@ export interface PlanLimits {
   maxBoards: number;
   maxSavedReferences: number;
   maxPortfolioPosts: number;
+  maxUnlockedReferences: number;
 }
 
 export interface Entitlements {
@@ -143,12 +144,12 @@ export interface Entitlements {
   limits: PlanLimits;
 }
 
-const UNLIMITED: PlanLimits = { maxBoards: Infinity, maxSavedReferences: Infinity, maxPortfolioPosts: Infinity };
+const UNLIMITED: PlanLimits = { maxBoards: Infinity, maxSavedReferences: Infinity, maxPortfolioPosts: Infinity, maxUnlockedReferences: Infinity };
 
 export const ACCESS_LIMITS: Record<AccessLevel, PlanLimits> = {
-  free: { maxBoards: 1, maxSavedReferences: 5, maxPortfolioPosts: 3 },
-  tier1: { maxBoards: 3, maxSavedReferences: 10, maxPortfolioPosts: 3 },
-  tier2: { maxBoards: 6, maxSavedReferences: 20, maxPortfolioPosts: 3 },
+  free: { maxBoards: 1, maxSavedReferences: 5, maxPortfolioPosts: 3, maxUnlockedReferences: 25 },
+  tier1: { maxBoards: 3, maxSavedReferences: 10, maxPortfolioPosts: 3, maxUnlockedReferences: 50 },
+  tier2: { maxBoards: 6, maxSavedReferences: 20, maxPortfolioPosts: 3, maxUnlockedReferences: 100 },
   pro: UNLIMITED,
   student_unlimited: UNLIMITED,
   admin: UNLIMITED,

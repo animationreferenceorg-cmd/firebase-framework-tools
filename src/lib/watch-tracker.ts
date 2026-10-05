@@ -1,105 +1,78 @@
 /**
- * Video Watch Tracker for Animation Reference
+ * Watch tracking for the soft Pro nudge.
  *
- * Free users get 30 video watches before a donate popup is displayed.
- * A video watch (view) is counted only when the user watches for more than 3 seconds.
+ * Watching is free and unlimited. After a free user has actually played
+ * PRO_NUDGE_AFTER_VIEWS references in one browser session, we show one small,
+ * dismissible corner card — never a blocking modal, and never mid-playback.
+ * Hover previews do not count: skimming a grid is browsing, not studying.
  */
 
-export const WATCH_COUNT_KEY = 'animref_video_watch_count';
-
-/** Number of video watches allowed for free users before the donate dialog pops up. */
-export const WATCH_COUNT_THRESHOLD = 30;
-
-/** Minimum watch duration (in seconds) required for a watch session to count as a view. */
+/** Minimum playback (in seconds) before a play counts as a view. */
 export const VIEW_MIN_SECONDS = 3;
 export const VIEW_MIN_DURATION_MS = VIEW_MIN_SECONDS * 1000;
-
-// Kept for backward compatibility with any legacy imports
+/** Hover-preview delay used by cards; unrelated to counting. */
 export const HOVER_GRACE_MS = VIEW_MIN_DURATION_MS;
-export const WATCH_MINUTES_BEFORE_DONATE_POPUP = 15;
-export const WATCH_SECONDS_BEFORE_DONATE_POPUP = 15 * 60;
 
-/**
- * Get current number of counted video watches from localStorage.
- */
-export function getWatchCount(): number {
-  if (typeof window === 'undefined') return 0;
+/** Played references in one session before the nudge may appear. */
+export const PRO_NUDGE_AFTER_VIEWS = 15;
+/** After the nudge is dismissed, keep it hidden for this long. */
+export const PRO_NUDGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+
+const SESSION_VIEWS_KEY = 'animref:session-views';
+const NUDGE_SHOWN_KEY = 'animref:pro-nudge-shown';
+const NUDGE_DISMISSED_AT_KEY = 'animref:pro-nudge-dismissed-at';
+
+// Storage can be missing or throw (SSR, private windows, blocked site data),
+// so every access goes through these guards and fails quietly.
+function read(storage: 'local' | 'session', key: string): string | null {
   try {
-    const raw = localStorage.getItem(WATCH_COUNT_KEY);
-    const value = raw ? parseInt(raw, 10) : 0;
-    return Number.isFinite(value) && value > 0 ? value : 0;
+    return (storage === 'local' ? window.localStorage : window.sessionStorage).getItem(key);
   } catch {
-    return 0;
+    return null;
   }
 }
 
-/**
- * Set the number of counted video watches in localStorage.
- */
-export function setWatchCount(count: number): void {
-  if (typeof window === 'undefined') return;
+function write(storage: 'local' | 'session', key: string, value: string): void {
   try {
-    localStorage.setItem(WATCH_COUNT_KEY, String(Math.max(0, count)));
+    (storage === 'local' ? window.localStorage : window.sessionStorage).setItem(key, value);
   } catch {
-    // Storage unavailable (private mode, blocked cookies)
+    // Storage unavailable
   }
 }
 
-/**
- * Reset the video watch count back to 0.
- */
-export function resetWatchCount(): void {
-  setWatchCount(0);
+export function getSessionViewCount(): number {
+  const value = parseInt(read('session', SESSION_VIEWS_KEY) || '0', 10);
+  return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
-/**
- * Increments the video watch count by 1 for free users.
- * Returns the updated count and whether the 30-watch threshold was reached.
- */
-export function recordVideoWatch(isPremium?: boolean): { count: number; reachedLimit: boolean } {
-  if (isPremium) {
-    return { count: 0, reachedLimit: false };
-  }
-  if (typeof window === 'undefined') {
-    return { count: 0, reachedLimit: false };
-  }
-
-  const previous = getWatchCount();
-  const next = previous + 1;
-  setWatchCount(next);
-
-  const reachedLimit = next >= WATCH_COUNT_THRESHOLD;
-  console.log(
-    `[Watch Tracker] Video view counted: ${next}/${WATCH_COUNT_THRESHOLD}${
-      reachedLimit ? ' — 30 watches reached, donate prompt queued!' : ''
-    }`
-  );
-
-  return { count: next, reachedLimit };
+/** Records one played reference and returns the new session total. */
+export function recordSessionView(): number {
+  const next = getSessionViewCount() + 1;
+  write('session', SESSION_VIEWS_KEY, String(next));
+  return next;
 }
 
-// Backward-compatibility helpers
-export function getWatchSeconds(): number {
-  return getWatchCount() * VIEW_MIN_SECONDS;
+/** True when the nudge may be shown: enough views, not yet shown this session, not recently dismissed. */
+export function shouldShowProNudge(views: number, now = Date.now()): boolean {
+  if (views < PRO_NUDGE_AFTER_VIEWS) return false;
+  if (read('session', NUDGE_SHOWN_KEY) === '1') return false;
+  const dismissedAt = parseInt(read('local', NUDGE_DISMISSED_AT_KEY) || '0', 10);
+  return !(dismissedAt && now - dismissedAt < PRO_NUDGE_COOLDOWN_MS);
 }
 
-export function setWatchSeconds(seconds: number): void {
-  setWatchCount(Math.floor(seconds / VIEW_MIN_SECONDS));
+export function markProNudgeShown(): void {
+  write('session', NUDGE_SHOWN_KEY, '1');
 }
 
-export function resetWatchSeconds(): void {
-  resetWatchCount();
+export function markProNudgeDismissed(now = Date.now()): void {
+  write('local', NUDGE_DISMISSED_AT_KEY, String(now));
 }
 
+/** Removes the counters used by the old 30-watch popup. */
 export function clearLegacyWatchCount(): void {
-  // Not needed, but preserved for backward compatibility
-}
-
-export function addWatchSeconds(seconds: number, isPremium?: boolean): boolean {
-  if (isPremium) return false;
-  if (seconds >= VIEW_MIN_SECONDS) {
-    const { reachedLimit } = recordVideoWatch(isPremium);
-    return reachedLimit;
+  try {
+    window.localStorage.removeItem('animref_video_watch_count');
+  } catch {
+    // Storage unavailable
   }
-  return false;
 }

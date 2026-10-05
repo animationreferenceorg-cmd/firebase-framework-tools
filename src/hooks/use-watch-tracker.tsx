@@ -1,233 +1,153 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { useUser } from './use-user';
+import { getEntitlements } from '@/lib/plans';
+import { track } from '@/lib/analytics';
 import {
-  getWatchCount,
-  setWatchCount,
-  resetWatchCount,
-  recordVideoWatch,
-  WATCH_COUNT_THRESHOLD,
   VIEW_MIN_DURATION_MS,
+  clearLegacyWatchCount,
+  getSessionViewCount,
+  markProNudgeDismissed,
+  markProNudgeShown,
+  recordSessionView,
+  shouldShowProNudge,
 } from '@/lib/watch-tracker';
-import { DonateDialog } from '@/components/DonateDialog';
+import { ProNudgeCard } from '@/components/ProNudgeCard';
 
 type WatchSource = 'hover' | 'playback';
 
+interface WatchTrackerContextType {
+  /** Begin timing a watch. Only `playback` sessions held for 3s+ count; hover previews never do. */
+  beginWatch: (key: string, source: WatchSource) => void;
+  /** Stop timing. With no other playback active, this is the natural pause where the nudge may appear. */
+  endWatch: (key: string) => void;
+}
+
 interface WatchSession {
-  key: string;
   videoId: string;
-  source: WatchSource;
-  startedAt: number;
   timerId: ReturnType<typeof setTimeout> | null;
   counted: boolean;
 }
 
-interface WatchTrackerContextType {
-  /** Begin timing. A view is counted if watched for > 3 seconds. */
-  beginWatch: (key: string, source: WatchSource) => void;
-  /** Stop timing. Also the natural pause where a queued donate prompt is shown. */
-  endWatch: (key: string) => void;
-  showDonatePopup: boolean;
-  setShowDonatePopup: (show: boolean) => void;
-  triggerDonatePopup: (force?: boolean) => void;
-  watchCount: number;
-  remainingWatches: number;
-}
+/** Pages where a corner card would get in the way or be redundant. */
+const NUDGE_HIDDEN_PATHS = ['/pricing', '/checkout', '/login', '/sjsu', '/paint', '/admin'];
 
 const WatchTrackerContext = createContext<WatchTrackerContextType | undefined>(undefined);
 
 export function WatchTrackerProvider({ children }: { children: ReactNode }) {
-  const { userProfile } = useUser();
-  const [showDonatePopup, setShowDonatePopup] = useState(false);
-  const [forceTimer, setForceTimer] = useState(false);
-  const [watchCount, setWatchCountState] = useState(0);
+  const { userProfile, loading } = useUser();
+  const pathname = usePathname() || '';
+  const [showNudge, setShowNudge] = useState(false);
 
-  const isPremium = userProfile?.isPremium;
-  const isPremiumRef = useRef(isPremium);
-  isPremiumRef.current = isPremium;
+  // Only free accounts (and signed-out visitors) are ever nudged. Paying
+  // supporters on legacy tiers are not free, so they are left alone too.
+  const isFree = !loading && getEntitlements(userProfile).access === 'free';
+  const isFreeRef = useRef(isFree);
+  isFreeRef.current = isFree;
 
   const sessionsRef = useRef<Map<string, WatchSession>>(new Map());
-  /** Recently counted video IDs to avoid double-charging the same video if user hovers then opens player. */
+  /** Video IDs counted recently, so replaying or reopening one video counts once. */
   const recentVideosRef = useRef<Map<string, number>>(new Map());
-  /** Threshold (30 watches) was crossed; waiting for a natural pause to show the donate prompt. */
-  const promptPendingRef = useRef(false);
+  const nudgePendingRef = useRef(false);
+  const nudgeAllowedHere = !NUDGE_HIDDEN_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  const nudgeAllowedRef = useRef(nudgeAllowedHere);
+  nudgeAllowedRef.current = nudgeAllowedHere;
 
-  // Sync initial watch count from localStorage on mount
   useEffect(() => {
-    const current = getWatchCount();
-    setWatchCountState(current);
-    if (!isPremiumRef.current && current >= WATCH_COUNT_THRESHOLD) {
-      promptPendingRef.current = true;
-    }
+    clearLegacyWatchCount();
   }, []);
 
-  const triggerDonatePopup = useCallback((force = false) => {
-    if (isPremiumRef.current && !force) {
-      console.log('[Watch Tracker] Paid plan active — donate popup suppressed.');
-      return;
-    }
-    setForceTimer(false);
-    setShowDonatePopup(true);
+  /** Shows a queued nudge only at a natural pause: nothing playing, on a page that allows it. */
+  const tryRevealNudge = useCallback(() => {
+    if (!nudgePendingRef.current || sessionsRef.current.size > 0 || !isFreeRef.current || !nudgeAllowedRef.current) return;
+    nudgePendingRef.current = false;
+    markProNudgeShown();
+    setShowNudge(true);
+    track('upgrade_prompt_viewed', { trigger: 'session_views', source: 'pro_nudge' });
   }, []);
 
-  const countSessionView = useCallback((session: WatchSession) => {
-    if (session.counted || isPremiumRef.current) return;
-
-    // Check if this exact video was counted within the last 60 seconds
-    const lastCountedAt = recentVideosRef.current.get(session.videoId);
-    const now = Date.now();
-    if (lastCountedAt && now - lastCountedAt < 60000) {
-      session.counted = true;
+  // A paid account (profile loaded, or just upgraded) is never nudged. For free
+  // accounts, also pick up a nudge earned before a full page load or held back on
+  // a page where the card is hidden, and show it shortly after arriving.
+  useEffect(() => {
+    if (!isFree) {
+      nudgePendingRef.current = false;
+      setShowNudge(false);
       return;
     }
+    if (shouldShowProNudge(getSessionViewCount())) nudgePendingRef.current = true;
+    if (!nudgePendingRef.current) return;
+    const timer = setTimeout(tryRevealNudge, 2000);
+    return () => clearTimeout(timer);
+  }, [isFree, pathname, tryRevealNudge]);
 
+  const countView = useCallback((session: WatchSession) => {
+    if (session.counted) return;
     session.counted = true;
+    if (!isFreeRef.current) return;
+
+    const now = Date.now();
+    const lastCountedAt = recentVideosRef.current.get(session.videoId);
+    if (lastCountedAt && now - lastCountedAt < 60_000) return;
     recentVideosRef.current.set(session.videoId, now);
 
-    const { count, reachedLimit } = recordVideoWatch(isPremiumRef.current);
-    setWatchCountState(count);
-
-    if (reachedLimit) {
-      promptPendingRef.current = true;
-    }
+    if (shouldShowProNudge(recordSessionView(), now)) nudgePendingRef.current = true;
   }, []);
 
   const beginWatch = useCallback((key: string, source: WatchSource) => {
-    if (isPremiumRef.current) return;
-    if (sessionsRef.current.has(key)) return;
+    if (source !== 'playback' || sessionsRef.current.has(key)) return;
 
-    // Extract video ID from key e.g. "hover:video123", "play:video123", "play:detail:video123"
     const videoId = key.replace(/^(hover|play):/, '').replace(/^(short|detail|moodboard):/, '');
-
-    const session: WatchSession = {
-      key,
-      videoId,
-      source,
-      startedAt: Date.now(),
-      timerId: null,
-      counted: false,
-    };
-
-    // A view is counted if user watches for more than 3 seconds
+    const session: WatchSession = { videoId, timerId: null, counted: false };
     session.timerId = setTimeout(() => {
-      const activeSession = sessionsRef.current.get(key);
-      if (activeSession && !activeSession.counted) {
-        countSessionView(activeSession);
-      }
+      session.timerId = null;
+      countView(session);
     }, VIEW_MIN_DURATION_MS);
-
     sessionsRef.current.set(key, session);
-  }, [countSessionView]);
+  }, [countView]);
 
   const endWatch = useCallback((key: string) => {
     const session = sessionsRef.current.get(key);
     if (!session) return;
-
-    if (session.timerId) {
-      clearTimeout(session.timerId);
-      session.timerId = null;
-    }
-
-    // Check if the watch lasted >= 3 seconds before being ended
-    if (!session.counted && !isPremiumRef.current) {
-      const elapsed = Date.now() - session.startedAt;
-      if (elapsed >= VIEW_MIN_DURATION_MS) {
-        countSessionView(session);
-      }
-    }
-
+    // A play shorter than 3 seconds never counts: the timer is the only path to countView.
+    if (session.timerId) clearTimeout(session.timerId);
     sessionsRef.current.delete(key);
 
-    // Natural pause: Once the user finishes watching/closing the video or leaving hover,
-    // if 30 video watches was reached, present the donate popup.
-    if (promptPendingRef.current && sessionsRef.current.size === 0) {
-      promptPendingRef.current = false;
-      resetWatchCount();
-      setWatchCountState(0);
-      triggerDonatePopup();
-    }
-  }, [countSessionView, triggerDonatePopup]);
+    tryRevealNudge();
+  }, [tryRevealNudge]);
 
-  // Clean up timers on visibility change or tab hiding
+  // Pause 3-second timers while the tab is hidden (a backgrounded tab is not
+  // watching) and restart them for still-open plays when it comes back.
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.visibilityState === 'hidden') {
-        // Clear active 3s timers while tab is hidden
-        sessionsRef.current.forEach((session) => {
-          if (session.timerId) {
-            clearTimeout(session.timerId);
+      const hidden = document.visibilityState === 'hidden';
+      sessionsRef.current.forEach((session) => {
+        if (hidden && session.timerId) {
+          clearTimeout(session.timerId);
+          session.timerId = null;
+        } else if (!hidden && !session.timerId && !session.counted) {
+          session.timerId = setTimeout(() => {
             session.timerId = null;
-          }
-        });
-      }
+            countView(session);
+          }, VIEW_MIN_DURATION_MS);
+        }
+      });
     };
-
     document.addEventListener('visibilitychange', handleVisibility);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [countView]);
+
+  const dismissNudge = useCallback(() => {
+    markProNudgeDismissed();
+    setShowNudge(false);
   }, []);
 
-  // Devtools helpers for testing
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    (window as any).__animref = {
-      beginWatch,
-      endWatch,
-      triggerDonatePopup: (force = true) => triggerDonatePopup(force),
-      getWatchCount: () => {
-        const count = getWatchCount();
-        console.log(`[Watch Tracker] Current count: ${count}/${WATCH_COUNT_THRESHOLD}`);
-        return count;
-      },
-      setWatchCount: (count: number) => {
-        setWatchCount(count);
-        setWatchCountState(count);
-        if (count >= WATCH_COUNT_THRESHOLD) {
-          promptPendingRef.current = true;
-        }
-        console.log(`[Watch Tracker] Watch count set to ${count}/${WATCH_COUNT_THRESHOLD}`);
-      },
-      resetWatchCount: () => {
-        resetWatchCount();
-        setWatchCountState(0);
-        promptPendingRef.current = false;
-        console.log('[Watch Tracker] Reset watch count to 0.');
-      },
-      _debug: () => ({
-        count: getWatchCount(),
-        threshold: WATCH_COUNT_THRESHOLD,
-        sessions: [...sessionsRef.current.entries()],
-        promptPending: promptPendingRef.current,
-        recentVideos: [...recentVideosRef.current.entries()],
-      }),
-    };
-  }, [beginWatch, endWatch, triggerDonatePopup]);
-
-  const remainingWatches = Math.max(0, WATCH_COUNT_THRESHOLD - watchCount);
-
   return (
-    <WatchTrackerContext.Provider
-      value={{
-        beginWatch,
-        endWatch,
-        showDonatePopup,
-        setShowDonatePopup,
-        triggerDonatePopup,
-        watchCount,
-        remainingWatches,
-      }}
-    >
+    <WatchTrackerContext.Provider value={{ beginWatch, endWatch }}>
       {children}
-      <DonateDialog
-        open={showDonatePopup}
-        forceTimer={forceTimer}
-        onOpenChange={(val) => {
-          setShowDonatePopup(val);
-          if (!val) setForceTimer(false);
-        }}
-      />
+      {showNudge && isFree && nudgeAllowedHere && <ProNudgeCard onDismiss={dismissNudge} />}
     </WatchTrackerContext.Provider>
   );
 }

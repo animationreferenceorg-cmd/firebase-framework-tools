@@ -16,6 +16,15 @@ import { useUser } from '@/hooks/use-user';
 import { likeVideo, unlikeVideo, saveVideo, unsaveVideo } from '@/lib/firestore';
 import { SaveToBoardModal } from '@/components/SaveToBoardModal';
 import { ProDownloadButton } from '@/components/ProDownloadButton';
+import { PricingDialog } from '@/components/PricingDialog';
+import { OnionSkinOverlay, type OnionSettings, type OnionSkinHandle, type OnionStatus } from '@/components/player/OnionSkinOverlay';
+import { StudyToolsPanel, VIEW_MODES, VIEW_MODE_FILTER, nextViewMode, type ViewMode } from '@/components/player/StudyToolsPanel';
+import { isForeignKeyTarget, isKeyboardTarget, registerPlayer, setHoveredPlayer } from '@/lib/player-focus';
+import { getEntitlements } from '@/lib/plans';
+import { resolveLoop, shouldWrapLoop } from '@/lib/loop-range';
+import { track } from '@/lib/analytics';
+import { useViewingQuota } from '@/hooks/use-viewing-quota';
+import { VideoQuotaSlate } from '@/components/VideoQuotaSlate';
 
 interface VideoPlayerProps {
     video: Video;
@@ -153,6 +162,52 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
     const [isFlipped, setIsFlipped] = React.useState(false);
     const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
+    // Study tools: A–B loop, view filters and onion skin.
+    const [viewMode, setViewMode] = React.useState<ViewMode>('normal');
+    const [loopIn, setLoopIn] = React.useState<number | null>(null);
+    const [loopOut, setLoopOut] = React.useState<number | null>(null);
+    const [mediaEl, setMediaEl] = React.useState<HTMLVideoElement | null>(null);
+    const [onionEnabled, setOnionEnabled] = React.useState(false);
+    const [onionSettings, setOnionSettings] = React.useState<OnionSettings>({ frames: 2, step: 1 });
+    const [onionStatus, setOnionStatus] = React.useState<OnionStatus>('idle');
+    const [onionExportable, setOnionExportable] = React.useState(false);
+    const [exportingOnion, setExportingOnion] = React.useState(false);
+    const [showPricing, setShowPricing] = React.useState(false);
+    const [containerSize, setContainerSize] = React.useState({ w: 0, h: 0 });
+    const onionRef = React.useRef<OnionSkinHandle>(null);
+    const playerIdRef = React.useRef(Symbol('video-player'));
+    const isPro = getEntitlements(userProfile).isPro;
+    const { isVideoUnlocked, attemptUnlock, unlockedCount, limit, hasReachedLimit } = useViewingQuota();
+
+    // Automatically attempt unlock when video mounts
+    React.useEffect(() => {
+        if (video?.id && !isPro) {
+            attemptUnlock(video.id);
+        }
+    }, [video?.id, isPro, attemptUnlock]);
+
+    const isBlockedByQuota = !isPro && hasReachedLimit && !isVideoUnlocked(video.id);
+
+    // Onion skin decodes frames from the file itself, so embeds (YouTube etc.) can't use it.
+    const onionSupported = mediaEl !== null && typeof video.videoUrl === 'string' && video.videoUrl.length > 0;
+
+    // A new video (or a reloaded player) starts with a clean loop and a fresh media element.
+    React.useEffect(() => {
+        setLoopIn(null);
+        setLoopOut(null);
+        setMediaEl(null);
+    }, [video.id, video.videoUrl, playerReloadToken]);
+
+    React.useEffect(() => registerPlayer(playerIdRef.current, () => containerRef.current), []);
+
+    React.useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        const observer = new ResizeObserver(() => setContainerSize({ w: el.clientWidth, h: el.clientHeight }));
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
+
     React.useEffect(() => {
         setFps(video.fps || 24);
     }, [video.fps]);
@@ -174,6 +229,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                 ? Math.min(duration, (internalPlayer as HTMLVideoElement).currentTime + frameTime)
                 : Math.max(0, (internalPlayer as HTMLVideoElement).currentTime - frameTime);
             playerRef.current.seekTo(newTime, 'seconds');
+            if (duration > 0) setPlayed(newTime / duration);
         }
     }, [duration, isPlaying, fps]);
 
@@ -207,6 +263,96 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
         });
     }, []);
 
+    const getTimeNow = React.useCallback((): number => {
+        if (mediaEl) return mediaEl.currentTime;
+        const t = playerRef.current?.getCurrentTime();
+        return typeof t === 'number' && Number.isFinite(t) ? t : played * duration;
+    }, [mediaEl, played, duration]);
+    const getTimeNowRef = React.useRef(getTimeNow);
+    getTimeNowRef.current = getTimeNow;
+
+    const seekToTime = React.useCallback((t: number) => {
+        if (!playerRef.current) return;
+        playerRef.current.seekTo(t, 'seconds');
+        if (duration > 0) setPlayed(t / duration);
+    }, [duration]);
+
+    React.useImperativeHandle(ref, () => ({
+        handlePlayPause,
+        getCurrentTime: () => getTimeNow(),
+        seekTo: (seconds: number) => seekToTime(seconds),
+    }), [handlePlayPause, getTimeNow, seekToTime]);
+
+    const loopRange = React.useMemo(() => resolveLoop(loopIn, loopOut, duration, fps), [loopIn, loopOut, duration, fps]);
+    const { start: loopStart, end: loopEnd, active: loopActive } = loopRange;
+
+    const handleSetLoopIn = React.useCallback(() => {
+        const t = getTimeNowRef.current();
+        setLoopIn(t);
+        setLoopOut((out) => (out !== null && out <= t ? null : out));
+    }, []);
+
+    const handleSetLoopOut = React.useCallback(() => {
+        const t = getTimeNowRef.current();
+        setLoopOut(t);
+        setLoopIn((start) => (start !== null && start >= t ? null : start));
+    }, []);
+
+    const clearLoop = React.useCallback(() => {
+        setLoopIn(null);
+        setLoopOut(null);
+    }, []);
+
+    // Enforce the loop every animation frame; onProgress (once a second) is far too coarse.
+    React.useEffect(() => {
+        if (!loopRange.active || !isPlaying) return;
+        let raf = 0;
+        let cooldownUntil = 0;
+        const tick = () => {
+            const now = performance.now();
+            if (now >= cooldownUntil && shouldWrapLoop(getTimeNowRef.current(), loopRange, duration, fps)) {
+                seekToTime(loopRange.start);
+                cooldownUntil = now + 150; // let the seek land before checking again
+            }
+            raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, [loopRange, isPlaying, duration, fps, seekToTime]);
+
+    const requestUpgrade = React.useCallback((trigger: string) => {
+        // The pricing dialog renders in a portal, which is invisible inside native fullscreen.
+        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        track('upgrade_prompt_viewed', { trigger, source: 'player' });
+        setShowPricing(true);
+    }, []);
+
+    const handleExportOnion = async () => {
+        if (!isPro) {
+            requestUpgrade('onion_export');
+            return;
+        }
+        if (!onionRef.current || exportingOnion) return;
+        setExportingOnion(true);
+        try {
+            const blob = await onionRef.current.exportPng();
+            const url = URL.createObjectURL(blob);
+            const slug = (video.title || 'reference').replace(/[^\w\s-]/g, '').trim().toLowerCase().replace(/\s+/g, '-') || 'reference';
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${slug}-onion-skin-f${Math.round(getTimeNowRef.current() * fps)}.png`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 10_000);
+            track('export_completed', { format: 'png', source: 'onion_skin' });
+        } catch (err: any) {
+            toast({ variant: 'destructive', title: 'Export unavailable', description: err?.message || 'Could not export this frame.' });
+        } finally {
+            setExportingOnion(false);
+        }
+    };
+
     React.useImperativeHandle(ref, () => ({
         handlePlayPause,
         getCurrentTime: () => played * duration,
@@ -225,11 +371,29 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
             setIsFullScreen(isCurrentlyFullScreen);
         };
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-                return;
-            }
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            if (isForeignKeyTarget(e.target, containerRef.current)) return;
+            // Many players can be mounted (clip cards); only one should react.
+            if (!isKeyboardTarget(playerIdRef.current)) return;
+            const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
 
-            if (e.key === ',' || (e.key === 'ArrowLeft' && e.shiftKey)) {
+            if (key === 'i') {
+                e.preventDefault();
+                handleSetLoopIn();
+            } else if (key === 'o') {
+                e.preventDefault();
+                handleSetLoopOut();
+            } else if (key === 'l') {
+                e.preventDefault();
+                clearLoop();
+            } else if (key === 'c') {
+                e.preventDefault();
+                setViewMode(nextViewMode);
+            } else if (key === 'g') {
+                if (!onionSupported) return;
+                e.preventDefault();
+                setOnionEnabled((on) => !on);
+            } else if (e.key === ',' || (e.key === 'ArrowLeft' && e.shiftKey)) {
                 e.preventDefault();
                 stepFrame('backward');
             } else if (e.key === '.' || (e.key === 'ArrowRight' && e.shiftKey)) {
@@ -238,7 +402,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
             } else if (e.key === ' ') {
                 e.preventDefault();
                 handlePlayPause();
-            } else if (e.key === 'm' || e.key === 'M') {
+            } else if (key === 'm') {
                 e.preventDefault();
                 setIsFlipped(prev => !prev);
             } else if (e.key === '[') {
@@ -256,7 +420,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
             document.removeEventListener('fullscreenchange', onFullScreenChange);
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [duration, isPlaying, stepFrame, handlePlayPause]);
+    }, [duration, isPlaying, stepFrame, handlePlayPause, handleSetLoopIn, handleSetLoopOut, clearLoop, onionSupported]);
 
 
     const handleMuteToggle = () => {
@@ -359,6 +523,23 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
 
     const currentTime = played * duration;
 
+    if (isBlockedByQuota) {
+        return (
+            <div
+                ref={containerRef}
+                className={cn(
+                    "group/player relative w-full h-full flex items-center justify-center overflow-hidden bg-black select-none",
+                    isFullScreen ? "rounded-none" : "rounded-lg"
+                )}
+            >
+                <VideoQuotaSlate
+                    posterUrl={video.thumbnailUrl || video.posterUrl}
+                    unlockedCount={unlockedCount}
+                    limit={limit}
+                />
+            </div>
+        );
+    }
 
     return (
         <div
@@ -368,6 +549,8 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                 isFullScreen ? "rounded-none" : "rounded-lg"
             )}
             onMouseMove={handleMouseMove}
+            onPointerEnter={() => setHoveredPlayer(playerIdRef.current, true)}
+            onPointerLeave={() => setHoveredPlayer(playerIdRef.current, false)}
             onMouseLeave={() => {
                 setIsNearBottom(false);
                 if (isPlaying) setShowControls(false);
@@ -384,7 +567,12 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                 handlePlayPause();
             }}
         >
-            <div className={cn("relative w-full aspect-video max-w-full max-h-full transition-transform duration-200", isFlipped && "-scale-x-100")}>
+            <div className="relative w-full aspect-video max-w-full max-h-full">
+                {/* Only the picture is mirrored and filtered; overlays and text stay readable. */}
+                <div
+                    className={cn("absolute inset-0 transition-transform duration-200", isFlipped && "-scale-x-100")}
+                    style={{ filter: VIEW_MODE_FILTER[viewMode] }}
+                >
                 <Player
                     key={`${video.id}-${playerReloadToken}`}
                     playerRef={playerRef}
@@ -398,7 +586,22 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                     onDuration={setDuration}
                     onPlay={() => { setIsPlaying(true); setVideoError(false); }}
                     onPause={() => setIsPlaying(false)}
+                    onReady={(player: any) => {
+                        const el = player?.getInternalPlayer?.();
+                        setMediaEl(el instanceof HTMLVideoElement ? el : null);
+                    }}
                     onEnded={() => {
+                        if (loopActive) {
+                            // Out point at (or past) the end: wrap back to the in point.
+                            seekToTime(loopStart);
+                            if (mediaEl) {
+                                mediaEl.play().catch(() => {});
+                            } else {
+                                setIsPlaying(false);
+                                setTimeout(() => setIsPlaying(true), 0);
+                            }
+                            return;
+                        }
                         setIsPlaying(false);
                         if (onEnded) onEnded();
                     }}
@@ -416,6 +619,22 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                         }
                     }}
                 />
+                {onionSupported && (
+                    <OnionSkinOverlay
+                        ref={onionRef}
+                        src={video.videoUrl}
+                        mediaEl={mediaEl}
+                        fps={fps}
+                        settings={onionSettings}
+                        enabled={onionEnabled}
+                        paused={!isPlaying}
+                        onStatusChange={(status, exportable) => {
+                            setOnionStatus(status);
+                            setOnionExportable(exportable);
+                        }}
+                    />
+                )}
+                </div>
 
                 {/* Never strand the user on a black player when a source fails. */}
                 {videoError && (
@@ -496,6 +715,44 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                 </div>
             ) : null}
 
+            {/* Active study tools, so a filtered or looping view is never a mystery. */}
+            {(loopActive || viewMode !== 'normal' || onionEnabled) && (
+                <div className={cn(
+                    "absolute top-3 right-3 z-50 flex flex-wrap justify-end gap-1 transition-opacity duration-300 pointer-events-none",
+                    showControls ? "opacity-100" : "opacity-0"
+                )}>
+                    {loopActive && (
+                        <span className="rounded-full border border-amber-400/40 bg-black/70 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-300">
+                            LOOP f{Math.round(loopStart * fps)}–f{Math.round(loopEnd * fps)}
+                        </span>
+                    )}
+                    {viewMode !== 'normal' && (
+                        <span className="rounded-full border border-white/20 bg-black/70 px-2 py-0.5 text-[10px] font-bold uppercase text-zinc-200">
+                            {VIEW_MODES.find((m) => m.id === viewMode)?.label}
+                        </span>
+                    )}
+                    {onionEnabled && (
+                        <span className="rounded-full border border-purple-400/40 bg-black/70 px-2 py-0.5 text-[10px] font-bold text-purple-200">
+                            ONION ±{onionSettings.frames}{isPlaying ? ' · pause to view' : ''}
+                        </span>
+                    )}
+                </div>
+            )}
+
+            {/* Transparent quota status pill for free tier users */}
+            {!isPro && (
+                <div
+                    className={cn(
+                        "absolute top-3 left-3 z-50 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-white/15 text-[10px] font-bold text-zinc-300 transition-opacity duration-300 pointer-events-auto",
+                        showControls ? "opacity-100" : "opacity-0"
+                    )}
+                    title={`Free plan includes ${limit} reference unlocks. Previously viewed references remain playable anytime.`}
+                >
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                    <span>{unlockedCount}/{limit} Unlocked</span>
+                </div>
+            )}
+
             {/* Quick Click Flash Play/Pause Animation (YouTube/Netflix Style) */}
             {clickFeedback && (
                 <div className="absolute inset-0 flex items-center justify-center z-[140] pointer-events-none transition-all duration-200">
@@ -520,6 +777,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                 {/* Progress Bar (Thin & Full Width) */}
                 <div className="flex items-center gap-3 mb-4 group/timeline z-[120] relative">
                     <p className="text-xs font-mono font-bold text-white w-12 text-right">{formatTime(currentTime)}</p>
+                    <div className="relative w-full">
                     <Slider
                         value={[played]}
                         onValueChange={handleSeekChange}
@@ -532,6 +790,17 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                         rangeClassName="bg-red-600 shadow-md"
                         thumbClassName="h-4.5 w-4.5 bg-red-600 border-2 border-white rounded-full shadow-xl scale-100 transition-transform hover:scale-125 cursor-grab active:cursor-grabbing"
                     />
+                    {loopActive && duration > 0 && (
+                        <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute top-1/2 h-4 -translate-y-1/2 rounded-sm border-x-2 border-amber-300 bg-amber-300/25"
+                            style={{
+                                left: `${(loopStart / duration) * 100}%`,
+                                width: `${(Math.min(loopEnd + 1 / fps, duration) - loopStart) / duration * 100}%`,
+                            }}
+                        />
+                    )}
+                    </div>
                     <p className="text-xs font-mono font-bold text-white w-12">{formatTime(duration)}</p>
                 </div>
 
@@ -683,6 +952,31 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                             <Bookmark className={cn("h-4 w-4", isSaved ? "fill-purple-400 text-purple-400" : "text-purple-300 fill-purple-400/20 hover:fill-purple-400")} />
                         </Button>}
 
+                        {containerSize.w >= 420 && (
+                            <StudyToolsPanel
+                                fps={fps}
+                                loopIn={loopIn}
+                                loopOut={loopOut}
+                                loopActive={loopActive}
+                                onSetIn={handleSetLoopIn}
+                                onSetOut={handleSetLoopOut}
+                                onClearLoop={clearLoop}
+                                viewMode={viewMode}
+                                onViewModeChange={setViewMode}
+                                onionEnabled={onionEnabled}
+                                onionSupported={onionSupported}
+                                onionStatus={onionStatus}
+                                onionExportable={onionExportable}
+                                onionSettings={onionSettings}
+                                onOnionToggle={() => setOnionEnabled((on) => !on)}
+                                onOnionSettingsChange={setOnionSettings}
+                                onExportOnion={handleExportOnion}
+                                exporting={exportingOnion}
+                                isPro={isPro}
+                                maxHeight={Math.max(160, containerSize.h - 110)}
+                            />
+                        )}
+
                         {/* Pro-only clean MP4 download */}
                         {video.id && <ProDownloadButton videoId={video.id} />}
 
@@ -731,6 +1025,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                 open={showSaveToBoard}
                 onOpenChange={setShowSaveToBoard}
             />
+            <PricingDialog open={showPricing} onOpenChange={setShowPricing} />
         </div>
     );
 });

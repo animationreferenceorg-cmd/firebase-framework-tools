@@ -12,6 +12,7 @@ import { MessageSquare, Check, Trash2, Clock, Send, Pencil, Save, X } from 'luci
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { FeedbackMessages } from '@/components/feedback/FeedbackMessages';
 
 interface Feedback {
   id: string;
@@ -332,6 +333,13 @@ export default function FeedbackPage() {
                           )}
                         </div>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Follow-up conversation after the first reply */}
+                  {item.response && (
+                    <div className="mt-4 pt-4 border-t border-border/50">
+                      <FeedbackMessages feedbackId={item.id} viewer="admin" />
                     </div>
                   )}
 

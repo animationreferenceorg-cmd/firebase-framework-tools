@@ -14,6 +14,7 @@ import { MessageSquare, Clock, CheckCircle2, User, Sparkles, CornerDownRight, Pl
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { FeedbackModal } from '@/components/FeedbackModal';
+import { FeedbackMessages } from '@/components/feedback/FeedbackMessages';
 
 interface UserFeedback {
   id: string;
@@ -24,6 +25,7 @@ interface UserFeedback {
   response?: string;
   respondedAt?: any;
   status?: string;
+  userId?: string;
 }
 
 const LAST_SEEN_KEY = 'feedback_last_seen';
@@ -223,6 +225,13 @@ export default function FeedbackPage() {
             <div className="ml-14 md:ml-16 pl-2 pt-1 flex items-center gap-2 text-xs text-zinc-500 italic">
               <Clock className="h-3.5 w-3.5 text-purple-400 animate-pulse" />
               Our team is reviewing your thread. Responses appear directly in this view.
+            </div>
+          )}
+
+          {/* Ongoing conversation: users can keep replying in the same thread. */}
+          {item.userId === user?.uid && (
+            <div className="relative z-10 ml-14 md:ml-16">
+              <FeedbackMessages feedbackId={item.id} viewer="user" tone="dark" />
             </div>
           )}
 

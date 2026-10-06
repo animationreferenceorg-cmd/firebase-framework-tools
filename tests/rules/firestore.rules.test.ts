@@ -232,3 +232,43 @@ describe('counters and social writes', () => {
     await assertSucceeds(setDoc(doc(sam, 'reference_board_saves/samBoard_c1'), { boardId: 'samBoard', clipId: 'c1', ownerId: 'sam' }));
   });
 });
+
+describe('feedback threads', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'feedback/f1'), { userId: 'alice', content: 'Videos not loading', status: 'read', response: 'Looking into it' });
+    });
+  });
+
+  const msg = (authorId: string, authorRole: string, body = 'Still broken for me') => ({ authorId, authorRole, body, createdAt: 1 });
+
+  it('the author can reply to their own thread and reopen it', async () => {
+    await assertSucceeds(setDoc(doc(alice(), 'feedback/f1/messages/m1'), msg('alice', 'user')));
+    await assertSucceeds(updateDoc(doc(alice(), 'feedback/f1'), { status: 'new', lastUserMessageAt: 2 }));
+    await assertSucceeds(getDocs(collection(alice(), 'feedback/f1/messages')));
+  });
+
+  it('the author cannot pose as admin or edit anything else on the thread', async () => {
+    await assertFails(setDoc(doc(alice(), 'feedback/f1/messages/m2'), msg('alice', 'admin')));
+    await assertFails(updateDoc(doc(alice(), 'feedback/f1'), { response: 'fake official reply' }));
+    await assertFails(updateDoc(doc(alice(), 'feedback/f1'), { status: 'archived' }));
+  });
+
+  it('other users cannot read or post in someone else’s thread', async () => {
+    const sam = env.authenticatedContext('sam').firestore();
+    await assertFails(getDocs(collection(sam, 'feedback/f1/messages')));
+    await assertFails(setDoc(doc(sam, 'feedback/f1/messages/m3'), msg('sam', 'user')));
+  });
+
+  it('admins can reply as admin', async () => {
+    const admin = env.authenticatedContext('admin1').firestore();
+    await assertSucceeds(setDoc(doc(admin, 'feedback/f1/messages/m4'), msg('admin1', 'admin', 'Fixed now, thanks!')));
+    await assertSucceeds(updateDoc(doc(admin, 'feedback/f1'), { status: 'read', lastAdminReplyAt: 3 }));
+  });
+
+  it('rejects empty or oversized messages', async () => {
+    await assertFails(setDoc(doc(alice(), 'feedback/f1/messages/m5'), msg('alice', 'user', '')));
+    await assertFails(setDoc(doc(alice(), 'feedback/f1/messages/m6'), msg('alice', 'user', 'x'.repeat(2001))));
+  });
+});

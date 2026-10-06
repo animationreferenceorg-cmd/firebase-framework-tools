@@ -159,6 +159,29 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
       allow write: if isAdmin();
+      // After replying, the author may only reopen their own thread for review.
+      allow update: if request.auth != null
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'lastUserMessageAt'])
+        && request.resource.data.status == 'new';
+
+      function isThreadOwner() {
+        return request.auth != null
+          && get(/databases/$(database)/documents/feedback/$(feedbackId)).data.userId == request.auth.uid;
+      }
+
+      // Ongoing replies. Users post as 'user' on their own threads; admins as 'admin'.
+      match /messages/{messageId} {
+        allow read: if isThreadOwner() || isAdmin();
+        allow create: if request.auth != null
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.body is string
+          && request.resource.data.body.size() > 0
+          && request.resource.data.body.size() <= 2000
+          && ((request.resource.data.authorRole == 'user' && isThreadOwner())
+              || (request.resource.data.authorRole == 'admin' && isAdmin()));
+        allow update, delete: if isAdmin();
+      }
     }
 
     // Users: Users can read/write their own document and any subcollections.

@@ -11,6 +11,7 @@ interface UserFeedback {
   id: string;
   response?: string;
   respondedAt?: any;
+  lastAdminReplyAt?: any;
 }
 
 const LAST_SEEN_KEY = 'feedback_last_seen';
@@ -36,11 +37,12 @@ export function UserFeedbackPanel() {
         })) as UserFeedback[];
 
         const lastSeen = parseInt(localStorage.getItem(LAST_SEEN_KEY) || '0', 10);
+        const toMillis = (t: any) => (t?.toDate ? t.toDate().getTime() : t ? new Date(t).getTime() : 0);
         const unseenItems = data.filter((item) => {
-          if (!item.response) return false;
-          if (!item.respondedAt) return true;
-          const time = item.respondedAt.toDate ? item.respondedAt.toDate().getTime() : new Date(item.respondedAt).getTime();
-          return time > lastSeen;
+          if (!item.response && !item.lastAdminReplyAt) return false;
+          if (!item.respondedAt && !item.lastAdminReplyAt) return true;
+          // The newest admin message, whether the first reply or a follow-up.
+          return Math.max(toMillis(item.respondedAt), toMillis(item.lastAdminReplyAt)) > lastSeen;
         });
 
         setUnseenCount(unseenItems.length);

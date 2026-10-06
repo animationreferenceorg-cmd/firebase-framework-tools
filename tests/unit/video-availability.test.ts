@@ -3,8 +3,8 @@ import { filterAvailableVideos, isVideoSourceAvailable, sanitizeVideoUrl } from 
 
 describe('video availability', () => {
   it('treats videos on offline hosts as unavailable', () => {
-    expect(isVideoSourceAvailable('https://assets.reflix.dev/previews/L3TR52T22TPVR.mp4')).toBe(false);
-    expect(isVideoSourceAvailable('https://ASSETS.REFLIX.DEV/previews/x.mp4')).toBe(false);
+    expect(isVideoSourceAvailable('https://offline-sample.com/previews/L3TR52T22TPVR.mp4')).toBe(false);
+    expect(isVideoSourceAvailable('https://OFFLINE-SAMPLE.COM/previews/x.mp4')).toBe(false);
   });
 
   it('keeps working hosts, embeds and empty URLs', () => {
@@ -15,11 +15,11 @@ describe('video availability', () => {
   });
 
   it('does not match look-alike hosts', () => {
-    expect(isVideoSourceAvailable('https://assets.reflix.dev.example.com/a.mp4')).toBe(true);
+    expect(isVideoSourceAvailable('https://offline-sample.com.example.com/a.mp4')).toBe(true);
   });
 
   it('filters lists', () => {
-    const list = [{ videoUrl: 'https://assets.reflix.dev/a.mp4' }, { videoUrl: 'https://storage.googleapis.com/a.mp4' }];
+    const list = [{ videoUrl: 'https://offline-sample.com/a.mp4' }, { videoUrl: 'https://storage.googleapis.com/a.mp4' }];
     expect(filterAvailableVideos(list)).toEqual([{ videoUrl: 'https://storage.googleapis.com/a.mp4' }]);
   });
 

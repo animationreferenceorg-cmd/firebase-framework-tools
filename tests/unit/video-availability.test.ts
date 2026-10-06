@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterAvailableVideos, isVideoSourceAvailable } from '@/lib/video-availability';
+import { filterAvailableVideos, isVideoSourceAvailable, sanitizeVideoUrl } from '@/lib/video-availability';
 
 describe('video availability', () => {
   it('treats videos on offline hosts as unavailable', () => {
@@ -21,5 +21,14 @@ describe('video availability', () => {
   it('filters lists', () => {
     const list = [{ videoUrl: 'https://assets.reflix.dev/a.mp4' }, { videoUrl: 'https://storage.googleapis.com/a.mp4' }];
     expect(filterAvailableVideos(list)).toEqual([{ videoUrl: 'https://storage.googleapis.com/a.mp4' }]);
+  });
+
+  it('sanitizes iframe embeds and youtube embed URLs', () => {
+    expect(sanitizeVideoUrl('<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" width="500"></iframe>'))
+      .toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    expect(sanitizeVideoUrl('https://www.youtube.com/embed/dQw4w9WgXcQ'))
+      .toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    expect(sanitizeVideoUrl('https://vz-1.b-cdn.net/g/playlist.m3u8'))
+      .toBe('https://vz-1.b-cdn.net/g/playlist.m3u8');
   });
 });

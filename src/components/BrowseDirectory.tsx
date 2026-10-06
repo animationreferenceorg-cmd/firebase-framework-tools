@@ -41,8 +41,17 @@ interface BrowseDirectoryProps {
 const DEFAULT_ITEMS_LIMIT = 48;
 const ITEMS_STEP = 36;
 
-const needsUnoptimized = (url?: string) =>
-    !!url && (url.includes('.b-cdn.net') || url.includes('cdninstagram.com') || url.includes('instagram.com'));
+export const needsUnoptimized = (url?: string) =>
+    !url ||
+    url.startsWith('data:') ||
+    url.startsWith('blob:') ||
+    url.includes('.b-cdn.net') ||
+    url.includes('cdninstagram.com') ||
+    url.includes('instagram.com') ||
+    url.includes('placehold.co') ||
+    url.includes('reflix.dev') ||
+    url.includes('ytimg.com');
+
 
 const formatCount = (count: number) => (count >= 1000 ? `${(count / 1000).toFixed(1)}k` : `${count}`);
 
@@ -358,7 +367,7 @@ export function BrowseDirectory({ categories, videos, query: controlledQuery, on
                                     >
                                         <div className="relative h-6 w-6 rounded-md overflow-hidden bg-black shrink-0 border border-white/10">
                                             {item.coverUrl ? (
-                                                <Image src={item.coverUrl} alt={item.title} fill className="object-cover" />
+                                                <Image src={item.coverUrl} alt={item.title} fill unoptimized={needsUnoptimized(item.coverUrl)} className="object-cover" />
                                             ) : (
                                                 <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
                                                     <Film className="h-3 w-3 text-white/50" />

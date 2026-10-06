@@ -334,7 +334,15 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   const aspectRatio = (video.isShort || poster) ? "aspect-[2/3]" : "aspect-[3/4] md:aspect-video";
 
   // Bypass Next.js image optimizer for external CDNs that block server-side fetches (403)
-  const isExternalCdn = imageUrl?.includes('.b-cdn.net') || imageUrl?.includes('cdninstagram.com') || imageUrl?.includes('instagram.com');
+  const isExternalCdn = !imageUrl ||
+    imageUrl.startsWith('data:') ||
+    imageUrl.startsWith('blob:') ||
+    imageUrl.includes('.b-cdn.net') ||
+    imageUrl.includes('cdninstagram.com') ||
+    imageUrl.includes('instagram.com') ||
+    imageUrl.includes('placehold.co') ||
+    imageUrl.includes('reflix.dev') ||
+    imageUrl.includes('ytimg.com');
 
   // Source for the lightweight native <video> fallback (only used when a card
   // has no thumbnail image). The grid no longer mounts hls.js players on hover —

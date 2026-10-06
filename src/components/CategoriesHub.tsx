@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Search, Sparkles } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
+import { filterAvailableVideos, isVideoSourceAvailable } from '@/lib/video-availability';
+
 const slugify = (text: string) =>
     text
         .toString()
@@ -37,7 +39,10 @@ export function CategoriesHub() {
                     getDocs(query(collection(db, 'categories'), where('status', '==', 'published'), limit(100))),
                 ]);
                 if (cancelled) return;
-                setVideos((vids as Video[]).filter((v) => !v.isShort));
+                const availableVideos = filterAvailableVideos(
+                    (vids as Video[]).filter((v) => !v.isShort)
+                );
+                setVideos(availableVideos);
                 setCategories(
                     catSnap.docs.map((d) => {
                         const data = d.data();
@@ -56,10 +61,12 @@ export function CategoriesHub() {
         };
     }, []);
 
-    // A random clip powers the hero video background, matching the home screen.
+    // A random playable clip powers the hero video background, matching the home screen.
     const heroVideo = useMemo(() => {
         if (videos.length === 0) return null;
-        return videos[Math.floor(Math.random() * videos.length)];
+        const candidates = videos.filter(v => isVideoSourceAvailable(v.videoUrl));
+        if (candidates.length === 0) return null;
+        return candidates[Math.floor(Math.random() * candidates.length)];
     }, [videos]);
 
     // As soon as the user types in the hero search, jump down to the results.

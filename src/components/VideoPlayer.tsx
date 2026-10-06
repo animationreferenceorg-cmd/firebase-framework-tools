@@ -22,7 +22,7 @@ import { StudyToolsPanel, VIEW_MODES, VIEW_MODE_FILTER, nextViewMode, type ViewM
 import { isForeignKeyTarget, isKeyboardTarget, registerPlayer, setHoveredPlayer } from '@/lib/player-focus';
 import { getEntitlements } from '@/lib/plans';
 import { resolveLoop, shouldWrapLoop } from '@/lib/loop-range';
-import { isVideoSourceAvailable } from '@/lib/video-availability';
+import { isVideoSourceAvailable, sanitizeVideoUrl } from '@/lib/video-availability';
 import { track } from '@/lib/analytics';
 import { useViewingQuota } from '@/hooks/use-viewing-quota';
 import { VideoQuotaSlate } from '@/components/VideoQuotaSlate';
@@ -166,8 +166,9 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
     const [playerReloadToken, setPlayerReloadToken] = React.useState(0);
     // Retries that failed again, so the overlay can say so instead of looking unchanged.
     const [failedRetries, setFailedRetries] = React.useState(0);
+    const cleanVideoUrl = React.useMemo(() => sanitizeVideoUrl(video.videoUrl), [video.videoUrl]);
     // Hosted on a library that went offline: no retry can ever succeed.
-    const sourceGone = !isVideoSourceAvailable(video.videoUrl);
+    const sourceGone = !isVideoSourceAvailable(cleanVideoUrl);
     const [fps, setFps] = React.useState<number>(video.fps || 24);
     const [isFlipped, setIsFlipped] = React.useState(false);
     const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -199,14 +200,14 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
     };
 
     // Onion skin decodes frames from the file itself, so embeds (YouTube etc.) can't use it.
-    const onionSupported = mediaEl !== null && typeof video.videoUrl === 'string' && video.videoUrl.length > 0;
+    const onionSupported = mediaEl !== null && typeof cleanVideoUrl === 'string' && cleanVideoUrl.length > 0 && !cleanVideoUrl.includes('youtube.com') && !cleanVideoUrl.includes('youtu.be');
 
     // A new video (or a reloaded player) starts with a clean loop and a fresh media element.
     React.useEffect(() => {
         setLoopIn(null);
         setLoopOut(null);
         setMediaEl(null);
-    }, [video.id, video.videoUrl, playerReloadToken]);
+    }, [video.id, cleanVideoUrl, playerReloadToken]);
 
     React.useEffect(() => registerPlayer(playerIdRef.current, () => containerRef.current), []);
 
@@ -225,7 +226,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
     React.useEffect(() => {
         setVideoError(false);
         setPlayerReloadToken(0);
-    }, [video.videoUrl]);
+    }, [cleanVideoUrl]);
 
     const stepFrame = React.useCallback((direction: 'forward' | 'backward') => {
         if (!playerRef.current) return;
@@ -580,7 +581,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                 {!sourceGone && <Player
                     key={`${video.id}-${playerReloadToken}`}
                     playerRef={playerRef}
-                    url={video.videoUrl}
+                    url={cleanVideoUrl}
                     video={video}
                     playing={isPlaying}
                     volume={volume}
@@ -627,7 +628,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                 {onionSupported && (
                     <OnionSkinOverlay
                         ref={onionRef}
-                        src={video.videoUrl}
+                        src={cleanVideoUrl}
                         mediaEl={mediaEl}
                         fps={fps}
                         settings={onionSettings}
@@ -721,7 +722,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                     <CreatorBadge
                         uploader={video.uploader}
                         originalUrl={video.originalUrl}
-                        videoUrl={video.videoUrl}
+                        videoUrl={cleanVideoUrl}
                     />
                 </div>
             ) : null}

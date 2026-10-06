@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Play, Info, Volume2, VolumeX } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { sanitizeVideoUrl, isVideoSourceAvailable } from '@/lib/video-availability';
 
 const ReactPlayer = dynamic(() => import('react-player'), { ssr: false });
 
@@ -19,6 +20,12 @@ export function BrowseHero({ video, children }: BrowseHeroProps) {
     const [isMuted, setIsMuted] = useState(true);
     const [isPlaying, setIsPlaying] = useState(true);
     const [showVideo, setShowVideo] = useState(false);
+
+    const cleanUrl = React.useMemo(() => {
+        return video?.videoUrl ? sanitizeVideoUrl(video.videoUrl) : undefined;
+    }, [video?.videoUrl]);
+
+    const isAvailable = Boolean(cleanUrl && isVideoSourceAvailable(cleanUrl));
 
     // Mount on client and delay video to prevent hydration mismatch
     useEffect(() => {
@@ -43,16 +50,16 @@ export function BrowseHero({ video, children }: BrowseHeroProps) {
                         className="absolute inset-0 bg-cover bg-center transition-opacity duration-700"
                         style={{
                             backgroundImage: `url(${video.thumbnailUrl || video.posterUrl})`,
-                            opacity: showVideo ? 0 : 1
+                            opacity: (showVideo && isAvailable) ? 0 : 1
                         }}
                     />
                 )}
 
                 {/* Video Player */}
-                {isMounted && video?.videoUrl && (
+                {isMounted && isAvailable && cleanUrl && (
                     <div className={`absolute inset-0 transition-opacity duration-1000 ${showVideo ? 'opacity-100' : 'opacity-0'}`}>
                         <ReactPlayer
-                            url={video.videoUrl}
+                            url={cleanUrl}
                             playing={isPlaying}
                             loop={true}
                             muted={isMuted}

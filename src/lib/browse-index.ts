@@ -24,8 +24,17 @@ export interface BrowseIndex {
 // room to avoid collisions.
 const MAX_CANDIDATES = 12;
 
+import { findCategoryThumbnailMatch } from './category-utils';
+
+function isValidCoverUrl(url?: string | null): boolean {
+    if (!url) return false;
+    const clean = url.trim().toLowerCase();
+    if (clean.includes('assets.reflix.dev')) return false;
+    return true;
+}
+
 function pushCandidate(list: string[], url: string) {
-    if (url && list.length < MAX_CANDIDATES && !list.includes(url)) list.push(url);
+    if (url && isValidCoverUrl(url) && list.length < MAX_CANDIDATES && !list.includes(url)) list.push(url);
 }
 
 /**
@@ -45,11 +54,16 @@ export function buildBrowseIndex(categories: Category[], videos: Video[]): Brows
     const categoryCandidates = new Map<string, string[]>();
     for (const c of categories) {
         categoryCounts[c.id] = 0;
-        categoryCandidates.set(c.id, c.imageUrl ? [c.imageUrl] : []);
+        const initialCands: string[] = [];
+        if (c.imageUrl && isValidCoverUrl(c.imageUrl)) {
+            initialCands.push(c.imageUrl);
+        }
+        categoryCandidates.set(c.id, initialCands);
     }
 
     for (const v of videos) {
         const cover = v.thumbnailUrl || v.posterUrl || '';
+        if (!isValidCoverUrl(cover)) continue;
 
         // Tags
         if (v.tags) {
@@ -59,11 +73,9 @@ export function buildBrowseIndex(categories: Category[], videos: Video[]): Brows
                 if (!key || seen.has(key)) continue; // don't double-count within one clip
                 seen.add(key);
                 tagCounts.set(key, (tagCounts.get(key) || 0) + 1);
-                if (cover) {
-                    const arr = tagCandidates.get(key) || [];
-                    pushCandidate(arr, cover);
-                    tagCandidates.set(key, arr);
-                }
+                const arr = tagCandidates.get(key) || [];
+                pushCandidate(arr, cover);
+                tagCandidates.set(key, arr);
             }
         }
 
@@ -71,7 +83,7 @@ export function buildBrowseIndex(categories: Category[], videos: Video[]): Brows
         for (const id of v.categoryIds || []) {
             if (id in categoryCounts) {
                 categoryCounts[id] += 1;
-                if (cover) pushCandidate(categoryCandidates.get(id)!, cover);
+                pushCandidate(categoryCandidates.get(id)!, cover);
             }
         }
     }
@@ -82,7 +94,7 @@ export function buildBrowseIndex(categories: Category[], videos: Video[]): Brows
     if (lacking.length) {
         for (const v of videos) {
             const cover = v.thumbnailUrl || v.posterUrl || '';
-            if (!cover) continue;
+            if (!isValidCoverUrl(cover)) continue;
             const title = (v.title || '').toLowerCase();
             const vtags = (v.tags || []).map((t) => t.toLowerCase());
             for (const c of lacking) {
@@ -102,7 +114,14 @@ export function buildBrowseIndex(categories: Category[], videos: Video[]): Brows
     const categoryCovers: Record<string, string> = {};
     for (const c of categories) {
         const cands = categoryCandidates.get(c.id) || [];
-        const pick = cands.find((u) => !used.has(u)) ?? cands[0];
+        let pick = cands.find((u) => !used.has(u)) ?? cands[0];
+        if (!pick) {
+            const fallbackVid = findCategoryThumbnailMatch(c, videos);
+            const fbThumb = fallbackVid?.thumbnailUrl || fallbackVid?.posterUrl;
+            if (fbThumb && isValidCoverUrl(fbThumb)) {
+                pick = fbThumb;
+            }
+        }
         if (pick) {
             used.add(pick);
             categoryCovers[c.id] = pick;

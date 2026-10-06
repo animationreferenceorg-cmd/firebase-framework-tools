@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { needsUnoptimized } from '@/components/BrowseDirectory';
 import { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -128,6 +129,7 @@ export function FeaturedCategoryRow({ title = "Featured Collections", categories
                                         fill
                                         className="object-cover transition-transform duration-700 group-hover/card:scale-110"
                                         sizes="(max-width: 640px) 85vw, 400px"
+                                        unoptimized={needsUnoptimized(category.imageUrl)}
                                         priority={index < 2} // Prioritize first few images
                                     />
                                 ) : (

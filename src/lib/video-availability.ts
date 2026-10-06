@@ -28,3 +28,23 @@ export function isVideoSourceAvailable(videoUrl: string | null | undefined): boo
 export function filterAvailableVideos<T extends { videoUrl?: string | null }>(videos: T[]): T[] {
   return videos.filter((v) => isVideoSourceAvailable(v.videoUrl));
 }
+
+/**
+ * Normalizes video URLs, extracting src from raw <iframe> strings and converting
+ * YouTube embed URLs to standard watch URLs for ReactPlayer compatibility.
+ */
+export function sanitizeVideoUrl(url?: string | null): string {
+  if (!url) return '';
+  let target = url.trim();
+  if (target.startsWith('<iframe')) {
+    const match = target.match(/src=["']([^"']+)["']/i);
+    if (match) target = match[1];
+  }
+  // Convert YouTube /embed/ into watch format so players don't choke
+  const ytMatch = target.match(/(?:youtube\.com\/embed\/|youtu\.be\/)([\w-]{11})/i);
+  if (ytMatch) {
+    return `https://www.youtube.com/watch?v=${ytMatch[1]}`;
+  }
+  return target;
+}
+

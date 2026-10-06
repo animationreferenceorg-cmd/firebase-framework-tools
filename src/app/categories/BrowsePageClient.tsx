@@ -6,6 +6,7 @@ import { collection, getDocs, query, limit, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getSnapshotVideos } from '@/lib/videoSnapshot';
 import type { Video, Category } from '@/lib/types';
+import { filterAvailableVideos, isVideoSourceAvailable } from '@/lib/video-availability';
 import { findCategoryThumbnailMatch } from '@/lib/category-utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { FilterBar, TabOption, TypeOption } from '@/components/FilterBar';
 import { VideoGrid } from '@/components/VideoGrid';
-import { BrowseDirectory } from '@/components/BrowseDirectory';
+import { BrowseDirectory, needsUnoptimized } from '@/components/BrowseDirectory';
 import {
     Dialog,
     DialogContent,
@@ -208,7 +209,7 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
             // The whole published library comes from the free static snapshot,
             // so filters and search below cover every video, not just loaded pages.
             const videos = await getSnapshotVideos();
-            setAllVideos(videos.filter(v => !v.isShort));
+            setAllVideos(filterAvailableVideos(videos.filter(v => !v.isShort)));
         } catch (error) {
             console.error("Error fetching videos:", error);
         } finally {
@@ -437,7 +438,8 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
     const heroVideo = useMemo(() => {
         if (allVideos.length === 0) return null;
         // Just pick one from the first few loaded
-        return allVideos[0];
+        const playable = allVideos.filter(v => isVideoSourceAvailable(v.videoUrl));
+        return playable[0] || null;
     }, [allVideos]);
 
     if (loading && allVideos.length === 0) {
@@ -707,7 +709,7 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
                             >
                                 <div className="h-12 w-12 rounded-lg bg-zinc-950 relative overflow-hidden shrink-0">
                                     {cat.imageUrl ? (
-                                        <Image src={cat.imageUrl} alt={cat.title} fill className="object-cover" />
+                                        <Image src={cat.imageUrl} alt={cat.title} fill unoptimized={needsUnoptimized(cat.imageUrl)} className="object-cover" />
                                     ) : (
                                         <div className="w-full h-full bg-zinc-800" />
                                     )}

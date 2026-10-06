@@ -2,10 +2,11 @@ import { Metadata } from 'next';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { getAllSnapshotVideos } from '@/lib/videoSnapshot.server';
+import { filterAvailableVideos, isVideoSourceAvailable, sanitizeVideoUrl } from '@/lib/video-availability';
 import type { Category, Video } from '@/lib/types';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Film, Sparkles, Search, Users, Clapperboard, Construction, Heart } from 'lucide-react';
+import { ArrowRight, Film, Sparkles, Users, Construction, Heart } from 'lucide-react';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { BrowseHero } from '@/components/BrowseHero';
@@ -28,6 +29,19 @@ const serializeVideo = (data: any): Video => {
     }
     return serialized as Video;
 };
+
+function getPreviewUrl(url?: string): string | undefined {
+    if (!url) return undefined;
+    let targetUrl: string | undefined = url.trim();
+    if (targetUrl.includes('playlist.m3u8')) {
+        targetUrl = targetUrl.replace('playlist.m3u8', 'play_480p.mp4');
+    } else if (targetUrl.startsWith('<iframe')) {
+        const match = targetUrl.match(/src=["']([^"']+)["']/);
+        targetUrl = match ? match[1] : undefined;
+    }
+    return targetUrl;
+}
+
 
 async function getCategoryBySlug(slug: string): Promise<Category | null> {
     try {
@@ -88,7 +102,10 @@ function getCategoryVideos(category: Category): Video[] {
             }
         }
 
-        return matches.slice(0, CATEGORY_VIDEO_LIMIT).map(v => serializeVideo(v));
+        // Filter out unavailable/offline video hosts so cards don't show error overlays
+        const availableMatches = filterAvailableVideos(matches);
+
+        return availableMatches.slice(0, CATEGORY_VIDEO_LIMIT).map(v => serializeVideo(v));
     } catch (error) {
         console.error("Error fetching category videos:", error);
         return [];
@@ -110,6 +127,10 @@ export async function generateMetadata(
     const title = category.seoTitle || `Animation References of ${category.title} | AnimationReference.org`;
     const description = category.seoDescription || category.description || `Browse the best curated ${category.title} animation references. High-quality clips for professional artists.`;
 
+    const ogImage = category.imageUrl && !category.imageUrl.startsWith('data:') && !category.imageUrl.includes('reflix.dev')
+        ? category.imageUrl
+        : undefined;
+
     return {
         title: title,
         description: description,
@@ -118,7 +139,7 @@ export async function generateMetadata(
             title: title,
             description: description,
             url: `https://animationreference.org/category/${slug}`,
-            images: category.imageUrl ? [category.imageUrl] : [],
+            images: ogImage ? [ogImage] : [],
         },
     };
 }
@@ -162,21 +183,22 @@ export default async function Page({ params }: Props) {
     };
 
     // Hero Logic
-    let heroVideo = null;
-    if (category.videoUrl) {
+    let heroVideo: Video | null = null;
+    const catCover = category.imageUrl && !category.imageUrl.startsWith('data:') ? category.imageUrl : (videos[0]?.thumbnailUrl || videos[0]?.posterUrl);
+    if (category.videoUrl && isVideoSourceAvailable(category.videoUrl)) {
         heroVideo = {
             id: 'category-hero',
             title: category.title,
             description: category.description,
-            thumbnailUrl: category.imageUrl,
-            posterUrl: category.imageUrl,
-            videoUrl: category.videoUrl,
+            thumbnailUrl: catCover,
+            posterUrl: catCover,
+            videoUrl: sanitizeVideoUrl(category.videoUrl),
             tags: category.tags,
             status: 'published'
         } as Video;
     } else if (videos.length > 0) {
-        // Pick random from videos
-        heroVideo = videos[Math.floor(Math.random() * videos.length)];
+        const playableCandidates = videos.filter(v => isVideoSourceAvailable(v.videoUrl));
+        heroVideo = playableCandidates.length > 0 ? playableCandidates[0] : null;
     }
 
     // Vault Preview Videos (take 4 for density)
@@ -411,7 +433,8 @@ export default async function Page({ params }: Props) {
                                         <div className="aspect-[4/3] bg-black rounded-lg mb-3 relative overflow-hidden">
                                             {/* Video Loop */}
                                             <video
-                                                src={video.videoUrl}
+                                                src={getPreviewUrl(video.videoUrl)}
+                                                poster={video.thumbnailUrl || video.posterUrl}
                                                 muted
                                                 loop
                                                 autoPlay

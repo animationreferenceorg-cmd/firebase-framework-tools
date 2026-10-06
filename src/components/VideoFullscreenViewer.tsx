@@ -18,7 +18,6 @@ import { ContactSheetModal } from '@/components/reference/ContactSheetModal';
 import { ProDownloadButton } from '@/components/ProDownloadButton';
 import { SaveToBoardModal } from '@/components/SaveToBoardModal';
 import { PricingDialog } from '@/components/PricingDialog';
-import { SendToMayaModal, MayaIcon } from '@/components/SendToMayaModal';
 import { useUser } from '@/hooks/use-user';
 import { getEntitlements } from '@/lib/plans';
 import { useViewingQuota } from '@/hooks/use-viewing-quota';
@@ -39,7 +38,6 @@ export function VideoFullscreenViewer({ video, title, description, onClose }: Vi
 
     const [showCompareModal, setShowCompareModal] = useState(false);
     const [showContactSheetModal, setShowContactSheetModal] = useState(false);
-    const [showMayaModal, setShowMayaModal] = useState(false);
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [showPricingDialog, setShowPricingDialog] = useState(false);
 
@@ -57,14 +55,6 @@ export function VideoFullscreenViewer({ video, title, description, onClose }: Vi
             return;
         }
         setShowContactSheetModal(true);
-    };
-
-    const handleMayaClick = () => {
-        if (!isPro) {
-            setShowPricingDialog(true);
-            return;
-        }
-        setShowMayaModal(true);
     };
 
     const handleSaveClick = () => {
@@ -132,21 +122,6 @@ export function VideoFullscreenViewer({ video, title, description, onClose }: Vi
                         )}
                     </Button>
 
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleMayaClick}
-                        className="h-9 px-2.5 sm:px-3 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/20 hover:text-white cursor-pointer flex items-center gap-1.5 transition-all"
-                        title="Send reference to Autodesk Maya via Animo"
-                    >
-                        <MayaIcon className="h-4 w-4 text-cyan-400" />
-                        <span className="hidden md:inline text-xs font-semibold">Maya Bridge</span>
-                        {!isPro && (
-                            <span className="text-[10px] font-bold text-amber-300 bg-amber-400/20 px-1 rounded border border-amber-400/30">
-                                PRO
-                            </span>
-                        )}
-                    </Button>
 
                     <Button
                         variant="ghost"
@@ -245,12 +220,6 @@ export function VideoFullscreenViewer({ video, title, description, onClose }: Vi
             <SaveToBoardModal
                 open={showSaveModal}
                 onOpenChange={setShowSaveModal}
-                video={video}
-            />
-
-            <SendToMayaModal
-                open={showMayaModal}
-                onOpenChange={setShowMayaModal}
                 video={video}
             />
 

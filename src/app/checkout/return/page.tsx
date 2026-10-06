@@ -116,7 +116,7 @@ function ReturnContent() {
                         </div>
                         <div className="flex items-center gap-2">
                             <LayoutGrid className="h-4 w-4 text-purple-400 shrink-0" />
-                            <span>Maya Bridge & Production Export</span>
+                            <span>Director Pitch Deck Export</span>
                         </div>
                     </div>
                 </div>

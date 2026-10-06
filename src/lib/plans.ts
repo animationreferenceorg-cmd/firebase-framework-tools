@@ -140,7 +140,6 @@ export interface Entitlements {
   canComparePlayblast: boolean;
   canExportHighResolution: boolean;
   canRemoveWatermark: boolean;
-  canUseMayaBridge: boolean;
   limits: PlanLimits;
 }
 
@@ -213,7 +212,6 @@ export function getEntitlements(profile: EntitlementProfile | null | undefined):
     canComparePlayblast: isPro,
     canExportHighResolution: isPro,
     canRemoveWatermark: isPro,
-    canUseMayaBridge: isPro,
     limits: ACCESS_LIMITS[access],
   };
 }

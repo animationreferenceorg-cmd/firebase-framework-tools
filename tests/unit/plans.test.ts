@@ -60,7 +60,7 @@ describe('entitlements', () => {
     const e = getEntitlements({});
     expect(e.access).toBe('free');
     expect(e.limits).toEqual({ maxBoards: 1, maxSavedReferences: 5, maxPortfolioPosts: 3, maxUnlockedReferences: 25 });
-    expect(e.canUsePrivateWorkspace || e.canComparePlayblast || e.canRemoveWatermark || e.canUseMayaBridge).toBe(false);
+    expect(e.canUsePrivateWorkspace || e.canComparePlayblast || e.canRemoveWatermark).toBe(false);
   });
 
   it.each([

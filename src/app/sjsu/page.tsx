@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { confirmSjsuVerificationCode, createUserProfile, requestSjsuVerificationCode } from '@/lib/firestore';
 import Link from 'next/link';
+import { isVideoSourceAvailable } from '@/lib/video-availability';
 
 // Expanded Default Animation Reference Video Pool
 const DEFAULT_ANIMATION_VIDEOS = [
@@ -157,12 +158,13 @@ export default function SjsuStudentPage() {
 
     async function loadDatabaseVideos() {
       try {
-        const q = query(collection(db, 'videos'), limit(25));
+        // Over-fetch: some library videos live on hosts that went offline and are skipped.
+        const q = query(collection(db, 'videos'), limit(60));
         const snap = await getDocs(q);
         const fetchedUrls: string[] = [];
         snap.forEach((doc) => {
           const data = doc.data();
-          if (data.videoUrl && typeof data.videoUrl === 'string' && data.videoUrl.startsWith('http')) {
+          if (data.videoUrl && typeof data.videoUrl === 'string' && data.videoUrl.startsWith('http') && isVideoSourceAvailable(data.videoUrl)) {
             fetchedUrls.push(data.videoUrl);
           }
         });

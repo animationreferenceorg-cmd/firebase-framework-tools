@@ -22,6 +22,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { saveShort, unsaveShort } from '@/lib/firestore';
 import Image from 'next/image';
+import { filterAvailableVideos } from '@/lib/video-availability';
 
 
 function RatingSelector({ onRate, hasRated, onRated }: { onRate: (rating: number) => void, hasRated: boolean, onRated: () => void }) {
@@ -135,7 +136,7 @@ export function ShortFilmDetailClient({ id }: { id: string }) {
               limit(10)
             );
             const relatedSnapshot = await getDocs(relatedQuery);
-            const relatedList = relatedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
+            const relatedList = filterAvailableVideos(relatedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video)));
             setRelatedVideos(relatedList);
           }
         } else {

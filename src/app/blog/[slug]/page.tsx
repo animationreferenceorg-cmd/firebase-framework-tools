@@ -8,6 +8,7 @@ import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Sparkles, Film } from 'lucide-react';
 import Link from 'next/link';
+import { filterAvailableVideos } from '@/lib/video-availability';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,7 +60,7 @@ export default async function SeoLandingPage({ params }: Props) {
             const videosRef = collection(db, 'videos');
             const q = query(videosRef, where(documentId(), 'in', post.videoIds));
             const snapshot = await getDocs(q);
-            videos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Video);
+            videos = filterAvailableVideos(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Video));
         } catch (error) {
             console.error("Error fetching associated videos for blog post:", error);
         }

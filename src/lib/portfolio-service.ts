@@ -16,6 +16,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage, auth } from "./firebase";
 import type { PortfolioItem, UserProfile, WipStage, Video } from "./types";
+import { isVideoSourceAvailable } from '@/lib/video-availability';
 
 const PORTFOLIO_COLLECTION = "portfolio_items";
 const USERS_COLLECTION = "users";
@@ -583,14 +584,16 @@ export async function createPortfolioItem(
 export async function getDatabaseVideosAsPortfolioItems(limitCount = 12): Promise<PortfolioItem[]> {
   try {
     const videosRef = collection(db, "videos");
-    const q = query(videosRef, limit(limitCount));
+    // Over-fetch: videos on hosts that went offline are skipped below.
+    const q = query(videosRef, limit(limitCount * 4));
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) return [];
+    const availableDocs = snapshot.docs.filter((d) => isVideoSourceAvailable(d.data().videoUrl)).slice(0, limitCount);
 
     const STAGES: WipStage[] = ['blocking', 'splining', 'polish', 'completed', 'concept'];
 
-    return snapshot.docs.map((docSnap, index) => {
+    return availableDocs.map((docSnap, index) => {
       const data = docSnap.data();
       const wipStage = STAGES[index % STAGES.length];
       const isWip = index % 2 === 1;

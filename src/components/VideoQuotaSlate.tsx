@@ -61,7 +61,7 @@ export function VideoQuotaSlate({
 
         {/* Headline */}
         <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white mb-2">
-          Unlock the Full 7,800+ Reference Library
+          Unlock the Full Reference Library
         </h2>
 
         {/* Friendly explanation: Re-watching unlocked clips is always free */}
@@ -73,7 +73,7 @@ export function VideoQuotaSlate({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full text-left mb-6 bg-white/[0.03] border border-white/10 rounded-2xl p-3.5 sm:p-4 text-xs">
           <div className="flex items-center gap-2 text-zinc-200">
             <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span>Unlimited 7,800+ clips</span>
+            <span>Unlimited reference studies</span>
           </div>
           <div className="flex items-center gap-2 text-zinc-200">
             <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />

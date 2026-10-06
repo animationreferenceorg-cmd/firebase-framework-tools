@@ -77,7 +77,7 @@ export default function PrinciplesGuide() {
                     <div>
                         <h2 className="text-4xl font-serif italic text-zinc-900 mb-4">Evidence in Motion</h2>
                         <p className="text-zinc-500 max-w-xl">
-                            We have curated thousands of clips specifically tagged by principle. Study these examples to see how academic concepts manifest in professional work.
+                            We have curated clips specifically tagged by principle. Study these examples to see how academic concepts manifest in professional work.
                         </p>
                     </div>
                     <Button asChild variant="outline" className="border-amber-900/20 text-amber-900 hover:bg-amber-900 hover:text-white">

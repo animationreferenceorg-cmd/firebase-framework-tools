@@ -1,4 +1,5 @@
 import type { Video } from './types';
+import { filterAvailableVideos } from './video-availability';
 
 // Static snapshot of all published, non-short videos, generated at build/deploy
 // time by scripts/export-videos-snapshot.cjs. Reading it costs zero Firestore
@@ -10,7 +11,8 @@ export function getSnapshotVideos(): Promise<Video[]> {
     cache = fetch('/data/videos-snapshot.json', { cache: 'force-cache' })
       .then(res => {
         if (!res.ok) throw new Error(`Failed to load video snapshot (${res.status})`);
-        return res.json() as Promise<Video[]>;
+        // Drop videos whose host went offline, even if an older snapshot still lists them.
+        return (res.json() as Promise<Video[]>).then(filterAvailableVideos);
       })
       .catch(err => {
         console.warn('Unable to fetch /data/videos-snapshot.json, using fallback:', err);

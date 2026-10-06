@@ -7,6 +7,7 @@ import type { Video } from '@/lib/types';
 import { VideoCard } from '@/components/VideoCard';
 import { Button } from '@/components/ui/button';
 import { Footprints, Zap, Wind, FastForward, Timer, Play, Layers, ArrowRight } from 'lucide-react';
+import { isVideoSourceAvailable } from '@/lib/video-availability';
 
 export const metadata: Metadata = {
     title: 'Walk & Run Cycle Reference Library | Professional Locomotion Animation',
@@ -28,7 +29,7 @@ async function getLocomotionVideos(): Promise<Video[]> {
     const videos = new Map<string, Video>();
     snapshots.flatMap((snapshot) => snapshot.docs).forEach((doc) => {
         const data = doc.data();
-        if (data.status !== 'draft') {
+        if (data.status !== 'draft' && isVideoSourceAvailable(data.videoUrl)) {
             videos.set(doc.id, { id: doc.id, ...data } as Video);
         }
     });

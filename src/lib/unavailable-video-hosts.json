@@ -1,0 +1,4 @@
+{
+  "_comment": "Video hosts whose files no longer load. reflix.dev went offline (DEPLOYMENT_DISABLED) and its CDN returns 403 for every file, taking ~7,400 hotlinked previews with it. Videos on these hosts are hidden from listings and shown as unavailable. Remove a host once its videos are re-hosted.",
+  "hosts": ["assets.reflix.dev"]
+}

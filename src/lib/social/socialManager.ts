@@ -6,6 +6,7 @@ import type { PostRequest, PostResult, SocialPlatform, SocialPostLog, SocialPlat
 import type { Video } from '../types';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase';
+import { isVideoSourceAvailable } from '@/lib/video-availability';
 
 const BASE_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://animationreference.org';
 
@@ -116,7 +117,8 @@ export async function selectDailyBotVideo(): Promise<Video | null> {
     if (snapshot.empty) return null;
 
     const videos = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Video));
-    const publishedVideos = videos.filter(v => (v.status === 'published' || !v.status) && v.videoUrl);
+    // Never auto-post a video whose host has gone offline.
+    const publishedVideos = videos.filter(v => (v.status === 'published' || !v.status) && v.videoUrl && isVideoSourceAvailable(v.videoUrl));
 
     if (publishedVideos.length === 0) return null;
 

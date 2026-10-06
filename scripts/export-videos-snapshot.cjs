@@ -10,6 +10,11 @@ require('dotenv').config({ path: '.env.local' });
 require('dotenv').config({ path: '.env' });
 
 const OUT_FILE = path.join(__dirname, '..', 'public', 'data', 'videos-snapshot.json');
+// Shared with src/lib/video-availability.ts: hosts whose files no longer load.
+const UNAVAILABLE_HOSTS = new Set(require('../src/lib/unavailable-video-hosts.json').hosts);
+function isAvailable(url) {
+  try { return !UNAVAILABLE_HOSTS.has(new URL(url).hostname.toLowerCase()); } catch { return true; }
+}
 
 function initDb() {
   const projectId = process.env.FIREBASE_PROJECT_ID;
@@ -79,7 +84,7 @@ async function retryWithAdc() {
   const snap = await db.collection('videos').get();
   const videos = snap.docs
     .map(d => ({ id: d.id, ...d.data() }))
-    .filter(v => v.status !== 'draft' && v.isShort !== true)
+    .filter(v => v.status !== 'draft' && v.isShort !== true && isAvailable(v.videoUrl))
     .map(v => ({
       id: v.id,
       type: v.type || 'video',

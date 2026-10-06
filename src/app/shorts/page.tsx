@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { VideoCard } from '@/components/VideoCard';
 import { SubmitShortFilmDialog } from '@/components/shorts/SubmitShortFilmDialog';
+import { isVideoSourceAvailable } from '@/lib/video-availability';
 
 /* ─── Helpers ─── */
 
@@ -106,7 +107,7 @@ export default function ShortFilmsStreamingPage() {
 
         // Drafts were previously shown alongside published films. Treat a
         // missing status as published so older records aren't dropped.
-        const published = rows.filter((v) => (v.status ?? 'published') === 'published');
+        const published = rows.filter((v) => (v.status ?? 'published') === 'published' && isVideoSourceAvailable(v.videoUrl));
 
         // Collapse duplicates — the same film re-imported under a second doc
         // shows up twice otherwise. Same source URL, or the same title, is the

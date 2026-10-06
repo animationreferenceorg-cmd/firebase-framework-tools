@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import type { Video } from './types';
+import { filterAvailableVideos } from './video-availability';
 
 // Server-side access to the static video snapshot generated at build time by
 // scripts/export-videos-snapshot.cjs. Reading it costs zero Firestore reads,
@@ -19,7 +20,8 @@ function load(): SnapshotCache {
     const file = path.join(process.cwd(), 'public', 'data', 'videos-snapshot.json');
     const mtimeMs = fs.statSync(file).mtimeMs;
     if (!cache || cache.mtimeMs !== mtimeMs) {
-        const videos = JSON.parse(fs.readFileSync(file, 'utf8')) as Video[];
+        // Drop videos whose host went offline, even if an older snapshot still lists them.
+        const videos = filterAvailableVideos(JSON.parse(fs.readFileSync(file, 'utf8')) as Video[]);
         cache = { videos, byId: new Map(videos.map(v => [v.id, v])), mtimeMs };
     }
     return cache;

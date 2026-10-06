@@ -22,6 +22,7 @@ import { StudyToolsPanel, VIEW_MODES, VIEW_MODE_FILTER, nextViewMode, type ViewM
 import { isForeignKeyTarget, isKeyboardTarget, registerPlayer, setHoveredPlayer } from '@/lib/player-focus';
 import { getEntitlements } from '@/lib/plans';
 import { resolveLoop, shouldWrapLoop } from '@/lib/loop-range';
+import { isVideoSourceAvailable } from '@/lib/video-availability';
 import { track } from '@/lib/analytics';
 import { useViewingQuota } from '@/hooks/use-viewing-quota';
 import { VideoQuotaSlate } from '@/components/VideoQuotaSlate';
@@ -163,6 +164,10 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
     const [playbackRate, setPlaybackRate] = React.useState(1);
     const [videoError, setVideoError] = React.useState(false);
     const [playerReloadToken, setPlayerReloadToken] = React.useState(0);
+    // Retries that failed again, so the overlay can say so instead of looking unchanged.
+    const [failedRetries, setFailedRetries] = React.useState(0);
+    // Hosted on a library that went offline: no retry can ever succeed.
+    const sourceGone = !isVideoSourceAvailable(video.videoUrl);
     const [fps, setFps] = React.useState<number>(video.fps || 24);
     const [isFlipped, setIsFlipped] = React.useState(false);
     const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -572,7 +577,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                     className={cn("absolute inset-0 transition-transform duration-200", isFlipped && "-scale-x-100")}
                     style={{ filter: VIEW_MODE_FILTER[viewMode] }}
                 >
-                <Player
+                {!sourceGone && <Player
                     key={`${video.id}-${playerReloadToken}`}
                     playerRef={playerRef}
                     url={video.videoUrl}
@@ -608,6 +613,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                         console.warn("Video Player Error:", e);
                         setIsPlaying(false);
                         setVideoError(true);
+                        if (playerReloadToken > 0) setFailedRetries(playerReloadToken);
                     }}
                     loop={loop}
                     config={{
@@ -617,7 +623,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                             } : {}
                         }
                     }}
-                />
+                />}
                 {onionSupported && (
                     <OnionSkinOverlay
                         ref={onionRef}
@@ -636,7 +642,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                 </div>
 
                 {/* Never strand the user on a black player when a source fails. */}
-                {videoError && (
+                {(videoError || sourceGone) && (
                     <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm rounded-lg gap-4 p-6 text-center">
                         <div className="w-16 h-16 bg-gradient-to-tr from-pink-500 to-purple-500 rounded-full flex items-center justify-center shadow-xl animate-bounce">
                             {video.originalUrl?.toLowerCase().includes('instagram.com') ? (
@@ -646,12 +652,18 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                             )}
                         </div>
                         <div>
-                            <p className="text-white font-bold text-lg mb-1">Video couldn't load</p>
-                            <p className="text-zinc-400 text-sm mb-4">
-                                {video.originalUrl ? 'Retry the player or open the original post.' : 'Retry the player to load this reference.'}
+                            <p className="text-white font-bold text-lg mb-1">
+                                {sourceGone ? 'This reference is unavailable' : "Video couldn't load"}
+                            </p>
+                            <p className="text-zinc-400 text-sm mb-4 max-w-sm mx-auto">
+                                {sourceGone
+                                    ? 'It was hosted by a third-party library that has gone offline. We’re working on restoring it.'
+                                    : failedRetries > 0
+                                        ? `Still couldn't load it after ${failedRetries === 1 ? 'a retry' : `${failedRetries} retries`}. The file may be temporarily unavailable — try again later${video.originalUrl ? ' or open the original post' : ''}.`
+                                        : video.originalUrl ? 'Retry the player or open the original post.' : 'Retry the player to load this reference.'}
                             </p>
                             <div className="flex flex-wrap items-center justify-center gap-3">
-                                <button
+                                {!sourceGone && <button
                                     type="button"
                                     onClick={(event) => {
                                         event.stopPropagation();
@@ -661,7 +673,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                                     className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-white/20"
                                 >
                                     Retry video
-                                </button>
+                                </button>}
                                 {video.originalUrl && (
                                     <a
                                         href={video.originalUrl}

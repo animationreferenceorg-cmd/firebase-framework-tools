@@ -4,6 +4,8 @@ import { getFirestore } from '@/lib/firebase-admin';
 import { apiErrorResponse, requireFirebaseUser } from '@/lib/api-auth';
 import { buildCheckoutSessionParams, CheckoutPlanError, priceForCheckout } from '@/lib/checkout';
 import { publicOrigin } from '@/lib/site-origin';
+import { PUBLIC_CONFIG_DEFAULTS, withDefault } from '@/lib/public-config';
+import { getIntroOffer } from '@/lib/plans';
 
 /**
  * Starts a Stripe Checkout session for `{ plan: 'pro_monthly' | 'pro_annual' }`.
@@ -36,7 +38,9 @@ export async function POST(req: NextRequest) {
         // Intro offer (first month at a lower price) only for people who have
         // never had a subscription on this customer, checked against Stripe so
         // cancel-and-resubscribe can't claim it again.
-        const introCouponId = process.env.STRIPE_PRO_INTRO_COUPON_ID?.trim() || null;
+        const configuredCoupon = withDefault(process.env.STRIPE_PRO_INTRO_COUPON_ID, PUBLIC_CONFIG_DEFAULTS.STRIPE_PRO_INTRO_COUPON_ID);
+        // The coupon only applies while the displayed intro offer is on, so price shown = price charged.
+        const introCouponId = configuredCoupon !== 'none' && getIntroOffer() ? configuredCoupon : null;
         let eligibleCoupon: string | null = null;
         if (introCouponId && plan === 'pro_monthly') {
             const previous = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 1 });

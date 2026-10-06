@@ -130,12 +130,23 @@ describe('POST /api/checkout (checkout redirect)', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 409 instead of charging monthly when annual is not configured', async () => {
-    vi.stubEnv('NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL', '');
+  it('returns 409 instead of charging monthly when annual is switched off', async () => {
+    // An unset value falls back to the built-in annual price (public-config.ts); "none" turns annual off.
+    vi.stubEnv('NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL', 'none');
     const { POST } = await import('@/app/api/checkout/route');
     const res = await POST(post('/api/checkout', { plan: 'pro_annual' }, 'token-alice'));
     expect(res.status).toBe(409);
     expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the built-in annual price when the env value is missing', async () => {
+    vi.stubEnv('NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL', '');
+    const { POST } = await import('@/app/api/checkout/route');
+    const res = await POST(post('/api/checkout', { plan: 'pro_annual' }, 'token-alice'));
+    expect(res.status).toBe(200);
+    expect(stripe.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({ line_items: [{ price: 'price_1UJd4X59QHehw05fqbQ2qZLs', quantity: 1 }] }),
+    );
   });
 });
 

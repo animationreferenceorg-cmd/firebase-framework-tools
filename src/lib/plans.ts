@@ -11,6 +11,8 @@
  * subscribers but never offered to new buyers.
  */
 
+import { PUBLIC_CONFIG_DEFAULTS, withDefault } from './public-config';
+
 export type CheckoutPlanId = 'pro_monthly' | 'pro_annual';
 export type LegacyTier = 'tier1' | 'tier2' | 'tier5';
 /** What a Stripe price grants. */
@@ -49,10 +51,11 @@ export interface PriceEnv {
  * literally, so read them here rather than via `process.env[name]`.
  */
 export function readPriceEnv(): PriceEnv {
+  // Defaults cover deploys whose build/runtime env lacks these public values (see public-config.ts).
   return {
-    NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY,
-    NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL,
-    NEXT_PUBLIC_PRO_INTRO_FIRST_MONTH_CENTS: process.env.NEXT_PUBLIC_PRO_INTRO_FIRST_MONTH_CENTS,
+    NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY: withDefault(process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY, PUBLIC_CONFIG_DEFAULTS.STRIPE_PRICE_PRO_MONTHLY),
+    NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL: withDefault(process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL, PUBLIC_CONFIG_DEFAULTS.STRIPE_PRICE_PRO_ANNUAL),
+    NEXT_PUBLIC_PRO_INTRO_FIRST_MONTH_CENTS: withDefault(process.env.NEXT_PUBLIC_PRO_INTRO_FIRST_MONTH_CENTS, PUBLIC_CONFIG_DEFAULTS.PRO_INTRO_FIRST_MONTH_CENTS),
   };
 }
 

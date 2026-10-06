@@ -57,7 +57,8 @@ export function CustomCheckoutModal({
     const [error, setError] = useState<string | null>(null);
     const [stripeAvailable, setStripeAvailable] = useState<boolean | null>(null);
     const [retryToken, setRetryToken] = useState(0);
-    const keyConfigured = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim());
+    // A built-in publishable key exists (public-config.ts), so this is always configured now.
+    const keyConfigured = true;
 
     const activeOffer = offers[selectedPlan].available ? offers[selectedPlan] : offers.pro_monthly;
     const { intro } = useIntroOffer();

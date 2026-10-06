@@ -1,4 +1,5 @@
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
+import { PUBLIC_CONFIG_DEFAULTS, withDefault } from './public-config';
 
 let stripePromise: Promise<Stripe | null> | null = null;
 
@@ -7,7 +8,7 @@ let stripePromise: Promise<Stripe | null> | null = null;
  * Returns null if the publishable key is not set.
  */
 export function getStripeClient(): Promise<Stripe | null> {
-  const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim();
+  const key = withDefault(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY, PUBLIC_CONFIG_DEFAULTS.STRIPE_PUBLISHABLE_KEY);
   if (!key) {
     return Promise.resolve(null);
   }

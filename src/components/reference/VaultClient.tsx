@@ -12,6 +12,9 @@ import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 import { createReferenceBoard, getUserReferenceBoards, getUserReferenceClips } from '@/lib/reference-service';
 import { isProProfile } from '@/lib/reference-utils';
+import { BoardCreationBlockedError, assertCanCreateBoard } from '@/lib/board-limits';
+import { LimitReachedDialog } from '@/components/LimitReachedDialog';
+import { PricingDialog } from '@/components/PricingDialog';
 import type { ReferenceBoard, ReferenceClip } from '@/lib/types';
 import { useSearchParams } from 'next/navigation';
 import { CaptureClipDialog } from './CaptureClipDialog';
@@ -31,6 +34,8 @@ export function VaultClient() {
   const [createOpen, setCreateOpen] = useState(false);
   const [boardTitle, setBoardTitle] = useState('');
   const [privateBoard, setPrivateBoard] = useState(false);
+  const [showLimitDialog, setShowLimitDialog] = useState(false);
+  const [showPricing, setShowPricing] = useState(false);
 
   const load = async () => {
     if (!user) return setLoading(false);
@@ -49,10 +54,19 @@ export function VaultClient() {
   const create = async () => {
     if (!userProfile || !boardTitle.trim()) return;
     try {
+      await assertCanCreateBoard(userProfile, privateBoard);
       await createReferenceBoard({ owner: userProfile, title: boardTitle, isPrivate: privateBoard });
       setBoardTitle(''); setPrivateBoard(false); setCreateOpen(false); await load();
       toast({ title: 'Board created' });
-    } catch (error: any) { toast({ variant: 'destructive', title: 'Could not create board', description: error.message }); }
+    } catch (error: any) {
+      if (error instanceof BoardCreationBlockedError) {
+        setCreateOpen(false);
+        if (error.block === 'board_limit') setShowLimitDialog(true);
+        else setShowPricing(true);
+        return;
+      }
+      toast({ variant: 'destructive', title: 'Could not create board', description: error.message });
+    }
   };
 
   if (authLoading) return <div className="py-32 text-center text-zinc-500">Opening your vault…</div>;
@@ -64,6 +78,8 @@ export function VaultClient() {
       <header className="mb-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-black uppercase tracking-[.2em] text-purple-300">Personal reference library</p><h1 className="mt-2 text-4xl font-black md:text-5xl">Your Vault</h1><p className="mt-2 text-zinc-400">Public curation and private project boards for your animations.</p></div><div className="flex gap-2"><CaptureClipDialog onCreated={load} initialUrl={sharedUrl} defaultOpen={Boolean(sharedUrl)} /><Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogTrigger asChild><Button variant="outline"><FolderPlus className="mr-2 h-4 w-4" />New board</Button></DialogTrigger><DialogContent className="border-white/10 bg-zinc-950 text-white"><DialogHeader><DialogTitle>Create a board</DialogTitle><DialogDescription>Build a focused, shareable motion playlist.</DialogDescription></DialogHeader><Input autoFocus value={boardTitle} onChange={(e) => setBoardTitle(e.target.value)} placeholder="Heavy Greatsword Combos" /><div className="flex items-center justify-between rounded-xl border border-white/10 p-3"><div><strong className="text-sm">Private board</strong><p className="text-xs text-zinc-500">Keep this board personal and outside public feeds</p></div><Switch checked={privateBoard} onCheckedChange={setPrivateBoard} /></div><Button onClick={create} disabled={!boardTitle.trim()} className="bg-purple-600 hover:bg-purple-500">Create board</Button></DialogContent></Dialog></div></header>
       <section><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-bold">Boards</h2><span className="text-sm text-zinc-500">{boards.length} collections</span></div>{boards.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{boards.map((board) => <Link key={board.id} href={`/board/${board.id}`} className="group rounded-2xl border border-white/10 bg-zinc-950/70 p-5 transition hover:border-purple-500/40"><div className="mb-8 flex items-center justify-between"><span className="grid h-10 w-10 place-items-center rounded-xl bg-purple-500/10 text-purple-300">{board.isPrivate ? <Lock className="h-5 w-5" /> : <Users className="h-5 w-5" />}</span><span className="text-xs text-zinc-500">{board.clipCount} clips</span></div><h3 className="text-lg font-bold group-hover:text-purple-200">{board.title}</h3><p className="mt-1 line-clamp-2 text-sm text-zinc-500">{board.description || (board.isPrivate ? 'Private project references' : 'Public, forkable playlist')}</p></Link>)}</div> : <Empty icon={<FolderPlus />} title="Create your first board" text="Organize references by shot, movement, character, or project." />}</section>
       <section className="mt-14"><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-bold">Clipped by you</h2><span className="text-sm text-zinc-500">{clips.length} moments</span></div>{clips.length ? <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">{clips.map((clip) => <ReferenceClipCard clip={clip} key={clip.id} onDeleted={(clipId) => setClips((current) => current.filter((item) => item.id !== clipId))} />)}</div> : <Empty icon={<Scissors />} title="Capture your first moment" text="Paste a timestamp here, or use the browser extension while you browse." />}</section>
+      <LimitReachedDialog open={showLimitDialog} onOpenChange={setShowLimitDialog} feature="moodboards" onUpgradeClick={() => setShowPricing(true)} />
+      <PricingDialog open={showPricing} onOpenChange={setShowPricing} />
     </main>
   );
 }

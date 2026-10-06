@@ -1,21 +1,14 @@
 import type { NextRequest } from 'next/server';
 import { ApiError, apiErrorResponse, getTrustedProfile, profileHasPro, requireFirebaseUser } from '@/lib/api-auth';
 import { getFirebaseStorage, getFirestore } from '@/lib/firebase-admin';
+import { resolveDownloadUrl } from '@/lib/download-url';
 
 // Pro-only clean MP4 download. The player streams for free; this route is the
 // one place that hands out a download link, and it re-checks Pro server-side
 // from the Admin SDK profile rather than trusting anything the client sends.
 
-const DIRECT_FILE = /\.(mp4|webm|mov)(\?|$)|firebasestorage|b-cdn\.net|assets\.reflix\.dev/i;
-
 function slugify(title: string) {
   return (title || 'reference').replace(/[^\w\s-]/g, '').trim().toLowerCase().replace(/\s+/g, '-') || 'reference';
-}
-
-function directUrl(raw: unknown): string | null {
-  if (typeof raw !== 'string') return null;
-  const url = raw.trim().replace('playlist.m3u8', 'play_720p.mp4');
-  return url.startsWith('https://') && DIRECT_FILE.test(url) ? url : null;
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -39,7 +32,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const video = videoSnap.data()!;
       if (video.status && video.status !== 'published') throw new ApiError(404, 'NOT_FOUND', 'Video not found.');
       title = video.title;
-      url = directUrl(video.videoUrl);
+      url = await resolveDownloadUrl(video.videoUrl);
     } else if (clipSnap.exists) {
       const clip = clipSnap.data()!;
       if (clip.isPrivate && clip.creatorId !== identity.uid) throw new ApiError(403, 'FORBIDDEN', 'This clip is private.');
@@ -47,7 +40,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (clip.storagePath && !String(clip.storagePath).startsWith('bunny/')) {
         [url] = await getFirebaseStorage().bucket().file(clip.storagePath).getSignedUrl({ action: 'read', expires: Date.now() + 5 * 60 * 1000 });
       } else {
-        url = directUrl(clip.uploadedMediaUrl) || directUrl(clip.sourceUrl);
+        url = (await resolveDownloadUrl(clip.uploadedMediaUrl)) || (await resolveDownloadUrl(clip.sourceUrl));
       }
     } else {
       throw new ApiError(404, 'NOT_FOUND', 'Video not found.');

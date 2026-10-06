@@ -290,7 +290,38 @@ export function PitchDeckExportModal({
       });
       return;
     }
-    window.print();
+    printDeck();
+  };
+
+  // Radix portals the dialog into a body-level <div> that carries no identifying
+  // attribute, so the print stylesheet can't target it. Mark it for the duration
+  // of the print instead; everything else on the page is hidden while marked.
+  const printDeck = () => {
+    const area = printContainerRef.current;
+    if (!area) {
+      window.print();
+      return;
+    }
+    let root: HTMLElement = area;
+    while (root.parentElement && root.parentElement !== document.body) root = root.parentElement;
+
+    const cleanup = () => {
+      document.body.removeAttribute('data-pitch-printing');
+      root.removeAttribute('data-pitch-print-root');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    document.body.setAttribute('data-pitch-printing', 'true');
+    root.setAttribute('data-pitch-print-root', 'true');
+    window.addEventListener('afterprint', cleanup);
+    // Let the attribute change apply before the print snapshot is taken.
+    requestAnimationFrame(() => {
+      try {
+        window.print();
+      } finally {
+        // Browsers that return from print() without firing afterprint still get cleaned up.
+        setTimeout(cleanup, 1000);
+      }
+    });
   };
 
   // Copy Markdown summary for Slack/Notion/Discord
@@ -912,22 +943,21 @@ export function PitchDeckExportModal({
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
-            body > *:not([data-radix-portal]),
-            [data-radix-portal] > [data-state="open"]:first-child,
-            [data-radix-focus-guard],
-            button,
-            #pitch-deck-modal-header,
-            #pitch-deck-config-sidebar {
+            /* While printing, hide the whole app except the dialog's portal (marked
+               by printDeck), plus the overlay, buttons and editor chrome inside it. */
+            body[data-pitch-printing] > *:not([data-pitch-print-root]),
+            [data-pitch-print-root] > :not([role="dialog"]),
+            [data-pitch-print-root] button,
+            [data-pitch-print-root] #pitch-deck-modal-header,
+            [data-pitch-print-root] #pitch-deck-config-sidebar {
               display: none !important;
             }
-            /* Radix renders the dialog in a body portal. Keep the portal and the
-               actual dialog visible; only its overlay and editor chrome are hidden. */
-            body > [data-radix-portal],
-            body > [data-radix-portal] > [role="dialog"] {
+            body[data-pitch-printing] > [data-pitch-print-root],
+            body[data-pitch-printing] > [data-pitch-print-root] > [role="dialog"] {
               display: block !important;
               visibility: visible !important;
             }
-            [role="dialog"] {
+            [data-pitch-print-root] [role="dialog"] {
               position: static !important;
               transform: none !important;
               max-width: 100% !important;

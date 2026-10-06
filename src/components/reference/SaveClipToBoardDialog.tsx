@@ -35,6 +35,9 @@ import {
   saveClipToBoard,
 } from '@/lib/reference-service';
 import { MoodboardService } from '@/lib/moodboard-service';
+import { BoardCreationBlockedError, assertCanCreateBoard } from '@/lib/board-limits';
+import { LimitReachedDialog } from '@/components/LimitReachedDialog';
+import { PricingDialog } from '@/components/PricingDialog';
 import type { ReferenceBoard, ReferenceClip, Video } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -70,6 +73,8 @@ export function SaveClipToBoardDialog({
   const [newTitle, setNewTitle] = useState('');
   const [isPrivate, setIsPrivate] = useState(clip?.isPrivate ?? false);
   const [creating, setCreating] = useState(false);
+  const [showLimitDialog, setShowLimitDialog] = useState(false);
+  const [showPricing, setShowPricing] = useState(false);
 
   // Fetch user boards and which boards already contain this clip
   useEffect(() => {
@@ -228,6 +233,7 @@ export function SaveClipToBoardDialog({
 
     setCreating(true);
     try {
+      await assertCanCreateBoard(userProfile, isPrivate);
       const boardId = await createReferenceBoard({
         owner: userProfile,
         title: titleToCreate,
@@ -281,6 +287,13 @@ export function SaveClipToBoardDialog({
         onOpenChange(false);
       }, 650);
     } catch (error: any) {
+      if (error instanceof BoardCreationBlockedError) {
+        // Close this dialog first so the upgrade prompt isn't stacked behind it.
+        onOpenChange(false);
+        if (error.block === 'board_limit') setShowLimitDialog(true);
+        else setShowPricing(true);
+        return;
+      }
       console.error('Failed to create board:', error);
       toast({
         variant: 'destructive',
@@ -300,6 +313,7 @@ export function SaveClipToBoardDialog({
   );
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="border-white/10 bg-zinc-950/95 text-white backdrop-blur-2xl sm:max-w-md rounded-3xl p-6 shadow-2xl">
         <DialogHeader className="text-left space-y-1">
@@ -596,5 +610,8 @@ export function SaveClipToBoardDialog({
         )}
       </DialogContent>
     </Dialog>
+    <LimitReachedDialog open={showLimitDialog} onOpenChange={setShowLimitDialog} feature="moodboards" onUpgradeClick={() => setShowPricing(true)} />
+    <PricingDialog open={showPricing} onOpenChange={setShowPricing} />
+    </>
   );
 }

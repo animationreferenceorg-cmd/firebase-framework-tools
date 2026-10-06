@@ -11,12 +11,30 @@ service cloud.firestore {
       );
     }
 
+    // Mirrors getEntitlements(...).isPro in src/lib/plans.ts: admins, SJSU/VIP
+    // passes, and paid Pro plans whose subscription hasn't ended.
+    function profileIsPro(p) {
+      return p.get('role', 'user') == 'admin'
+        || p.get('tier', '') == 'student_unlimited'
+        || p.get('isVIP', false) == true
+        || p.get('unlimitedAccess', false) == true
+        || (p.get('isPremium', false) == true
+            && !(p.get('subscriptionStatus', '') in ['canceled', 'unpaid', 'incomplete_expired', 'incomplete', 'paused'])
+            && (p.get('plan', '') in ['pro_monthly', 'pro_annual', 'tier5'] || p.get('tier', '') == 'tier5'));
+    }
+
     function isPro() {
-      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') == 'admin' ||
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isPremium', false) == true &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('tier', 'free') == 'tier5')
-      );
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && profileIsPro(get(/databases/$(database)/documents/users/$(request.auth.uid)).data);
+    }
+
+    // Making something private (boards, clips) is a Pro feature; keeping an
+    // existing private item private is always allowed.
+    function privacyAllowed() {
+      return request.resource.data.get('isPrivate', false) != true
+        || (resource != null && resource.data.get('isPrivate', false) == true)
+        || isPro();
     }
 
     function canReadBoard(boardId) {
@@ -169,7 +187,10 @@ service cloud.firestore {
               'isVIP', 'unlimitedAccess', 'isStudent']);
       allow read, write: if isAdmin();
     }
-    match /users/{userId}/{document=**} {
+    // Subcollections only. `{document=**}` directly under {userId} would also
+    // match zero segments, i.e. the profile doc itself, and bypass the
+    // entitlement guard above.
+    match /users/{userId}/{subcollection}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
       allow read, write: if isAdmin();
     }
@@ -246,9 +267,9 @@ service cloud.firestore {
       allow read: if resource.data.isPrivate == false
         || (request.auth != null && resource.data.ownerId == request.auth.uid)
         || isAdmin();
-      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid && privacyAllowed();
       allow update: if request.auth != null && (
-        (resource.data.ownerId == request.auth.uid && request.resource.data.ownerId == resource.data.ownerId)
+        (resource.data.ownerId == request.auth.uid && request.resource.data.ownerId == resource.data.ownerId && privacyAllowed())
         || isAdmin()
       );
       // Anyone signed in may follow/unfollow: the counter moves by one in the
@@ -267,9 +288,16 @@ service cloud.firestore {
     }
 
     match /reference_clips/{clipId} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null && (resource.data.creatorId == request.auth.uid || isAdmin());
+      // Private clips (studio/NDA uploads) are visible only to their creator.
+      // List queries from other users must filter on isPrivate == false.
+      allow read: if resource.data.isPrivate == false
+        || (request.auth != null && resource.data.creatorId == request.auth.uid)
+        || isAdmin();
+      allow create: if request.auth != null && request.resource.data.creatorId == request.auth.uid && privacyAllowed();
+      allow update: if request.auth != null && (
+        (resource.data.creatorId == request.auth.uid && request.resource.data.creatorId == resource.data.creatorId && privacyAllowed())
+        || isAdmin()
+      );
       // Saving another creator's clip to your board moves its save counter by one.
       allow update: if request.auth != null
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['saveCount'])

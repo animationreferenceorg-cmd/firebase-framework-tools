@@ -95,13 +95,19 @@ export async function createReferenceClip(input: Omit<ReferenceClip, 'id' | 'sav
 }
 
 export async function getReferenceClip(clipId: string): Promise<ReferenceClip | null> {
-  const snap = await getDoc(doc(db, CLIPS, clipId));
-  return snap.exists() ? withId<ReferenceClip>(snap) : null;
+  try {
+    const snap = await getDoc(doc(db, CLIPS, clipId));
+    return snap.exists() ? withId<ReferenceClip>(snap) : null;
+  } catch {
+    // Another user's private clip is unreadable under the rules; treat it as missing.
+    return null;
+  }
 }
 
 export async function getPublicReferenceClips(max = 60): Promise<ReferenceClip[]> {
   try {
-    const snaps = await getDocs(query(collection(db, CLIPS), limit(max)));
+    // The rules only let other users list public clips, so the query must say so.
+    const snaps = await getDocs(query(collection(db, CLIPS), where('isPrivate', '==', false), limit(max)));
     const clips = snaps.docs
       .map((item) => withId<ReferenceClip>(item))
       .filter((clip) => !clip.isPrivate && !clip.removedFromCreatorAt);

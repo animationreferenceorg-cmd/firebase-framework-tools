@@ -68,16 +68,14 @@ export const UsernameSetupModal: React.FC<UsernameSetupModalProps> = ({
       } catch (e) {}
 
       // Trigger automated welcome email via Resend
+      // The server sends to the account's own email, once; it reads name and handle from the profile.
       if (auth.currentUser.email) {
-        fetch('/api/send-welcome-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: auth.currentUser.email,
-            displayName: userProfile?.displayName || auth.currentUser.displayName || 'Animator',
-            username: cleanHandle,
-          }),
-        }).catch((err) => console.warn('Welcome email trigger skipped:', err));
+        auth.currentUser.getIdToken()
+          .then((idToken) => fetch('/api/send-welcome-email', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${idToken}` },
+          }))
+          .catch((err) => console.warn('Welcome email trigger skipped:', err));
       }
 
       toast({

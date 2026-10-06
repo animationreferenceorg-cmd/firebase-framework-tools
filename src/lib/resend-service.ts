@@ -4,6 +4,16 @@ import { Resend } from 'resend';
 const resendApiKey = process.env.RESEND_API_KEY || '';
 export const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
+/** Escapes user-supplied text before it goes into email HTML (names, titles, messages). */
+function esc(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export interface FounderEmailPayload {
   toEmail: string;
   displayName: string;
@@ -42,12 +52,12 @@ export async function sendFounderDealWelcomeEmail({ toEmail, displayName, userna
       <body>
         <div class="container">
           <div class="badge">🎁 7-Day Free Trial • $2/mo Lifetime Deal</div>
-          <h1>Welcome to AnimationReference, ${displayName}!</h1>
+          <h1>Welcome to AnimationReference, ${esc(displayName)}!</h1>
           <p>Claim your personal animator portfolio handle and start sharing your blocking passes, WIPs, and reels with studio recruiters.</p>
           
           <div class="highlight-box">
             <div style="font-weight: 800; font-size: 14px; color: #c084fc; margin-bottom: 10px;">✨ What's Included in Your Portfolio:</div>
-            <div class="feature-item">🌐 <strong>Custom Profile URL</strong>: animationreference.org/${handleSlug}</div>
+            <div class="feature-item">🌐 <strong>Custom Profile URL</strong>: animationreference.org/${esc(handleSlug)}</div>
             <div class="feature-item">🎬 <strong>Frame Scrubber</strong>: Pick keyframe cover thumbnails for video passes</div>
             <div class="feature-item">🏷️ <strong>Software & Hashtags</strong>: Tag Maya, Blender, Unreal, & mechanics</div>
             <div class="feature-item">🔒 <strong>$2/mo Lifetime Price Lock</strong>: Never upcharged as long as active</div>
@@ -96,7 +106,7 @@ export async function sendCrewApplicationEmail({ toEmail, ownerName, applicantNa
     return { success: false, message: "RESEND_API_KEY not configured" };
   }
 
-  const projectLink = `https://animationreference.org/studio/projects/${projectId}`;
+  const projectLink = `https://animationreference.org/studio/projects/${encodeURIComponent(projectId)}`;
   const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -113,9 +123,9 @@ export async function sendCrewApplicationEmail({ toEmail, ownerName, applicantNa
       </head>
       <body>
         <div class="container">
-          <h1>🎬 ${applicantName} wants to join ${projectTitle}</h1>
-          <p>Hey ${ownerName}, you've got a new crew application${roleTitle ? ` for <strong>${roleTitle}</strong>` : ''}.</p>
-          <div class="quote">"${message}"</div>
+          <h1>🎬 ${esc(applicantName)} wants to join ${esc(projectTitle)}</h1>
+          <p>Hey ${esc(ownerName)}, you've got a new crew application${roleTitle ? ` for <strong>${esc(roleTitle)}</strong>` : ''}.</p>
+          <div class="quote">"${esc(message)}"</div>
           <a href="${projectLink}" class="btn">Review Application</a>
         </div>
       </body>
@@ -151,7 +161,7 @@ export async function sendCrewAcceptedEmail({ toEmail, applicantName, projectTit
     return { success: false, message: "RESEND_API_KEY not configured" };
   }
 
-  const projectLink = `https://animationreference.org/studio/projects/${projectId}`;
+  const projectLink = `https://animationreference.org/studio/projects/${encodeURIComponent(projectId)}`;
   const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -167,8 +177,8 @@ export async function sendCrewAcceptedEmail({ toEmail, applicantName, projectTit
       </head>
       <body>
         <div class="container">
-          <h1>🎉 You're in, ${applicantName}!</h1>
-          <p>You've been accepted onto the crew for <strong>${projectTitle}</strong>. Head over to the Crew tab to see your onboarding checklist and say hi in the chat.</p>
+          <h1>🎉 You're in, ${esc(applicantName)}!</h1>
+          <p>You've been accepted onto the crew for <strong>${esc(projectTitle)}</strong>. Head over to the Crew tab to see your onboarding checklist and say hi in the chat.</p>
           <a href="${projectLink}" class="btn">Go to Production</a>
         </div>
       </body>

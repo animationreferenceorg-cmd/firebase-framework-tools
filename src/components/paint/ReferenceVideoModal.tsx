@@ -31,40 +31,32 @@ export interface ReferenceVideoItem {
   isSaved?: boolean;
 }
 
-const CURATED_REFERENCES: ReferenceVideoItem[] = [
+// Fallback list when the library snapshot can't load. Hosted in our own
+// bucket; the previous Google sample videos now return 403.
+export const CURATED_REFERENCES: ReferenceVideoItem[] = [
   {
-    id: 'ref-1',
-    title: 'Character Walk & Weight Locomotion',
-    category: 'LOCOMOTION',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80',
-    isLiked: true,
+    id: "0CNOPrh8f6WCFnLUFieR",
+    title: "Video by nathan.engelhardt",
+    category: "DISNEY",
+    videoUrl: "https://storage.googleapis.com/aniamtion-reference.firebasestorage.app/videos/53661796-3f97-4c8a-a198-a7dd4bfef741.mp4",
+    thumbnailUrl: "https://storage.googleapis.com/aniamtion-reference.firebasestorage.app/thumbnails/0CNOPrh8f6WCFnLUFieR.jpg",
   },
   {
-    id: 'ref-2',
-    title: 'Sword Attack & Combat Reaction',
-    category: 'COMBAT',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop&q=80',
-    isLiked: true,
+    id: "0B7G3eA6jD4mTYGQJR6e",
+    title: "Video by illusionxrstudio",
+    category: "ILLUSION XR STUDIO",
+    videoUrl: "https://storage.googleapis.com/aniamtion-reference.firebasestorage.app/videos/a18a5aa0-ad23-4d8a-b989-54285b560ff1.mp4",
+    thumbnailUrl: "https://storage.googleapis.com/aniamtion-reference.firebasestorage.app/thumbnails/0B7G3eA6jD4mTYGQJR6e.jpg",
   },
   {
-    id: 'ref-3',
-    title: 'Dynamic Acrobat Jump & Arc',
-    category: 'ACTING',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
-    isLiked: true,
-  },
-  {
-    id: 'ref-4',
-    title: 'Creature Quadruped Run Cycle',
-    category: 'CREATURE',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyflights.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1563089145-599997674d42?w=800&auto=format&fit=crop&q=80',
-    isLiked: true,
+    id: "0Z0I4SlXmNPaxyqvcXyS",
+    title: "Video by reinmartens",
+    category: "REIN MARTENS",
+    videoUrl: "https://storage.googleapis.com/aniamtion-reference.firebasestorage.app/videos/09d9cfdb-fb16-46ec-a77a-66e7d9180adf.mp4",
+    thumbnailUrl: "https://storage.googleapis.com/aniamtion-reference.firebasestorage.app/thumbnails/0Z0I4SlXmNPaxyqvcXyS.jpg",
   },
 ];
+const CURATED_IDS = new Set(CURATED_REFERENCES.map((r) => r.id));
 
 interface ReferenceVideoModalProps {
   onSelectVideo: (video: ReferenceVideoItem) => void;
@@ -137,7 +129,8 @@ export function ReferenceVideoModal({ onSelectVideo, onClose }: ReferenceVideoMo
 
     if (!matchesSearch) return false;
 
-    if (activeTab === 'LIKED') return v.isLiked || v.id.startsWith('ref-');
+    // The built-in starter references always show here, so the tab is never empty.
+    if (activeTab === 'LIKED') return v.isLiked || CURATED_IDS.has(v.id);
     if (activeTab === 'SAVED') return v.isSaved || v.isLiked;
     if (activeTab === 'ALL') return true;
     return v.category?.includes(activeTab);

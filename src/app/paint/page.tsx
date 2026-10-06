@@ -10,7 +10,7 @@ import { ToolOptionsBar } from '@/components/paint/ToolOptionsBar';
 import { ProcreateBrushStudio } from '@/components/paint/ProcreateBrushStudio';
 import { BrushContextMenu } from '@/components/paint/BrushContextMenu';
 import { CanvasSettingsDialog } from '@/components/paint/CanvasSettingsDialog';
-import { ReferenceVideoModal, type ReferenceVideoItem } from '@/components/paint/ReferenceVideoModal';
+import { CURATED_REFERENCES, ReferenceVideoModal, type ReferenceVideoItem } from '@/components/paint/ReferenceVideoModal';
 import { ReferenceComparisonModal } from '@/components/paint/ReferenceComparisonModal';
 import { ReferenceOverlay } from '@/components/paint/ReferenceOverlay';
 import { NewProjectModal } from '@/components/paint/NewProjectModal';
@@ -1713,11 +1713,7 @@ export default function PaintPage() {
           isOpen={showComparisonModal}
           onClose={() => setShowComparisonModal(false)}
           primaryVideo={activeReferenceVideo}
-          availableVideos={[
-            { id: '1', title: 'Action Parkour Flip', category: 'Locomotion', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4' },
-            { id: '2', title: 'Sword Combat Strike', category: 'Combat', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4' },
-            { id: '3', title: 'Heavy Weight Lifting', category: 'Acting', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4' },
-          ]}
+          availableVideos={CURATED_REFERENCES}
         />
       )}
 
@@ -1744,6 +1740,7 @@ export default function PaintPage() {
         frames={displayFrames}
         canvasSize={canvasSize}
         fps={fps}
+        referenceVideo={isPinnedToCanvas && activeReferenceVideo ? { videoUrl: activeReferenceVideo.videoUrl, opacity: tracingOpacity } : null}
       />
     </div>
   );

@@ -34,15 +34,9 @@ import { isVideoSourceAvailable } from '@/lib/video-availability';
 
 // Expanded Default Animation Reference Video Pool
 const DEFAULT_ANIMATION_VIDEOS = [
-  'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-  'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-  'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-  'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-  'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-  'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
-  'https://storage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
-  'https://storage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnTheGrid.mp4',
-  'https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+  "https://storage.googleapis.com/aniamtion-reference.firebasestorage.app/videos/53661796-3f97-4c8a-a198-a7dd4bfef741.mp4",
+  "https://storage.googleapis.com/aniamtion-reference.firebasestorage.app/videos/a18a5aa0-ad23-4d8a-b989-54285b560ff1.mp4",
+  "https://storage.googleapis.com/aniamtion-reference.firebasestorage.app/videos/09d9cfdb-fb16-46ec-a77a-66e7d9180adf.mp4",
 ];
 
 // Use the current site mark instead of the legacy embedded logo data.

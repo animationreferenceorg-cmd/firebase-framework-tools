@@ -17,6 +17,8 @@ import type { Frame, CanvasSize } from '@/lib/paint/types';
 import { createLayerCanvas } from '@/lib/paint/engine';
 import { serializeProject, downloadProject } from '@/lib/paint/persistence';
 import { Layers } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { playFramesIntoCanvas, renderFramesWithReference, type ReferenceExportOptions } from '@/lib/paint/reference-export';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -24,6 +26,8 @@ interface ExportModalProps {
   frames: Frame[];
   canvasSize: CanvasSize;
   fps: number;
+  /** The pinned tracing reference, if any; video exports can include it underneath. */
+  referenceVideo?: ReferenceExportOptions | null;
 }
 
 export function ExportModal({
@@ -32,7 +36,12 @@ export function ExportModal({
   frames,
   canvasSize,
   fps,
+  referenceVideo = null,
 }: ExportModalProps) {
+  const { toast } = useToast();
+  // Export the drawing over the reference footage (requested by users), on by default when one is pinned.
+  const [includeReference, setIncludeReference] = useState<boolean>(true);
+  const withReference = Boolean(referenceVideo && includeReference);
   const [exportType, setExportType] = useState<'mp4' | 'webm' | 'spritesheet' | 'png' | 'project'>('mp4');
   const [columns, setColumns] = useState<number>(4);
   const [includeBackground, setIncludeBackground] = useState<boolean>(true);
@@ -202,6 +211,22 @@ export function ExportModal({
       else if (MediaRecorder.isTypeSupported('video/webm')) mimeType = 'video/webm';
     }
 
+    let referenceFrames: Blob[] | null = null;
+    if (withReference && referenceVideo) {
+      try {
+        referenceFrames = await renderFramesWithReference(frames, canvasSize, fps, referenceVideo, (f) => setExportProgress(Math.round(5 + f * 55)));
+      } catch (err: any) {
+        setIsExporting(false);
+        setExportProgress(0);
+        toast({
+          variant: 'destructive',
+          title: 'Could not include the reference video',
+          description: `${err?.message || 'The reference failed to load.'} Turn off "Include reference video" to export the drawing alone.`,
+        });
+        return;
+      }
+    }
+
     const stream = recCanvas.captureStream(fps);
     let recorder: MediaRecorder;
     try {
@@ -218,7 +243,7 @@ export function ExportModal({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `animation_${fps}fps_${frames.length}cels.${ext}`;
+      a.download = `animation_${withReference ? 'with-reference_' : ''}${fps}fps_${frames.length}cels.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
       setIsExporting(false);
@@ -226,6 +251,12 @@ export function ExportModal({
     };
 
     recorder.start();
+
+    if (referenceFrames) {
+      await playFramesIntoCanvas(referenceFrames, recCanvas, fps, (f) => setExportProgress(Math.round(60 + f * 38)));
+      recorder.stop();
+      return;
+    }
 
     // Render frames sequentially into video recorder
     for (let i = 0; i < frames.length; i++) {
@@ -425,6 +456,22 @@ export function ExportModal({
                   Result: <strong className="text-white">{columns}x{Math.ceil(frames.length / columns)} Grid</strong> ({columns * canvasSize.width}px × {Math.ceil(frames.length / columns) * canvasSize.height}px)
                 </div>
               </div>
+            )}
+
+            {/* Reference footage underneath (video exports only) */}
+            {referenceVideo && (exportType === 'mp4' || exportType === 'webm') && (
+              <label className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between gap-3 cursor-pointer">
+                <span>
+                  <span className="block text-xs font-bold text-zinc-300">Include reference video</span>
+                  <span className="block text-[11px] text-zinc-400">Your drawing over the pinned reference, at {Math.round(referenceVideo.opacity * 100)}% opacity like the tracing view.</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={includeReference}
+                  onChange={(e) => setIncludeReference(e.target.checked)}
+                  className="h-4 w-4 accent-purple-500 rounded cursor-pointer"
+                />
+              </label>
             )}
 
             {/* Background Fill Settings */}

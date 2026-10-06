@@ -589,7 +589,7 @@ export async function getDatabaseVideosAsPortfolioItems(limitCount = 12): Promis
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) return [];
-    const availableDocs = snapshot.docs.filter((d) => isVideoSourceAvailable(d.data().videoUrl)).slice(0, limitCount);
+    const availableDocs = snapshot.docs.filter((d) => d.data().videoUrl && isVideoSourceAvailable(d.data().videoUrl)).slice(0, limitCount);
 
     const STAGES: WipStage[] = ['blocking', 'splining', 'polish', 'completed', 'concept'];
 
@@ -608,7 +608,7 @@ export async function getDatabaseVideosAsPortfolioItems(limitCount = 12): Promis
         type: isWip ? 'wip' : 'portfolio',
         wipStage: isWip ? wipStage : 'completed',
         mediaType: 'video_url',
-        mediaUrl: data.videoUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+        mediaUrl: data.videoUrl,
         thumbnailUrl: data.thumbnailUrl || data.posterUrl || `https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=800&q=80`,
         tags: data.tags && data.tags.length > 0 ? data.tags : ['3D Animation', 'Body Mechanics', 'Reference'],
         software: index % 2 === 0 ? ['Maya', 'Blender'] : ['ToonBoom', 'TVPaint'],

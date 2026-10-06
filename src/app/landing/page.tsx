@@ -202,7 +202,7 @@ export default function LandingPage() {
                     {/* Quick Stats Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pt-16 max-w-3xl mx-auto w-full">
                         <div className="p-4 rounded-2xl glass-panel text-center">
-                            <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">7,600+</div>
+                            <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">8,000</div>
                             <div className="text-xs text-zinc-400 font-medium mt-0.5">Curated Reference Clips</div>
                         </div>
                         <div className="p-4 rounded-2xl glass-panel text-center">
@@ -385,7 +385,7 @@ export default function LandingPage() {
                         </div>
                         <Button asChild variant="ghost" className="text-purple-300 hover:text-white hover:bg-white/5 w-fit font-semibold text-sm">
                             <Link href="/home" className="flex items-center gap-1.5">
-                                Browse all 7,600+ clips <ArrowRight className="w-4 h-4" />
+                                Browse all 8,000 clips <ArrowRight className="w-4 h-4" />
                             </Link>
                         </Button>
                     </div>

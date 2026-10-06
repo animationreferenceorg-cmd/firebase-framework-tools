@@ -4,8 +4,8 @@ import LandingPage from '@/app/landing/page';
 const BASE_URL = 'https://animationreference.org';
 
 export const metadata: Metadata = {
-  title: 'Animation Reference - 7,600+ Free Animation Clips & References',
-  description: 'Browse 7,600+ free animation reference clips organized by tag. Study body mechanics, acting, combat, locomotion & more. Frame-by-frame analysis for animators, game developers & motion designers. Build your professional portfolio and get discovered by studios.',
+  title: 'Animation Reference - 8,000 Free Animation Clips & References',
+  description: 'Browse 8,000 free animation reference clips organized by tag. Study body mechanics, acting, combat, locomotion & more. Frame-by-frame analysis for animators, game developers & motion designers. Build your professional portfolio and get discovered by studios.',
   keywords: [
     'animation reference',
     'animation tutorial',
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: BASE_URL,
     title: 'Animation Reference - Free Animation Clips & Professional Portfolio Platform',
-    description: '7,600+ curated animation reference clips. Study professional motion, build your portfolio, get discovered by studios. Free for animators & game developers.',
+    description: '8,000 curated animation reference clips. Study professional motion, build your portfolio, get discovered by studios. Free for animators & game developers.',
     images: [
       {
         url: `${BASE_URL}/og-image.jpg`,
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Animation Reference - Free Animation Clips',
-    description: 'Browse 7,600+ animation reference clips. Study body mechanics, acting, combat & more. Free for animators.',
+    description: 'Browse 8,000 animation reference clips. Study body mechanics, acting, combat & more. Free for animators.',
     creator: '@animationref',
     images: [`${BASE_URL}/og-image.jpg`],
   },

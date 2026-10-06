@@ -590,7 +590,7 @@ export function ContactSheetModal({
               <Film className="w-8 h-8 text-zinc-500 mx-auto" />
               <p className="text-sm font-bold text-zinc-300">External Embed Video</p>
               <p className="text-xs text-zinc-500 max-w-sm">
-                This reference is hosted on an external provider (YouTube/Vimeo). Frame breakdowns are available on all 7,400+ library MP4s.
+                This reference is hosted on an external provider (YouTube/Vimeo). Frame breakdowns are available on all 8,000 library MP4s.
               </p>
             </div>
           )}

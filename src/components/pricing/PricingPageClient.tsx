@@ -9,6 +9,7 @@ import { CustomCheckoutModal } from '@/components/checkout/CustomCheckoutModal';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
+import { useIntroOffer } from '@/hooks/use-intro-offer';
 import { cn } from '@/lib/utils';
 import {
   ACCESS_LIMITS,
@@ -30,7 +31,7 @@ const COMPARISON: { group: string; rows: { label: string; free: Cell; pro: Cell 
   {
     group: 'Motion study',
     rows: [
-      { label: 'Reference library studies', free: `${ACCESS_LIMITS.free.maxUnlockedReferences} references (re-watch anytime)`, pro: 'Unlimited' },
+      { label: 'Reference library studies', free: `${ACCESS_LIMITS.free.maxUnlockedReferences} new per day (re-watch anytime)`, pro: 'Unlimited' },
       { label: 'Frame-by-frame playback & speed controls', free: true, pro: true },
       { label: 'Side-by-side synchronized playblast compare', free: false, pro: true },
     ],
@@ -70,7 +71,7 @@ const FAQ = [
   },
   {
     q: 'What does the free plan include?',
-    a: `You can open ${ACCESS_LIMITS.free.maxUnlockedReferences} references from the library with full frame-by-frame study tools, and every reference you've opened stays playable forever. Pro unlocks the entire library plus downloads, exports and unlimited boards.`,
+    a: `You can open ${ACCESS_LIMITS.free.maxUnlockedReferences} new references from the library every day with full frame-by-frame study tools, and any reference you've opened before stays playable anytime. Pro removes the daily limit and adds downloads, exports and unlimited boards.`,
   },
   {
     q: 'How is payment handled?',
@@ -110,9 +111,14 @@ export function PricingPageClient() {
   const annualSavingsPct = offers.pro_annual.available
     ? Math.round((1 - offers.pro_annual.amountCents / (offers.pro_monthly.amountCents * 12)) * 100)
     : 0;
+  const { intro } = useIntroOffer();
+  // The intro offer applies to the monthly plan only.
+  const showIntro = Boolean(intro) && selected.interval === 'month';
   const priceLine = selected.interval === 'year'
     ? `Billed ${formatUsd(selected.amountCents)} yearly`
-    : `Billed ${formatUsd(selected.amountCents)} monthly · cancel anytime`;
+    : showIntro
+      ? `First month ${formatUsd(intro!.amountCents)}, then ${formatUsd(selected.amountCents)}/month · cancel anytime`
+      : `Billed ${formatUsd(selected.amountCents)} monthly · cancel anytime`;
 
   const openPortal = async () => {
     if (isPortalLoading || !user) return;
@@ -150,8 +156,8 @@ export function PricingPageClient() {
       : isPro
         ? 'Pro access active'
         : user
-          ? `Upgrade for ${formatUsd(monthlyEquivalent)}/mo`
-          : 'Sign in to upgrade';
+          ? showIntro ? `Start Pro for ${formatUsd(intro!.amountCents)}` : `Upgrade for ${formatUsd(monthlyEquivalent)}/mo`
+          : showIntro ? `Sign in to start Pro for ${formatUsd(intro!.amountCents)}` : 'Sign in to upgrade';
 
   return (
     <main className="relative mx-auto max-w-5xl px-4 pb-32 pt-12 text-white md:px-8">
@@ -163,7 +169,9 @@ export function PricingPageClient() {
         </div>
         <h1 className="text-3xl font-black tracking-tight md:text-5xl">Start studying free. Unlock the whole library with Pro.</h1>
         <p className="mx-auto max-w-2xl text-sm text-zinc-400 md:text-base">
-          Your first {ACCESS_LIMITS.free.maxUnlockedReferences} references are free, and stay playable forever. Pro is {formatUsd(offers.pro_monthly.amountCents)}/month for the full library, unlimited boards, MP4 downloads, playblast compare and clean exports.
+          Study {ACCESS_LIMITS.free.maxUnlockedReferences} new references a day for free. Pro removes the limit and adds unlimited boards, MP4 downloads, playblast compare and clean exports{intro
+            ? ` — try it for ${formatUsd(intro.amountCents)} your first month, then ${formatUsd(offers.pro_monthly.amountCents)}/month.`
+            : ` for ${formatUsd(offers.pro_monthly.amountCents)}/month.`}
         </p>
       </header>
 
@@ -220,8 +228,8 @@ export function PricingPageClient() {
               {!isFree && <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400">{current.title} · {current.price}</span>}
             </div>
             <p className="flex items-baseline gap-1">
-              <span className="text-4xl font-black">{formatUsd(monthlyEquivalent)}</span>
-              <span className="text-sm text-zinc-400">/ month</span>
+              <span className="text-4xl font-black">{formatUsd(showIntro ? intro!.amountCents : monthlyEquivalent)}</span>
+              <span className="text-sm text-zinc-400">{showIntro ? 'first month' : '/ month'}</span>
             </p>
             <p className="mt-1 text-xs text-purple-200/90">{priceLine}</p>
             <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-purple-300">Everything in Free, plus</p>

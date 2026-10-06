@@ -40,6 +40,8 @@ export const PRO_ANNUAL_CENTS = 4500;
 export interface PriceEnv {
   NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY?: string;
   NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL?: string;
+  /** First-month price of Pro monthly for new subscribers, in cents (e.g. "100"). Unset = no intro offer. */
+  NEXT_PUBLIC_PRO_INTRO_FIRST_MONTH_CENTS?: string;
 }
 
 /**
@@ -50,7 +52,32 @@ export function readPriceEnv(): PriceEnv {
   return {
     NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY,
     NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL,
+    NEXT_PUBLIC_PRO_INTRO_FIRST_MONTH_CENTS: process.env.NEXT_PUBLIC_PRO_INTRO_FIRST_MONTH_CENTS,
   };
+}
+
+/**
+ * Intro offer: the first month of Pro monthly at a lower price, for people
+ * who have never subscribed (August's $1 tier converted far better than $5).
+ * Checkout applies a matching Stripe coupon; this only drives display.
+ */
+export function getIntroOffer(env: PriceEnv = readPriceEnv()): { amountCents: number } | null {
+  const cents = Number(env.NEXT_PUBLIC_PRO_INTRO_FIRST_MONTH_CENTS);
+  const regular = getProOffers(env).pro_monthly.amountCents;
+  if (!Number.isFinite(cents) || cents <= 0 || cents >= regular) return null;
+  return { amountCents: Math.round(cents) };
+}
+
+/**
+ * Whether a profile can get the intro offer: never had a subscription. Billing
+ * sync writes subscriptionStatus for anyone who ever subscribed ('none' means
+ * Stripe has no subscriptions for them). Checkout re-checks against Stripe.
+ */
+export function isIntroEligible(profile: EntitlementProfile | null | undefined): boolean {
+  if (!profile) return true; // signed-out visitors
+  if (resolveAccessLevel(profile) !== 'free') return false;
+  const status = profile.subscriptionStatus;
+  return !status || status === 'none';
 }
 
 function clean(value?: string): string | null {

@@ -26,6 +26,7 @@ import {
     type CheckoutPlanId,
 } from '@/lib/plans';
 import { CustomCheckoutModal } from '@/components/checkout/CustomCheckoutModal';
+import { useIntroOffer } from '@/hooks/use-intro-offer';
 
 export interface PricingDialogProps {
     children?: React.ReactNode;
@@ -62,6 +63,8 @@ export function PricingDialog({ children, open: openProp, onOpenChange: onOpenCh
     const hasStripePlan = !isFree && (entitlements.access === 'pro' || entitlements.access === 'tier1' || entitlements.access === 'tier2');
 
     const selected = offers[billingCycle].available ? offers[billingCycle] : offers.pro_monthly;
+    const { intro } = useIntroOffer();
+    const showIntro = Boolean(intro) && selected.interval === 'month';
     const monthlyEquivalent = selected.interval === 'year' ? Math.round(selected.amountCents / 12) : selected.amountCents;
     const annualSavingsPct = offers.pro_annual.available
         ? Math.round((1 - offers.pro_annual.amountCents / (offers.pro_monthly.amountCents * 12)) * 100)
@@ -258,10 +261,10 @@ export function PricingDialog({ children, open: openProp, onOpenChange: onOpenCh
                                                 <span className="text-4xl font-black text-white">
                                                     {selected.interval === 'year'
                                                         ? formatUsd(monthlyEquivalent)
-                                                        : formatUsd(selected.amountCents)}
+                                                        : formatUsd(showIntro ? intro!.amountCents : selected.amountCents)}
                                                 </span>
                                                 <span className="text-xs text-zinc-400 font-medium">
-                                                    / month
+                                                    {showIntro ? 'first month' : '/ month'}
                                                 </span>
                                                 {selected.interval === 'year' && (
                                                     <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
@@ -272,7 +275,9 @@ export function PricingDialog({ children, open: openProp, onOpenChange: onOpenCh
                                             <p className="text-xs text-purple-200/90 mt-1">
                                                 {selected.interval === 'year'
                                                     ? `Billed annually at ${formatUsd(selected.amountCents)}/year (${formatUsd(monthlyEquivalent)}/mo)`
-                                                    : 'Billed monthly at $5/mo · Cancel anytime in 1 click'}
+                                                    : showIntro
+                                                        ? `First month ${formatUsd(intro!.amountCents)}, then ${formatUsd(selected.amountCents)}/mo · Cancel anytime in 1 click`
+                                                        : `Billed monthly at ${formatUsd(selected.amountCents)}/mo · Cancel anytime in 1 click`}
                                             </p>
                                         </div>
 
@@ -299,7 +304,7 @@ export function PricingDialog({ children, open: openProp, onOpenChange: onOpenCh
                                             ) : isPro ? (
                                                 'Pro access active'
                                             ) : (
-                                                <><span>Upgrade to Pro</span><ArrowRight className="h-4 w-4" /></>
+                                                <><span>{showIntro ? `Start Pro for ${formatUsd(intro!.amountCents)}` : 'Upgrade to Pro'}</span><ArrowRight className="h-4 w-4" /></>
                                             )}
                                         </Button>
                                         <p className="text-[10px] text-center text-zinc-400 mt-2 flex items-center justify-center gap-1">

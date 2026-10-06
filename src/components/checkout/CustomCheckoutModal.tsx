@@ -31,6 +31,7 @@ import {
 } from '@/lib/plans';
 import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
+import { useIntroOffer } from '@/hooks/use-intro-offer';
 
 export interface CustomCheckoutModalProps {
     open: boolean;
@@ -59,6 +60,8 @@ export function CustomCheckoutModal({
     const keyConfigured = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim());
 
     const activeOffer = offers[selectedPlan].available ? offers[selectedPlan] : offers.pro_monthly;
+    const { intro } = useIntroOffer();
+    const showIntro = Boolean(intro) && activeOffer.interval === 'month';
     const monthlyEquivalent = activeOffer.interval === 'year'
         ? Math.round(activeOffer.amountCents / 12)
         : activeOffer.amountCents;
@@ -225,14 +228,16 @@ export function CustomCheckoutModal({
                             <div className="p-4 rounded-2xl bg-gradient-to-b from-purple-950/40 to-black/60 border border-purple-500/40 space-y-1">
                                 <div className="flex items-baseline gap-1.5">
                                     <span className="text-3xl font-black text-white">
-                                        {formatUsd(monthlyEquivalent)}
+                                        {formatUsd(showIntro ? intro!.amountCents : monthlyEquivalent)}
                                     </span>
-                                    <span className="text-xs text-zinc-400 font-medium">/ month</span>
+                                    <span className="text-xs text-zinc-400 font-medium">{showIntro ? 'first month' : '/ month'}</span>
                                 </div>
                                 <p className="text-[11px] text-purple-200/80">
                                     {selectedPlan === 'pro_annual'
                                         ? `Billed annually at ${formatUsd(offers.pro_annual.amountCents)}/year`
-                                        : 'Billed monthly. Cancel anytime.'}
+                                        : showIntro
+                                            ? `Then ${formatUsd(activeOffer.amountCents)}/month. Cancel anytime.`
+                                            : 'Billed monthly. Cancel anytime.'}
                                 </p>
                             </div>
 

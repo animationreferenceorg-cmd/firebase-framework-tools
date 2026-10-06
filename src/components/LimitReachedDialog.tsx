@@ -13,7 +13,8 @@ import { Heart, Layout, Sparkles, Check, ArrowRight } from 'lucide-react';
 import { useEffect } from 'react';
 import { useUser } from '@/hooks/use-user';
 import { track } from '@/lib/analytics';
-import { formatUsd, getEntitlements, getProOffers } from '@/lib/plans';
+import { getEntitlements } from '@/lib/plans';
+import { useIntroOffer } from '@/hooks/use-intro-offer';
 
 interface LimitReachedDialogProps {
     open: boolean;
@@ -36,7 +37,7 @@ export function LimitReachedDialog({
     const limit = isLikes ? limits.maxSavedReferences : limits.maxBoards;
     const noun = isLikes ? (limit === 1 ? 'saved reference' : 'saved references') : (limit === 1 ? 'board' : 'boards');
     const planName = access === 'free' ? 'free plan' : 'current plan';
-    const price = formatUsd(getProOffers().pro_monthly.amountCents);
+    const { shortPrice: price } = useIntroOffer();
     const title = isLikes ? 'Your reference library is full' : 'You’ve reached your board limit';
     const Icon = isLikes ? Heart : Layout;
 
@@ -102,7 +103,7 @@ export function LimitReachedDialog({
                         onClick={handleAction}
                         className="w-full h-11 bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
                     >
-                        <span>Upgrade to Pro — {price}/mo</span>
+                        <span>Upgrade to Pro — {price}</span>
                         <ArrowRight className="h-4 w-4" />
                     </Button>
                 </DialogFooter>

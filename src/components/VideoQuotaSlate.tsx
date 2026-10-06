@@ -6,7 +6,7 @@ import { Lock, Sparkles, Check, Film, ArrowRight, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PricingDialog } from '@/components/PricingDialog';
 import { track } from '@/lib/analytics';
-import { formatUsd, getProOffers } from '@/lib/plans';
+import { useIntroOffer } from '@/hooks/use-intro-offer';
 
 interface VideoQuotaSlateProps {
   posterUrl?: string;
@@ -26,7 +26,7 @@ export function VideoQuotaSlate({
   className = '',
 }: VideoQuotaSlateProps) {
   const [showPricing, setShowPricing] = useState(false);
-  const price = formatUsd(getProOffers().pro_monthly.amountCents);
+  const { shortPrice } = useIntroOffer();
 
   useEffect(() => {
     track('upgrade_prompt_viewed', { trigger: 'reference_quota', source: 'quota_slate' });
@@ -100,7 +100,7 @@ export function VideoQuotaSlate({
             className="w-full sm:w-auto h-11 px-6 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-[0_0_25px_rgba(168,85,247,0.35)] transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300" />
-            <span>Unlock Pro — {price}/month</span>
+            <span>Unlock Pro — {shortPrice}</span>
             <ArrowRight className="w-4 h-4 ml-0.5" />
           </Button>
 

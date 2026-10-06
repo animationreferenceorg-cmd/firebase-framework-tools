@@ -17,6 +17,14 @@ runConfig:
     - variable: NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL
       value: price_1UJd4X59QHehw05fqbQ2qZLs
       availability: [BUILD, RUNTIME]
+    # Intro offer: first month of Pro monthly for $1 (new subscribers only).
+    # Unset both to turn the offer off. The coupon lives in Stripe (live mode).
+    - variable: NEXT_PUBLIC_PRO_INTRO_FIRST_MONTH_CENTS
+      value: "100"
+      availability: [BUILD, RUNTIME]
+    - variable: STRIPE_PRO_INTRO_COUPON_ID
+      value: PRO_FIRST_MONTH_1
+      availability: [RUNTIME]
     - variable: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
       value: pk_live_51SFfWk59QHehw05fAQmlkaJZ6ys02e7g5EwfG44sUIkSvC0F6fos5TyfIzMvCHAoMrI7piuOdUfwglN7jh2CFAuK00pBgZ4uI7
       availability: [BUILD, RUNTIME]

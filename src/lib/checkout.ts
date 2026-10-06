@@ -23,19 +23,26 @@ export interface CheckoutSessionInput {
   origin: string;
   env?: PriceEnv;
   embedded?: boolean;
+  /** Stripe coupon for the first-month intro offer; only applied to Pro monthly. */
+  introCouponId?: string | null;
 }
 
 /** Parameters for stripe.checkout.sessions.create. */
-export function buildCheckoutSessionParams({ plan, uid, customerId, origin, env, embedded }: CheckoutSessionInput) {
+export function buildCheckoutSessionParams({ plan, uid, customerId, origin, env, embedded, introCouponId }: CheckoutSessionInput) {
   const resolved = priceForCheckout(plan, env);
+  const intro = Boolean(introCouponId) && resolved.plan === 'pro_monthly';
+  // Stripe rejects `discounts` together with `allow_promotion_codes`.
+  const discountParams = intro
+    ? { discounts: [{ coupon: introCouponId as string }] }
+    : { allow_promotion_codes: true };
   const base = {
     mode: 'subscription' as const,
     customer: customerId,
     client_reference_id: uid,
-    metadata: { userId: uid, firebaseUID: uid, plan: resolved.plan },
+    metadata: { userId: uid, firebaseUID: uid, plan: resolved.plan, ...(intro ? { offer: 'intro_first_month' } : {}) },
     subscription_data: { metadata: { firebaseUID: uid, plan: resolved.plan } },
     line_items: [{ price: resolved.priceId, quantity: 1 }],
-    allow_promotion_codes: true,
+    ...discountParams,
   };
 
   if (embedded) {

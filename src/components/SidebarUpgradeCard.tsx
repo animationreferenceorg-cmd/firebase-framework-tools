@@ -3,14 +3,14 @@
 import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { useUser } from '@/hooks/use-user';
-import { formatUsd, getEntitlements, getProOffers } from '@/lib/plans';
+import { getEntitlements } from '@/lib/plans';
+import { useIntroOffer } from '@/hooks/use-intro-offer';
 
 /** Compact, permanent Pro callout at the foot of the sidebar. Free accounts only. */
 export function SidebarUpgradeCard() {
   const { userProfile, loading } = useUser();
+  const { intro, shortPrice } = useIntroOffer();
   if (loading || getEntitlements(userProfile).access !== 'free') return null;
-
-  const price = formatUsd(getProOffers().pro_monthly.amountCents);
 
   return (
     <Link
@@ -24,7 +24,7 @@ export function SidebarUpgradeCard() {
         The full library, unlimited boards &amp; MP4 downloads.
       </p>
       <p className="mt-2 flex items-center gap-1 text-xs font-bold text-white">
-        Upgrade for {price}/mo
+        {intro ? `Try Pro for ${shortPrice}` : `Upgrade for ${shortPrice}`}
         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/upgrade:translate-x-0.5" />
       </p>
     </Link>

@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { Sparkles, X } from 'lucide-react';
-import { formatUsd, getProOffers } from '@/lib/plans';
+import { useIntroOffer } from '@/hooks/use-intro-offer';
 
 /**
  * Small, non-blocking corner card shown once per session to free users who
  * are actively studying. It never takes focus or pauses playback.
  */
 export function ProNudgeCard({ onDismiss }: { onDismiss: () => void }) {
-  const price = formatUsd(getProOffers().pro_monthly.amountCents);
+  const { intro, shortPrice } = useIntroOffer();
 
   return (
     <aside
@@ -32,7 +32,7 @@ export function ProNudgeCard({ onDismiss }: { onDismiss: () => void }) {
         <div className="space-y-1">
           <p className="text-sm font-bold">Studying for a shot?</p>
           <p className="text-xs leading-relaxed text-zinc-400">
-            Pro unlocks the full reference library, unlimited boards, clean MP4 downloads and playblast compare for {price}/mo.
+            Pro unlocks the full reference library, unlimited boards, clean MP4 downloads and playblast compare{intro ? ` — try it for ${shortPrice}.` : ` for ${shortPrice}.`}
           </p>
         </div>
       </div>

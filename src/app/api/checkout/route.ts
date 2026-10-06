@@ -33,6 +33,16 @@ export async function POST(req: NextRequest) {
             await userRef.set({ stripeCustomerId: customerId }, { merge: true });
         }
 
+        // Intro offer (first month at a lower price) only for people who have
+        // never had a subscription on this customer, checked against Stripe so
+        // cancel-and-resubscribe can't claim it again.
+        const introCouponId = process.env.STRIPE_PRO_INTRO_COUPON_ID?.trim() || null;
+        let eligibleCoupon: string | null = null;
+        if (introCouponId && plan === 'pro_monthly') {
+            const previous = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 1 });
+            if (previous.data.length === 0) eligibleCoupon = introCouponId;
+        }
+
         const session = await stripe.checkout.sessions.create(
             buildCheckoutSessionParams({
                 plan,
@@ -40,6 +50,7 @@ export async function POST(req: NextRequest) {
                 customerId,
                 origin: publicOrigin(req.headers),
                 embedded: Boolean(embedded),
+                introCouponId: eligibleCoupon,
             })
         );
 

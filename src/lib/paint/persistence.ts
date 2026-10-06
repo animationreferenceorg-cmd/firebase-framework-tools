@@ -59,7 +59,20 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-function serializeLayer(l: Layer): SerializedLayer {
+// PNG data URLs of layer canvases, keyed by the canvas object. Only the frame
+// being drawn on changes between autosaves, so other frames reuse their last
+// encoding instead of re-encoding every layer of every frame each time.
+const encodedCanvases = new WeakMap<HTMLCanvasElement, string>();
+
+function encodeCanvas(canvas: HTMLCanvasElement, reuse: boolean): string {
+  const cached = reuse ? encodedCanvases.get(canvas) : undefined;
+  if (cached) return cached;
+  const dataUrl = canvas.toDataURL('image/png');
+  encodedCanvases.set(canvas, dataUrl);
+  return dataUrl;
+}
+
+function serializeLayer(l: Layer, reuse = false): SerializedLayer {
   return {
     id: l.id,
     name: l.name,
@@ -68,8 +81,8 @@ function serializeLayer(l: Layer): SerializedLayer {
     blendMode: l.blendMode,
     alphaLocked: l.alphaLocked,
     maskEnabled: l.maskEnabled,
-    dataUrl: l.canvas.toDataURL('image/png'),
-    maskDataUrl: l.mask ? l.mask.toDataURL('image/png') : undefined,
+    dataUrl: encodeCanvas(l.canvas, reuse),
+    maskDataUrl: l.mask ? encodeCanvas(l.mask, reuse) : undefined,
   };
 }
 
@@ -98,18 +111,23 @@ async function deserializeLayer(s: SerializedLayer, canvasSize: CanvasSize): Pro
   };
 }
 
-export function serializeProject(frames: Frame[], canvasSize: CanvasSize, activeFrameIndex: number, fps?: number): SerializedProject {
+/**
+ * `reuseInactiveFrames`: for autosave. Frames other than the active one are
+ * not edited in place, so their cached encodings are reused. Explicit saves
+ * and exports leave it off and encode everything fresh.
+ */
+export function serializeProject(frames: Frame[], canvasSize: CanvasSize, activeFrameIndex: number, fps?: number, options: { reuseInactiveFrames?: boolean } = {}): SerializedProject {
   return {
     version: 2,
     canvasSize,
     fps,
     activeFrameIndex,
     savedAt: Date.now(),
-    frames: frames.map((f) => ({
+    frames: frames.map((f, index) => ({
       id: f.id,
       name: f.name,
       activeLayerId: f.activeLayerId,
-      layers: f.layers.map(serializeLayer),
+      layers: f.layers.map((l) => serializeLayer(l, Boolean(options.reuseInactiveFrames) && index !== activeFrameIndex)),
       storyboardScript: f.storyboardScript,
       poseType: f.poseType,
     })),

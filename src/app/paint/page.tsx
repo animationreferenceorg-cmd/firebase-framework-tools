@@ -15,7 +15,7 @@ import { ReferenceComparisonModal } from '@/components/paint/ReferenceComparison
 import { ReferenceOverlay } from '@/components/paint/ReferenceOverlay';
 import { NewProjectModal } from '@/components/paint/NewProjectModal';
 import { HistoryManager, type LayerSnapshot } from '@/lib/paint/history';
-import { createLayerCanvas, processBrushTextureImage, applyBrightnessContrast, applyHueSaturation, cloneCanvas, flattenLayers, tintSilhouette, invertMask, maskToSelection } from '@/lib/paint/engine';
+import { createLayerCanvas, processBrushTextureImage, applyBrightnessContrast, applyHueSaturation, cloneCanvas, flattenLayers, renderThumbnail, tintSilhouette, invertMask, maskToSelection } from '@/lib/paint/engine';
 import { createBuiltinBrushLibrary } from '@/lib/paint/builtinBrushes';
 import { ExportModal } from '@/components/paint/ExportModal';
 import { AdjustmentsDialog } from '@/components/paint/AdjustmentsDialog';
@@ -36,6 +36,18 @@ import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Clapperboard, Pin, PinOff, Film, 
 import { nanoid } from 'nanoid';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+
+/** An autosave newer than this reopens silently (e.g. a refresh); older ones prompt. */
+const RESUME_SILENTLY_WITHIN_MS = 30 * 60 * 1000;
+
+function formatAgo(timestamp: number): string {
+  const minutes = Math.round((Date.now() - timestamp) / 60000);
+  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+  if (minutes < 60) return rtf.format(-minutes, 'minute');
+  const hours = Math.round(minutes / 60);
+  if (hours < 48) return rtf.format(-hours, 'hour');
+  return rtf.format(-Math.round(hours / 24), 'day');
+}
 
 const DEFAULT_CANVAS_SIZE = { width: 1920, height: 1080 };
 
@@ -130,6 +142,8 @@ export default function PaintPage() {
   };
   const [isPlaying, setIsPlaying] = useState(false);
   const [fps, setFps] = useState(6);
+  const fpsRef = useRef(fps);
+  fpsRef.current = fps;
   const panContainerRef = useRef<HTMLDivElement>(null);
   const spacerRef = useRef<HTMLDivElement>(null);
   const isPanningRef = useRef(false);
@@ -248,25 +262,43 @@ export default function PaintPage() {
     img.src = url;
   }, []);
 
+  // An older autosave the user hasn't chosen to continue or discard yet.
+  const [resumeOffer, setResumeOffer] = useState<{ project: Awaited<ReturnType<typeof loadAutosavedProject>>; savedAt: number | null } | null>(null);
+  const resumeOfferRef = useRef(resumeOffer);
+  resumeOfferRef.current = resumeOffer;
+
+  const restoreProject = useCallback(async (saved: NonNullable<Awaited<ReturnType<typeof loadAutosavedProject>>>): Promise<boolean> => {
+    try {
+      const restored = await deserializeProject(saved);
+      const active = restored.frames[restored.activeFrameIndex];
+      setFrames(restored.frames);
+      setActiveFrameIndex(restored.activeFrameIndex);
+      setLayers(active.layers);
+      setActiveLayerId(active.activeLayerId);
+      setCanvasSize(restored.canvasSize);
+      if (restored.fps) setFps(restored.fps);
+      setCustomTextures(createBuiltinBrushLibrary());
+      return true;
+    } catch {
+      // Corrupt/unreadable autosave: start fresh rather than getting stuck loading.
+      return false;
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const saved = await loadAutosavedProject().catch(() => null);
       const savedHasContent = saved && (saved.version === 2 ? saved.frames.length > 0 : saved.layers.length > 0);
       if (!cancelled && savedHasContent) {
-        try {
-          const restored = await deserializeProject(saved!);
-          const active = restored.frames[restored.activeFrameIndex];
-          setFrames(restored.frames);
-          setActiveFrameIndex(restored.activeFrameIndex);
-          setLayers(active.layers);
-          setActiveLayerId(active.activeLayerId);
-          setCanvasSize(restored.canvasSize);
-          setCustomTextures(createBuiltinBrushLibrary());
-          return;
-        } catch {
-          // Corrupt/unreadable autosave — fall through to a fresh document
-          // rather than leaving the app stuck on the loading screen.
+        const savedAt = saved!.version === 2 ? saved!.savedAt : null;
+        // A refresh mid-session continues silently; after a longer break, ask
+        // instead of reopening an old doodle when the user wanted a new canvas.
+        const recent = savedAt !== null && Date.now() - savedAt < RESUME_SILENTLY_WITHIN_MS;
+        if (recent) {
+          if (await restoreProject(saved!)) return;
+        } else {
+          setResumeOffer({ project: saved, savedAt });
         }
       }
       if (cancelled) return;
@@ -314,7 +346,7 @@ export default function PaintPage() {
         ...f, 
         layers: layersRef.current, 
         activeLayerId: activeLayerIdRef.current,
-        thumbnail: flattenLayers(layersRef.current, canvasSizeRef.current.width, canvasSizeRef.current.height, false).toDataURL('image/png')
+        thumbnail: renderThumbnail(layersRef.current, canvasSizeRef.current.width, canvasSizeRef.current.height)
       } : f
     );
   }, []);
@@ -325,7 +357,9 @@ export default function PaintPage() {
   const scheduleAutosave = useCallback(() => {
     if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
     autosaveTimerRef.current = setTimeout(() => {
-      const project = serializeProject(framesWithLiveActive(), canvasSizeRef.current, activeFrameIndexRef.current);
+      // Don't overwrite an older drawing the user hasn't decided about yet.
+      if (resumeOfferRef.current) return;
+      const project = serializeProject(framesWithLiveActive(), canvasSizeRef.current, activeFrameIndexRef.current, fpsRef.current, { reuseInactiveFrames: true });
       autosaveProject(project).catch(() => {});
     }, 1500);
   }, [framesWithLiveActive]);
@@ -903,7 +937,7 @@ export default function PaintPage() {
     refreshHistoryButtons();
 
     // 4. Overwrite autosave with fresh new project
-    const cleanProject = serializeProject([initialFrame], settings.canvasSize, 0);
+    const cleanProject = serializeProject([initialFrame], settings.canvasSize, 0, settings.fps);
     autosaveProject(cleanProject).catch(() => {});
 
     toast({
@@ -1243,6 +1277,7 @@ export default function PaintPage() {
           canUndo={canUndo}
           canRedo={canRedo}
           onOpenReferenceModal={() => setShowReferenceModal(true)}
+          onOpenColorPicker={(x, y) => setContextMenuPos({ x, y })}
         />
 
         <ToolOptionsBar
@@ -1629,6 +1664,36 @@ export default function PaintPage() {
           onCreateProject={handleCreateNewProject}
           onClose={() => setShowNewProjectModal(false)}
         />
+      )}
+
+      {/* Older autosave found: let the user pick instead of silently reopening it. */}
+      {resumeOffer && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="paint-resume-title">
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#141414] p-6 text-white shadow-2xl">
+            <h2 id="paint-resume-title" className="text-lg font-bold">Continue your last drawing?</h2>
+            <p className="mt-1 text-sm text-zinc-400">
+              {resumeOffer.savedAt ? `You last worked on it ${formatAgo(resumeOffer.savedAt)}.` : 'You have a saved drawing from an earlier session.'}
+              {' '}Starting a new canvas replaces it once you draw.
+            </p>
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <Button
+                className="flex-1"
+                onClick={async () => {
+                  const offer = resumeOfferRef.current;
+                  setResumeOffer(null);
+                  if (offer?.project && !(await restoreProject(offer.project))) {
+                    toast({ variant: 'destructive', title: 'Could not open your last drawing', description: 'It may be damaged. A new canvas is ready instead.' });
+                  }
+                }}
+              >
+                Continue drawing
+              </Button>
+              <Button variant="outline" className="flex-1 border-white/15 bg-transparent text-white hover:bg-white/10" onClick={() => setResumeOffer(null)}>
+                New canvas
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ──────────────── FULL MOODBOARD STYLE SAVED REFERENCE LIBRARY MODAL ──────────────── */}

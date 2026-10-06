@@ -39,6 +39,8 @@ interface ProcreateSliderDockProps {
   canUndo: boolean;
   canRedo: boolean;
   onOpenReferenceModal?: () => void;
+  /** Opens the color picker anchored at the click position. */
+  onOpenColorPicker?: (clientX: number, clientY: number) => void;
 }
 
 const DOCK_TOOLS: { type: ToolType; icon: React.ElementType; label: string }[] = [
@@ -72,6 +74,8 @@ export function ProcreateSliderDock({
   canUndo,
   canRedo,
   onOpenReferenceModal,
+  onOpenColorPicker,
+  brush,
 }: ProcreateSliderDockProps) {
   return (
     <div 
@@ -82,6 +86,19 @@ export function ProcreateSliderDock({
       {/* ──────────────── MAIN EXPANDED VERTICAL TOOL DOCK (MAXIMUM TOOL VISIBILITY) ──────────────── */}
       <div className="flex-1 flex flex-col justify-between items-center w-16 py-3 px-2 bg-[#161620]/90 backdrop-blur-3xl border border-white/10 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.8)] overflow-hidden touch-none space-y-2">
         
+        {/* Current color, at the top of the tools where people look for it. The
+            double ring keeps black (the default) visible against the dark dock. */}
+        {onOpenColorPicker && (
+          <button
+            type="button"
+            onClick={(e) => onOpenColorPicker(e.clientX, e.clientY)}
+            title="Brush color"
+            aria-label={`Brush color ${brush.color}. Click to change.`}
+            className="w-11 h-11 shrink-0 rounded-full cursor-pointer transition-transform hover:scale-110 ring-2 ring-white ring-offset-2 ring-offset-zinc-700 shadow-lg"
+            style={{ backgroundColor: brush.color }}
+          />
+        )}
+
         {/* Scrollable Tool Palette with Larger Icons */}
         <div className="flex flex-col items-center gap-2 w-full flex-1 overflow-y-auto scrollbar-none py-1">
           {DOCK_TOOLS.map(({ type, icon: Icon, label }) => {

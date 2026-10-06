@@ -256,7 +256,7 @@ export function ProcreateHeader({
         {/* Color Swatch / Active Color Trigger */}
         <div 
           onClick={(e) => onOpenColorPicker(e.clientX, e.clientY)}
-          className="w-8 h-8 rounded-full border-2 border-white/40 shadow-lg cursor-pointer transition-transform hover:scale-110 ml-2"
+          className="w-8 h-8 rounded-full ring-2 ring-white ring-offset-2 ring-offset-zinc-700 shadow-lg cursor-pointer transition-transform hover:scale-110 ml-2"
           style={{ backgroundColor: brush.color }}
           title="Active Color Swatch"
         />

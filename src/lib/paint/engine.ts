@@ -281,6 +281,27 @@ export function flattenLayers(layers: Layer[], width: number, height: number, sk
   return composite;
 }
 
+/**
+ * Small preview of a frame for the timeline. Draws each visible layer straight
+ * into a thumbnail-sized canvas instead of flattening at full resolution and
+ * PNG-encoding that: the old path ran after every stroke and stalled drawing
+ * for a noticeable moment on large canvases.
+ */
+export function renderThumbnail(layers: Layer[], width: number, height: number, maxWidth = 240): string {
+  const scale = Math.min(1, maxWidth / Math.max(1, width));
+  const thumb = createLayerCanvas(Math.max(1, Math.round(width * scale)), Math.max(1, Math.round(height * scale)));
+  const ctx = thumb.getContext('2d')!;
+  for (const layer of layers) {
+    if (!layer.visible) continue;
+    ctx.save();
+    ctx.globalAlpha = layer.opacity;
+    ctx.globalCompositeOperation = layer.blendMode;
+    ctx.drawImage(layer.canvas, 0, 0, thumb.width, thumb.height);
+    ctx.restore();
+  }
+  return thumb.toDataURL('image/png');
+}
+
 /** Recolors every opaque pixel of `source` to a flat tint color while
  * keeping its alpha shape — the solid-color "ghost" look onion skinning
  * uses (blue for the previous frame, orange/red for the next). */

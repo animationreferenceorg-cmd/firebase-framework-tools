@@ -540,6 +540,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                 <VideoQuotaSlate
                     posterUrl={video.thumbnailUrl || video.posterUrl}
                     unlockedCount={quota.unlockedCount}
+                    todayCount={quota.todayCount}
                     limit={quota.limit}
                 />
             </div>

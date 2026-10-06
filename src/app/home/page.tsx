@@ -9,6 +9,7 @@ import { VideoGrid } from '@/components/VideoGrid';
 import { PricingDialog } from '@/components/PricingDialog';
 import { ImmersiveHomeHeader } from '@/components/home/ImmersiveHomeHeader';
 import { CommunityFeedShelf } from '@/components/home/CommunityFeedShelf';
+import { RecentlyViewedShelf } from '@/components/home/RecentlyViewedShelf';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from '@/components/motion/SectionHeading';
 
@@ -253,6 +254,13 @@ export default function HomePage() {
         searchInputRef={searchInputRef}
         onOpenPricing={() => setShowPricingDialog(true)}
       />
+
+      {/* 2. SHELF: Recently Viewed References (always playable) */}
+      {!searchQuery && (
+        <Reveal>
+          <RecentlyViewedShelf videos={allVideos} />
+        </Reveal>
+      )}
 
       {/* 3. SHELF: Community Portfolio Feed */}
       {!searchQuery && (

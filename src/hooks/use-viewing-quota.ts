@@ -3,38 +3,48 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUser } from './use-user';
 import { getEntitlements } from '@/lib/plans';
-import { QUOTA_CHANGED_EVENT, getUnlockedReferenceIds, unlockReference } from '@/lib/viewing-quota';
-
-const STORAGE_KEY = 'animref_unlocked_references';
+import {
+  FREE_DAILY_UNLOCKED_LIMIT,
+  QUOTA_CHANGED_EVENT,
+  ALL_TIME_UNLOCKED_STORAGE_KEY,
+  DAILY_QUOTA_STORAGE_KEY,
+  getDailyQuotaStatus,
+  unlockReference,
+} from '@/lib/viewing-quota';
 
 /**
- * Free-plan reference quota: each plan can open a limited number of distinct
- * library references, and anything already opened stays playable forever.
- * The limit comes from the account's entitlements (Pro, SJSU and admin are
- * unlimited). Until the profile has loaded nothing is blocked or counted, so
- * a Pro member never sees the slate flash while their plan is still loading.
+ * Daily reference quota:
+ * Free users get 25 new reference video views per day.
+ * When 25 are used up, users must come back tomorrow or upgrade to Pro.
+ * Any video previously watched remains 100% free to re-watch anytime without consuming quota.
  */
 export function useViewingQuota() {
   const { userProfile, loading } = useUser();
   const ready = !loading;
-  const limit = getEntitlements(userProfile).limits.maxUnlockedReferences;
-  const unlimited = !Number.isFinite(limit);
+  const rawLimit = getEntitlements(userProfile).limits.maxUnlockedReferences;
+  const unlimited = !Number.isFinite(rawLimit);
+  const limit = unlimited ? Infinity : (rawLimit || FREE_DAILY_UNLOCKED_LIMIT);
   const profileList = (userProfile as { unlockedReferences?: string[] } | null)?.unlockedReferences;
   const uid = userProfile?.uid;
 
-  // Start empty and read storage after mount: the server render has no
-  // localStorage, so reading it during the first render would mismatch.
-  const [unlockedIds, setUnlockedIds] = useState<string[]>([]);
+  const [status, setStatus] = useState(() =>
+    getDailyQuotaStatus(profileList, Number.isFinite(limit) ? limit : FREE_DAILY_UNLOCKED_LIMIT)
+  );
+
+  const refresh = useCallback(() => {
+    setStatus(getDailyQuotaStatus(profileList, Number.isFinite(limit) ? limit : FREE_DAILY_UNLOCKED_LIMIT));
+  }, [profileList, limit]);
 
   useEffect(() => {
-    setUnlockedIds(getUnlockedReferenceIds(profileList));
-  }, [profileList]);
+    refresh();
+  }, [refresh]);
 
   // Keep every counter in sync: other tabs (storage) and other components in this tab.
   useEffect(() => {
-    const refresh = () => setUnlockedIds(getUnlockedReferenceIds(profileList));
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) refresh();
+      if (e.key === ALL_TIME_UNLOCKED_STORAGE_KEY || e.key === DAILY_QUOTA_STORAGE_KEY) {
+        refresh();
+      }
     };
     window.addEventListener('storage', handleStorage);
     window.addEventListener(QUOTA_CHANGED_EVENT, refresh);
@@ -42,26 +52,29 @@ export function useViewingQuota() {
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener(QUOTA_CHANGED_EVENT, refresh);
     };
-  }, [profileList]);
+  }, [refresh]);
 
+  const unlockedIds = status.allTimeUnlockedIds;
   const unlockedCount = unlockedIds.length;
-  const remaining = unlimited ? Infinity : Math.max(0, limit - unlockedCount);
-  const hasReachedLimit = ready && !unlimited && unlockedCount >= limit;
+  const todayCount = status.todayCount;
+  const todayRemaining = unlimited ? Infinity : Math.max(0, limit - todayCount);
+  const remaining = todayRemaining;
+  const hasReachedLimit = ready && !unlimited && todayCount >= limit;
 
   const isVideoUnlocked = useCallback(
     (videoId: string) => unlimited || !videoId || unlockedIds.includes(videoId),
     [unlimited, unlockedIds]
   );
 
-  /** Records a deliberate view. Returns allowed=false only when the quota is used up. */
+  /** Records a deliberate view. Returns allowed=false only when daily quota is used up and video is new. */
   const attemptUnlock = useCallback(
     async (videoId: string): Promise<{ allowed: boolean; alreadyUnlocked: boolean }> => {
       if (!ready || unlimited || !videoId) return { allowed: true, alreadyUnlocked: true };
       const res = await unlockReference(videoId, uid, profileList, limit);
-      if (res.success) setUnlockedIds(res.ids);
+      refresh();
       return { allowed: res.success, alreadyUnlocked: res.alreadyUnlocked };
     },
-    [ready, unlimited, uid, profileList, limit]
+    [ready, unlimited, uid, profileList, limit, refresh]
   );
 
   return {
@@ -70,6 +83,8 @@ export function useViewingQuota() {
     loading,
     unlockedIds,
     unlockedCount,
+    todayCount,
+    todayRemaining,
     limit,
     remaining,
     hasReachedLimit,

@@ -229,7 +229,7 @@ export function formatUsd(cents: number): string {
  * happy path is tested and reachable from the product.
  */
 export const FREE_FEATURES = [
-  `${ACCESS_LIMITS.free.maxUnlockedReferences} library references (re-watch anytime)`,
+  `${ACCESS_LIMITS.free.maxUnlockedReferences} daily library references (re-watch anytime)`,
   'Frame-by-frame playback and speed controls',
   `${ACCESS_LIMITS.free.maxBoards} visual reference board`,
   'Save clips directly to your boards',

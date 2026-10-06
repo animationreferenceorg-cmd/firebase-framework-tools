@@ -21,6 +21,7 @@ import { PricingDialog } from '@/components/PricingDialog';
 import { useUser } from '@/hooks/use-user';
 import { getEntitlements } from '@/lib/plans';
 import { useViewingQuota } from '@/hooks/use-viewing-quota';
+import { cn } from '@/lib/utils';
 
 type VideoFullscreenViewerProps = {
     video: Video;
@@ -78,11 +79,16 @@ export function VideoFullscreenViewer({ video, title, description, onClose }: Vi
 
                     {quota.ready && !quota.unlimited && (
                         <div
-                            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-zinc-300 shrink-0"
-                            title={`Your plan includes ${quota.limit} reference unlocks. References you've opened stay playable anytime.`}
+                            className={cn(
+                                "hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold shrink-0 transition-colors",
+                                quota.hasReachedLimit
+                                    ? "bg-amber-500/10 border-amber-500/30 text-amber-300"
+                                    : "bg-white/5 border-white/10 text-zinc-300"
+                            )}
+                            title={`Daily reference quota: ${quota.todayRemaining} of ${quota.limit} clips left today. Resets tomorrow. Previously opened clips stay playable anytime.`}
                         >
-                            <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                            <span>{Math.min(quota.unlockedCount, quota.limit)}/{quota.limit} unlocked</span>
+                            <span className={cn("w-1.5 h-1.5 rounded-full", quota.hasReachedLimit ? "bg-amber-400" : "bg-purple-400")} />
+                            <span>{quota.todayRemaining}/{quota.limit} left today</span>
                         </div>
                     )}
                 </div>

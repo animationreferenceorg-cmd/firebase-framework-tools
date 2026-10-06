@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Lock, Sparkles, Check, Film, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+import { Lock, Sparkles, Check, Film, ArrowRight, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PricingDialog } from '@/components/PricingDialog';
 import { track } from '@/lib/analytics';
@@ -10,6 +11,7 @@ import { formatUsd, getProOffers } from '@/lib/plans';
 interface VideoQuotaSlateProps {
   posterUrl?: string;
   unlockedCount?: number;
+  todayCount?: number;
   limit?: number;
   onBrowseUnlocked?: () => void;
   className?: string;
@@ -18,6 +20,7 @@ interface VideoQuotaSlateProps {
 export function VideoQuotaSlate({
   posterUrl,
   unlockedCount = 25,
+  todayCount = 25,
   limit = 25,
   onBrowseUnlocked,
   className = '',
@@ -54,19 +57,19 @@ export function VideoQuotaSlate({
       {/* Content Box */}
       <div className="relative z-10 max-w-lg w-full text-center flex flex-col items-center">
         {/* Lock Pill */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-200 text-xs font-bold tracking-wide uppercase mb-4 shadow-inner">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-200 text-xs font-bold tracking-wide uppercase mb-4 shadow-inner">
           <Lock className="w-3.5 h-3.5 text-amber-400" />
-          <span>Free Reference Quota Reached ({unlockedCount}/{limit})</span>
+          <span>Daily Quota Reached ({todayCount || limit}/{limit} today)</span>
         </div>
 
         {/* Headline */}
         <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white mb-2">
-          Unlock the Full Reference Library
+          Come Back Tomorrow or Unlock Pro
         </h2>
 
         {/* Friendly explanation: Re-watching unlocked clips is always free */}
         <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed mb-6 max-w-md">
-          You've unlocked your <strong className="text-white">{limit} free reference studies</strong>. Any clip you've previously opened remains <span className="text-purple-300 font-semibold">100% playable forever</span> in your account.
+          You&apos;ve watched your <strong className="text-white">{limit} free reference clips today</strong>. Come back tomorrow for 25 more, or upgrade to Pro for unlimited instant access. Any video you&apos;ve already watched remains <span className="text-purple-300 font-semibold">100% free to rewatch anytime</span>!
         </p>
 
         {/* Feature Highlights Grid */}
@@ -101,7 +104,7 @@ export function VideoQuotaSlate({
             <ArrowRight className="w-4 h-4 ml-0.5" />
           </Button>
 
-          {onBrowseUnlocked && (
+          {onBrowseUnlocked ? (
             <Button
               variant="outline"
               size="lg"
@@ -109,7 +112,19 @@ export function VideoQuotaSlate({
               className="w-full sm:w-auto h-11 px-4 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs font-semibold cursor-pointer"
             >
               <Film className="w-3.5 h-3.5 mr-1.5 text-zinc-400" />
-              <span>Back to Unlocked Clips</span>
+              <span>Back to Watched Clips</span>
+            </Button>
+          ) : (
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="w-full sm:w-auto h-11 px-4 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs font-semibold cursor-pointer"
+            >
+              <Link href="/home#recently-viewed">
+                <History className="w-3.5 h-3.5 mr-1.5 text-purple-400" />
+                <span>Recently Viewed Clips</span>
+              </Link>
             </Button>
           )}
         </div>

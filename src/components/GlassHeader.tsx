@@ -12,6 +12,7 @@ import { UpdatesModal } from '@/components/UpdatesModal';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { BrandMark } from '@/components/motion/BrandMark';
+import { DailyQuotaHeaderBadge } from '@/components/DailyQuotaHeaderBadge';
 
 export function GlassHeader() {
     const { state } = useSidebar();
@@ -62,7 +63,6 @@ export function GlassHeader() {
                     {[
                         { label: 'Discover', href: '/home', icon: Film },
                         { label: 'Categories', href: '/categories', icon: LayoutGrid },
-
                         { label: 'Community', href: '/feed', icon: Sparkles },
                     ].map((item) => {
                         const Icon = item.icon;
@@ -76,9 +76,6 @@ export function GlassHeader() {
                                     isActive ? "text-white" : "text-zinc-400 hover:text-white"
                                 )}
                             >
-                                {/* One shared pill that glides between tabs, like a
-                                    streaming app's nav, instead of each tab snapping
-                                    its own background on and off. */}
                                 {isActive && (
                                     <motion.span
                                         layoutId="header-nav-pill"
@@ -93,8 +90,11 @@ export function GlassHeader() {
                     })}
                 </nav>
 
-                {/* Right: Upload CTA, Announcements & Auth */}
+                {/* Right: Daily Quota, Upload CTA, Announcements & Auth */}
                 <div className="flex items-center gap-2 md:gap-3">
+                    {/* Daily 25 Reference Counter */}
+                    <DailyQuotaHeaderBadge />
+
                     {/* Global Upload CTA */}
                     <Link href="/profile?tab=studio&upload=true">
                         <Button

@@ -1,14 +1,14 @@
 import { Metadata } from 'next';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
-import { getAllSnapshotVideos } from '@/lib/videoSnapshot.server';
+import { getAllSnapshotVideos, getTagBySlug, slugifyTag } from '@/lib/videoSnapshot.server';
 import { filterAvailableVideos, isVideoSourceAvailable, sanitizeVideoUrl } from '@/lib/video-availability';
 import type { Category, Video } from '@/lib/types';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Film, Sparkles, Users, Construction, Heart } from 'lucide-react';
 import Image from 'next/image';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { BrowseHero } from '@/components/BrowseHero';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -42,26 +42,114 @@ function getPreviewUrl(url?: string): string | undefined {
     return targetUrl;
 }
 
+function isUsableCover(url?: string): url is string {
+    if (!url || url.startsWith('data:') || url.startsWith('blob:')) return false;
+    const clean = url.toLowerCase();
+    return !clean.includes('placehold.co') && !clean.includes('reflix.dev');
+}
+
+function getDerivedVideoCover(url?: string): string | undefined {
+    if (!url) return undefined;
+    const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/i);
+    return match?.[1] ? `https://i.ytimg.com/vi/${match[1]}/hqdefault.jpg` : undefined;
+}
+
+function addVideoCoverFallbacks(videos: Video[]): Video[] {
+    return videos.map((video) => {
+        if (isUsableCover(video.thumbnailUrl) || isUsableCover(video.posterUrl)) return video;
+        const derived = getDerivedVideoCover(video.videoUrl);
+        return derived ? { ...video, thumbnailUrl: derived, posterUrl: derived } : video;
+    });
+}
+
+const normalizeSlug = (s: string) =>
+    (s || '')
+        .toLowerCase()
+        .trim()
+        .replace(/&/g, ' and ')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+
+const stripCategorySuffix = (s: string) =>
+    (s || '')
+        .toLowerCase()
+        .trim()
+        .replace(/-animation-references?$/i, '')
+        .replace(/-references?$/i, '')
+        .replace(/-animations?$/i, '')
+        .replace(/-reference-clips?$/i, '')
+        .replace(/(^-|-$)/g, '');
+
+const CATEGORY_ALIASES: Record<string, string[]> = {
+    'running': ['running', 'run-cycle', 'run', 'sprint', 'jogging'],
+    'walking': ['walking', 'walk-cycle', 'walk', 'locomotion'],
+    'action': ['action', 'combat-action', 'combat', 'martial-arts', 'stunts'],
+    'fighting': ['fighting', 'fighitng', 'brawl', 'melee'],
+    'acting': ['acting', 'acting-dialogue', 'performance', 'pantomime'],
+    'dialogue': ['dialogue', 'lip-sync', 'talking'],
+    'body-mechanics': ['body-mechanics', 'body', 'weight', 'balance', 'physics'],
+    'jumping': ['jumping', 'jump', 'leap', 'hop'],
+    'facial-expressions': ['facial-expressions', 'facial', 'eye-animations', 'eye-animation', 'eyes', 'mouth'],
+    'disney': ['disney', 'walt-disney'],
+    'dreamworks': ['dreamworks', 'dream-works'],
+    'live-action': ['live-action', 'liveaction', 'mocap', 'live'],
+    '2d-animation': ['2d-animation', '2d'],
+    '3d-animation': ['3d-animation', '3d'],
+    'vfx': ['vfx', 'fx', '2d-effects', 'effects'],
+};
 
 async function getCategoryBySlug(slug: string): Promise<Category | null> {
     try {
         const categoriesRef = collection(db, 'categories');
-        const qSlug = query(categoriesRef, where('slug', '==', slug), limit(1));
-        const snapshotSlug = await getDocs(qSlug);
+        const targetSlug = slug.toLowerCase().trim();
+        const strippedSlug = stripCategorySuffix(targetSlug);
 
+        // 1. Direct query by exact slug if configured
+        const qSlug = query(categoriesRef, where('slug', '==', targetSlug), limit(1));
+        const snapshotSlug = await getDocs(qSlug);
         if (!snapshotSlug.empty) {
             const doc = snapshotSlug.docs[0];
             return { id: doc.id, ...doc.data() } as Category;
         }
 
-        const qAll = query(categoriesRef, where('status', '==', 'published'));
-        const snapshotAll = await getDocs(qAll);
-        const targetSlug = slug.toLowerCase();
+        // 2. Fetch all categories and match flexibly
+        const snapshotAll = await getDocs(categoriesRef);
 
         const found = snapshotAll.docs.find(doc => {
             const data = doc.data();
-            const titleSlug = (data.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-            return titleSlug === targetSlug;
+            const id = doc.id.toLowerCase();
+            const docSlug = (data.slug || '').toLowerCase().trim();
+            const rawTitle = data.title || '';
+            const titleSlug = normalizeSlug(rawTitle);
+            const titleWithoutAnd = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const strippedTitle = stripCategorySuffix(titleSlug);
+
+            // Exact ID or doc slug
+            if (id === targetSlug || doc.id === slug || docSlug === targetSlug || docSlug === strippedSlug) {
+                return true;
+            }
+
+            // Title slug matches
+            if (titleSlug === targetSlug || titleSlug === strippedSlug) {
+                return true;
+            }
+            if (titleWithoutAnd === targetSlug || titleWithoutAnd === strippedSlug) {
+                return true;
+            }
+            if (strippedTitle === strippedSlug) {
+                return true;
+            }
+
+            // Check aliases
+            for (const [key, aliases] of Object.entries(CATEGORY_ALIASES)) {
+                if (titleSlug === key || strippedTitle === key) {
+                    if (aliases.includes(targetSlug) || aliases.includes(strippedSlug)) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         });
 
         if (found) {
@@ -105,7 +193,7 @@ function getCategoryVideos(category: Category): Video[] {
         // Filter out unavailable/offline video hosts so cards don't show error overlays
         const availableMatches = filterAvailableVideos(matches);
 
-        return availableMatches.slice(0, CATEGORY_VIDEO_LIMIT).map(v => serializeVideo(v));
+        return addVideoCoverFallbacks(availableMatches.slice(0, CATEGORY_VIDEO_LIMIT).map(v => serializeVideo(v)));
     } catch (error) {
         console.error("Error fetching category videos:", error);
         return [];
@@ -119,6 +207,13 @@ export async function generateMetadata(
     const category = await getCategoryBySlug(slug);
 
     if (!category) {
+        const tagMatch = getTagBySlug(slug) || getTagBySlug(stripCategorySuffix(slug));
+        if (tagMatch) {
+            return {
+                title: `${tagMatch.tag} Animation References | Animation Reference`,
+                description: `Browse curated ${tagMatch.tag} animation reference clips. High-quality clips for professional artists.`,
+            };
+        }
         return {
             title: 'Category Not Found',
         };
@@ -149,6 +244,10 @@ export default async function Page({ params }: Props) {
     const category = await getCategoryBySlug(slug);
 
     if (!category) {
+        const tagMatch = getTagBySlug(slug) || getTagBySlug(stripCategorySuffix(slug));
+        if (tagMatch) {
+            redirect(`/tags/${slugifyTag(tagMatch.tag)}`);
+        }
         notFound();
     }
 
@@ -184,7 +283,12 @@ export default async function Page({ params }: Props) {
 
     // Hero Logic
     let heroVideo: Video | null = null;
-    const catCover = category.imageUrl && !category.imageUrl.startsWith('data:') ? category.imageUrl : (videos[0]?.thumbnailUrl || videos[0]?.posterUrl);
+    // Use artwork from a video in this category first so every category page
+    // is visibly tied to the references it contains. Stored category artwork
+    // is only a fallback for categories whose videos have no cover image.
+    const videoCover = videos.find((video) => isUsableCover(video.thumbnailUrl) || isUsableCover(video.posterUrl));
+    const catCover = videoCover?.thumbnailUrl || videoCover?.posterUrl ||
+        (isUsableCover(category.imageUrl) ? category.imageUrl : undefined);
     if (category.videoUrl && isVideoSourceAvailable(category.videoUrl)) {
         heroVideo = {
             id: 'category-hero',
@@ -242,7 +346,7 @@ export default async function Page({ params }: Props) {
 
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
                             <Button asChild className="h-16 px-10 rounded-2xl text-lg font-semibold bg-gradient-to-br from-[#7c3aed] to-[#6d28d9] hover:scale-105 shadow-[0_10px_40px_-10px_rgba(124,58,237,0.5)] border border-purple-400/20 transition-all duration-300 group text-white">
-                                <Link href={`/browse?category=${category.id}`}>
+                                <Link href="#references">
                                     Access the Full {category.title} Library
                                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                                 </Link>
@@ -253,7 +357,7 @@ export default async function Page({ params }: Props) {
             ) : (
                 <div className="h-[80vh] w-full bg-[#030014] flex flex-col items-center justify-center text-center px-4">
                     <h1 className="text-6xl font-black text-white mb-6">{category.title} References</h1>
-                    <Button asChild size="lg"><Link href={`/browse?category=${category.id}`}>View Collection</Link></Button>
+                    <Button asChild size="lg"><Link href="#references">View Collection</Link></Button>
                 </div>
             )}
 
@@ -263,7 +367,7 @@ export default async function Page({ params }: Props) {
                 even when it held hundreds of clips. The full grid now leads,
                 in the same layout as the home feed. The SEO sections below are
                 kept, but they no longer stand between the visitor and the work. */}
-            <section className="py-12 md:py-16">
+            <section id="references" className="py-12 md:py-16 scroll-mt-24">
                 <div className="container mx-auto px-6">
                     {videos.length > 0 ? (
                         <>

@@ -68,7 +68,7 @@ interface TagIndex {
     mtimeMs: number;
 }
 
-const MIN_VIDEOS_PER_TAG_PAGE = 2;
+const MIN_VIDEOS_PER_TAG_PAGE = 1;
 let tagCache: TagIndex | null = null;
 
 export function getTagIndex(): TagIndex {
@@ -111,7 +111,16 @@ export function getTagIndex(): TagIndex {
 }
 
 export function getTagBySlug(slug: string): { tag: string; videos: Video[] } | null {
-    return getTagIndex().bySlug.get(slug) ?? null;
+    const fromIndex = getTagIndex().bySlug.get(slug);
+    if (fromIndex) return fromIndex;
+    const snap = load();
+    const cleanSlug = slug.toLowerCase().trim();
+    const matches = snap.videos.filter(v => (v.tags || []).some(t => slugifyTag(t) === cleanSlug));
+    if (matches.length > 0) {
+        const foundTag = matches[0].tags?.find(t => slugifyTag(t) === cleanSlug) || slug;
+        return { tag: foundTag, videos: matches };
+    }
+    return null;
 }
 
 export function getAllTags(): { slug: string; tag: string; videos: Video[] }[] {

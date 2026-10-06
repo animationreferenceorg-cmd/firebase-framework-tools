@@ -9,6 +9,8 @@ export interface TagEntry {
     count: number;
     /** Cover image, uniquely assigned so no two cards share the same photo. */
     coverUrl?: string;
+    /** Fallback video preview url when image is unavailable */
+    videoUrl?: string;
 }
 
 export interface BrowseIndex {
@@ -30,6 +32,7 @@ function isValidCoverUrl(url?: string | null): boolean {
     if (!url) return false;
     const clean = url.trim().toLowerCase();
     if (clean.includes('assets.reflix.dev')) return false;
+    if (clean.includes('cdninstagram.com') || clean.includes('instagram.com') || clean.includes('fbcdn.net')) return false;
     return true;
 }
 
@@ -49,6 +52,7 @@ function pushCandidate(list: string[], url: string) {
 export function buildBrowseIndex(categories: Category[], videos: Video[]): BrowseIndex {
     const tagCounts = new Map<string, number>();
     const tagCandidates = new Map<string, string[]>();
+    const tagVideos = new Map<string, string>();
 
     const categoryCounts: Record<string, number> = {};
     const categoryCandidates = new Map<string, string[]>();
@@ -63,7 +67,7 @@ export function buildBrowseIndex(categories: Category[], videos: Video[]): Brows
 
     for (const v of videos) {
         const cover = v.thumbnailUrl || v.posterUrl || '';
-        if (!isValidCoverUrl(cover)) continue;
+        const hasValidCover = isValidCoverUrl(cover);
 
         // Tags
         if (v.tags) {
@@ -73,9 +77,14 @@ export function buildBrowseIndex(categories: Category[], videos: Video[]): Brows
                 if (!key || seen.has(key)) continue; // don't double-count within one clip
                 seen.add(key);
                 tagCounts.set(key, (tagCounts.get(key) || 0) + 1);
-                const arr = tagCandidates.get(key) || [];
-                pushCandidate(arr, cover);
-                tagCandidates.set(key, arr);
+                if (v.videoUrl && !tagVideos.has(key)) {
+                    tagVideos.set(key, v.videoUrl);
+                }
+                if (hasValidCover) {
+                    const arr = tagCandidates.get(key) || [];
+                    pushCandidate(arr, cover);
+                    tagCandidates.set(key, arr);
+                }
             }
         }
 
@@ -83,7 +92,9 @@ export function buildBrowseIndex(categories: Category[], videos: Video[]): Brows
         for (const id of v.categoryIds || []) {
             if (id in categoryCounts) {
                 categoryCounts[id] += 1;
-                pushCandidate(categoryCandidates.get(id)!, cover);
+                if (hasValidCover) {
+                    pushCandidate(categoryCandidates.get(id)!, cover);
+                }
             }
         }
     }
@@ -150,7 +161,12 @@ export function buildBrowseIndex(categories: Category[], videos: Video[]): Brows
 
     const tags: TagEntry[] = tagList
         .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
-        .map(({ tag, count }) => ({ tag, count, coverUrl: tagCoverMap.get(tag) }));
+        .map(({ tag, count }) => ({
+            tag,
+            count,
+            coverUrl: tagCoverMap.get(tag),
+            videoUrl: tagVideos.get(tag)
+        }));
 
     return { categoryCounts, categoryCovers, tags };
 }

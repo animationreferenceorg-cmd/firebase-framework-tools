@@ -49,7 +49,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         profile = await getUserProfile(currentUid);
       }
 
-      setUserProfile(profile);
+      // The email lives in Firebase Auth, not the public profile document.
+      setUserProfile(profile ? { ...profile, email: authUser?.email ?? profile.email ?? null } : null);
       lastFetchedUidRef.current = currentUid;
     } catch (error) {
       console.error("Failed to fetch user profile:", error);

@@ -4,6 +4,7 @@
  */
 
 import type Stripe from 'stripe';
+import { getFirebaseAuth } from './firebase-admin';
 import type { Firestore } from 'firebase-admin/firestore';
 import { billingStateFromSubscriptions, billingUpdateFor, type BillingState } from './subscription-state';
 import type { WebhookDeps } from './stripe-webhook';
@@ -34,8 +35,11 @@ export function createWebhookDeps(stripe: Stripe, db: Firestore): WebhookDeps {
       return snap.docs.map((d) => d.id);
     },
     async findUserIdsByEmail(email) {
-      const snap = await users.where('email', '==', email).limit(MAX_LOOKUP).get();
-      return snap.docs.map((d) => d.id);
+      // Firebase Auth is the source of truth for emails; profiles no longer store them.
+      const account = await getFirebaseAuth().getUserByEmail(email).catch(() => null);
+      if (!account) return [];
+      const profile = await users.doc(account.uid).get();
+      return profile.exists ? [account.uid] : [];
     },
     async updateUser(uid, data) {
       await users.doc(uid).set(data, { merge: true });

@@ -197,8 +197,11 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if true;
+      // Profiles are public, so they must never hold the account email
+      // (Firebase Auth has it). Owners can't add or change one.
       allow update: if request.auth != null && request.auth.uid == userId
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(entitlementFields());
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(entitlementFields())
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['email']);
       allow delete: if request.auth != null && request.auth.uid == userId;
       // A new profile may carry only the default role/plan values.
       allow create: if request.auth != null && request.auth.uid == userId
@@ -207,7 +210,7 @@ service cloud.firestore {
         && request.resource.data.get('tier', 'free') in ['free', null]
         && !request.resource.data.keys().hasAny(['plan', 'subscriptionStatus',
               'stripeCustomerId', 'stripeSubscriptionId', 'stripePriceId', 'billingUpdatedAt',
-              'isVIP', 'unlimitedAccess', 'isStudent']);
+              'isVIP', 'unlimitedAccess', 'isStudent', 'email']);
       allow read, write: if isAdmin();
     }
     // Subcollections only. `{document=**}` directly under {userId} would also

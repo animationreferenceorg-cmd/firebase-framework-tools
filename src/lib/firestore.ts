@@ -35,8 +35,11 @@ export async function createUserProfile(user: User): Promise<void> {
         savedShortIds: [],
         recentlyViewedShortIds: [],
     };
-    // createdAt makes signups-per-month measurable (profiles had no timestamp).
-    await setDoc(userRef, { ...userProfile, createdAt: serverTimestamp() });
+    // users/{uid} is publicly readable (portfolio pages), so the email is not
+    // stored here; Firebase Auth already holds it. createdAt makes signups per
+    // month measurable.
+    const { email: _privateEmail, ...publicProfile } = userProfile;
+    await setDoc(userRef, { ...publicProfile, createdAt: serverTimestamp() });
     track('sign_up', { source: user.providerData[0]?.providerId || 'unknown' });
   }
   
@@ -193,11 +196,11 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
           profile.isPremium = true;
           profile.tier = detectedTier;
           profile.plan = detectedPlan;
-          if (profile.email) {
+          if (auth.currentUser?.email) {
             auth.currentUser.getIdToken().then((idToken) => fetch('/api/sync-stripe', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-              body: JSON.stringify({ userId: uid, email: profile?.email }),
+              body: JSON.stringify({ userId: uid, email: auth.currentUser?.email }),
             })).catch((e) => console.error('[Subscription Check] Failed to trigger server-side sync:', e));
           }
         }

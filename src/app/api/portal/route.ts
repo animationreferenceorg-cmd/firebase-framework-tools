@@ -27,9 +27,10 @@ export async function POST(req: NextRequest) {
         const userData = userDoc.data() || {};
         let stripeCustomerId = userData.stripeCustomerId;
 
-        // FALLBACK: If stripeCustomerId is missing, search Stripe by user's email
-        if (!stripeCustomerId && userData.email) {
-            const email = userData.email;
+        // FALLBACK: If stripeCustomerId is missing, search Stripe by the account email (from Firebase Auth).
+        const accountEmail = identity.email;
+        if (!stripeCustomerId && accountEmail) {
+            const email = accountEmail;
             console.log(`[Portal] stripeCustomerId missing for user ${userId}. Searching Stripe by email: ${email}`);
             try {
                 const stripe = getStripe();

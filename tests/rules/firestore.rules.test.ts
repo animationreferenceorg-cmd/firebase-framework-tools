@@ -75,7 +75,13 @@ describe('users/{uid} entitlement fields', () => {
     const bob = env.authenticatedContext('bob').firestore();
     await assertFails(setDoc(doc(bob, 'users/bob'), { role: 'user', isVIP: true }));
     await assertFails(setDoc(doc(bob, 'users/bob'), { role: 'user', isPremium: true, tier: 'tier5' }));
-    await assertSucceeds(setDoc(doc(bob, 'users/bob'), { role: 'user', email: 'bob@example.com' }));
+    await assertSucceeds(setDoc(doc(bob, 'users/bob'), { role: 'user', displayName: 'Bob' }));
+  });
+
+  it('public profiles cannot carry an email address', async () => {
+    const bob = env.authenticatedContext('bob').firestore();
+    await assertFails(setDoc(doc(bob, 'users/bob'), { role: 'user', email: 'bob@example.com' }));
+    await assertFails(updateDoc(doc(alice(), 'users/alice'), { email: 'new@example.com' }));
   });
 
   it('users cannot write another user profile', async () => {

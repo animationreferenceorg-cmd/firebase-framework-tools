@@ -49,6 +49,16 @@ export default function UsersAdminPage() {
           id: doc.id,
           ...doc.data()
         })) as User[];
+
+        // Emails live in Firebase Auth (profiles are public), fetched via an admin-only route.
+        try {
+          const idToken = await authUser?.getIdToken();
+          const res = await fetch('/api/admin/user-emails', { headers: { Authorization: `Bearer ${idToken}` } });
+          const { emails } = (await res.json()) as { emails?: Record<string, string> };
+          if (emails) usersList.forEach((u) => { u.email = emails[u.id] || u.email || ''; });
+        } catch (err) {
+          console.warn('Could not load account emails:', err);
+        }
         
         // Sort by email
         usersList.sort((a, b) => {
@@ -65,8 +75,8 @@ export default function UsersAdminPage() {
       }
     }
     
-    fetchUsers();
-  }, []);
+    if (authUser) fetchUsers();
+  }, [authUser]);
 
   const handleSyncUser = async (userId: string, email: string) => {
     if (!userId || !email) return;

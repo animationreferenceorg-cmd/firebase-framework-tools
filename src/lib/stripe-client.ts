@@ -12,7 +12,14 @@ export function getStripeClient(): Promise<Stripe | null> {
     return Promise.resolve(null);
   }
   if (!stripePromise) {
-    stripePromise = loadStripe(key);
+    // loadStripe rejects when js.stripe.com can't load (ad/privacy blockers,
+    // strict tracking prevention, flaky networks). Resolve to null instead so
+    // callers fall back to hosted checkout, and allow a retry next time.
+    stripePromise = loadStripe(key).catch((err) => {
+      console.warn('[stripe] Stripe.js failed to load; using hosted checkout instead.', err);
+      stripePromise = null;
+      return null;
+    });
   }
   return stripePromise;
 }

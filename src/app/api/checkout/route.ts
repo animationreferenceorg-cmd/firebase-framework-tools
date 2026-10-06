@@ -3,6 +3,7 @@ import { getStripe } from '@/lib/stripe';
 import { getFirestore } from '@/lib/firebase-admin';
 import { apiErrorResponse, requireFirebaseUser } from '@/lib/api-auth';
 import { buildCheckoutSessionParams, CheckoutPlanError, priceForCheckout } from '@/lib/checkout';
+import { publicOrigin } from '@/lib/site-origin';
 
 /**
  * Starts a Stripe Checkout session for `{ plan: 'pro_monthly' | 'pro_annual' }`.
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
                 plan,
                 uid: identity.uid,
                 customerId,
-                origin: req.nextUrl.origin,
+                origin: publicOrigin(req.headers),
                 embedded: Boolean(embedded),
             })
         );

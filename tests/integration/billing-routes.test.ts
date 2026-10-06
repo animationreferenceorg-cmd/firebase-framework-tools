@@ -152,7 +152,8 @@ describe('POST /api/portal (billing portal redirect)', () => {
     expect(await res.json()).toEqual({ url: 'https://billing.stripe.test/portal' });
     expect(stripe.billingPortal.sessions.create).toHaveBeenCalledWith({
       customer: 'cus_A',
-      return_url: 'https://animationreference.test/profile',
+      // Unknown request hosts never leak into Stripe links; customers go to the canonical site.
+      return_url: 'https://animationreference.org/profile',
     });
   });
 });

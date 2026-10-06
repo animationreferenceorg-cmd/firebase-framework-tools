@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { publicOrigin } from '@/lib/site-origin';
 import { getStripe } from '@/lib/stripe';
 import { getFirestore } from '@/lib/firebase-admin';
 import { apiErrorResponse, requireFirebaseUser } from '@/lib/api-auth';
@@ -55,8 +56,17 @@ export async function POST(req: NextRequest) {
 
         // Create a Billing Portal session
         const stripe = getStripe();
-        const origin = req.nextUrl.origin;
-        const safeReturnUrl = typeof returnUrl === 'string' && new URL(returnUrl, origin).origin === origin ? new URL(returnUrl, origin).toString() : `${origin}/profile`;
+        // Only return customers to our own site, never to an address supplied by the client.
+        const origin = publicOrigin(req.headers);
+        let safeReturnUrl = `${origin}/profile`;
+        if (typeof returnUrl === 'string') {
+            try {
+                const candidate = new URL(returnUrl, origin);
+                if (candidate.origin === origin) safeReturnUrl = candidate.toString();
+            } catch {
+                // Malformed return URL: keep the default.
+            }
+        }
         const session = await stripe.billingPortal.sessions.create({
             customer: stripeCustomerId,
             return_url: safeReturnUrl,

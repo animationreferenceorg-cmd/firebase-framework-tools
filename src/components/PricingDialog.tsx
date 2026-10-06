@@ -34,7 +34,15 @@ export interface PricingDialogProps {
     forceTimer?: boolean;
 }
 
-export function PricingDialog({ children, open, onOpenChange }: PricingDialogProps) {
+export function PricingDialog({ children, open: openProp, onOpenChange: onOpenChangeProp }: PricingDialogProps) {
+    // Works both controlled (open/onOpenChange) and uncontrolled (trigger child):
+    // "Upgrade" must be able to close this dialog either way before checkout opens.
+    const [internalOpen, setInternalOpen] = useState(false);
+    const open = openProp ?? internalOpen;
+    const onOpenChange = (next: boolean) => {
+        if (openProp === undefined) setInternalOpen(next);
+        onOpenChangeProp?.(next);
+    };
     const offers = getProOffers();
     const [billingCycle, setBillingCycle] = useState<CheckoutPlanId>('pro_monthly');
     const [activeView, setActiveView] = useState<'cards' | 'comparison'>('cards');

@@ -55,6 +55,8 @@ export function CustomCheckoutModal({
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [stripeAvailable, setStripeAvailable] = useState<boolean | null>(null);
+    const [retryToken, setRetryToken] = useState(0);
+    const keyConfigured = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim());
 
     const activeOffer = offers[selectedPlan].available ? offers[selectedPlan] : offers.pro_monthly;
     const monthlyEquivalent = activeOffer.interval === 'year'
@@ -64,12 +66,18 @@ export function CustomCheckoutModal({
         ? Math.round((1 - offers.pro_annual.amountCents / (offers.pro_monthly.amountCents * 12)) * 100)
         : 0;
 
-    // Check if Stripe publishable key is configured on client
+    // Can the in-page Stripe form load? Re-checked each time the modal opens:
+    // blockers or a bad network make Stripe.js unavailable, and then we use
+    // Stripe's hosted checkout page instead of leaving the buyer stuck.
     useEffect(() => {
-        getStripeClient().then((stripe) => {
-            setStripeAvailable(Boolean(stripe));
-        });
-    }, []);
+        if (!open) return;
+        let cancelled = false;
+        setStripeAvailable(null);
+        getStripeClient()
+            .then((stripe) => { if (!cancelled) setStripeAvailable(Boolean(stripe)); })
+            .catch(() => { if (!cancelled) setStripeAvailable(false); });
+        return () => { cancelled = true; };
+    }, [open, retryToken]);
 
     // Keep plan in sync if initialPlan prop changes while closed
     useEffect(() => {
@@ -81,9 +89,10 @@ export function CustomCheckoutModal({
         setSelectedPlan(initialPlan);
     }, [open, initialPlan]);
 
-    // Fetch checkout session clientSecret whenever open or selectedPlan changes
+    // Create the checkout session once we know which kind we can show:
+    // embedded (Stripe.js loaded) or hosted (a link to Stripe's checkout page).
     useEffect(() => {
-        if (!open) return;
+        if (!open || stripeAvailable === null) return;
         let isCancelled = false;
 
         async function createSession() {
@@ -109,7 +118,7 @@ export function CustomCheckoutModal({
                     },
                     body: JSON.stringify({
                         plan: selectedPlan,
-                        embedded: true,
+                        embedded: stripeAvailable,
                     }),
                 });
 
@@ -125,6 +134,9 @@ export function CustomCheckoutModal({
                 }
                 if (data.url) {
                     setFallbackUrl(data.url);
+                }
+                if (!data.clientSecret && !data.url) {
+                    throw new Error('Checkout could not be started. Please try again.');
                 }
             } catch (err: any) {
                 if (isCancelled) return;
@@ -142,7 +154,7 @@ export function CustomCheckoutModal({
         return () => {
             isCancelled = true;
         };
-    }, [open, selectedPlan, user, source]);
+    }, [open, selectedPlan, user, source, stripeAvailable, retryToken]);
 
     const stripePromise = getStripeClient();
 
@@ -264,7 +276,7 @@ export function CustomCheckoutModal({
 
                     {/* Right Column: Stripe Embedded Checkout or Hosted Fallback */}
                     <div className="lg:w-[58%] p-6 sm:p-8 flex flex-col justify-center min-h-[460px]">
-                        {isLoading && (
+                        {(isLoading || (open && !error && stripeAvailable === null)) && (
                             <div className="flex flex-col items-center justify-center space-y-4 py-16">
                                 <div className="relative w-12 h-12">
                                     <div className="absolute inset-0 rounded-full border-2 border-purple-500/20" />
@@ -284,7 +296,7 @@ export function CustomCheckoutModal({
                                     <p className="text-xs text-zinc-400">{error}</p>
                                 </div>
                                 <Button
-                                    onClick={() => setSelectedPlan(selectedPlan)}
+                                    onClick={() => setRetryToken((t) => t + 1)}
                                     className="bg-white/10 hover:bg-white/20 text-white text-xs h-9 rounded-xl"
                                 >
                                     <RefreshCcw className="h-3.5 w-3.5 mr-1.5" />
@@ -306,7 +318,7 @@ export function CustomCheckoutModal({
                         )}
 
                         {/* Case 2: Stripe publishable key is not set in environment or clientSecret not available -> Fallback Card */}
-                        {!isLoading && !error && (!stripeAvailable || !clientSecret) && (
+                        {!isLoading && !error && stripeAvailable !== null && (!stripeAvailable || !clientSecret) && (
                             <div className="p-6 sm:p-8 rounded-2xl bg-zinc-900/60 border border-purple-500/30 text-center space-y-6">
                                 <div className="mx-auto w-14 h-14 rounded-2xl bg-purple-600/15 border border-purple-500/30 flex items-center justify-center">
                                     <ShieldCheck className="h-7 w-7 text-purple-400" />
@@ -332,14 +344,16 @@ export function CustomCheckoutModal({
                                     </Button>
                                 ) : (
                                     <Button
-                                        disabled
-                                        className="w-full h-12 rounded-xl bg-white/10 text-zinc-400 text-sm"
+                                        onClick={() => setRetryToken((t) => t + 1)}
+                                        className="w-full h-12 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm"
                                     >
-                                        Loading checkout link…
+                                        <RefreshCcw className="h-4 w-4 mr-1.5" />
+                                        Retry checkout
                                     </Button>
                                 )}
 
-                                {!stripeAvailable && (
+                                {/* Developer hint only: never shown to buyers on the live site. */}
+                                {process.env.NODE_ENV !== 'production' && !keyConfigured && (
                                     <div className="p-3 rounded-xl bg-purple-950/30 border border-purple-500/20 text-left text-[11px] text-purple-300/80 space-y-1">
                                         <div className="font-semibold text-purple-200">
                                             💡 Inline Checkout Notice

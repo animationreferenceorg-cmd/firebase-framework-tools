@@ -160,7 +160,7 @@ export function CuratedCategoryPillsShelf({ onSelectPill, categories = [], video
         ...cfg,
         displayCount: count,
         resolvedImage: actualImageUrl,
-        targetHref: cfg.slug === 'shorts' ? '/shorts' : `/categories?category=${matchedCategory?.id || cfg.slug}`,
+        targetHref: cfg.slug === 'shorts' ? '/shorts' : `/category/${matchedCategory?.slug || (matchedCategory?.title ? matchedCategory.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : (matchedCategory?.id || cfg.slug))}`,
       };
     });
   }, [categories, videos]);

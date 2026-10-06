@@ -82,7 +82,7 @@ export function HeroSection({ video, isShort = false }: HeroSectionProps) {
     return null;
   }
   
-  const href = isShort ? `/shorts/${video.id}` : (video.categoryIds && video.categoryIds.length > 0 ? `/browse/${video.categoryIds[0]}` : '#');
+  const href = isShort ? `/shorts/${video.id}` : (video.categoryIds && video.categoryIds.length > 0 ? `/category/${video.categoryIds[0]}` : '#');
 
 
   const handleRate = (rating: number) => {

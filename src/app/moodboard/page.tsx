@@ -3034,7 +3034,7 @@ function MoodboardContent() {
                             ) : likedVideos.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-[260px] text-xs gap-3 text-zinc-500">
                                     <p>No liked videos yet.</p>
-                                    <Link href="/browse">
+                                    <Link href="/categories">
                                         <Button variant="outline" size="sm" className="bg-transparent border-white/20 text-white hover:bg-white/10">Browse Videos</Button>
                                     </Link>
                                 </div>

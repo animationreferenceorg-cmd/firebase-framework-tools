@@ -71,7 +71,7 @@ export function LikedCategoryRow({ categories, title = 'Liked Collections' }: Li
                 <CarouselContent className="-ml-4">
                     {categories.map((cat) => (
                         <CarouselItem key={cat.id} className="pl-4 basis-[85%] sm:basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
-                            <Link href={`/browse?category=${cat.id}`} className="block group relative w-full aspect-[16/9] rounded-xl overflow-hidden bg-zinc-900 border border-white/5 hover:border-purple-500/50 transition-all">
+                            <Link href={`/category/${cat.slug || (cat.title ? cat.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : cat.id)}`} className="block group relative w-full aspect-[16/9] rounded-xl overflow-hidden bg-zinc-900 border border-white/5 hover:border-purple-500/50 transition-all">
                                 {cat.imageUrl ? (
                                     <Image
                                         src={cat.imageUrl}

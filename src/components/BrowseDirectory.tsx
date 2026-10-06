@@ -55,6 +55,15 @@ export const needsUnoptimized = (url?: string) =>
 
 const formatCount = (count: number) => (count >= 1000 ? `${(count / 1000).toFixed(1)}k` : `${count}`);
 
+const getPreviewUrl = (url?: string): string => {
+    if (!url) return '';
+    const trimmed = url.trim();
+    if (trimmed.includes('playlist.m3u8')) {
+        return trimmed.replace('playlist.m3u8', 'play_480p.mp4');
+    }
+    return trimmed;
+};
+
 const slugifyTag = (tag: string) =>
     tag.toLowerCase().trim().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
@@ -68,6 +77,7 @@ export interface UnifiedCategoryCardItem {
     href: string;
     title: string;
     coverUrl?: string;
+    videoUrl?: string;
     count: number;
     description?: string;
     badge?: string;
@@ -131,6 +141,7 @@ export function BrowseDirectory({ categories, videos, query: controlledQuery, on
             href: `/tags/${slugifyTag(t.tag)}`,
             title: t.tag.charAt(0).toUpperCase() + t.tag.slice(1),
             coverUrl: t.coverUrl,
+            videoUrl: t.videoUrl,
             count: t.count,
             description: `${t.count} reference clips`,
             badge: idx % 4 === 0 ? 'FEATURED' : 'TRENDING',
@@ -456,6 +467,7 @@ export function BrowseDirectory({ categories, videos, query: controlledQuery, on
                         href={item.href}
                         title={item.title}
                         coverUrl={item.coverUrl}
+                        videoUrl={item.videoUrl}
                         count={item.count}
                         description={item.description}
                         onClick={(e) => {
@@ -504,6 +516,7 @@ function BrowseCard({
     href,
     title,
     coverUrl,
+    videoUrl,
     count,
     description,
     onClick,
@@ -511,6 +524,7 @@ function BrowseCard({
     href: string;
     title: string;
     coverUrl?: string;
+    videoUrl?: string;
     count: number;
     description?: string;
     onClick?: (e: React.MouseEvent) => void;
@@ -518,6 +532,9 @@ function BrowseCard({
     const [hasError, setHasError] = useState(false);
     const { beginWatch, endWatch } = useWatchTracker();
     const hoverKey = `hover:browse:${href}`;
+
+    const isInstagramCover = coverUrl && (coverUrl.includes('cdninstagram.com') || coverUrl.includes('fbcdn.net'));
+    const canUseImage = coverUrl && !hasError && !isInstagramCover;
 
     return (
         <Link
@@ -527,7 +544,7 @@ function BrowseCard({
             onMouseLeave={() => endWatch(hoverKey)}
             className="group/card relative aspect-square rounded-xl overflow-hidden border border-white/10 bg-black shadow-lg transition-all duration-300 text-left hover:-translate-y-1 hover:border-purple-500/80 hover:shadow-[0_0_30px_-5px_rgba(168,85,247,0.5)] cursor-pointer block w-full"
         >
-            {coverUrl && !hasError ? (
+            {canUseImage ? (
                 <Image
                     src={coverUrl}
                     alt={title}
@@ -536,6 +553,14 @@ function BrowseCard({
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 16vw"
                     onError={() => setHasError(true)}
                     className="object-cover transition-transform duration-500 group-hover/card:scale-110"
+                />
+            ) : videoUrl ? (
+                <video
+                    src={getPreviewUrl(videoUrl) + '#t=0.1'}
+                    preload="metadata"
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-110"
                 />
             ) : (
                 <div className="w-full h-full bg-gradient-to-br from-purple-950 via-indigo-950 to-zinc-950 flex flex-col items-center justify-center p-3 text-center">

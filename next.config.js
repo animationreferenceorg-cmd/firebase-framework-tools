@@ -5,6 +5,16 @@ const nextConfig = {
     return [
       // Main Hub & References Redirects
       {
+        source: '/browse',
+        destination: '/categories',
+        permanent: true,
+      },
+      {
+        source: '/browse/:path*',
+        destination: '/category/:path*',
+        permanent: true,
+      },
+      {
         source: '/categories/',
         destination: '/categories',
         permanent: true,

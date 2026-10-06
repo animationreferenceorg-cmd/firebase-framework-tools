@@ -49,11 +49,15 @@ export default function LandingPage() {
 
                 if (!isMounted) return;
 
-                const categories = (categorySnapshot.docs || []).map(doc => ({
-                    id: doc.id,
-                    href: `/browse?category=${doc.id}`,
-                    ...doc.data()
-                } as Category));
+                const categories = (categorySnapshot.docs || []).map(doc => {
+                    const data = doc.data();
+                    const slug = data.slug || (data.title ? data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : doc.id);
+                    return {
+                        id: doc.id,
+                        href: `/category/${slug}`,
+                        ...data
+                    } as Category;
+                });
 
                 if (categories && categories.length > 0) {
                     setAllCategories(categories);
@@ -347,7 +351,7 @@ export default function LandingPage() {
                                         </p>
                                         <div className="pt-2">
                                             <Button asChild variant="outline" className="rounded-full px-7 py-5 border-white/15 bg-white/5 hover:bg-purple-600 hover:text-white hover:border-purple-500/50 transition-all group text-sm font-bold cursor-pointer">
-                                                <Link href={`/browse?category=${category.id}`}>
+                                                <Link href={category.href || (category.slug ? `/category/${category.slug}` : `/category/${category.id}`)}>
                                                     View Collection
                                                     <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                                                 </Link>

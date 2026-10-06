@@ -67,7 +67,7 @@ export function VideoDetailClient({ id, initialData }: VideoDetailClientProps) {
         return (
             <div className="h-screen w-full bg-black flex flex-col items-center justify-center text-white space-y-4">
                 <h1 className="text-2xl font-bold text-red-500">Video Not Found</h1>
-                <Link href="/browse">
+                <Link href="/categories">
                     <Button variant="outline">Back to Browse</Button>
                 </Link>
             </div>

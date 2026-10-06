@@ -110,7 +110,7 @@ export function FeaturedCategoryRow({ title = "Featured Collections", categories
                     {categories.map((category, index) => (
                         <Link
                             key={category.id}
-                            href={category.href || `/browse?category=${category.id}`}
+                            href={category.href || `/category/${category.slug || (category.title ? category.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : category.id)}`}
                             onClick={(e) => {
                                 if (onCategorySelect) {
                                     e.preventDefault();

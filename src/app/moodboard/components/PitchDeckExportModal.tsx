@@ -22,7 +22,8 @@ import {
   Clock, 
   ExternalLink,
   ChevronRight,
-  Eye
+  Eye,
+  Printer
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DraggableCanvasItem } from '../types';
@@ -279,6 +280,19 @@ export function PitchDeckExportModal({
     }
   };
 
+  // Direct Print / Save to PDF
+  const handlePrintPDF = () => {
+    if (!isPro) {
+      setShowPricing(true);
+      toast({
+        title: 'Pro Required',
+        description: 'Exporting pitch deck PDFs requires a Pro subscription ($5/mo).',
+      });
+      return;
+    }
+    window.print();
+  };
+
   // Copy Markdown summary for Slack/Notion/Discord
   const handleCopyMarkdown = () => {
     if (!isPro) {
@@ -376,10 +390,21 @@ export function PitchDeckExportModal({
               size="sm"
               onClick={handleExportPNG}
               disabled={isExportingPng}
-              className="border-white/10 bg-white/5 hover:bg-white/10 text-zinc-200 text-xs h-9"
+              className="border-white/10 bg-white/5 hover:bg-white/10 text-zinc-200 text-xs h-9 cursor-pointer"
             >
               <Download className="h-3.5 w-3.5 mr-1.5 text-zinc-400" />
               {isExportingPng ? 'Rendering...' : 'Export PNG'}
+              {!isPro && <span className="ml-1.5 rounded bg-purple-600 px-1 text-[9px] font-black">PRO</span>}
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={handlePrintPDF}
+              className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs h-9 cursor-pointer flex items-center gap-1.5"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              <span>Export PDF</span>
+              {!isPro && <span className="rounded bg-black/30 px-1 text-[9px] font-black">PRO</span>}
             </Button>
 
           </div>

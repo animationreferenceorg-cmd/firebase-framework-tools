@@ -60,6 +60,45 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
+// Category mapping dictionary
+const TAG_CATEGORY_MAP = [
+  // 2D Effects & VFX
+  { match: ['effects', 'fx', 'explosions', 'fire', 'liquid', 'smoke', 'lightning', 'sparks', 'water', 'wind', 'debris'], catId: 'EeIMYpkza6ffxV97C67D' }, // 2D Effects
+  { match: ['effects', 'vfx', 'cgi', 'magic', 'particles'], catId: 'JnNo18EyCB8UvqHXZvBl' }, // VFX
+  // Combat & Action
+  { match: ['fighting', 'combat', 'fight', 'swordplay', 'martial-arts', 'punch', 'kick', 'duel', 'battle', 'action'], catId: 'm0CyxY6mfwH1NA4cODUE' }, // Fighting
+  { match: ['fighting', 'combat', 'action', 'chase', 'stunt', 'parkour'], catId: 'QVQEqkbOTtGgdM3U7LXh' }, // Action
+  { match: ['impact', 'impact-frames'], catId: '4eM7RPaC5NpePJHlihTS' }, // Impact
+  // Locomotion & Body Mechanics
+  { match: ['running', 'run'], catId: 'LV6GiJMlAkokTTy8KUv3' }, // Running
+  { match: ['walking', 'walk'], catId: '0r59cXoM1zJD0JE73hlY' }, // Walking
+  { match: ['jumping', 'jump', 'leap'], catId: 'QoheetDwRPYLb3Wj23hk' }, // Jumping
+  { match: ['flips', 'flip', 'acrobatics'], catId: 'epfOiDy6l50o4BWYE1kg' }, // Flips
+  { match: ['body-mechanics', 'weight', 'balance', 'athletic'], catId: 'azUEkxAG1UGy9VUe7U56' }, // Body Mechanics
+  // Character Acting & Expressions
+  { match: ['character-acting', 'acting', 'dialogue', 'performance'], catId: '7GjU9a66aYCz7Rz1tblf' }, // Acting
+  { match: ['facial-expressions', 'facial', 'expression', 'crying', 'laughing', 'smile', 'eyes'], catId: 'QIiVyUhM8REmxEbnT4bD' }, // Facial Expressions
+  // Creatures & Animals
+  { match: ['creature', 'monster', 'beast', 'dragon'], catId: '2TuH0WAoEqOP4uMii89h' }, // Creature
+  { match: ['animals', 'animal', 'dog', 'cat', 'bird', 'horse', 'wolf'], catId: 'AdnmZ4NrkTfuRcDbh2zV' }, // Animals
+  { match: ['flying', 'flight', 'wings'], catId: 'RNxV9WLXFjD7Dt3J6DYL' }, // Flying
+  // Smears
+  { match: ['smears', 'smear', 'multi-limb', 'blur'], catId: 'HPh2OYR2AgyxkqBEWLy2' }, // Smears
+  // Anime
+  { match: ['anime', 'japanese'], catId: 'Th5Qq4w5s3aIPqwz8VcN' }, // Anime
+];
+
+function resolveCategoryIds(tags) {
+  const ids = new Set();
+  ids.add('00YSaHyKCqexOMjP3qx5'); // 2D Animation base
+  for (const rule of TAG_CATEGORY_MAP) {
+    if (rule.match.some(m => tags.includes(m))) {
+      ids.add(rule.catId);
+    }
+  }
+  return Array.from(ids);
+}
+
 // Validation for Bunny configurations if download is enabled
 if (download && (!apiKey || !libraryId)) {
   console.error('ERROR: Missing Bunny.net configuration (BUNNY_API_KEY or BUNNY_LIBRARY_ID) in environment variables.');
@@ -81,22 +120,43 @@ function fetchJson(url) {
   });
 }
 
-function downloadFile(url, dest) {
-  return new Promise((resolve, reject) => {
-    try {
-      const curlCmd = process.platform === 'win32' ? 'curl.exe' : 'curl';
-      const cmd = `${curlCmd} -s -L -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" -o "${dest}" "${url}"`;
-      execSync(cmd);
-      resolve();
-    } catch (e) {
-      reject(e);
-    }
+async function downloadFile(url, dest) {
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
   });
+  if (!res.ok) {
+    throw new Error(`Failed to download ${url}: ${res.statusText}`);
+  }
+  const arrayBuffer = await res.arrayBuffer();
+  fs.writeFileSync(dest, Buffer.from(arrayBuffer));
 }
 
 // Helper to interact with Bunny Stream API
-async function uploadToBunny(localFilePath, title) {
-  // 1. Create video entry on Bunny Stream
+async function uploadToBunny(urlOrFilePath, title) {
+  // If given a remote URL, instruct Bunny Stream to fetch directly
+  if (urlOrFilePath.startsWith('http')) {
+    const fetchRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/fetch`, {
+      method: 'POST',
+      headers: {
+        'AccessKey': apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        url: urlOrFilePath,
+        title: title || 'Animation Reference'
+      })
+    });
+
+    if (!fetchRes.ok) {
+      const text = await fetchRes.text();
+      throw new Error(`Failed to ingest video to Bunny: ${fetchRes.statusText} (${text})`);
+    }
+
+    const data = await fetchRes.json();
+    return data.id || data.guid;
+  }
+
+  // 1. Create video entry on Bunny Stream for local files
   const createRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos`, {
     method: 'POST',
     headers: {
@@ -115,12 +175,13 @@ async function uploadToBunny(localFilePath, title) {
   const guid = createData.guid;
 
   // 2. Upload file binary
-  const fileBuffer = fs.readFileSync(localFilePath);
+  const fileBuffer = fs.readFileSync(urlOrFilePath);
   const uploadRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${guid}`, {
     method: 'PUT',
     headers: {
       'AccessKey': apiKey,
-      'Content-Type': 'application/octet-stream'
+      'Content-Type': 'application/octet-stream',
+      'Content-Length': fileBuffer.length.toString()
     },
     body: fileBuffer
   });
@@ -160,18 +221,21 @@ function initDb() {
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = (process.env.FIREBASE_PRIVATE_KEY || '').replace(/^"|"$/g, '').replace(/\\n/g, '\n');
-  const storageBucket = process.env.FIREBASE_STORAGE_BUCKET;
-
-  if (!projectId || !clientEmail || !privateKey) {
-    console.error('Missing FIREBASE_* credentials in environment files (.env.local or .env)');
-    process.exit(1);
-  }
+  const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || 'aniamtion-reference.firebasestorage.app';
 
   if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
-      storageBucket
-    });
+    if (projectId && clientEmail && privateKey.includes('BEGIN PRIVATE KEY')) {
+      admin.initializeApp({
+        credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
+        storageBucket
+      });
+    } else {
+      admin.initializeApp({
+        credential: admin.credential.applicationDefault(),
+        projectId: projectId || 'aniamtion-reference',
+        storageBucket
+      });
+    }
   }
 
   return admin.firestore();
@@ -268,22 +332,15 @@ function initDb() {
     let externalBunnyId = null;
 
     if (download) {
-      const tempFilePath = path.join(os.tmpdir(), `${docId}.mp4`);
       try {
-        await downloadFile(post.file_url, tempFilePath);
-
-        drawProgressBar(i, videoPosts.length, `Uploading #${post.id} to Bunny`);
-        const guid = await uploadToBunny(tempFilePath, post.source || `Sakugabooru #${post.id}`);
+        drawProgressBar(i, videoPosts.length, `Ingesting #${post.id} to Bunny`);
+        const guid = await uploadToBunny(post.file_url, post.source || `Sakugabooru #${post.id}`);
 
         videoUrl = `https://${bunnyHost}/${guid}/playlist.m3u8`;
         thumbnailUrl = `https://${bunnyHost}/${guid}/thumbnail.jpg`;
         externalBunnyId = guid;
-
-        fs.unlinkSync(tempFilePath);
       } catch (err) {
-        if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
         console.error(`\nFailed to upload #${post.id} to Bunny: ${err.message}. Falling back to source CDN.`);
-        // Fallback silently to use direct link in progress
       }
     }
 
@@ -293,6 +350,8 @@ function initDb() {
       .filter(Boolean);
 
     mappedTags.forEach(t => allFinalTags.add(t));
+
+    const categoryIds = resolveCategoryIds(mappedTags);
 
     let description = `Source: ${post.source || 'Unknown'}`;
     description += `\nOriginal Sakugabooru post: https://www.sakugabooru.com/post/show/${post.id}`;
@@ -308,7 +367,7 @@ function initDb() {
         posterUrl: thumbnailUrl,
         videoUrl,
         tags: mappedTags,
-        categoryIds: [],
+        categoryIds,
         isShort: false,
         status,
         folderId,

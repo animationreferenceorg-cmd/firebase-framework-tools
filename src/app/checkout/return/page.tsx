@@ -7,6 +7,22 @@ import { CheckCircle2, Sparkles, ArrowRight, LayoutGrid, ShieldCheck, Film, Laye
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
+import { track } from '@/lib/analytics';
+import { PRO_ANNUAL_CENTS, getProOffers } from '@/lib/plans';
+
+/** Logs the GA4 purchase once per checkout session, even if the page is refreshed. */
+function recordPurchase(plan?: string) {
+    try {
+        const sessionId = new URLSearchParams(window.location.search).get('session_id') || 'unknown';
+        const key = `animref:purchase-tracked:${sessionId}`;
+        if (sessionStorage.getItem(key)) return;
+        sessionStorage.setItem(key, '1');
+        const cents = plan === 'pro_annual' ? PRO_ANNUAL_CENTS : getProOffers().pro_monthly.amountCents;
+        track('checkout_completed', { plan: plan || 'pro_monthly', value: cents / 100, currency: 'USD', source: 'checkout_return' });
+    } catch {
+        // Analytics must never block the success screen.
+    }
+}
 import { PRO_FEATURES } from '@/lib/plans';
 
 function ReturnContent() {
@@ -52,6 +68,7 @@ function ReturnContent() {
 
                 setStatus('success');
                 setMessage(syncData?.message || 'Your Pro membership is active!');
+                if (syncData?.success) recordPurchase(syncData.plan);
             } catch (err: any) {
                 if (isCancelled) return;
                 console.error('Return sync error:', err);

@@ -21,6 +21,7 @@ export const ANALYTICS_EVENTS = [
   'checkout_started',
   'checkout_completed',
   'subscription_canceled',
+  'sign_up',
 ] as const;
 
 export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];
@@ -36,6 +37,9 @@ export const ALLOWED_PROPERTIES = [
   'fps',
   'format',
   'status',
+  // GA4 monetization: purchase value and currency.
+  'value',
+  'currency',
 ] as const;
 
 export type AnalyticsProperty = (typeof ALLOWED_PROPERTIES)[number];

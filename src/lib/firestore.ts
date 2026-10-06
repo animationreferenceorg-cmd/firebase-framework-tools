@@ -1,5 +1,6 @@
 
-import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, addDoc, collection, writeBatch, query, where, getDocs, increment } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, addDoc, collection, writeBatch, query, where, getDocs, increment, serverTimestamp } from "firebase/firestore";
+import { track } from './analytics';
 import { db, auth } from "./firebase";
 import type { User } from "firebase/auth";
 import type { Category, UserProfile } from "./types";
@@ -34,7 +35,9 @@ export async function createUserProfile(user: User): Promise<void> {
         savedShortIds: [],
         recentlyViewedShortIds: [],
     };
-    await setDoc(userRef, userProfile);
+    // createdAt makes signups-per-month measurable (profiles had no timestamp).
+    await setDoc(userRef, { ...userProfile, createdAt: serverTimestamp() });
+    track('sign_up', { source: user.providerData[0]?.providerId || 'unknown' });
   }
   
   // Also create a customer document for Stripe if it doesn't exist.

@@ -28,6 +28,7 @@ import { MobileInstallBanner } from '@/components/reference/MobileInstallBanner'
 import { isAppInstalled, isMobileInstallCandidate } from '@/lib/pwa';
 
 import { WatchTrackerProvider } from '@/hooks/use-watch-tracker';
+import { AnalyticsBridge } from '@/components/AnalyticsBridge';
 
 export function LayoutClient({ children }: { children: React.ReactNode }) {
     const { userProfile } = useUser();
@@ -64,6 +65,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     if (isAdminPage || isComingSoon || isPaintPage || isSjsuPage) {
         return (
             <WatchTrackerProvider>
+                <AnalyticsBridge />
                 <UploadProvider>
                     {children}
                     <UploadProgressManager />
@@ -81,6 +83,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
 
     return (
         <WatchTrackerProvider>
+                <AnalyticsBridge />
             <UploadProvider>
             {isMoodboardPage && (
                 <style dangerouslySetInnerHTML={{ __html: '/* Completely hide collapsed sidebar on moodboard workspace */ [data-state="collapsed"] { --sidebar-width-icon: 0px !important; width: 0px !important; border-right-width: 0px !important; overflow: hidden !important; }' }} />

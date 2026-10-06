@@ -278,3 +278,11 @@ describe('feedback threads', () => {
     await assertFails(setDoc(doc(alice(), 'feedback/f1/messages/m6'), msg('alice', 'user', 'x'.repeat(2001))));
   });
 });
+
+describe('lifecycle email collections are server-only', () => {
+  it('clients cannot read or write unsubscribe tokens or the send log', async () => {
+    await assertFails(getDoc(doc(alice(), 'email_prefs/alice')));
+    await assertFails(setDoc(doc(alice(), 'email_prefs/alice'), { optOut: false, token: 'x' }));
+    await assertFails(getDoc(doc(alice(), 'email_log/alice')));
+  });
+});

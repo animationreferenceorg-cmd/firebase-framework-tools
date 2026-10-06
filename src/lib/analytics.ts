@@ -22,6 +22,7 @@ export const ANALYTICS_EVENTS = [
   'checkout_completed',
   'subscription_canceled',
   'sign_up',
+  'signup_prompt_clicked',
 ] as const;
 
 export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];

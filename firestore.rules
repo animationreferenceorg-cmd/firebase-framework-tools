@@ -89,6 +89,9 @@ service cloud.firestore {
 
     // SJSU Student Pass: codes and grants are written only by /api/sjsu.
     match /sjsu_codes/{uid} { allow read, write: if false; }
+    // Lifecycle email preferences (unsubscribe tokens) and send log: server-only.
+    match /email_prefs/{uid} { allow read, write: if false; }
+    match /email_log/{uid} { allow read, write: if false; }
     match /sjsu_verifications/{uid} {
       allow read: if (request.auth != null && request.auth.uid == uid) || isAdmin();
       allow write: if false;

@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { PricingDialog } from '@/components/PricingDialog';
 import { track } from '@/lib/analytics';
 import { useIntroOffer } from '@/hooks/use-intro-offer';
+import { useAuth } from '@/hooks/use-auth';
+import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface VideoQuotaSlateProps {
   posterUrl?: string;
@@ -27,10 +30,30 @@ export function VideoQuotaSlate({
 }: VideoQuotaSlateProps) {
   const [showPricing, setShowPricing] = useState(false);
   const { shortPrice } = useIntroOffer();
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
     track('upgrade_prompt_viewed', { trigger: 'reference_quota', source: 'quota_slate' });
   }, []);
+
+  // Note the limit hit on the profile (once a day) so the next-day reminder
+  // email can go to people who actually ran out.
+  useEffect(() => {
+    if (!user) return;
+    const key = `animref:quota-hit-recorded:${user.uid}`;
+    const today = new Date().toDateString();
+    try {
+      if (localStorage.getItem(key) === today) return;
+      localStorage.setItem(key, today);
+    } catch {
+      // storage unavailable: still record, at worst more than once a day
+    }
+    updateDoc(doc(db, 'users', user.uid), { lastQuotaHitAt: serverTimestamp() }).catch(() => {});
+  }, [user]);
+
+  const signupHref = typeof window !== 'undefined'
+    ? `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`
+    : '/login';
 
   const openPricing = () => {
     // The pricing dialog renders in a portal, which is invisible inside native fullscreen.
@@ -91,6 +114,23 @@ export function VideoQuotaSlate({
             <span>Unlimited visual boards</span>
           </div>
         </div>
+
+        {/* Signed-out visitors: a free account is the lighter step before Pro. */}
+        {!authLoading && !user && (
+          <div className="w-full mb-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-3.5 text-left">
+            <p className="text-xs font-bold text-emerald-200">Not ready for Pro? Create a free account</p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-300">
+              Keep your watch history and boards on every device, and save references to come back to tomorrow.
+            </p>
+            <Link
+              href={signupHref}
+              onClick={() => track('signup_prompt_clicked', { trigger: 'reference_quota', source: 'quota_slate' })}
+              className="mt-2 inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 text-xs font-bold text-white hover:bg-emerald-500"
+            >
+              Create free account <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full justify-center">

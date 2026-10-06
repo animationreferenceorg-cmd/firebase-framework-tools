@@ -9,7 +9,11 @@ export async function GET(req: Request) {
     const secret = searchParams.get('secret');
     const cronSecret = process.env.CRON_SECRET;
 
-    if (cronSecret && secret !== cronSecret) {
+    // Without a configured secret anyone could trigger social posts, so refuse.
+    if (!cronSecret) {
+      return NextResponse.json({ error: 'CRON_SECRET is not configured' }, { status: 503 });
+    }
+    if (secret !== cronSecret) {
       return NextResponse.json({ error: 'Unauthorized cron request' }, { status: 401 });
     }
 

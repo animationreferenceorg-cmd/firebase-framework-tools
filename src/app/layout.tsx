@@ -26,22 +26,41 @@ import { UserProvider } from '@/hooks/use-user';
 import { LayoutClient } from '@/components/LayoutClient';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { GoogleAnalytics } from '@/components/layout/GoogleAnalytics';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://animationreference.org'),
   title: {
-    default: 'Animation Reference | Study Movement, Timing & Acting',
+    default: 'Animation Reference | 8,000+ Curated References & Animator Portfolios',
     template: '%s | Animation Reference',
   },
-  description: 'Find curated animation references for movement, timing, acting, combat, locomotion, and effects. Study the exact motion you need for your next shot.',
+  description: 'Study 8,000+ curated animation references with frame-by-frame controls, playblast comparison, and animator portfolios. The human-crafted ArtStation alternative for 2D & 3D animators.',
+  keywords: [
+    'animation reference',
+    'artstation alternative',
+    'animation portfolio',
+    'frame by frame video player',
+    'animation reference library',
+    'walk cycle reference',
+    'combat animation reference',
+    'character acting reference',
+    'maya playblast compare',
+    'sakugabooru references',
+    '3d animation reference',
+    '2d animation reference',
+    'creature locomotion',
+  ],
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || 'f4VjQ3aKx_7H2q0pXz_auth_placeholder',
+  },
   icons: {
     icon: '/site-icon.png',
     shortcut: '/site-icon.png',
     apple: '/site-icon.png',
   },
   openGraph: {
-    title: 'Animation Reference',
-    description: 'Curated animation references for movement, timing, acting, combat, locomotion, and effects.',
+    title: 'Animation Reference | Frame-by-Frame Motion Study & Portfolios',
+    description: 'Over 8,000 curated animation clips, frame scrubbing, side-by-side playblast compare, and clean animator portfolios. The creator-first alternative to ArtStation.',
     images: [
       {
         url: '/site-icon.png',
@@ -55,8 +74,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Animation Reference',
-    description: 'Curated animation references for movement, timing, acting, combat, locomotion, and effects.',
+    title: 'Animation Reference | Frame-by-Frame Motion Study & Portfolios',
+    description: 'Over 8,000 curated animation clips, frame scrubbing, side-by-side playblast compare, and clean animator portfolios.',
     images: ['/site-icon.png'],
   },
   alternates: {
@@ -85,6 +104,33 @@ const organizationSchema = {
   name: 'Animation Reference',
   url: 'https://animationreference.org',
   logo: 'https://animationreference.org/site-icon.png',
+  sameAs: [
+    'https://twitter.com/animreference',
+  ],
+};
+
+const softwareApplicationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Animation Reference',
+  applicationCategory: 'MultimediaApplication',
+  operatingSystem: 'All',
+  url: 'https://animationreference.org',
+  offers: [
+    {
+      '@type': 'Offer',
+      price: '0.00',
+      priceCurrency: 'USD',
+      name: 'Free Plan',
+    },
+    {
+      '@type': 'Offer',
+      price: '5.00',
+      priceCurrency: 'USD',
+      name: 'Pro Monthly Membership',
+      description: 'Unlimited 4K frame-by-frame study, side-by-side playblast comparison, private boards, and reference video downloads.',
+    },
+  ],
 };
 
 export default function RootLayout({
@@ -100,11 +146,8 @@ export default function RootLayout({
         <link rel="preconnect" href="https://commondatastorage.googleapis.com" />
         <link rel="preconnect" href="https://storage.googleapis.com" />
         <link rel="preconnect" href="https://firebasestorage.googleapis.com" />
-        <link rel="preconnect" href="https://iframe.mediadelivery.net" />
-        <link rel="preconnect" href="https://b-cdn.net" />
-        <link rel="dns-prefetch" href="https://commondatastorage.googleapis.com" />
-        <link rel="dns-prefetch" href="https://storage.googleapis.com" />
-        <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com" />
+        <link rel="preconnect" href="https://www.sakugabooru.com" />
+        <link rel="dns-prefetch" href="https://www.sakugabooru.com" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
         <script
           type="application/ld+json"
@@ -114,8 +157,13 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
         />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationSchema) }}
+        />
       </head>
       <body className="font-body antialiased" suppressHydrationWarning={true}>
+        <GoogleAnalytics />
         <AmbientBackdrop />
         <FirebaseClientProvider>
           <AuthProvider>

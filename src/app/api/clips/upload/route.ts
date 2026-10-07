@@ -4,6 +4,7 @@ import { ApiError, apiErrorResponse, getTrustedProfile, profileHasPro, requireFi
 import { getFirebaseStorage, getFirestore } from '@/lib/firebase-admin';
 import { bunnyStreamConfig } from '@/lib/bunny-stream';
 import { analyzeReferenceVisuals } from '@/lib/reference-discovery';
+import { challengeStatus, getChallenge } from '@/lib/challenges';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -34,6 +35,14 @@ export async function POST(request: NextRequest) {
     if (isPrivate && !profileHasPro(profile)) {
       throw new ApiError(403, 'PRIVATE_REQUIRES_PRO', 'Private uploads are a Pro feature. Free uploads are shared with the community.');
     }
+
+    // Monthly challenge entry: must be public and the challenge must be running.
+    const challengeSlug = String(form.get('challengeId') || '').trim();
+    const challenge = challengeSlug ? getChallenge(challengeSlug) : null;
+    if (challengeSlug && (!challenge || challengeStatus(challenge) !== 'active')) {
+      throw new ApiError(422, 'CHALLENGE_CLOSED', 'That challenge is not open for entries.');
+    }
+    if (challenge && isPrivate) throw new ApiError(422, 'CHALLENGE_PUBLIC', 'Challenge entries must be public.');
 
     const mediaType = isVideo ? 'video' : file.type === 'image/gif' ? 'gif' : 'image';
     const fileBuffer = Buffer.from(await file.arrayBuffer());
@@ -147,6 +156,7 @@ export async function POST(request: NextRequest) {
         ...discovery,
         isPrivate,
         communityVisible: !isPrivate,
+        challengeId: challenge?.slug ?? null,
         removedFromCreatorAt: null,
         primaryBoardId: boardId || null,
         saveCount: boardId ? 1 : 0,

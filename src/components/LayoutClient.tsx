@@ -4,7 +4,7 @@ import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, 
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Film, LayoutGrid, List, Rss, Shield, BookCopy, Camera, User, Box, ShoppingBag, CreditCard, MessageSquare, Paintbrush, Scissors, Compass, Sparkles } from 'lucide-react';
+import { Film, LayoutGrid, List, Rss, Shield, BookCopy, Camera, User, Box, ShoppingBag, CreditCard, MessageSquare, Paintbrush, Scissors, Compass, Sparkles, Briefcase } from 'lucide-react';
 import { useUser } from '@/hooks/use-user';
 import { useAuth } from '@/hooks/use-auth';
 import { Suspense, useEffect, useState } from 'react';
@@ -182,6 +182,11 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
+                                    <SidebarLink href="/portfolio" icon={Briefcase} tooltip="Animator Portfolio">
+                                        Portfolio
+                                    </SidebarLink>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
                                     <SidebarLink href="/resources" icon={BookCopy} tooltip="Animation Guides">
                                         Animation Guides
                                     </SidebarLink>
@@ -270,16 +275,19 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                 <div className="w-48">
                                     <FeedbackModal />
                                 </div>
-                                <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/40 mt-2">
+                                <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-white/50 mt-2">
+                                    <Link href="/artstation-alternative" className="text-purple-300 hover:text-purple-200 font-semibold transition-colors">ArtStation Alternative</Link>
+                                    <Link href="/portfolio" className="text-zinc-300 hover:text-white transition-colors">Animator Portfolio</Link>
+                                    <Link href="/pricing" className="text-zinc-300 hover:text-white transition-colors">Pricing &amp; Pro</Link>
                                     <Link href="/blog" className="hover:text-white/70 transition-colors">Blog</Link>
-                                    <Link href="/resources/12-principles-of-animation-reference" className="hover:text-white/70 transition-colors">12 Principles of Animation</Link>
+                                    <Link href="/resources/12-principles-of-animation-reference" className="hover:text-white/70 transition-colors">12 Principles</Link>
                                     <Link href="/resources/combat-animation-reference" className="hover:text-white/70 transition-colors">Combat Reference</Link>
-                                    <Link href="/resources/locomotion-animation-reference" className="hover:text-white/70 transition-colors">Locomotion Reference</Link>
+                                    <Link href="/resources/locomotion-animation-reference" className="hover:text-white/70 transition-colors">Locomotion</Link>
                                     <Link href="/terms" className="hover:text-white/70 transition-colors">Terms</Link>
                                     <Link href="/privacy" className="hover:text-white/70 transition-colors">Privacy</Link>
-                                    <Link href="/dmca" className="hover:text-white/70 transition-colors">DMCA / Copyright</Link>
+                                    <Link href="/dmca" className="hover:text-white/70 transition-colors">DMCA</Link>
                                 </nav>
-                                <p className="text-[10px] text-white/20 mt-4">© 2026 Animation Reference. Built for the community.</p>
+                                <p className="text-[10px] text-white/20 mt-4">© 2026 Animation Reference. 100% human motion for 2D &amp; 3D animators.</p>
                             </footer>
                         )}
                     </div>

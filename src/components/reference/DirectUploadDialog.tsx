@@ -20,10 +20,11 @@ import { generateAutoThumbnail } from '@/lib/portfolio-service';
 import type { ReferenceBoard } from '@/lib/types';
 import { CONTRIBUTION_BONUS_PER_UPLOAD, MAX_CONTRIBUTION_BONUS, getEntitlements } from '@/lib/plans';
 import { CONTRIBUTION_CHANGED_EVENT } from '@/hooks/use-viewing-quota';
+import type { Challenge } from '@/lib/challenges';
 
 const ACCEPTED_MEDIA = 'video/mp4,video/webm,video/quicktime,image/jpeg,image/png,image/webp,image/gif';
 
-export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
+export function DirectUploadDialog({ onCreated, challenge, triggerLabel, triggerClassName }: { onCreated?(): void; challenge?: Challenge | null; triggerLabel?: string; triggerClassName?: string }) {
   const { user } = useAuth();
   const { userProfile } = useUser();
   const { toast } = useToast();
@@ -134,8 +135,9 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
       title: form.title.trim() || file.name.replace(/\.[^.]+$/, ''),
       category: form.category || 'Acting',
       tags: cleanTags,
-      isPrivate: Boolean(form.isPrivate),
-      communityVisible: !form.isPrivate,
+      isPrivate: challenge ? false : Boolean(form.isPrivate),
+      communityVisible: challenge ? true : !form.isPrivate,
+      challengeId: challenge?.slug ?? null,
       removedFromCreatorAt: undefined,
       primaryBoardId: form.boardId || undefined,
       captureStatus: 'ready',
@@ -170,6 +172,10 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
         const payload = new FormData();
         payload.set('file', file);
         Object.entries(form).forEach(([key, value]) => payload.set(key, String(value)));
+        if (challenge) {
+          payload.set('challengeId', challenge.slug);
+          payload.set('isPrivate', 'false');
+        }
 
         await new Promise<void>((resolve, reject) => {
           const request = new XMLHttpRequest();
@@ -234,11 +240,15 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!saving) setOpen(next); }}>
-      <DialogTrigger asChild><Button variant="outline"><Upload className="mr-2 h-4 w-4" />Upload media</Button></DialogTrigger>
+      <DialogTrigger asChild><Button variant="outline" className={triggerClassName}><Upload className="mr-2 h-4 w-4" />{triggerLabel ?? 'Upload media'}</Button></DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-zinc-950 text-white sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Add your own reference</DialogTitle>
-          <DialogDescription>Upload videos, acting takes, photos, pose sheets, GIFs, and visual research as reference clips.</DialogDescription>
+          <DialogTitle>{challenge ? `Enter: ${challenge.title}` : 'Add your own reference'}</DialogTitle>
+          <DialogDescription>
+            {challenge
+              ? `${challenge.brief} Entries are public, and the community votes by saving them.`
+              : 'Upload videos, acting takes, photos, pose sheets, GIFs, and visual research as reference clips.'}
+          </DialogDescription>
         </DialogHeader>
         {!user ? (
           <div className="rounded-2xl border border-purple-500/20 bg-purple-950/20 p-6 text-center">
@@ -297,7 +307,7 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
               </Field>
             </div>
             <Field label="Tags"><Input value={form.tags} onChange={(event) => setForm({ ...form, tags: event.target.value })} placeholder="pose sheet, facial acting, client-x" /></Field>
-            <div className="flex items-center justify-between rounded-xl border border-white/10 p-3">
+            {!challenge && <div className="flex items-center justify-between rounded-xl border border-white/10 p-3">
               <div>
                 <Label className="flex items-center gap-2">Private{!canPrivate && <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-300">Pro</span>}</Label>
                 <p className="text-xs text-zinc-500">{canPrivate ? 'Keep this media outside public discovery' : 'Free uploads are shared with the community. Pro keeps studio and NDA work private.'}</p>
@@ -305,7 +315,7 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
               {canPrivate
                 ? <Switch checked={form.isPrivate} onCheckedChange={(value) => setForm({ ...form, isPrivate: value })} />
                 : <Button asChild size="sm" variant="outline" className="border-amber-500/30 text-amber-200"><Link href="/pricing?source=private_upload">Go Pro</Link></Button>}
-            </div>
+            </div>}
             {!form.isPrivate && !canPrivate && (
               <p className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs text-emerald-200">
                 Sharing publicly earns you +{CONTRIBUTION_BONUS_PER_UPLOAD} extra library views today (up to +{MAX_CONTRIBUTION_BONUS}).

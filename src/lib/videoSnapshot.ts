@@ -8,7 +8,7 @@ let cache: Promise<Video[]> | null = null;
 
 export function getSnapshotVideos(): Promise<Video[]> {
   if (!cache) {
-    cache = fetch('/data/videos-snapshot.json', { cache: 'force-cache' })
+    cache = fetch('/data/videos-snapshot.json', { cache: 'no-cache' })
       .then(res => {
         if (!res.ok) throw new Error(`Failed to load video snapshot (${res.status})`);
         // Drop videos whose host went offline, even if an older snapshot still lists them.

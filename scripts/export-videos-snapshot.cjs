@@ -117,7 +117,9 @@ function toMillis(val) {
       ...(v.duration ? { duration: v.duration } : {}),
       ...(v.width ? { width: v.width } : {}),
       ...(v.height ? { height: v.height } : {}),
-      createdAt: toMillis(v.createdAt) || toMillis(v.uploadedAt) || toMillis(v.updatedAt) || toMillis(v.importedAt) || null,
+      createdAt: (v.importSource === 'sakugabooru' || v.importSource)
+        ? (toMillis(v.updatedAt) || toMillis(v.importedAt) || toMillis(v.createdAt) || Date.now())
+        : (toMillis(v.createdAt) || toMillis(v.uploadedAt) || toMillis(v.updatedAt) || toMillis(v.importedAt) || null),
     }))
     // Newest first, so all new references appear towards the top
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));

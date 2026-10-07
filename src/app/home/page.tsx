@@ -9,6 +9,7 @@ import { VideoGrid } from '@/components/VideoGrid';
 import { PricingDialog } from '@/components/PricingDialog';
 import { ImmersiveHomeHeader } from '@/components/home/ImmersiveHomeHeader';
 import { CommunityFeedShelf } from '@/components/home/CommunityFeedShelf';
+import { TrendingCommunityShelf } from '@/components/home/TrendingCommunityShelf';
 import { RecentlyViewedShelf } from '@/components/home/RecentlyViewedShelf';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from '@/components/motion/SectionHeading';
@@ -259,7 +260,14 @@ export default function HomePage() {
         </Reveal>
       )}
 
-      {/* 3. SHELF: Community Portfolio Feed */}
+      {/* 3. SHELF: Monthly challenge + trending community references */}
+      {!searchQuery && (
+        <Reveal>
+          <TrendingCommunityShelf />
+        </Reveal>
+      )}
+
+      {/* 4. SHELF: Community Portfolio Feed */}
       {!searchQuery && (
         <Reveal>
           <CommunityFeedShelf />

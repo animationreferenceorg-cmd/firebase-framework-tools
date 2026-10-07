@@ -30,6 +30,10 @@ export async function POST(request: NextRequest) {
     }
 
     const isPrivate = String(form.get('isPrivate')) === 'true';
+    // Free uploads are public and feed the community library; private uploads are Pro.
+    if (isPrivate && !profileHasPro(profile)) {
+      throw new ApiError(403, 'PRIVATE_REQUIRES_PRO', 'Private uploads are a Pro feature. Free uploads are shared with the community.');
+    }
 
     const mediaType = isVideo ? 'video' : file.type === 'image/gif' ? 'gif' : 'image';
     const fileBuffer = Buffer.from(await file.arrayBuffer());

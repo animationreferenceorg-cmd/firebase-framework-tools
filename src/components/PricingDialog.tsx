@@ -393,13 +393,13 @@ export function PricingDialog({ children, open: openProp, onOpenChange: onOpenCh
                                             </td>
                                         </tr>
                                         <tr className="hover:bg-white/[0.02]">
-                                            <td className="p-2.5 text-zinc-300 font-medium">Saved References Limit</td>
-                                            <td className="p-2.5 text-center text-zinc-400 bg-white/[0.01]">5 references</td>
+                                            <td className="p-2.5 text-zinc-300 font-medium">New Library References</td>
+                                            <td className="p-2.5 text-center text-zinc-400 bg-white/[0.01]">25/day (+ bonus for sharing)</td>
                                             <td className="p-2.5 text-center font-bold text-purple-300 bg-purple-950/20 border-l border-purple-500/10">Unlimited</td>
                                         </tr>
                                         <tr className="hover:bg-white/[0.02]">
-                                            <td className="p-2.5 text-zinc-300 font-medium">Active Project Boards</td>
-                                            <td className="p-2.5 text-center text-zinc-400 bg-white/[0.01]">1 board</td>
+                                            <td className="p-2.5 text-zinc-300 font-medium">Boards, Saves & Uploads</td>
+                                            <td className="p-2.5 text-center text-zinc-400 bg-white/[0.01]">Unlimited (public)</td>
                                             <td className="p-2.5 text-center font-bold text-purple-300 bg-purple-950/20 border-l border-purple-500/10">Unlimited</td>
                                         </tr>
                                         <tr className="hover:bg-white/[0.02]">

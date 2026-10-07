@@ -57,10 +57,10 @@ describe('checkout pricing', () => {
 describe('checkLimit (legacy call sites)', () => {
   const profile = (p: Partial<UserProfile>) => ({ uid: 'u', email: null, displayName: null, photoURL: null, role: 'user', ...p }) as UserProfile;
 
-  it('free: 1 board, 5 saved references', () => {
+  it('free: unlimited boards and saved references', () => {
     expect(checkLimit(profile({}), 'moodboards', 0).allowed).toBe(true);
-    expect(checkLimit(profile({}), 'moodboards', 1)).toMatchObject({ allowed: false, limit: 1, nextTier: 'pro' });
-    expect(checkLimit(profile({}), 'likes', 5).allowed).toBe(false);
+    expect(checkLimit(profile({}), 'moodboards', 500)).toMatchObject({ allowed: true, limit: Infinity, nextTier: undefined });
+    expect(checkLimit(profile({}), 'likes', 500).allowed).toBe(true);
   });
 
   it('Pro and SJSU are unlimited', () => {

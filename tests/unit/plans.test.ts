@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CONTRIBUTION_BONUS_PER_UPLOAD,
   LEGACY_PRICE_IDS,
+  MAX_CONTRIBUTION_BONUS,
+  contributionBonus,
   describeAccess,
   getEntitlements,
   getProOffers,
@@ -59,8 +62,19 @@ describe('entitlements', () => {
   it('free users get the free limits and no Pro tools', () => {
     const e = getEntitlements({});
     expect(e.access).toBe('free');
-    expect(e.limits).toEqual({ maxBoards: 1, maxSavedReferences: 5, maxPortfolioPosts: 3, maxUnlockedReferences: 25 });
-    expect(e.canUsePrivateWorkspace || e.canComparePlayblast || e.canRemoveWatermark).toBe(false);
+    // Creating is unlimited; viewing other people's references is metered.
+    expect(e.limits).toEqual({ maxBoards: Infinity, maxSavedReferences: Infinity, maxPortfolioPosts: Infinity, maxUnlockedReferences: 25 });
+    expect(e.canUsePrivateWorkspace || e.canUploadPrivateMedia || e.canComparePlayblast || e.canRemoveWatermark).toBe(false);
+  });
+
+  it('earns free users +3 daily views per public share, capped at +25', () => {
+    expect(contributionBonus(0)).toBe(0);
+    expect(contributionBonus(-2)).toBe(0);
+    expect(contributionBonus(1)).toBe(CONTRIBUTION_BONUS_PER_UPLOAD);
+    expect(contributionBonus(4)).toBe(12);
+    expect(contributionBonus(9)).toBe(MAX_CONTRIBUTION_BONUS);
+    expect(contributionBonus(100)).toBe(MAX_CONTRIBUTION_BONUS);
+    expect(contributionBonus(Number.NaN)).toBe(0);
   });
 
   it.each([
@@ -84,9 +98,9 @@ describe('entitlements', () => {
     expect(getEntitlements({ unlimitedAccess: true }).limits.maxBoards).toBe(Infinity);
   });
 
-  it('keeps legacy supporter limits', () => {
-    expect(getEntitlements({ isPremium: true, tier: 'tier1' }).limits).toMatchObject({ maxBoards: 3, maxSavedReferences: 10 });
-    expect(getEntitlements({ isPremium: true, tier: 'tier2' }).limits).toMatchObject({ maxBoards: 6, maxSavedReferences: 20 });
+  it('gives legacy supporters at least what free users get, plus their larger daily allowance', () => {
+    expect(getEntitlements({ isPremium: true, tier: 'tier1' }).limits).toMatchObject({ maxBoards: Infinity, maxUnlockedReferences: 50 });
+    expect(getEntitlements({ isPremium: true, tier: 'tier2' }).limits).toMatchObject({ maxBoards: Infinity, maxUnlockedReferences: 100 });
     expect(getEntitlements({ isPremium: true, tier: 'tier2' }).canUsePrivateWorkspace).toBe(false);
   });
 

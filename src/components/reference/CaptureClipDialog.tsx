@@ -16,6 +16,7 @@ import { getUserReferenceBoards } from '@/lib/reference-service';
 import { isProProfile, normalizeHttpUrl } from '@/lib/reference-utils';
 import type { ReferenceBoard } from '@/lib/types';
 import Link from 'next/link';
+import { CONTRIBUTION_CHANGED_EVENT } from '@/hooks/use-viewing-quota';
 
 interface OEmbedMeta {
   title?: string;
@@ -49,6 +50,7 @@ export function CaptureClipDialog({ onCreated, initialUrl, defaultOpen = false }
     boardId: '',
     isPrivate: false,
   });
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
 
   useEffect(() => {
     if (initialUrl) {
@@ -154,6 +156,8 @@ export function CaptureClipDialog({ onCreated, initialUrl, defaultOpen = false }
       setSaveProgress(0);
       setForm({ sourceUrl: '', title: '', category: 'Acting', tags: '', startTime: '0', endTime: '5', boardId: '', isPrivate: false });
       setOembedMeta(null);
+      setRightsConfirmed(false);
+      window.dispatchEvent(new Event(CONTRIBUTION_CHANGED_EVENT));
       onCreated?.();
     } catch (error: any) {
       setSaveFailed(true);
@@ -354,6 +358,11 @@ export function CaptureClipDialog({ onCreated, initialUrl, defaultOpen = false }
                 <Switch checked={form.isPrivate} disabled={!isProProfile(userProfile)} onCheckedChange={(value) => setForm({ ...form, isPrivate: value })} />
               </div>
 
+              <label className="flex items-start gap-3 rounded-xl border border-white/10 p-3 text-[11px] text-zinc-400">
+                <input type="checkbox" required checked={rightsConfirmed} onChange={(e) => setRightsConfirmed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-purple-500" />
+                <span>I have the right to share this clip, and I agree to the <Link href="/terms" className="text-purple-300 underline">Terms</Link> and <Link href="/dmca" className="text-purple-300 underline">copyright policy</Link>.</span>
+              </label>
+
               {(saving || saveProgress > 0) && (
                 <div className={`rounded-xl border p-3 ${saveFailed ? 'border-red-500/30 bg-red-500/5' : saveProgress === 100 ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-purple-500/30 bg-purple-500/5'}`} aria-live="polite">
                   <div className="mb-2 flex items-center justify-between text-xs font-semibold">
@@ -365,7 +374,7 @@ export function CaptureClipDialog({ onCreated, initialUrl, defaultOpen = false }
                 </div>
               )}
 
-              <Button type="submit" disabled={saving || !form.sourceUrl} className="w-full bg-purple-600 hover:bg-purple-500 font-bold py-5">
+              <Button type="submit" disabled={saving || !form.sourceUrl || !rightsConfirmed}className="w-full bg-purple-600 hover:bg-purple-500 font-bold py-5">
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {saving ? saveStage : 'Save reference clip'}
               </Button>

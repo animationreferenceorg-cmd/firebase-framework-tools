@@ -286,3 +286,28 @@ describe('lifecycle email collections are server-only', () => {
     await assertFails(getDoc(doc(alice(), 'email_log/alice')));
   });
 });
+
+describe('moderation', () => {
+  it('reports, strikes and takedowns are server-only', async () => {
+    const admin = env.authenticatedContext('admin1').firestore();
+    for (const path of ['content_reports/r1', 'moderation/alice', 'takedowns/v1']) {
+      await assertFails(getDoc(doc(alice(), path)));
+      await assertFails(setDoc(doc(alice(), path), { x: 1 }));
+      await assertFails(getDoc(doc(admin, path)));
+    }
+  });
+
+  it('a clip removed after a report cannot be made public again by its creator', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'reference_clips/removed'), { creatorId: 'alice', isPrivate: true, communityVisible: false, title: 'x', takenDownAt: 1, takenDownReason: 'copyright' });
+      await setDoc(doc(ctx.firestore(), 'reference_clips/live'), { creatorId: 'alice', isPrivate: false, title: 'y' });
+    });
+    await assertFails(updateDoc(doc(alice(), 'reference_clips/removed'), { isPrivate: false }));
+    await assertFails(updateDoc(doc(alice(), 'reference_clips/removed'), { takenDownAt: null }));
+    await assertSucceeds(updateDoc(doc(alice(), 'reference_clips/removed'), { title: 'renamed' }));
+    await assertFails(updateDoc(doc(alice(), 'reference_clips/live'), { takenDownAt: 5 }));
+    await assertSucceeds(updateDoc(doc(alice(), 'reference_clips/live'), { title: 'still public' }));
+    const admin = env.authenticatedContext('admin1').firestore();
+    await assertSucceeds(updateDoc(doc(admin, 'reference_clips/removed'), { isPrivate: false, takenDownAt: null }));
+  });
+});

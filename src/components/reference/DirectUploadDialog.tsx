@@ -18,6 +18,8 @@ import { storage } from '@/lib/firebase';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { generateAutoThumbnail } from '@/lib/portfolio-service';
 import type { ReferenceBoard } from '@/lib/types';
+import { CONTRIBUTION_BONUS_PER_UPLOAD, MAX_CONTRIBUTION_BONUS, getEntitlements } from '@/lib/plans';
+import { CONTRIBUTION_CHANGED_EVENT } from '@/hooks/use-viewing-quota';
 
 const ACCEPTED_MEDIA = 'video/mp4,video/webm,video/quicktime,image/jpeg,image/png,image/webp,image/gif';
 
@@ -34,6 +36,8 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [form, setForm] = useState({ title: '', category: 'Acting', tags: '', boardId: '', isPrivate: false, duration: 10 });
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  const canPrivate = getEntitlements(userProfile).canUploadPrivateMedia;
 
   useEffect(() => {
     if (open && user) getUserReferenceBoards(user.uid, true).then(setBoards).catch(() => setBoards([]));
@@ -188,12 +192,16 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
               uploadedSuccessfully = true;
               resolve();
             } else {
-              reject(new Error(result.message || result.error || 'Server error'));
+              const error = new Error(result.message || result.error || 'Server error') as Error & { status?: number };
+              error.status = request.status;
+              reject(error);
             }
           };
           request.send(payload);
         });
       } catch (apiError: any) {
+        // A refusal (e.g. private upload without Pro) is final; only fall back when the server is unreachable or failing.
+        if (typeof apiError?.status === 'number' && apiError.status >= 400 && apiError.status < 500) throw apiError;
         console.warn('Server upload unavailable, uploading directly to storage:', apiError.message);
         // Seamless fallback to direct Firebase Storage & Firestore upload
         await uploadViaClientStorage();
@@ -210,6 +218,8 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
         setFile(null);
         setPreviewUrl('');
         setForm({ title: '', category: 'Acting', tags: '', boardId: '', isPrivate: false, duration: 10 });
+        setRightsConfirmed(false);
+        window.dispatchEvent(new Event(CONTRIBUTION_CHANGED_EVENT));
         onCreated?.();
       }
     } catch (error: any) {
@@ -288,9 +298,23 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
             </div>
             <Field label="Tags"><Input value={form.tags} onChange={(event) => setForm({ ...form, tags: event.target.value })} placeholder="pose sheet, facial acting, client-x" /></Field>
             <div className="flex items-center justify-between rounded-xl border border-white/10 p-3">
-              <div><Label>Private</Label><p className="text-xs text-zinc-500">Keep this media outside public discovery</p></div>
-              <Switch checked={form.isPrivate} onCheckedChange={(value) => setForm({ ...form, isPrivate: value })} />
+              <div>
+                <Label className="flex items-center gap-2">Private{!canPrivate && <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-300">Pro</span>}</Label>
+                <p className="text-xs text-zinc-500">{canPrivate ? 'Keep this media outside public discovery' : 'Free uploads are shared with the community. Pro keeps studio and NDA work private.'}</p>
+              </div>
+              {canPrivate
+                ? <Switch checked={form.isPrivate} onCheckedChange={(value) => setForm({ ...form, isPrivate: value })} />
+                : <Button asChild size="sm" variant="outline" className="border-amber-500/30 text-amber-200"><Link href="/pricing?source=private_upload">Go Pro</Link></Button>}
             </div>
+            {!form.isPrivate && !canPrivate && (
+              <p className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs text-emerald-200">
+                Sharing publicly earns you +{CONTRIBUTION_BONUS_PER_UPLOAD} extra library views today (up to +{MAX_CONTRIBUTION_BONUS}).
+              </p>
+            )}
+            <label className="flex items-start gap-3 rounded-xl border border-white/10 p-3 text-xs text-zinc-400">
+              <input type="checkbox" required checked={rightsConfirmed} onChange={(event) => setRightsConfirmed(event.target.checked)} className="mt-0.5 h-4 w-4 accent-purple-500" />
+              <span>I filmed or made this, or I have permission to share it. I agree to the <Link href="/terms" className="text-purple-300 underline">Terms</Link> and <Link href="/dmca" className="text-purple-300 underline">copyright policy</Link>.</span>
+            </label>
             {(saving || uploadProgress > 0) && (
               <div className={`rounded-xl border p-3 ${uploadFailed ? 'border-red-500/30 bg-red-500/5' : uploadProgress === 100 ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-purple-500/30 bg-purple-500/5'}`} aria-live="polite">
                 <div className="mb-2 flex items-center justify-between text-xs font-semibold">
@@ -301,7 +325,7 @@ export function DirectUploadDialog({ onCreated }: { onCreated?(): void }) {
                 <p className="mt-2 text-[11px] text-zinc-500">{saving ? 'Keep this window open until the reference is ready.' : uploadFailed ? 'Your file was not added. You can try again.' : 'Upload complete.'}</p>
               </div>
             )}
-            <Button disabled={saving || !file} type="submit" className="w-full bg-purple-600 hover:bg-purple-500">{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{saving ? uploadStage : 'Upload reference'}</Button>
+            <Button disabled={saving || !file || !rightsConfirmed} type="submit" className="w-full bg-purple-600 hover:bg-purple-500">{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{saving ? uploadStage : 'Upload reference'}</Button>
           </form>
         )}
       </DialogContent>

@@ -13,6 +13,8 @@ import { useIntroOffer } from '@/hooks/use-intro-offer';
 import { cn } from '@/lib/utils';
 import {
   ACCESS_LIMITS,
+  CONTRIBUTION_BONUS_PER_UPLOAD,
+  MAX_CONTRIBUTION_BONUS,
   FREE_FEATURES,
   PRO_FEATURES,
   describeAccess,
@@ -32,6 +34,7 @@ const COMPARISON: { group: string; rows: { label: string; free: Cell; pro: Cell 
     group: 'Motion study',
     rows: [
       { label: 'Reference library studies', free: `${ACCESS_LIMITS.free.maxUnlockedReferences} new per day (re-watch anytime)`, pro: 'Unlimited' },
+      { label: 'Bonus daily references for sharing', free: `+${CONTRIBUTION_BONUS_PER_UPLOAD} per public upload (up to +${MAX_CONTRIBUTION_BONUS})`, pro: 'Not needed' },
       { label: 'Frame-by-frame playback & speed controls', free: true, pro: true },
       { label: 'Side-by-side synchronized playblast compare', free: false, pro: true },
     ],
@@ -39,9 +42,9 @@ const COMPARISON: { group: string; rows: { label: string; free: Cell; pro: Cell 
   {
     group: 'Boards & storage',
     rows: [
-      { label: 'Reference boards', free: limitLabel(ACCESS_LIMITS.free.maxBoards, 'board'), pro: 'Unlimited' },
-      { label: 'Saved references', free: limitLabel(ACCESS_LIMITS.free.maxSavedReferences, 'reference'), pro: 'Unlimited' },
-      { label: 'Private boards & private video uploads', free: false, pro: true },
+      { label: 'Reference boards', free: `${limitLabel(ACCESS_LIMITS.free.maxBoards, 'board')} (public)`, pro: 'Unlimited' },
+      { label: 'Saves & uploads', free: `${limitLabel(ACCESS_LIMITS.free.maxSavedReferences, 'reference')} (public)`, pro: 'Unlimited' },
+      { label: 'Private boards & private uploads (studio / NDA work)', free: false, pro: true },
     ],
   },
   {
@@ -67,11 +70,15 @@ const FAQ = [
   },
   {
     q: 'What happens to my boards if I cancel?',
-    a: 'Nothing is deleted. Your boards and saved references stay in your account; you just can’t add past the free limits until you upgrade again.',
+    a: 'Nothing is deleted. Your boards and saved references stay in your account, and private ones stay private. You go back to the daily reference limit until you upgrade again.',
   },
   {
     q: 'What does the free plan include?',
-    a: `You can open ${ACCESS_LIMITS.free.maxUnlockedReferences} new references from the library every day with full frame-by-frame study tools, and any reference you've opened before stays playable anytime. Pro removes the daily limit and adds downloads, exports and unlimited boards.`,
+    a: `Unlimited public boards, uploads and portfolio posts, plus ${ACCESS_LIMITS.free.maxUnlockedReferences} new references from the library every day with frame-by-frame playback. Anything you've opened before stays playable anytime, and each reference you share publicly earns ${CONTRIBUTION_BONUS_PER_UPLOAD} extra views that day (up to ${MAX_CONTRIBUTION_BONUS}). Pro removes the daily limit and adds private boards, downloads, compare and exports.`,
+  },
+  {
+    q: 'Why are free boards public?',
+    a: 'Animation Reference is built by animators sharing what they find. Free boards and uploads join the community library, and you get extra daily references for sharing. Pro keeps studio and NDA work private.',
   },
   {
     q: 'How is payment handled?',

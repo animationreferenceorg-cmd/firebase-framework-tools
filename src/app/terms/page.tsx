@@ -56,7 +56,26 @@ export default function TermsOfServicePage() {
                         <li>Attempt to gain unauthorized access to Properties, accounts registered to others, or to the computers, servers or networks connected to Properties.</li>
                         <li>Reproduce, duplicate, copy, sell, trade, resell or exploit for any commercial purpose any portion of Properties.</li>
                         <li>Upload, post, e-mail, transmit or otherwise make available any unsolicited or unauthorized advertising, promotional materials, “junk mail,” “spam,” “chain letters,” “pyramid schemes,” or any other form of solicitation.</li>
+                        <li>Upload or share content that you do not own or do not have permission to share, or that infringes anyone’s copyright, trademark, privacy or other rights.</li>
                     </ul>
+
+                    <h3>4.1 Content You Share</h3>
+                    <p>
+                        Boards, clips, uploads, portfolio posts and other content you share on the Properties
+                        (“User Content”) remain yours. By sharing User Content you confirm that you created it, own it,
+                        or have the permission needed to share it, and you grant us a worldwide, non-exclusive,
+                        royalty-free license to host, store, display, reproduce and distribute it on and in connection
+                        with the Properties, including to other users for study and reference. User Content you mark
+                        public on a free plan is visible to the community; private boards and uploads are a Pro feature.
+                    </p>
+                    <p>
+                        We do not review User Content before it is posted and are not responsible for it. We may remove
+                        any User Content at any time. Anyone may report content using the “Report” link, and copyright
+                        owners may send a notice under our <a href="/dmca">DMCA / Copyright Policy</a>. We remove content
+                        in response to valid notices and terminate, in appropriate circumstances, the accounts of
+                        repeat infringers. As a rule, an account that receives three valid copyright notices is
+                        terminated.
+                    </p>
 
                     <h3>5. Fees and Purchase Terms</h3>
                     <p><strong>5.1 Payment:</strong> You agree to pay all fees or charges to your Account in accordance with the fees, charges and billing terms in effect at the time a fee or charge is due and payable. You must provide a valid credit card (Visa, MasterCard, or any other issuer accepted by us) to Stripe, our third party payment provider.</p>

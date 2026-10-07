@@ -14,6 +14,7 @@ import {
   BookOpen,
   Share2,
   MessageSquare,
+  Flag,
 } from 'lucide-react';
 import { useUser } from '@/hooks/use-user';
 import { useRouter } from 'next/navigation';
@@ -34,6 +35,7 @@ function AdminNav() {
     { href: '/admin/shorts', label: 'Short Films', icon: Film },
     { href: '/admin/blog', label: 'Articles', icon: BookOpen },
     { href: '/admin/feedback', label: 'Feedback & Responses', icon: MessageSquare },
+  { href: '/admin/reports', label: 'Content Reports', icon: Flag },
     { href: '/admin/bunny', label: 'Bunny Sync', icon: Video },
   ];
 

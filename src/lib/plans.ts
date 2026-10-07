@@ -175,14 +175,29 @@ export interface Entitlements {
 
 const UNLIMITED: PlanLimits = { maxBoards: Infinity, maxSavedReferences: Infinity, maxPortfolioPosts: Infinity, maxUnlockedReferences: Infinity };
 
+// Creating is free and unlimited (boards, saves, uploads, portfolio posts):
+// every public board and upload grows the community library. What Pro buys
+// is unlimited viewing of other people's references, privacy and the study
+// and export tools. Legacy paid tiers keep their larger daily allowance.
 export const ACCESS_LIMITS: Record<AccessLevel, PlanLimits> = {
-  free: { maxBoards: 1, maxSavedReferences: 5, maxPortfolioPosts: 3, maxUnlockedReferences: 25 },
-  tier1: { maxBoards: 3, maxSavedReferences: 10, maxPortfolioPosts: 3, maxUnlockedReferences: 50 },
-  tier2: { maxBoards: 6, maxSavedReferences: 20, maxPortfolioPosts: 3, maxUnlockedReferences: 100 },
+  free: { maxBoards: Infinity, maxSavedReferences: Infinity, maxPortfolioPosts: Infinity, maxUnlockedReferences: 25 },
+  tier1: { maxBoards: Infinity, maxSavedReferences: Infinity, maxPortfolioPosts: Infinity, maxUnlockedReferences: 50 },
+  tier2: { maxBoards: Infinity, maxSavedReferences: Infinity, maxPortfolioPosts: Infinity, maxUnlockedReferences: 100 },
   pro: UNLIMITED,
   student_unlimited: UNLIMITED,
   admin: UNLIMITED,
 };
+
+/** Extra daily library views a free user earns per public reference shared today. */
+export const CONTRIBUTION_BONUS_PER_UPLOAD = 3;
+/** Cap on the daily contribution bonus. */
+export const MAX_CONTRIBUTION_BONUS = 25;
+
+/** Bonus daily views for a number of public references shared today. */
+export function contributionBonus(publicUploadsToday: number): number {
+  if (!Number.isFinite(publicUploadsToday) || publicUploadsToday <= 0) return 0;
+  return Math.min(MAX_CONTRIBUTION_BONUS, Math.floor(publicUploadsToday) * CONTRIBUTION_BONUS_PER_UPLOAD);
+}
 
 /** Subscription statuses that keep paid access. `past_due` is Stripe's retry window. */
 export const ACCESS_GRANTING_STATUSES = ['active', 'trialing', 'past_due'] as const;
@@ -259,21 +274,21 @@ export function formatUsd(cents: number): string {
  * happy path is tested and reachable from the product.
  */
 export const FREE_FEATURES = [
-  `${ACCESS_LIMITS.free.maxUnlockedReferences} daily library references (re-watch anytime)`,
+  `${ACCESS_LIMITS.free.maxUnlockedReferences} new library references a day (re-watch anytime)`,
+  `Earn up to +${MAX_CONTRIBUTION_BONUS} extra a day by sharing references`,
+  'Unlimited public boards and uploads',
+  'Unlimited portfolio posts',
   'Frame-by-frame playback and speed controls',
-  `${ACCESS_LIMITS.free.maxBoards} visual reference board`,
-  'Save clips directly to your boards',
-  `${ACCESS_LIMITS.free.maxPortfolioPosts} portfolio posts`,
 ] as const;
 
 export const PRO_FEATURES = [
-  'Unlimited visual reference boards',
-  'Private boards & private video uploads',
+  'Unlimited references every day',
+  'Private boards & private uploads for studio/NDA work',
   'Side-by-side synchronized playblast compare',
   'High-resolution contact sheets & PureRef export',
   'Reference MP4 video downloads & exports',
   'Pitch deck & director presentation PDF exports',
-  'Unlimited portfolio posts & shot breakdowns',
+  'Shot breakdowns & a Pro badge on your portfolio',
 ] as const;
 
 export interface PlanSummary {
@@ -297,11 +312,11 @@ export function describeAccess(profile: EntitlementProfile | null | undefined): 
       return { badge: 'PRO', title: 'Pro (original)', price: `${formatUsd(LEGACY_PRICE_CENTS.tier5)}/mo`, description: 'Unlimited reference boards and private workspaces.' };
     }
     case 'tier2':
-      return { badge: 'SUPER FAN', title: 'Super Fan (legacy)', price: `${formatUsd(LEGACY_PRICE_CENTS.tier2)}/mo`, description: `${ACCESS_LIMITS.tier2.maxBoards} reference boards.` };
+      return { badge: 'SUPER FAN', title: 'Super Fan (legacy)', price: `${formatUsd(LEGACY_PRICE_CENTS.tier2)}/mo`, description: `${ACCESS_LIMITS.tier2.maxUnlockedReferences} new references a day.` };
     case 'tier1':
-      return { badge: 'SUPPORTER', title: 'Supporter (legacy)', price: `${formatUsd(LEGACY_PRICE_CENTS.tier1)}/mo`, description: `${ACCESS_LIMITS.tier1.maxBoards} reference boards.` };
+      return { badge: 'SUPPORTER', title: 'Supporter (legacy)', price: `${formatUsd(LEGACY_PRICE_CENTS.tier1)}/mo`, description: `${ACCESS_LIMITS.tier1.maxUnlockedReferences} new references a day.` };
     default:
-      return { badge: 'FREE', title: 'Free', price: '$0', description: `${ACCESS_LIMITS.free.maxBoards} active visual reference board.` };
+      return { badge: 'FREE', title: 'Free', price: '$0', description: `Unlimited public boards · ${ACCESS_LIMITS.free.maxUnlockedReferences} new references a day.` };
   }
 }
 

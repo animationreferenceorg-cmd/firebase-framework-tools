@@ -91,7 +91,12 @@ export default function DmcaPage() {
                     <p>
                         In accordance with the DMCA and other applicable law, we maintain a policy of terminating, in
                         appropriate circumstances, the accounts of users who are determined to be repeat infringers of
-                        the intellectual property rights of others.
+                        the intellectual property rights of others. Each valid takedown counts as a strike against the
+                        account that uploaded the material; an account that reaches three strikes is terminated.
+                    </p>
+                    <p>
+                        You can also flag any clip with the “Report” link on its page. Reports go straight to our
+                        review queue.
                     </p>
 
                     <h3>5. Community-Submitted Content</h3>

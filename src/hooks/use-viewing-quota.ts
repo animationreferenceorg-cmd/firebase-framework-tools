@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useUser } from './use-user';
-import { getEntitlements } from '@/lib/plans';
+import { contributionBonus, getEntitlements } from '@/lib/plans';
+import { countPublicSharesToday } from '@/lib/contribution';
 import {
   FREE_DAILY_UNLOCKED_LIMIT,
   QUOTA_CHANGED_EVENT,
@@ -17,15 +18,37 @@ import {
  * Free users get 25 new reference video views per day.
  * When 25 are used up, users must come back tomorrow or upgrade to Pro.
  * Any video previously watched remains 100% free to re-watch anytime without consuming quota.
+ * Sharing public references earns extra views for the day (contributionBonus).
  */
+export const CONTRIBUTION_CHANGED_EVENT = 'animref:contribution-changed';
+
+function useContributionBonus(uid: string | undefined, enabled: boolean): number {
+  const [bonus, setBonus] = useState(0);
+  const load = useCallback(() => {
+    if (!uid || !enabled) { setBonus(0); return; }
+    import('@/lib/reference-service')
+      .then(({ getUserReferenceClips }) => getUserReferenceClips(uid, false))
+      .then((clips) => setBonus(contributionBonus(countPublicSharesToday(clips))))
+      .catch(() => setBonus(0));
+  }, [uid, enabled]);
+  useEffect(() => {
+    load();
+    window.addEventListener(CONTRIBUTION_CHANGED_EVENT, load);
+    return () => window.removeEventListener(CONTRIBUTION_CHANGED_EVENT, load);
+  }, [load]);
+  return bonus;
+}
+
 export function useViewingQuota() {
   const { userProfile, loading } = useUser();
   const ready = !loading;
   const rawLimit = getEntitlements(userProfile).limits.maxUnlockedReferences;
   const unlimited = !Number.isFinite(rawLimit);
-  const limit = unlimited ? Infinity : (rawLimit || FREE_DAILY_UNLOCKED_LIMIT);
-  const profileList = (userProfile as { unlockedReferences?: string[] } | null)?.unlockedReferences;
   const uid = userProfile?.uid;
+  const bonus = useContributionBonus(uid, !unlimited);
+  const baseLimit = unlimited ? Infinity : (rawLimit || FREE_DAILY_UNLOCKED_LIMIT);
+  const limit = unlimited ? Infinity : baseLimit + bonus;
+  const profileList = (userProfile as { unlockedReferences?: string[] } | null)?.unlockedReferences;
 
   const [status, setStatus] = useState(() =>
     getDailyQuotaStatus(profileList, Number.isFinite(limit) ? limit : FREE_DAILY_UNLOCKED_LIMIT)
@@ -86,6 +109,8 @@ export function useViewingQuota() {
     todayCount,
     todayRemaining,
     limit,
+    baseLimit,
+    bonus,
     remaining,
     hasReachedLimit,
     isVideoUnlocked,

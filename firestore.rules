@@ -92,6 +92,10 @@ service cloud.firestore {
     // Lifecycle email preferences (unsubscribe tokens) and send log: server-only.
     match /email_prefs/{uid} { allow read, write: if false; }
     match /email_log/{uid} { allow read, write: if false; }
+    // Content reports and copyright strikes: written and read via the server only.
+    match /content_reports/{reportId} { allow read, write: if false; }
+    match /moderation/{uid} { allow read, write: if false; }
+    match /takedowns/{videoId} { allow read, write: if false; }
     match /sjsu_verifications/{uid} {
       allow read: if (request.auth != null && request.auth.uid == uid) || isAdmin();
       allow write: if false;
@@ -323,8 +327,12 @@ service cloud.firestore {
         || (request.auth != null && resource.data.creatorId == request.auth.uid)
         || isAdmin();
       allow create: if request.auth != null && request.resource.data.creatorId == request.auth.uid && privacyAllowed();
+      // A clip removed after a report stays private: only an admin (or a
+      // counter-notice handled by an admin) can restore it.
       allow update: if request.auth != null && (
-        (resource.data.creatorId == request.auth.uid && request.resource.data.creatorId == resource.data.creatorId && privacyAllowed())
+        (resource.data.creatorId == request.auth.uid && request.resource.data.creatorId == resource.data.creatorId && privacyAllowed()
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['takenDownAt', 'takenDownReason'])
+          && (resource.data.get('takenDownAt', null) == null || request.resource.data.get('isPrivate', false) == true))
         || isAdmin()
       );
       // Saving another creator's clip to your board moves its save counter by one.

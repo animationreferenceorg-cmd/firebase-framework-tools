@@ -525,7 +525,7 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
         if (existingPosts && existingPosts.size >= maxPortfolioPosts) {
           toast({
             title: 'Free portfolio limit reached',
-            description: `Free members can publish ${maxPortfolioPosts} portfolio posts. Upgrade to Pro for unlimited posts and private reference boards.`,
+            description: `Your plan allows ${maxPortfolioPosts} portfolio posts. Upgrade to Pro for unlimited posts and private reference boards.`,
             variant: 'destructive',
           });
           return;

@@ -77,6 +77,10 @@ export async function POST(request: NextRequest) {
     }
 
     const input = parsed.data;
+    // Free saves are public and feed the community library; private clips are Pro.
+    if (input.isPrivate && !profileHasPro(profile)) {
+      throw new ApiError(403, 'PRIVATE_REQUIRES_PRO', 'Private clips are a Pro feature. Free saves are shared with the community.');
+    }
     const cleanBoardId = input.boardId && input.boardId.trim() !== '' ? input.boardId.trim() : null;
     const cleanThumbnail = input.thumbnailUrl && input.thumbnailUrl.trim() !== '' && input.thumbnailUrl.startsWith('http') ? input.thumbnailUrl.trim() : null;
     const cleanTags = [...new Set(input.tags.map((t) => t.trim().toLowerCase()).filter((t) => t.length > 0 && t.length < 50))];

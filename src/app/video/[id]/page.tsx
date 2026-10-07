@@ -7,6 +7,8 @@ import { VideoDetailClient } from '@/components/VideoDetailClient';
 import { ReferenceThumbnail } from '@/components/ReferenceThumbnail';
 import { isVideoSourceAvailable } from '@/lib/video-availability';
 import type { Video } from '@/lib/types';
+import { ReportContentButton } from '@/components/ReportContentButton';
+import { isVideoTakenDown } from '@/lib/takedowns.server';
 import {
     getAllSnapshotVideos,
     getSnapshotVideoById,
@@ -128,6 +130,7 @@ export default async function VideoPage({ params }: Props) {
     const video = await getVideo(id);
 
     if (!video) return <VideoDetailClient id={id} initialData={null} />;
+    if (await isVideoTakenDown(id)) return <UnavailableReference video={video} reason="removed" />;
     if (!isVideoSourceAvailable(video.videoUrl)) return <UnavailableReference video={video} />;
 
     const pageUrl = `${BASE_URL}/video/${id}`;
@@ -174,6 +177,9 @@ export default async function VideoPage({ params }: Props) {
     return (
         <>
             <VideoDetailClient id={id} initialData={video} />
+            <div className="container mx-auto flex justify-end px-4 md:px-8">
+                <ReportContentButton targetType="video" targetId={id} />
+            </div>
 
             {related.length > 0 && (
                 <section className="container mx-auto px-4 md:px-8 py-12">
@@ -242,7 +248,7 @@ export default async function VideoPage({ params }: Props) {
  * Shown for references whose video host has gone offline: a clear message
  * instead of a player that can never load, plus working alternatives.
  */
-function UnavailableReference({ video }: { video: Video }) {
+function UnavailableReference({ video, reason = 'offline' }: { video: Video; reason?: 'offline' | 'removed' }) {
     let related: Video[] = [];
     try {
         related = getRelatedSnapshotVideos(video, 8);
@@ -256,8 +262,9 @@ function UnavailableReference({ video }: { video: Video }) {
                 <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Reference unavailable</p>
                 <h1 className="mt-2 text-2xl font-black text-foreground md:text-3xl">{video.title}</h1>
                 <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
-                    This clip was hosted by a third-party library that has gone offline, so it can’t be played right now.
-                    We’re working on restoring it. In the meantime, these references are ready to study.
+                    {reason === 'removed'
+                        ? 'This clip was removed after a report. These references are ready to study instead.'
+                        : 'This clip was hosted by a third-party library that has gone offline, so it can’t be played right now. We’re working on restoring it. In the meantime, these references are ready to study.'}
                 </p>
                 <Link href="/categories" className="mt-6 inline-flex rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90">
                     Browse the library

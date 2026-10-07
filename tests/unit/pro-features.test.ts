@@ -54,15 +54,10 @@ describe('evaluateBoardCreation', () => {
     expect(evaluateBoardCreation(free, [], false).allowed).toBe(true);
   });
 
-  it('blocks a free user at the 1-board limit', () => {
-    const d = evaluateBoardCreation(free, ['a'], false);
-    expect(d).toMatchObject({ allowed: false, block: 'board_limit', limit: 1 });
-  });
-
-  it('counts a board that exists in both stores only once', () => {
-    // The same board id appears in reference_boards and in moodboards.
-    expect(evaluateBoardCreation(free, ['a', 'a'], false)).toMatchObject({ allowed: false, block: 'board_limit' });
-    expect(evaluateBoardCreation({ role: 'user', isPremium: true, tier: 'tier1' }, ['a', 'a', 'b'], false).allowed).toBe(true); // 2 of 3
+  it('lets free users create unlimited public boards', () => {
+    const many = Array.from({ length: 50 }, (_, i) => `b${i}`);
+    expect(evaluateBoardCreation(free, many, false)).toMatchObject({ allowed: true, limit: Infinity });
+    expect(evaluateBoardCreation({ role: 'user', isPremium: true, tier: 'tier1' }, many, false).allowed).toBe(true);
   });
 
   it('blocks private boards for free users', () => {
@@ -77,6 +72,7 @@ describe('evaluateBoardCreation', () => {
 
   it('does not treat a canceled subscription as Pro', () => {
     const canceled = { role: 'user', isPremium: true, tier: 'tier5', plan: 'pro_monthly', subscriptionStatus: 'canceled' };
-    expect(evaluateBoardCreation(canceled, ['a'], false).allowed).toBe(false);
+    expect(evaluateBoardCreation(canceled, ['a'], true)).toMatchObject({ allowed: false, block: 'private_requires_pro' });
+    expect(evaluateBoardCreation(canceled, ['a'], false).allowed).toBe(true); // public boards stay free
   });
 });

@@ -232,13 +232,21 @@ export function PricingPageClient() {
           <div>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-base font-bold">Pro</h2>
+              {showIntro && (
+                <span className="rounded-full border border-pink-400/40 bg-pink-500/20 px-2.5 py-0.5 text-[10px] font-bold text-pink-300">
+                  First Month $1 · Then $5/mo
+                </span>
+              )}
               {!isFree && <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400">{current.title} · {current.price}</span>}
             </div>
-            <p className="flex items-baseline gap-1">
+            <p className="flex items-baseline gap-1.5">
               <span className="text-4xl font-black">{formatUsd(showIntro ? intro!.amountCents : monthlyEquivalent)}</span>
               <span className="text-sm text-zinc-400">{showIntro ? 'first month' : '/ month'}</span>
+              {showIntro && (
+                <span className="text-xs text-zinc-400 line-through ml-1">{formatUsd(selected.amountCents)}</span>
+              )}
             </p>
-            <p className="mt-1 text-xs text-purple-200/90">{priceLine}</p>
+            <p className="mt-1 text-xs font-medium text-purple-200/90">{priceLine}</p>
             <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-purple-300">Everything in Free, plus</p>
             <ul className="mt-3 space-y-2.5 text-sm">
               {PRO_FEATURES.map((feature) => (

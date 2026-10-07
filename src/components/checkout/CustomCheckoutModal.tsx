@@ -227,11 +227,19 @@ export function CustomCheckoutModal({
 
                             {/* Price Card */}
                             <div className="p-4 rounded-2xl bg-gradient-to-b from-purple-950/40 to-black/60 border border-purple-500/40 space-y-1">
+                                {showIntro && (
+                                    <div className="inline-flex items-center gap-1 rounded-full border border-pink-400/40 bg-pink-500/20 px-2 py-0.5 text-[10px] font-bold text-pink-300 mb-1">
+                                        Special Intro Offer: $1 First Month
+                                    </div>
+                                )}
                                 <div className="flex items-baseline gap-1.5">
                                     <span className="text-3xl font-black text-white">
                                         {formatUsd(showIntro ? intro!.amountCents : monthlyEquivalent)}
                                     </span>
                                     <span className="text-xs text-zinc-400 font-medium">{showIntro ? 'first month' : '/ month'}</span>
+                                    {showIntro && (
+                                        <span className="text-xs text-zinc-400 line-through ml-1">{formatUsd(activeOffer.amountCents)}</span>
+                                    )}
                                 </div>
                                 <p className="text-[11px] text-purple-200/80">
                                     {selectedPlan === 'pro_annual'

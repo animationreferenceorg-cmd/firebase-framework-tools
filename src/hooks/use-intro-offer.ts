@@ -11,8 +11,11 @@ import { formatUsd, getIntroOffer, getProOffers, isIntroEligible } from '@/lib/p
 export function useIntroOffer() {
   const { userProfile, loading } = useUser();
   const offer = getIntroOffer();
+  // The intro offer applies to all visitors and free accounts by default,
+  // unless a signed-in profile has loaded and shows an existing/past paid subscription.
+  const hasExistingSub = Boolean(userProfile && !isIntroEligible(userProfile));
+  const intro = offer && !hasExistingSub ? offer : null;
   const regularCents = getProOffers().pro_monthly.amountCents;
-  const intro = offer && !loading && isIntroEligible(userProfile) ? offer : null;
   const regular = formatUsd(regularCents);
 
   return {

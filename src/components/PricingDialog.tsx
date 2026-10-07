@@ -249,6 +249,11 @@ export function PricingDialog({ children, open: openProp, onOpenChange: onOpenCh
                                     <div>
                                         <div className="flex items-center justify-between mb-3 mt-1">
                                             <h3 className="text-base font-bold text-white">Pro</h3>
+                                            {showIntro && (
+                                                <span className="text-[10px] font-bold text-pink-300 px-2 py-0.5 rounded-full bg-pink-500/20 border border-pink-400/40">
+                                                    First Month $1 · Then $5/mo
+                                                </span>
+                                            )}
                                             {!isFree && (
                                                 <span className="text-[10px] font-bold text-emerald-400 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
                                                     {current.title} · {current.price}
@@ -266,6 +271,11 @@ export function PricingDialog({ children, open: openProp, onOpenChange: onOpenCh
                                                 <span className="text-xs text-zinc-400 font-medium">
                                                     {showIntro ? 'first month' : '/ month'}
                                                 </span>
+                                                {showIntro && selected.interval === 'month' && (
+                                                    <span className="text-xs text-zinc-400 line-through">
+                                                        {formatUsd(selected.amountCents)}
+                                                    </span>
+                                                )}
                                                 {selected.interval === 'year' && (
                                                     <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
                                                         Save {annualSavingsPct}%

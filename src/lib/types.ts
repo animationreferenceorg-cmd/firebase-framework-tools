@@ -158,6 +158,10 @@ export interface ReferenceClip {
   communityVisible?: boolean;
   /** Set when a creator removes a clip from their library; the record is retained. */
   removedFromCreatorAt?: any;
+  /** Monthly challenge this clip was entered into (see src/lib/challenges.ts). */
+  challengeId?: string | null;
+  /** Set when the clip was removed after a report (it is then private to its creator). */
+  takenDownAt?: number | null;
   primaryBoardId?: string;
   saveCount: number;
   createdAt: any;

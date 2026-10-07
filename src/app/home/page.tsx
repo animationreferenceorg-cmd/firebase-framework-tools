@@ -24,7 +24,7 @@ export default function HomePage() {
 
   // Pagination & Filters
   const [visibleCount, setVisibleCount] = useState(VIDEOS_PER_PAGE);
-  const [activeTab, setActiveTab] = useState<TabOption>('featured');
+  const [activeTab, setActiveTab] = useState<TabOption>('latest');
   const [activeType, setActiveType] = useState<TypeOption>('all');
   const [activePill, setActivePill] = useState<PillOption>('all');
   const [columns, setColumns] = useState<number>(4);
@@ -75,9 +75,12 @@ export default function HomePage() {
       );
     }
 
-    // Helper to get numeric timestamp for sorting
+    // Helper to get numeric timestamp for sorting (newest first)
     const getVideoTimestamp = (v: Video): number => {
-      if (typeof v.createdAt === 'number') return v.createdAt;
+      if (typeof v.createdAt === 'number' && !isNaN(v.createdAt) && v.createdAt > 0) return v.createdAt;
+      if (typeof (v as any).updatedAt === 'number' && (v as any).updatedAt > 0) return (v as any).updatedAt;
+      if (typeof (v as any).uploadedAt === 'number' && (v as any).uploadedAt > 0) return (v as any).uploadedAt;
+      if (typeof (v as any).importedAt === 'number' && (v as any).importedAt > 0) return (v as any).importedAt;
       if (typeof v.createdAt === 'string') {
         const p = Date.parse(v.createdAt);
         if (!isNaN(p)) return p;
@@ -150,18 +153,11 @@ export default function HomePage() {
       const userUploaded = result.filter(v => !!v.isPortfolio || !!v.uploader);
       const standardRef = result.filter(v => !v.uploader && !v.author_name && v.type !== 'social' && (v.type as string) !== 'instagram');
 
-      function shuffle<T>(arr: T[]): T[] {
-        const copy = [...arr];
-        for (let i = copy.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [copy[i], copy[j]] = [copy[j], copy[i]];
-        }
-        return copy;
-      }
+      const sortByNewest = (arr: Video[]) => [...arr].sort((a, b) => getVideoTimestamp(b) - getVideoTimestamp(a));
 
-      const sTagged = shuffle(taggedOrUploader);
-      const sUser = shuffle(userUploaded);
-      const sStandard = shuffle(standardRef);
+      const sTagged = sortByNewest(taggedOrUploader);
+      const sUser = sortByNewest(userUploaded);
+      const sStandard = sortByNewest(standardRef);
 
       const mixed: Video[] = [];
       const seen = new Set<string>();
@@ -182,7 +178,7 @@ export default function HomePage() {
         }
       }
 
-      for (const item of shuffle(result)) {
+      for (const item of sortByNewest(result)) {
         if (!seen.has(item.id)) {
           mixed.push(item);
           seen.add(item.id);

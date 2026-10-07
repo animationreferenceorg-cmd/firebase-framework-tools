@@ -81,6 +81,7 @@ export interface UnifiedCategoryCardItem {
     count: number;
     description?: string;
     badge?: string;
+    latestTime?: number;
 }
 
 export function BrowseDirectory({ categories, videos, query: controlledQuery, onQueryChange, onSelectCategory, onSelectTag }: BrowseDirectoryProps) {
@@ -120,7 +121,29 @@ export function BrowseDirectory({ categories, videos, query: controlledQuery, on
 
     const q = query.toLowerCase().trim();
 
-    // Unified List: Combine categories and tag topics into a single "Channels" library
+    const { categoryLatestTime, tagLatestTime } = useMemo(() => {
+        const catTime: Record<string, number> = {};
+        const tagTime: Record<string, number> = {};
+        const getTs = (v: Video): number => {
+            if (typeof v.createdAt === 'number' && !isNaN(v.createdAt) && v.createdAt > 0) return v.createdAt;
+            if (typeof (v as any).updatedAt === 'number' && (v as any).updatedAt > 0) return (v as any).updatedAt;
+            return 0;
+        };
+        for (const v of videos) {
+            const ts = getTs(v);
+            if (!ts) continue;
+            for (const cId of v.categoryIds || []) {
+                if (!catTime[cId] || ts > catTime[cId]) catTime[cId] = ts;
+            }
+            for (const t of v.tags || []) {
+                const k = t.toLowerCase().trim();
+                if (!tagTime[k] || ts > tagTime[k]) tagTime[k] = ts;
+            }
+        }
+        return { categoryLatestTime: catTime, tagLatestTime: tagTime };
+    }, [videos]);
+
+    // Unified List: Combine categories and tag topics into a single "Channels" library (newest references first)
     const unifiedList = useMemo(() => {
         const catItems: UnifiedCategoryCardItem[] = categories.map((c, idx) => ({
             id: `cat-${c.id}`,
@@ -132,6 +155,7 @@ export function BrowseDirectory({ categories, videos, query: controlledQuery, on
             count: categoryCounts[c.id] || 0,
             description: c.description || 'Animation Reference Channel',
             badge: idx % 3 === 0 ? 'ART BLAST' : idx % 2 === 0 ? 'FEATURED' : 'SPOTLIGHT',
+            latestTime: categoryLatestTime[c.id] || 0,
         }));
 
         const tagItems: UnifiedCategoryCardItem[] = tagEntries.map((t, idx) => ({
@@ -145,6 +169,7 @@ export function BrowseDirectory({ categories, videos, query: controlledQuery, on
             count: t.count,
             description: `${t.count} reference clips`,
             badge: idx % 4 === 0 ? 'FEATURED' : 'TRENDING',
+            latestTime: tagLatestTime[t.tag.toLowerCase().trim()] || 0,
         }));
 
         const seenTitles = new Set<string>();
@@ -161,8 +186,11 @@ export function BrowseDirectory({ categories, videos, query: controlledQuery, on
             }
         }
 
+        // Channels with the newest references appear towards the top
+        combined.sort((a, b) => (b.latestTime || 0) - (a.latestTime || 0) || b.count - a.count);
+
         return combined;
-    }, [categories, categoryCovers, categoryCounts, tagEntries]);
+    }, [categories, categoryCovers, categoryCounts, tagEntries, categoryLatestTime, tagLatestTime]);
 
     // ArtStation Style Featured Top Banners (Top 6 Items)
     const featuredBanners = useMemo(() => {
@@ -201,7 +229,7 @@ export function BrowseDirectory({ categories, videos, query: controlledQuery, on
         if (activeSortMode === 'trending') {
             result.sort((a, b) => b.count - a.count);
         } else if (activeSortMode === 'latest') {
-            result.reverse();
+            result.sort((a, b) => (b.latestTime || 0) - (a.latestTime || 0));
         }
 
         return result;

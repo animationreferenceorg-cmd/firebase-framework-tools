@@ -247,7 +247,7 @@ function UnavailableReference({ video }: { video: Video }) {
     try {
         related = getRelatedSnapshotVideos(video, 8);
         // Nothing shares its tags (common for a whole offline collection): suggest the newest references.
-        if (related.length === 0) related = getAllSnapshotVideos().slice(-8).reverse();
+        if (related.length === 0) related = getAllSnapshotVideos().slice(0, 8);
     } catch { /* snapshot unavailable */ }
 
     return (

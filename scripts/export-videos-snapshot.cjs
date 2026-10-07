@@ -81,6 +81,18 @@ async function retryWithAdc() {
     }
   }
 
+function toMillis(val) {
+  if (!val) return 0;
+  if (typeof val === 'number' && !isNaN(val)) return val;
+  if (typeof val.toMillis === 'function') return val.toMillis();
+  if (val.seconds) return val.seconds * 1000;
+  if (typeof val === 'string') {
+    const p = Date.parse(val);
+    if (!isNaN(p)) return p;
+  }
+  return 0;
+}
+
   const snap = await db.collection('videos').get();
   const videos = snap.docs
     .map(d => ({ id: d.id, ...d.data() }))
@@ -105,10 +117,10 @@ async function retryWithAdc() {
       ...(v.duration ? { duration: v.duration } : {}),
       ...(v.width ? { width: v.width } : {}),
       ...(v.height ? { height: v.height } : {}),
-      createdAt: v.createdAt && typeof v.createdAt.toMillis === 'function' ? v.createdAt.toMillis() : null,
+      createdAt: toMillis(v.createdAt) || toMillis(v.uploadedAt) || toMillis(v.updatedAt) || toMillis(v.importedAt) || null,
     }))
-    // Oldest first, so consumers doing [...videos].reverse() get newest first
-    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    // Newest first, so all new references appear towards the top
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
   fs.mkdirSync(path.dirname(OUT_FILE), { recursive: true });
   fs.writeFileSync(OUT_FILE, JSON.stringify(videos));

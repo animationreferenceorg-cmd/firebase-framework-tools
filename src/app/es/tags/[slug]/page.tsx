@@ -102,7 +102,17 @@ export default async function SpanishTagPage({ params, searchParams }: Props) {
     const totalPages = Math.ceil(entry.videos.length / PER_PAGE);
     if (page > totalPages) notFound();
 
-    const ordered = [...entry.videos].reverse();
+    const getTs = (v: any): number => {
+        if (typeof v.createdAt === 'number' && !isNaN(v.createdAt) && v.createdAt > 0) return v.createdAt;
+        if (typeof v.updatedAt === 'number' && v.updatedAt > 0) return v.updatedAt;
+        if (typeof v.uploadedAt === 'number' && v.uploadedAt > 0) return v.uploadedAt;
+        if (typeof v.importedAt === 'number' && v.importedAt > 0) return v.importedAt;
+        if (typeof v.createdAt === 'string') { const p = Date.parse(v.createdAt); if (!isNaN(p)) return p; }
+        if (v.createdAt?.toMillis && typeof v.createdAt.toMillis === 'function') return v.createdAt.toMillis();
+        if (v.createdAt?.seconds) return v.createdAt.seconds * 1000;
+        return 0;
+    };
+    const ordered = [...entry.videos].sort((a, b) => getTs(b) - getTs(a));
     const videos = ordered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
     const name = titleCase(entry.tag);
     const relatedTags = getRelatedTags(entry.tag, 14);

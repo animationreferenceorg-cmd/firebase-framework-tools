@@ -180,7 +180,7 @@ function getCategoryVideos(category: Category): Video[] {
         if (matches.length < CATEGORY_VIDEO_LIMIT && category.tags?.length) {
             const catTags = new Set(category.tags.map(t => t.toLowerCase()));
             const seen = new Set(matches.map(v => v.id));
-            for (let i = all.length - 1; i >= 0 && matches.length < CATEGORY_VIDEO_LIMIT; i--) {
+            for (let i = 0; i < all.length && matches.length < CATEGORY_VIDEO_LIMIT; i++) {
                 const v = all[i];
                 if (seen.has(v.id)) continue;
                 if ((v.tags || []).some(t => catTags.has(t.toLowerCase()))) {
@@ -190,8 +190,19 @@ function getCategoryVideos(category: Category): Video[] {
             }
         }
 
-        // Filter out unavailable/offline video hosts so cards don't show error overlays
-        const availableMatches = filterAvailableVideos(matches);
+        const getTs = (v: any): number => {
+            if (typeof v.createdAt === 'number' && !isNaN(v.createdAt) && v.createdAt > 0) return v.createdAt;
+            if (typeof v.updatedAt === 'number' && v.updatedAt > 0) return v.updatedAt;
+            if (typeof v.uploadedAt === 'number' && v.uploadedAt > 0) return v.uploadedAt;
+            if (typeof v.importedAt === 'number' && v.importedAt > 0) return v.importedAt;
+            if (typeof v.createdAt === 'string') { const p = Date.parse(v.createdAt); if (!isNaN(p)) return p; }
+            if (v.createdAt?.toMillis && typeof v.createdAt.toMillis === 'function') return v.createdAt.toMillis();
+            if (v.createdAt?.seconds) return v.createdAt.seconds * 1000;
+            return 0;
+        };
+
+        // Filter out unavailable/offline video hosts and sort newest first
+        const availableMatches = filterAvailableVideos(matches).sort((a, b) => getTs(b) - getTs(a));
 
         return addVideoCoverFallbacks(availableMatches.slice(0, CATEGORY_VIDEO_LIMIT).map(v => serializeVideo(v)));
     } catch (error) {

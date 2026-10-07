@@ -1,4 +1,4 @@
 {
   "_comment": "Video hosts whose files no longer load. Videos on these hosts are hidden from listings. Remove a host once its videos are re-hosted.",
-  "hosts": ["offline-sample.com"]
+  "hosts": ["offline-sample.com", "assets.reflix.dev", "reflix.dev"]
 }

@@ -103,7 +103,7 @@ export function CategoriesHub() {
 
                         {/* Subheadline */}
                         <p className="text-lg md:text-xl text-zinc-100 mb-10 max-w-2xl mx-auto leading-relaxed drop-shadow-lg font-medium">
-                            Discover 8,000 animation clips organized by category and tag. Study the best animation, then build and share your portfolio.
+                            Discover 589 animation clips organized by category and tag. Study the best animation, then build and share your portfolio.
                         </p>
 
                         {/* Category search bar */}

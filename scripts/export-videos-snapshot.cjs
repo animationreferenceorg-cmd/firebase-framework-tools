@@ -84,14 +84,14 @@ async function retryWithAdc() {
   const snap = await db.collection('videos').get();
   const videos = snap.docs
     .map(d => ({ id: d.id, ...d.data() }))
-    .filter(v => v.status !== 'draft' && v.isShort !== true && isAvailable(v.videoUrl))
+    .filter(v => v.status !== 'draft' && v.status !== 'archived' && v.isShort !== true && isAvailable(v.videoUrl))
     .map(v => ({
       id: v.id,
       type: v.type || 'video',
       title: v.title || '',
       description: v.description || '',
       thumbnailUrl: v.thumbnailUrl || '',
-      posterUrl: v.posterUrl || v.thumbnailUrl || '',
+      posterUrl: (/cdninstagram\.com|fbcdn\.net|reflix\.dev/i.test(v.posterUrl || '') ? v.thumbnailUrl : (v.posterUrl || v.thumbnailUrl)) || '',
       videoUrl: v.videoUrl || '',
       tags: v.tags || [],
       categoryIds: v.categoryIds || [],

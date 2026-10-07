@@ -483,7 +483,7 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
 
                         {/* Subheadline */}
                         <p className="text-lg md:text-xl text-zinc-100 mb-6 max-w-2xl mx-auto leading-relaxed drop-shadow-lg font-medium">
-                            Browse 8,000 curated animation clips. Filter by 2D, 3D, source, and categories below.
+                            Browse 589 curated animation clips. Filter by 2D, 3D, source, and categories below.
                         </p>
                     </div>
                 </BrowseHero>

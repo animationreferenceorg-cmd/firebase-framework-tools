@@ -44,11 +44,11 @@ function getYouTubeId(url?: string): string | null {
 function isPlayableVideoUrl(url?: string): boolean {
   if (!url) return false;
   const clean = url.toLowerCase();
-  if (clean.includes('youtube.com') || clean.includes('youtu.be') || clean.includes('vimeo.com') || clean.includes('instagram.com') || clean.includes('tiktok.com')) {
+  if (clean.includes('youtube.com') || clean.includes('youtu.be') || clean.includes('vimeo.com') || clean.includes('instagram.com') || clean.includes('tiktok.com') || clean.includes('reflix.dev')) {
     return false;
   }
   if (clean.includes('.mp4') || clean.includes('.webm') || clean.includes('playlist.m3u8')) return true;
-  if (clean.includes('firebasestorage.googleapis.com') || clean.includes('storage.googleapis.com') || clean.includes('b-cdn.net') || clean.includes('assets.reflix.dev')) return true;
+  if (clean.includes('firebasestorage.googleapis.com') || clean.includes('storage.googleapis.com') || clean.includes('b-cdn.net')) return true;
   return false;
 }
 
@@ -405,6 +405,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
               muted
               playsInline
               onLoadedData={() => setIsImageLoaded(true)}
+              onError={() => setIsImageLoaded(true)}
               className={cn(
                 "w-full h-full object-cover transition-opacity duration-300",
                 !isImageLoaded && "opacity-0"
@@ -501,6 +502,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
               muted
               playsInline
               onLoadedData={() => setIsImageLoaded(true)}
+              onError={() => setIsImageLoaded(true)}
               className={cn(
                 "w-full h-full object-cover transition-transform duration-500",
                 isHovered && !isPlayerOpen ? "scale-[1.06]" : "scale-100",
@@ -678,6 +680,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
             muted
             playsInline
             onLoadedData={() => setIsImageLoaded(true)}
+            onError={() => setIsImageLoaded(true)}
             className={cn(
               "w-full h-full object-cover transition-opacity duration-300",
               !isImageLoaded && "opacity-0"

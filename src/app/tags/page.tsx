@@ -9,7 +9,7 @@ const BASE_URL = 'https://animationreference.org';
 export const metadata: Metadata = {
     title: 'Browse Animation References by Tag',
     description:
-        'Explore 8,000 animation reference clips by tag — combat, locomotion, acting, weapons, hit reactions, cinematics and more. Free frame-by-frame study for animators.',
+        'Explore 589 animation reference clips by tag — combat, locomotion, acting, weapons, hit reactions, cinematics and more. Free frame-by-frame study for animators.',
     alternates: { canonical: `${BASE_URL}/tags` },
     openGraph: {
         title: 'Browse Animation References by Tag | Animation Reference',

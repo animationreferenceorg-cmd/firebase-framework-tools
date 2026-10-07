@@ -37,16 +37,21 @@ function initDb() {
 
 async function main() {
   const db = initDb();
-  console.log('Querying Reflix videos in Firestore...');
+  console.log('Querying videos in Firestore to identify Reflix hosts...');
 
-  const snapshot = await db.collection('videos')
-    .where('importSource', '==', 'animref-references')
-    .get();
+  const snapshot = await db.collection('videos').get();
+  const reflixDocs = snapshot.docs.filter(doc => {
+    const data = doc.data();
+    const vid = (data.videoUrl || '').toLowerCase();
+    const thumb = (data.thumbnailUrl || '').toLowerCase();
+    const poster = (data.posterUrl || '').toLowerCase();
+    return vid.includes('reflix.dev') || thumb.includes('reflix.dev') || poster.includes('reflix.dev');
+  });
 
-  console.log(`Found ${snapshot.size} Reflix videos. Setting status to 'archived'...`);
+  console.log(`Found ${reflixDocs.length} Reflix videos out of ${snapshot.size} total. Setting status to 'archived'...`);
 
   let count = 0;
-  const docs = snapshot.docs;
+  const docs = reflixDocs;
   const BATCH_SIZE = 450;
 
   for (let i = 0; i < docs.length; i += BATCH_SIZE) {

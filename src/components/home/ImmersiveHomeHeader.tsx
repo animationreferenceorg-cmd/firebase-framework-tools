@@ -134,7 +134,7 @@ export function ImmersiveHomeHeader({
           </h1>
 
           <p className="mt-6 max-w-xl text-base font-medium leading-relaxed text-white/70 sm:text-lg">
-            8,000 animation references playing in one living library—ready to search, scrub, save, and use.
+            589 animation references playing in one living library—ready to search, scrub, save, and use.
           </p>
 
           <div className="mt-8 max-w-2xl">

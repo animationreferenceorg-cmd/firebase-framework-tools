@@ -12,6 +12,7 @@ import { CommunityFeedShelf } from '@/components/home/CommunityFeedShelf';
 import { RecentlyViewedShelf } from '@/components/home/RecentlyViewedShelf';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from '@/components/motion/SectionHeading';
+import { filterAvailableVideos } from '@/lib/video-availability';
 
 const VIDEOS_PER_PAGE = 30;
 
@@ -50,7 +51,7 @@ export default function HomePage() {
       setLoading(true);
       try {
         const videos = await getSnapshotVideos();
-        setAllVideos(videos);
+        setAllVideos(filterAvailableVideos(videos));
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {

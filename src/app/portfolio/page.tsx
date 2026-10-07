@@ -16,6 +16,8 @@ import {
   Tv
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { HeroBackgroundVideo } from '@/components/landing/HeroBackgroundVideo';
+import { InteractivePlayerShowcase } from '@/components/landing/InteractivePlayerShowcase';
 
 export const metadata: Metadata = {
   title: 'Animation Portfolio Builder | Showcase Reels & Frame-by-Frame Breakdowns',
@@ -60,33 +62,34 @@ export default function PortfolioLandingPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden pt-24 pb-20 px-4 sm:px-6 lg:px-8 border-b border-white/[0.08]">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(168,85,247,0.18),rgba(255,255,255,0))]" />
+        {/* Ambient Animation Playing in Background */}
+        <HeroBackgroundVideo />
         
-        <div className="relative max-w-5xl mx-auto text-center space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-purple-500/30 bg-purple-950/40 text-purple-300 text-xs font-semibold tracking-wide uppercase">
+        <div className="relative max-w-5xl mx-auto text-center space-y-6 z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-purple-500/30 bg-purple-950/60 text-purple-300 text-xs font-semibold tracking-wide uppercase backdrop-blur-md">
             <Film className="w-3.5 h-3.5 text-purple-400" />
             Designed For Animation Recruiters &amp; Supervisors
           </div>
 
-          <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight sm:leading-none">
+          <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight sm:leading-none drop-shadow-lg">
             The Animation Portfolio <br className="hidden sm:inline" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-300 to-indigo-300">
               Directors Actually Want to Review
             </span>
           </h1>
 
-          <p className="max-w-2xl mx-auto text-base sm:text-lg text-zinc-400 leading-relaxed">
+          <p className="max-w-2xl mx-auto text-base sm:text-lg text-zinc-300 leading-relaxed drop-shadow">
             Stop sending recruiters compressed YouTube links or image-heavy ArtStation posts. Showcase your shots with frame-by-frame scrubbing, timing breakdowns, and uncompressed playback.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <Button asChild size="lg" className="w-full sm:w-auto bg-purple-600 hover:bg-purple-500 text-white font-semibold px-8 shadow-lg shadow-purple-900/30">
+            <Button asChild size="lg" className="w-full sm:w-auto bg-purple-600 hover:bg-purple-500 text-white font-semibold px-8 shadow-xl shadow-purple-900/40">
               <Link href="/profile">
                 Create Your Animator Profile
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="w-full sm:w-auto border-white/20 text-white hover:bg-white/10 font-semibold px-6">
+            <Button asChild size="lg" variant="outline" className="w-full sm:w-auto border-white/20 bg-black/40 backdrop-blur-md text-white hover:bg-white/10 font-semibold px-6">
               <Link href="/home">
                 Browse Community Work
               </Link>
@@ -94,6 +97,9 @@ export default function PortfolioLandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Live Video Player Showcase */}
+      <InteractivePlayerShowcase />
 
       {/* Why Recruiter Love It */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">

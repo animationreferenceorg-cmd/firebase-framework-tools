@@ -17,6 +17,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { HeroBackgroundVideo } from '@/components/landing/HeroBackgroundVideo';
+import { InteractivePlayerShowcase } from '@/components/landing/InteractivePlayerShowcase';
 
 export const metadata: Metadata = {
   title: 'The ArtStation Alternative for Animators | 100% Human Motion, Zero AI Noise',
@@ -142,55 +144,59 @@ export default function ArtstationAlternativePage() {
 
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-24 pb-20 px-4 sm:px-6 lg:px-8 border-b border-white/[0.08]">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(147,51,234,0.18),rgba(255,255,255,0))]" />
+        {/* Ambient Animation Video Playing in the Background */}
+        <HeroBackgroundVideo />
         
-        <div className="relative max-w-5xl mx-auto text-center space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-purple-500/30 bg-purple-950/40 text-purple-300 text-xs font-semibold tracking-wide uppercase">
+        <div className="relative max-w-5xl mx-auto text-center space-y-6 z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-purple-500/30 bg-purple-950/60 text-purple-300 text-xs font-semibold tracking-wide uppercase backdrop-blur-md">
             <Sparkles className="w-3.5 h-3.5 text-purple-400" />
             The Animator-First Alternative
           </div>
 
-          <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight sm:leading-none">
+          <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight sm:leading-none drop-shadow-lg">
             The ArtStation Alternative <br className="hidden sm:inline" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-300 to-indigo-300">
               Built Strictly For Animators
             </span>
           </h1>
 
-          <p className="max-w-2xl mx-auto text-base sm:text-lg text-zinc-400 leading-relaxed">
+          <p className="max-w-2xl mx-auto text-base sm:text-lg text-zinc-300 leading-relaxed drop-shadow">
             Tired of unmoderated AI noise and crushed video compression? Animation Reference gives 2D &amp; 3D animators studio-grade frame-by-frame scrubbing, synchronized playblast comparison, and clean professional portfolios.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <Button asChild size="lg" className="w-full sm:w-auto bg-purple-600 hover:bg-purple-500 text-white font-semibold px-8 shadow-lg shadow-purple-900/30">
+            <Button asChild size="lg" className="w-full sm:w-auto bg-purple-600 hover:bg-purple-500 text-white font-semibold px-8 shadow-xl shadow-purple-900/40">
               <Link href="/home">
                 Explore 8,000+ References Free
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="w-full sm:w-auto border-white/20 text-white hover:bg-white/10 font-semibold px-6">
+            <Button asChild size="lg" variant="outline" className="w-full sm:w-auto border-white/20 bg-black/40 backdrop-blur-md text-white hover:bg-white/10 font-semibold px-6">
               <Link href="/pricing">
                 Get Pro for $1 (Intro Offer)
               </Link>
             </Button>
           </div>
 
-          <div className="pt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-zinc-400">
-            <span className="flex items-center gap-1.5">
+          <div className="pt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-zinc-300">
+            <span className="flex items-center gap-1.5 bg-black/40 px-2.5 py-1 rounded-full border border-white/10 backdrop-blur-sm">
               <Check className="w-4 h-4 text-emerald-400" /> 100% Human Motion
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1.5 bg-black/40 px-2.5 py-1 rounded-full border border-white/10 backdrop-blur-sm">
               <Check className="w-4 h-4 text-emerald-400" /> Frame-by-Frame Controls
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1.5 bg-black/40 px-2.5 py-1 rounded-full border border-white/10 backdrop-blur-sm">
               <Check className="w-4 h-4 text-emerald-400" /> Zero AI Flood
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1.5 bg-black/40 px-2.5 py-1 rounded-full border border-white/10 backdrop-blur-sm">
               <Check className="w-4 h-4 text-emerald-400" /> Maya &amp; Blender Friendly
             </span>
           </div>
         </div>
       </section>
+
+      {/* Live Interactive Video Player Test Drive */}
+      <InteractivePlayerShowcase />
 
       {/* Comparison Matrix */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">

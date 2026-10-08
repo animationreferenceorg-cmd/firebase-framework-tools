@@ -20,6 +20,8 @@ import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
 import { SaveToBoardModal } from './SaveToBoardModal';
 import { VideoFullscreenViewer } from './VideoFullscreenViewer';
+import { VideoQuotaSlate } from '@/components/VideoQuotaSlate';
+import { useViewingQuota } from '@/hooks/use-viewing-quota';
 import Link from 'next/link';
 import type { Video } from '@/lib/types';
 
@@ -71,6 +73,22 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   const hoverKey = `hover:${video.id}`;
   const playKey = `play:${video.id}`;
   const { toast } = useToast();
+
+  // The daily 25-reference limit only means anything if hovering a card
+  // can't be used to watch it for free. A hover preview held 6s+ consumes a
+  // slot exactly like opening the full player does; once the day's quota is
+  // gone, cards stop auto-playing and the full player shows the quota slate.
+  const quota = useViewingQuota();
+  const alreadyUnlocked = quota.isVideoUnlocked(video.id);
+  const previewBlocked = quota.hasReachedLimit && !alreadyUnlocked;
+  const HOVER_WATCH_MS = 6000;
+  const quotaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearQuotaTimer = () => {
+    if (quotaTimerRef.current) {
+      clearTimeout(quotaTimerRef.current);
+      quotaTimerRef.current = null;
+    }
+  };
 
   // A card can unmount while still hovered — filtering a grid, or navigating
   // away mid-preview. Without this the session would stay open and keep
@@ -142,9 +160,20 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
 
   useEffect(() => {
     const videoElem = videoRef.current;
-    if (!videoElem) return;
 
-    if (isHovered) {
+    if (isHovered && !previewBlocked) {
+      // 6 continuous seconds of hover-preview is a watch, same as opening
+      // the full player: consume a quota slot so it can't be dodged by
+      // never clicking through.
+      clearQuotaTimer();
+      if (!alreadyUnlocked && video.id) {
+        quotaTimerRef.current = setTimeout(() => {
+          quotaTimerRef.current = null;
+          quota.attemptUnlock(video.id);
+        }, HOVER_WATCH_MS);
+      }
+
+      if (!videoElem) return;
       const attemptPlay = () => {
         const playPromise = videoElem.play();
         if (playPromise !== undefined) {
@@ -159,12 +188,18 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
         videoElem.load();
       }
     } else {
+      clearQuotaTimer();
+      if (!videoElem) return;
       videoElem.pause();
       try {
         videoElem.currentTime = 0;
       } catch {}
     }
-  }, [isHovered]);
+  }, [isHovered, previewBlocked, alreadyUnlocked, video.id]);
+
+  // A card can unmount mid-hover (filtering a grid) with the timer still
+  // pending; it must not fire against a video nobody is looking at anymore.
+  useEffect(() => clearQuotaTimer, []);
 
   useEffect(() => {
     if (!isHovered) return;
@@ -363,16 +398,11 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           onMouseEnter={() => {
             beginWatch(hoverKey, 'hover');
             setIsHovered(true);
-            if (videoRef.current) {
-              videoRef.current.play().catch(() => {});
-            }
+            // Playback itself is driven by the isHovered effect above, which
+            // also gates it on the daily quota — no direct .play() here.
           }} onMouseLeave={() => {
             endWatch(hoverKey);
             setIsHovered(false);
-            if (videoRef.current) {
-              videoRef.current.pause();
-              videoRef.current.currentTime = 0;
-            }
           }}
           className={cn(
             "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lift transform-gpu transition-[transform,box-shadow] duration-500 ease-out-expo group-hover/card:-translate-y-1.5 group-hover/card:shadow-onion",
@@ -605,12 +635,22 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
                 positioned off-screen rather than hidden with display:none,
                 which would remove it from the accessibility tree too. */}
             <DialogTitle className="sr-only">{displayTitle}</DialogTitle>
-            <VideoFullscreenViewer
-              video={video}
-              title={displayTitle}
-              description={displayDescription}
-              onClose={() => setIsPlayerOpen(false)}
-            />
+            {previewBlocked ? (
+              <VideoQuotaSlate
+                posterUrl={video.thumbnailUrl || video.posterUrl}
+                unlockedCount={quota.unlockedCount}
+                todayCount={quota.todayCount}
+                limit={quota.limit}
+                onBrowseUnlocked={() => setIsPlayerOpen(false)}
+              />
+            ) : (
+              <VideoFullscreenViewer
+                video={video}
+                title={displayTitle}
+                description={displayDescription}
+                onClose={() => setIsPlayerOpen(false)}
+              />
+            )}
 
           </DialogContent>
         </div>
@@ -784,12 +824,22 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
       </div>
       <DialogContent className="h-[100dvh] w-screen max-w-none gap-0 overflow-hidden rounded-none border-0 bg-[#080611] p-0 [&>button]:hidden">
         <DialogTitle className="sr-only">{displayTitle}</DialogTitle>
-        <VideoFullscreenViewer
-          video={video}
-          title={displayTitle}
-          description={displayDescription}
-          onClose={() => setIsPlayerOpen(false)}
-        />
+        {previewBlocked ? (
+          <VideoQuotaSlate
+            posterUrl={video.thumbnailUrl || video.posterUrl}
+            unlockedCount={quota.unlockedCount}
+            todayCount={quota.todayCount}
+            limit={quota.limit}
+            onBrowseUnlocked={() => setIsPlayerOpen(false)}
+          />
+        ) : (
+          <VideoFullscreenViewer
+            video={video}
+            title={displayTitle}
+            description={displayDescription}
+            onClose={() => setIsPlayerOpen(false)}
+          />
+        )}
 
       </DialogContent>
     </Dialog>

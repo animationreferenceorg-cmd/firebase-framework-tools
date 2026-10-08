@@ -3,8 +3,6 @@
   "hosts": [
     "offline-sample.com",
     "assets.reflix.dev",
-    "reflix.dev",
-    "vz-79893c7f-720.b-cdn.net",
-    "b-cdn.net"
+    "reflix.dev"
   ]
 }

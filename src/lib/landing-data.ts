@@ -110,6 +110,7 @@ export const DEFAULT_LANDING_CATEGORIES: Category[] = [
     imageUrl: "https://www.sakugabooru.com/data/preview/c6c3451b29890089943589b1bb0e3ebd.jpg",
     href: "/category/body-mechanics",
     status: "published",
+    tags: [],
   },
   {
     id: "combat-action",
@@ -119,6 +120,7 @@ export const DEFAULT_LANDING_CATEGORIES: Category[] = [
     imageUrl: "https://www.sakugabooru.com/data/preview/e0dd86863fd54cd5c06a6dead12c29e2.jpg",
     href: "/category/fighting",
     status: "published",
+    tags: [],
   },
   {
     id: "acting-dialogue",
@@ -128,6 +130,7 @@ export const DEFAULT_LANDING_CATEGORIES: Category[] = [
     imageUrl: "https://www.sakugabooru.com/data/preview/1ddcfd6d99e6c6d8e9eb49ae8f2983c4.jpg",
     href: "/category/character-acting",
     status: "published",
+    tags: [],
   },
   {
     id: "2d-effects",
@@ -137,5 +140,6 @@ export const DEFAULT_LANDING_CATEGORIES: Category[] = [
     imageUrl: "https://www.sakugabooru.com/data/preview/1fff9324dade4765248a73abc82b9488.jpg",
     href: "/category/2d-effects",
     status: "published",
+    tags: [],
   },
 ];

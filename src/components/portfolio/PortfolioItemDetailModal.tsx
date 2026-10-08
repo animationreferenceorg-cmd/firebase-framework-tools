@@ -18,6 +18,7 @@ import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { UniversalVideoPlayer } from './UniversalVideoPlayer';
+import { RefVsFinalPlayer } from './RefVsFinalPlayer';
 import { PortfolioCommentsPanel } from './PortfolioCommentsPanel';
 import { SaveToBoardModal } from '@/components/SaveToBoardModal';
 
@@ -216,6 +217,8 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
                       className="relative max-h-[75vh] w-auto max-w-full object-contain rounded-xl shadow-2xl transition-transform duration-300 group-hover:scale-[1.01]"
                     />
                   </div>
+                ) : item.referenceMediaUrl && item.mediaType === 'video_file' ? (
+                  <RefVsFinalPlayer referenceUrl={item.referenceMediaUrl} finalUrl={item.mediaUrl} poster={item.thumbnailUrl} referenceClipId={item.referenceClipId} />
                 ) : (
                   <div className="relative aspect-video w-full rounded-2xl overflow-hidden shadow-[0_0_50px_-10px_rgba(124,58,237,0.35)] bg-black border border-white/10">
                     <UniversalVideoPlayer
@@ -225,6 +228,12 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
                       muted={false}
                       controls={true}
                     />
+                  </div>
+                )}
+                {item.referenceMediaUrl && item.mediaType !== 'video_file' && (
+                  <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-black">
+                    <p className="px-3 pt-2 text-[11px] font-bold uppercase tracking-wider text-zinc-400">Reference used</p>
+                    <UniversalVideoPlayer url={item.referenceMediaUrl} muted controls />
                   </div>
                 )}
 

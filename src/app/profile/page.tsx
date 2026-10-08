@@ -27,6 +27,7 @@ import { MOCK_PORTFOLIO_ITEMS } from '@/lib/mock-portfolio-data';
 import { PortfolioItemCard } from '@/components/portfolio/PortfolioItemCard';
 import { PortfolioHeroBanner } from '@/components/portfolio/PortfolioHeroBanner';
 import { UploadPortfolioItemModal } from '@/components/portfolio/UploadPortfolioItemModal';
+import { ImportArtStationDialog } from '@/components/portfolio/ImportArtStationDialog';
 import { UploadAnnouncementBanner } from '@/components/portfolio/UploadAnnouncementBanner';
 import { EditPortfolioItemModal } from '@/components/portfolio/EditPortfolioItemModal';
 import { PortfolioFounderDealModal } from '@/components/portfolio/PortfolioFounderDealModal';
@@ -624,6 +625,8 @@ export default function ProfilePage() {
                 <Button onClick={() => setIsReelStudioOpen(true)} variant="secondary" className="bg-zinc-800 hover:bg-zinc-700 text-white font-semibold cursor-pointer gap-1.5">
                   <Wand2 className="h-4 w-4 text-amber-400" /> Open Reel Editor
                 </Button>
+                <ImportArtStationDialog onImported={() => getUserPortfolioItems(authUser.uid).then((items) => setPortfolioItems(items || [])).catch(() => {})} />
+
                 <Button variant="outline" onClick={handlePreviewPublicProfile} className="border-white/15 text-zinc-200 hover:bg-white/10 cursor-pointer gap-1.5 font-bold">
                   <Eye className="h-4 w-4 text-cyan-400" /> Preview Public View
                 </Button>

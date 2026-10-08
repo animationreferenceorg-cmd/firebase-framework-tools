@@ -25,6 +25,7 @@ import { db, auth } from '@/lib/firebase';
 import { Upload, Link as LinkIcon, Plus, X, Layers, Sparkles, Film, Image as ImageIcon, Hash, ArrowRight, ArrowLeft, ChevronRight, ChevronLeft, CheckCircle2 } from 'lucide-react';
 import type { PortfolioItem, WipStage } from '@/lib/types';
 import { createPortfolioItem, generateAutoThumbnail } from '@/lib/portfolio-service';
+import { CONTRIBUTION_CHANGED_EVENT } from '@/hooks/use-viewing-quota';
 
 interface UploadPortfolioItemModalProps {
   open: boolean;
@@ -415,6 +416,8 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
   
   // Media files & URLs
   const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [referenceFile, setReferenceFile] = useState<File | null>(null);
+  const [referenceRightsConfirmed, setReferenceRightsConfirmed] = useState(false);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [autoThumbPreview, setAutoThumbPreview] = useState<string | null>(null);
   const [videoUrlInput, setVideoUrlInput] = useState('');
@@ -516,6 +519,12 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
       return;
     }
 
+    if (referenceFile && !referenceRightsConfirmed) {
+      toast({ title: 'Confirm your reference', description: 'Tick the box to confirm you filmed the reference or have permission to share it, or remove it.', variant: 'destructive' });
+      setCurrentStep(1);
+      return;
+    }
+
     const { maxPortfolioPosts } = getEntitlements(userProfile).limits;
     if (maxPortfolioPosts !== Infinity) {
       try {
@@ -580,8 +589,37 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
         mediaType = 'video_url';
       }
 
+      // Upload the reference first so the post can link to it. A failed
+      // reference upload never blocks publishing the animation itself.
+      let reference: { clipId: string; mediaUrl: string } | null = null;
+      if (referenceFile && auth.currentUser) {
+        try {
+          const payload = new FormData();
+          payload.set('file', referenceFile);
+          payload.set('title', `Reference: ${title.trim()}`.slice(0, 120));
+          payload.set('category', 'Acting');
+          payload.set('tags', ['reference vs final', ...selectedTags].join(','));
+          payload.set('isPrivate', 'false');
+          const res = await fetch('/api/clips/upload', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${await auth.currentUser.getIdToken()}` },
+            body: payload,
+          });
+          const body = await res.json().catch(() => ({}));
+          if (res.ok && body.id && body.uploadedMediaUrl) {
+            reference = { clipId: body.id, mediaUrl: body.uploadedMediaUrl };
+            window.dispatchEvent(new Event(CONTRIBUTION_CHANGED_EVENT));
+          } else {
+            toast({ title: 'Reference not attached', description: body.message || 'Your animation will still be published.' });
+          }
+        } catch {
+          toast({ title: 'Reference not attached', description: 'Your animation will still be published.' });
+        }
+      }
+
       const newItem = await createPortfolioItem(
         {
+          ...(reference ? { referenceClipId: reference.clipId, referenceMediaUrl: reference.mediaUrl } : {}),
           userId: activeUid,
           authorName: userProfile?.displayName || authorName,
           authorAvatar: userProfile?.photoURL || authorAvatar,
@@ -612,6 +650,8 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
       setTitle('');
       setDescription('');
       setMediaFile(null);
+      setReferenceFile(null);
+      setReferenceRightsConfirmed(false);
       setThumbnailFile(null);
       setAutoThumbPreview(null);
       setVideoUrlInput('');
@@ -641,6 +681,8 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
       setTitle('');
       setDescription('');
       setMediaFile(null);
+      setReferenceFile(null);
+      setReferenceRightsConfirmed(false);
       setThumbnailFile(null);
       setAutoThumbPreview(null);
       setVideoUrlInput('');
@@ -811,6 +853,28 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
                   }}
                   className="bg-zinc-900 border-white/10 text-white text-xs h-9 file:bg-zinc-800 file:text-white file:border-0 file:rounded-md file:text-xs"
                 />
+              </div>
+
+              {/* Optional reference: shown side by side with the final shot */}
+              <div className="space-y-2 rounded-2xl border border-purple-500/25 bg-purple-950/15 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="reference-upload" className="text-xs font-medium text-zinc-200">Reference you used <span className="text-zinc-500">(optional)</span></Label>
+                  <Badge variant="outline" className="border-purple-500/30 text-[10px] text-purple-200">Ref vs Final</Badge>
+                </div>
+                <p className="text-[11px] text-zinc-400">Add the reference video and your post plays it side by side with your animation. It&apos;s also shared to the community library with your name on it.</p>
+                <Input
+                  id="reference-upload"
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime"
+                  onChange={(e) => setReferenceFile(e.target.files?.[0] ?? null)}
+                  className="bg-zinc-900 border-white/10 text-white text-xs h-9 file:bg-zinc-800 file:text-white file:border-0 file:rounded-md file:text-xs"
+                />
+                {referenceFile && (
+                  <label className="flex items-start gap-2 text-[11px] text-zinc-400">
+                    <input type="checkbox" checked={referenceRightsConfirmed} onChange={(e) => setReferenceRightsConfirmed(e.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-purple-500" />
+                    <span>I filmed this reference or have permission to share it.</span>
+                  </label>
+                )}
               </div>
             </div>
           )}

@@ -96,6 +96,8 @@ service cloud.firestore {
     match /content_reports/{reportId} { allow read, write: if false; }
     match /moderation/{uid} { allow read, write: if false; }
     match /takedowns/{videoId} { allow read, write: if false; }
+    // ArtStation ownership codes for portfolio import: server-only.
+    match /import_verifications/{uid} { allow read, write: if false; }
     match /sjsu_verifications/{uid} {
       allow read: if (request.auth != null && request.auth.uid == uid) || isAdmin();
       allow write: if false;

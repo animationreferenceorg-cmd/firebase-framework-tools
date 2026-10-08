@@ -243,6 +243,12 @@ export interface PortfolioItem {
   likedBy?: string[];
   sortIndex?: number;
   isFeatured?: boolean;
+  /** "Reference vs final": the reference clip the animator used, played side by side with the post. */
+  referenceClipId?: string;
+  referenceMediaUrl?: string;
+  /** Original post when imported from another site (e.g. ArtStation). */
+  sourceUrl?: string;
+  importedFrom?: 'artstation';
   createdAt: any;
   updatedAt: any;
 }

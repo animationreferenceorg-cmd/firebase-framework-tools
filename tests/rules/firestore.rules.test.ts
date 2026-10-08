@@ -290,7 +290,7 @@ describe('lifecycle email collections are server-only', () => {
 describe('moderation', () => {
   it('reports, strikes and takedowns are server-only', async () => {
     const admin = env.authenticatedContext('admin1').firestore();
-    for (const path of ['content_reports/r1', 'moderation/alice', 'takedowns/v1']) {
+    for (const path of ['content_reports/r1', 'moderation/alice', 'takedowns/v1', 'import_verifications/alice']) {
       await assertFails(getDoc(doc(alice(), path)));
       await assertFails(setDoc(doc(alice(), path), { x: 1 }));
       await assertFails(getDoc(doc(admin, path)));

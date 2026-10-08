@@ -24,7 +24,7 @@ export default function ChallengesPage() {
       <p className="mt-4 max-w-2xl text-zinc-400">
         One theme a month. Film your own reference, upload it, and the community votes by saving the entries they&apos;d
         actually use. The top three win <strong className="text-white">3 months of Pro</strong> and a spot on the home page.
-        Everyone who enters 3+ references earns a contributor badge and extra daily library views.
+        Every entry also earns you extra library views that day.
       </p>
 
       {active && (

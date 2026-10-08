@@ -18,11 +18,16 @@ function hostOf(url: string): string | null {
   }
 }
 
-/** True unless the video's file lives on a host known to be offline. */
 export function isVideoSourceAvailable(videoUrl: string | null | undefined): boolean {
   if (!videoUrl) return true; // embeds/iframes and empty URLs are judged elsewhere
   const host = hostOf(videoUrl.trim());
-  return !host || !UNAVAILABLE_HOSTS.has(host);
+  if (!host) return true;
+  for (const unavailable of UNAVAILABLE_HOSTS) {
+    if (host === unavailable || host.endsWith('.' + unavailable)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export function filterAvailableVideos<T extends { videoUrl?: string | null }>(videos: T[]): T[] {

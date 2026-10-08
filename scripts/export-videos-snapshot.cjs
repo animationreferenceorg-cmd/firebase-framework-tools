@@ -13,7 +13,13 @@ const OUT_FILE = path.join(__dirname, '..', 'public', 'data', 'videos-snapshot.j
 // Shared with src/lib/video-availability.ts: hosts whose files no longer load.
 const UNAVAILABLE_HOSTS = new Set(require('../src/lib/unavailable-video-hosts.json').hosts);
 function isAvailable(url) {
-  try { return !UNAVAILABLE_HOSTS.has(new URL(url).hostname.toLowerCase()); } catch { return true; }
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    for (const unavailable of UNAVAILABLE_HOSTS) {
+      if (host === unavailable || host.endsWith('.' + unavailable)) return false;
+    }
+    return true;
+  } catch { return true; }
 }
 
 function initDb() {

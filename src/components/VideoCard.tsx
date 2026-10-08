@@ -41,14 +41,17 @@ function getYouTubeId(url?: string): string | null {
   return match ? match[1] : null;
 }
 
+import { isVideoSourceAvailable } from '@/lib/video-availability';
+
 function isPlayableVideoUrl(url?: string): boolean {
   if (!url) return false;
+  if (!isVideoSourceAvailable(url)) return false;
   const clean = url.toLowerCase();
-  if (clean.includes('youtube.com') || clean.includes('youtu.be') || clean.includes('vimeo.com') || clean.includes('instagram.com') || clean.includes('tiktok.com') || clean.includes('reflix.dev')) {
+  if (clean.includes('youtube.com') || clean.includes('youtu.be') || clean.includes('vimeo.com') || clean.includes('instagram.com') || clean.includes('tiktok.com') || clean.includes('reflix.dev') || clean.includes('b-cdn.net')) {
     return false;
   }
   if (clean.includes('.mp4') || clean.includes('.webm') || clean.includes('playlist.m3u8')) return true;
-  if (clean.includes('firebasestorage.googleapis.com') || clean.includes('storage.googleapis.com') || clean.includes('b-cdn.net')) return true;
+  if (clean.includes('firebasestorage.googleapis.com') || clean.includes('storage.googleapis.com')) return true;
   return false;
 }
 

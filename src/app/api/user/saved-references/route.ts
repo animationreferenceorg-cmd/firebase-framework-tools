@@ -29,11 +29,13 @@ export async function GET(request: NextRequest) {
     const likedIds: string[] = (profile.likedVideoIds || []).slice(0, 50);
 
     const fetchVideos = async (ids: string[]) => {
-      const results = [];
-      for (const id of ids) {
-        try {
-          const docSnap = await db.collection('videos').doc(id).get();
-          if (docSnap.exists) {
+      if (!ids || ids.length === 0) return [];
+      try {
+        const docRefs = ids.map((id) => db.collection('videos').doc(id));
+        const docSnaps = await db.getAll(...docRefs);
+        const results = [];
+        for (const docSnap of docSnaps) {
+          if (docSnap && docSnap.exists) {
             const d = docSnap.data();
             results.push({
               id: docSnap.id,
@@ -45,11 +47,33 @@ export async function GET(request: NextRequest) {
               tags: d?.tags || [],
             });
           }
-        } catch {
-          // ignore single doc fetch errors
         }
+        return results;
+      } catch (err) {
+        const results = await Promise.all(
+          ids.map(async (id) => {
+            try {
+              const docSnap = await db.collection('videos').doc(id).get();
+              if (docSnap.exists) {
+                const d = docSnap.data();
+                return {
+                  id: docSnap.id,
+                  title: d?.title || 'Reference Clip',
+                  videoUrl: d?.videoUrl || '',
+                  category: d?.category || 'General',
+                  fps: d?.fps || 24,
+                  thumbnailUrl: d?.thumbnailUrl || d?.previewUrl || '',
+                  tags: d?.tags || [],
+                };
+              }
+            } catch {
+              return null;
+            }
+            return null;
+          })
+        );
+        return results.filter(Boolean);
       }
-      return results;
     };
 
     const [savedVideos, likedVideos] = await Promise.all([
@@ -65,7 +89,12 @@ export async function GET(request: NextRequest) {
       },
       savedVideos,
       likedVideos,
-    }, { headers: corsHeaders });
+    }, {
+      headers: {
+        ...corsHeaders,
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=300',
+      },
+    });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Authentication required' },

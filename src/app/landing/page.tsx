@@ -25,6 +25,7 @@ import { VideoCard } from '@/components/VideoCard';
 import { VideoGrid } from '@/components/VideoGrid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BrowseHero } from '@/components/BrowseHero';
+import { mixReferences } from '@/lib/reference-mix';
 import { DEFAULT_HERO_VIDEO, DEFAULT_LANDING_VIDEOS, DEFAULT_LANDING_CATEGORIES } from '@/lib/landing-data';
 
 export default function LandingPage() {
@@ -63,7 +64,7 @@ export default function LandingPage() {
                     setAllCategories(categories);
                 }
                 if (videos && videos.length > 0) {
-                    setAllVideos(videos);
+                    setAllVideos(mixReferences(videos));
                 }
 
             } catch (error) {
@@ -100,7 +101,10 @@ export default function LandingPage() {
     }, [allVideos]);
 
     const heroVideo = useMemo(() => {
-        return allVideos[0] || DEFAULT_HERO_VIDEO;
+        // The hero plays videoUrl in a plain <video>, so skip HLS/YouTube links
+        // and prefer a landscape clip for the wide frame.
+        const playable = allVideos.filter(v => !v.isShort && /\.(mp4|webm)(\?|$)/i.test(v.videoUrl || ''));
+        return playable.find(v => (v.width ?? 0) > (v.height ?? 0)) || playable[0] || DEFAULT_HERO_VIDEO;
     }, [allVideos]);
 
     return (

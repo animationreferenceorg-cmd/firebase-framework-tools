@@ -14,6 +14,7 @@ import { RecentlyViewedShelf } from '@/components/home/RecentlyViewedShelf';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from '@/components/motion/SectionHeading';
 import { filterAvailableVideos } from '@/lib/video-availability';
+import { mixReferences } from '@/lib/reference-mix';
 
 const VIDEOS_PER_PAGE = 30;
 
@@ -25,7 +26,7 @@ export default function HomePage() {
 
   // Pagination & Filters
   const [visibleCount, setVisibleCount] = useState(VIDEOS_PER_PAGE);
-  const [activeTab, setActiveTab] = useState<TabOption>('latest');
+  const [activeTab, setActiveTab] = useState<TabOption>('featured');
   const [activeType, setActiveType] = useState<TypeOption>('all');
   const [activePill, setActivePill] = useState<PillOption>('all');
   const [columns, setColumns] = useState<number>(4);
@@ -52,7 +53,8 @@ export default function HomePage() {
       setLoading(true);
       try {
         const videos = await getSnapshotVideos();
-        setAllVideos(filterAvailableVideos(videos));
+        // Shuffled once per visit; tabs and filters keep this mixed order.
+        setAllVideos(mixReferences(filterAvailableVideos(videos)));
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -148,45 +150,8 @@ export default function HomePage() {
     } else if (activeTab === 'latest') {
       // Latest: Latest uploaded references (newest first by createdAt)
       result = [...result].sort((a, b) => getVideoTimestamp(b) - getVideoTimestamp(a));
-    } else if (activeTab === 'featured') {
-      // Featured: Randomized videos with a mix between tagged accounts, non-tagged accounts, and user uploaded videos
-      const taggedOrUploader = result.filter(v => !!v.uploader || !!v.author_name || v.type === 'social' || (v.type as string) === 'instagram' || !!v.originalUrl);
-      const userUploaded = result.filter(v => !!v.isPortfolio || !!v.uploader);
-      const standardRef = result.filter(v => !v.uploader && !v.author_name && v.type !== 'social' && (v.type as string) !== 'instagram');
-
-      const sortByNewest = (arr: Video[]) => [...arr].sort((a, b) => getVideoTimestamp(b) - getVideoTimestamp(a));
-
-      const sTagged = sortByNewest(taggedOrUploader);
-      const sUser = sortByNewest(userUploaded);
-      const sStandard = sortByNewest(standardRef);
-
-      const mixed: Video[] = [];
-      const seen = new Set<string>();
-      const maxLen = Math.max(sTagged.length, sUser.length, sStandard.length);
-
-      for (let i = 0; i < maxLen; i++) {
-        if (i < sTagged.length && !seen.has(sTagged[i].id)) {
-          mixed.push(sTagged[i]);
-          seen.add(sTagged[i].id);
-        }
-        if (i < sUser.length && !seen.has(sUser[i].id)) {
-          mixed.push(sUser[i]);
-          seen.add(sUser[i].id);
-        }
-        if (i < sStandard.length && !seen.has(sStandard[i].id)) {
-          mixed.push(sStandard[i]);
-          seen.add(sStandard[i].id);
-        }
-      }
-
-      for (const item of sortByNewest(result)) {
-        if (!seen.has(item.id)) {
-          mixed.push(item);
-          seen.add(item.id);
-        }
-      }
-      result = mixed;
     }
+    // Featured: keeps the randomized, anime-balanced order from mixReferences.
 
     return result;
   }, [allVideos, activeTab, activeType, activePill, searchQuery]);

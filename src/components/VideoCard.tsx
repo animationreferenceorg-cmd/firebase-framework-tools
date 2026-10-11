@@ -29,7 +29,7 @@ function getPreviewUrl(url?: string): string | undefined {
   if (!url) return undefined;
   let targetUrl: string | undefined = url.trim();
   if (targetUrl.includes('playlist.m3u8')) {
-    targetUrl = targetUrl.replace('playlist.m3u8', 'play_480p.mp4');
+    targetUrl = targetUrl.replace('playlist.m3u8', 'original?.mp4');
   } else if (targetUrl.startsWith('<iframe')) {
     const match = targetUrl.match(/src=["']([^"']+)["']/);
     targetUrl = match ? match[1] : undefined;
@@ -49,10 +49,10 @@ function isPlayableVideoUrl(url?: string): boolean {
   if (!url) return false;
   if (!isVideoSourceAvailable(url)) return false;
   const clean = url.toLowerCase();
-  if (clean.includes('youtube.com') || clean.includes('youtu.be') || clean.includes('vimeo.com') || clean.includes('instagram.com') || clean.includes('tiktok.com') || clean.includes('reflix.dev') || clean.includes('b-cdn.net')) {
+  if (clean.includes('youtube.com') || clean.includes('youtu.be') || clean.includes('vimeo.com') || clean.includes('instagram.com') || clean.includes('tiktok.com') || clean.includes('reflix.dev')) {
     return false;
   }
-  if (clean.includes('.mp4') || clean.includes('.webm') || clean.includes('playlist.m3u8')) return true;
+  if (clean.includes('.mp4') || clean.includes('.webm') || clean.includes('playlist.m3u8') || clean.includes('b-cdn.net')) return true;
   if (clean.includes('firebasestorage.googleapis.com') || clean.includes('storage.googleapis.com')) return true;
   return false;
 }

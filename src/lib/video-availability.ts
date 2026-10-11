@@ -50,6 +50,10 @@ export function sanitizeVideoUrl(url?: string | null): string {
   if (ytMatch) {
     return `https://www.youtube.com/watch?v=${ytMatch[1]}`;
   }
+  // Convert Bunny CDN HLS playlist.m3u8 into universal MP4 stream
+  if (target.includes('b-cdn.net') && target.includes('playlist.m3u8')) {
+    return target.replace('playlist.m3u8', 'original?.mp4');
+  }
   return target;
 }
 

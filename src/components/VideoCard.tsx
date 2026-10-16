@@ -37,24 +37,13 @@ function getPreviewUrl(url?: string): string | undefined {
   return targetUrl;
 }
 
-function getYouTubeId(url?: string): string | null {
-  if (!url) return null;
-  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/i);
-  return match ? match[1] : null;
-}
-
 import { isVideoSourceAvailable } from '@/lib/video-availability';
+import { getYouTubeId, getInstagramId, getVimeoId, isDirectPlayableVideoUrl } from '@/lib/reference-utils';
 
 function isPlayableVideoUrl(url?: string): boolean {
   if (!url) return false;
   if (!isVideoSourceAvailable(url)) return false;
-  const clean = url.toLowerCase();
-  if (clean.includes('youtube.com') || clean.includes('youtu.be') || clean.includes('vimeo.com') || clean.includes('instagram.com') || clean.includes('tiktok.com') || clean.includes('reflix.dev')) {
-    return false;
-  }
-  if (clean.includes('.mp4') || clean.includes('.webm') || clean.includes('playlist.m3u8') || clean.includes('b-cdn.net')) return true;
-  if (clean.includes('firebasestorage.googleapis.com') || clean.includes('storage.googleapis.com')) return true;
-  return false;
+  return isDirectPlayableVideoUrl(url);
 }
 
 import { useWatchTracker } from '@/hooks/use-watch-tracker';
@@ -152,7 +141,10 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   const [optimisticSaved, setOptimisticSaved] = useState<boolean | null>(null);
   const [likeCountDelta, setLikeCountDelta] = useState(0);
   const [showSaveToBoard, setShowSaveToBoard] = useState(false);
-  const youtubeId = useMemo(() => getYouTubeId(video.videoUrl), [video.videoUrl]);
+  const targetVideoUrl = video.videoUrl || video.originalUrl || (video as any).sourceUrl || '';
+  const youtubeId = useMemo(() => getYouTubeId(targetVideoUrl), [targetVideoUrl]);
+  const instagramId = useMemo(() => getInstagramId(targetVideoUrl), [targetVideoUrl]);
+  const vimeoId = useMemo(() => getVimeoId(targetVideoUrl), [targetVideoUrl]);
 
   const isLiked = optimisticLiked !== null ? optimisticLiked : isLikedProp;
   const isSaved = optimisticSaved !== null ? optimisticSaved : isSavedProp;
@@ -380,7 +372,13 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
     imageUrl.includes('instagram.com') ||
     imageUrl.includes('placehold.co') ||
     imageUrl.includes('reflix.dev') ||
-    imageUrl.includes('ytimg.com');
+    imageUrl.includes('ytimg.com') ||
+    imageUrl.includes('pinimg.com') ||
+    imageUrl.includes('artstation.com') ||
+    imageUrl.includes('sketchfab.com') ||
+    imageUrl.includes('sakugabooru.com') ||
+    imageUrl.includes('wikimedia.org') ||
+    imageUrl.includes('archive.org');
 
   // Source for the lightweight native <video> fallback (only used when a card
   // has no thumbnail image). The grid no longer mounts hls.js players on hover —
@@ -767,8 +765,30 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           </div>
         )}
 
+
+        {/* Vimeo hover preview for Vimeo reference cards */}
+        {vimeoId && !video.isShort && !poster && isHovered && !isPlayerOpen && (
+          <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-[5] bg-black">
+            <iframe
+              src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&muted=1&loop=1&background=1&autopause=0`}
+              className="w-full h-full scale-125 object-cover pointer-events-none"
+              tabIndex={-1}
+              loading="lazy"
+              allow="autoplay"
+            />
+          </div>
+        )}
+
         {/* Subtle creator badge — top-left, always visible for any video with uploader/originalUrl */}
         <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} avatarUrl={video.authorAvatar || (video as any).author_avatar || (video as any).creatorAvatar} />
+
+        {/* Pinterest-style Community Pin / Save Badge (Top Right) */}
+        {((video.saveCount && video.saveCount > 0) || (video.repinCount && video.repinCount > 0)) ? (
+          <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md border border-purple-500/30 text-purple-200 text-[10px] font-semibold shadow-md pointer-events-none">
+            <Bookmark className="w-2.5 h-2.5 fill-purple-400 text-purple-400" />
+            <span>{video.saveCount || video.repinCount}</span>
+          </div>
+        ) : null}
 
         {/* Dark Overlay Gradient (softens on hover so video is crystal clear) */}
         <div className={cn(
@@ -807,8 +827,11 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
                 <Heart className={cn("text-white h-3.5 w-3.5", isLiked && "fill-red-500 text-red-500")} />
                 <span className="text-white text-[11px] font-semibold">{displayLikeCount}</span>
               </Button>
-              <Button variant="ghost" size="icon" onClick={handleBookmarkToggle} className="h-7 w-7 squash rounded-full bg-black/35 hover:bg-white/25 ring-1 ring-white/15 backdrop-blur-md" title="Save Video">
+              <Button variant="ghost" size="icon" onClick={handleBookmarkToggle} className="h-7 px-2 squash rounded-full bg-black/35 hover:bg-white/25 ring-1 ring-white/15 backdrop-blur-md gap-1 w-auto" title="Save Video to Board">
                 <Bookmark className={cn("h-3.5 w-3.5", isSaved ? "fill-purple-400 text-purple-400" : "text-purple-300 fill-purple-400/30 hover:fill-purple-400")} />
+                {video.saveCount && video.saveCount > 0 ? (
+                  <span className="text-white text-[11px] font-semibold">{video.saveCount}</span>
+                ) : null}
               </Button>
               <Button variant="ghost" size="icon" onClick={handleShare} className="h-7 w-7 squash rounded-full bg-black/35 hover:bg-white/25 ring-1 ring-white/15 backdrop-blur-md" title="Share Link">
                 <Share2 className="text-white h-3.5 w-3.5" />

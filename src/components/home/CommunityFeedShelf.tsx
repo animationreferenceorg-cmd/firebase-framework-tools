@@ -137,7 +137,7 @@ export function CommunityFeedShelf() {
           </div>
         </div>
 
-        <Link href="/profile" className="w-full sm:w-auto">
+        <Link href="/contribute" className="w-full sm:w-auto">
           <Button variant="secondary" className="w-full sm:w-auto bg-purple-600 hover:bg-purple-500 text-white font-black transition-all shadow-[0_0_20px_rgba(168,85,247,0.3)] hover:shadow-[0_0_30px_rgba(168,85,247,0.5)] rounded-xl hover:scale-105">
             Submit Your Work
             <ArrowRight className="ml-2 w-4 h-4" />

@@ -5,6 +5,8 @@ import { getFirebaseStorage, getFirestore } from '@/lib/firebase-admin';
 import { bunnyStreamConfig } from '@/lib/bunny-stream';
 import { analyzeReferenceVisuals } from '@/lib/reference-discovery';
 import { challengeStatus, getChallenge } from '@/lib/challenges';
+import { detectClipPlatform } from '@/lib/reference-utils';
+import { parseSourcePage } from '@/lib/source-page';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -50,12 +52,29 @@ export async function POST(request: NextRequest) {
     const category = String(form.get('category') || 'Acting').trim().slice(0, 60);
     const tags = String(form.get('tags') || '').split(',').map((tag) => tag.trim().toLowerCase()).filter(Boolean).slice(0, 20);
     const boardId = String(form.get('boardId') || '').trim();
+    // Saves from the browser extension carry the page they came from, so the
+    // clip credits and links back to its source.
+    const source = parseSourcePage(form.get('sourceUrl'), form.get('sourceTitle'));
+    const authorName = String(form.get('authorName') || '').trim();
+    const authorUrl = String(form.get('authorUrl') || '').trim();
+    const authorAvatar = String(form.get('authorAvatar') || '').trim();
 
     const db = getFirestore();
+    let boardDoc: { ref: FirebaseFirestore.DocumentReference; data: FirebaseFirestore.DocumentData; isMoodboard: boolean } | null = null;
     if (boardId) {
       const board = await db.collection('reference_boards').doc(boardId).get();
-      if (!board.exists || board.data()?.ownerId !== identity.uid || Boolean(board.data()?.isPrivate) !== isPrivate) {
-        throw new ApiError(403, 'BOARD_FORBIDDEN', 'Choose one of your matching boards.');
+      if (board.exists && board.data()?.ownerId === identity.uid) {
+        if (Boolean(board.data()?.isPrivate) !== isPrivate) {
+          throw new ApiError(403, 'BOARD_FORBIDDEN', 'Choose one of your matching boards.');
+        }
+        boardDoc = { ref: board.ref, data: board.data()!, isMoodboard: false };
+      } else {
+        const mb = await db.collection('users').doc(identity.uid).collection('moodboards').doc(boardId).get();
+        if (mb.exists) {
+          boardDoc = { ref: mb.ref, data: mb.data()!, isMoodboard: true };
+        } else {
+          throw new ApiError(403, 'BOARD_FORBIDDEN', 'Choose one of your matching boards.');
+        }
       }
     }
 
@@ -140,8 +159,15 @@ export async function POST(request: NextRequest) {
         creatorName: profile.displayName || profile.username || identity.name || 'Animator',
         creatorUsername: profile.username || null,
         creatorAvatar: profile.photoURL || null,
-        sourceUrl: '',
-        sourcePlatform: 'upload',
+        sourceUrl: source?.url ?? '',
+        sourcePlatform: source ? detectClipPlatform(source.url) : 'upload',
+        sourceAuthorName: authorName || (source ? source.host : null),
+        sourceAuthorUrl: authorUrl || (source ? source.url : null),
+        sourceAuthorAvatar: authorAvatar || null,
+        sourceDescription: source?.title || null,
+        uploader: authorName || (source ? `@${source.host}` : profile.displayName || 'Animator'),
+        authorAvatar: authorAvatar || null,
+        originalUrl: source?.url ?? '',
         storagePath,
         externalBunnyId,
         uploadedMediaUrl,
@@ -168,14 +194,77 @@ export async function POST(request: NextRequest) {
         updatedAt: now,
       });
 
-      if (boardId) {
-        transaction.create(db.collection('reference_board_saves').doc(`${boardId}_${clipRef.id}`), {
-          boardId,
-          clipId: clipRef.id,
-          ownerId: identity.uid,
+      if (!isPrivate && isVideo && uploadedMediaUrl) {
+        transaction.set(db.collection('videos').doc(clipRef.id), {
+          id: clipRef.id,
+          title,
+          description: source?.title || title,
+          videoUrl: uploadedMediaUrl,
+          thumbnailUrl: thumbnailUrl || uploadedMediaUrl,
+          posterUrl: thumbnailUrl || uploadedMediaUrl,
+          originalUrl: source?.url || '',
+          sourceUrl: source?.url || '',
+          sourcePlatform: source ? detectClipPlatform(source.url) : 'web',
+          uploader: authorName || (source ? `@${source.host}` : profile.displayName || 'Animator'),
+          authorAvatar: authorAvatar || null,
+          tags,
+          categoryIds: [category.toLowerCase()],
+          status: 'published',
+          isPublic: true,
+          type: 'social',
+          saveCount: boardId ? 1 : 0,
+          repinCount: boardId ? 1 : 0,
           createdAt: now,
-        });
-        transaction.update(db.collection('reference_boards').doc(boardId), { clipCount: FieldValue.increment(1), updatedAt: now });
+          updatedAt: now,
+        }, { merge: true });
+      }
+
+      if (boardDoc) {
+        if (boardDoc.isMoodboard) {
+          const mbData = boardDoc.data || {};
+          const currentItems = (mbData.items || []) as any[];
+          const thumb = thumbnailUrl || uploadedMediaUrl || '';
+          const newItem = {
+            id: `reference-${clipRef.id}-${Date.now()}`,
+            type: isVideo ? 'video' : 'image',
+            videoId: clipRef.id,
+            videoData: {
+              id: clipRef.id,
+              title,
+              videoUrl: uploadedMediaUrl,
+              thumbnailUrl: thumb,
+              posterUrl: thumb,
+              categories: [category],
+              tags,
+              sourceUrl: source?.url || '',
+              sourceAuthorName: authorName || source?.host || '',
+              uploader: authorName || (source ? `@${source.host}` : 'Animator'),
+              authorAvatar: authorAvatar || null,
+            },
+            imageUrl: thumb,
+            x: 120 + (currentItems.length % 4) * 300,
+            y: 120 + Math.floor(currentItems.length / 4) * 200,
+            width: 280,
+            height: 160,
+            zIndex: currentItems.length + 1,
+          };
+          const nextItems = [...currentItems, newItem];
+          const mbUpdates: any = {
+            items: nextItems,
+            itemCount: nextItems.length,
+            updatedAt: now,
+          };
+          if (thumb && !mbData.thumbnailUrl) mbUpdates.thumbnailUrl = thumb;
+          transaction.set(boardDoc.ref, mbUpdates, { merge: true });
+        } else {
+          transaction.create(db.collection('reference_board_saves').doc(`${boardId}_${clipRef.id}`), {
+            boardId,
+            clipId: clipRef.id,
+            ownerId: identity.uid,
+            createdAt: now,
+          });
+          transaction.update(boardDoc.ref, { clipCount: FieldValue.increment(1), updatedAt: now });
+        }
       }
     });
 

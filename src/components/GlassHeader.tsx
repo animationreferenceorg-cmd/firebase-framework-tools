@@ -96,13 +96,13 @@ export function GlassHeader() {
                     <DailyQuotaHeaderBadge />
 
                     {/* Global Upload CTA */}
-                    <Link href="/profile?tab=studio&upload=true">
+                    <Link href="/contribute">
                         <Button
                             size="sm"
                             className="squash shine hidden sm:flex items-center gap-1.5 rounded-full h-9 px-4 text-xs font-bold bg-white text-[#12101c] hover:bg-white shadow-[0_8px_24px_-10px_rgba(255,255,255,0.6)] transition-shadow"
                         >
                             <Plus className="w-3.5 h-3.5" />
-                            <span>Upload Shot</span>
+                            <span>Contribute</span>
                         </Button>
                     </Link>
 

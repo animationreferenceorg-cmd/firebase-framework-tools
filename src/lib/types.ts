@@ -48,6 +48,12 @@ export interface Video {
   likeCount?: number;
   viewCount?: number;
   isPortfolio?: boolean;
+  saveCount?: number;
+  repinCount?: number;
+  sourcePlatform?: string;
+  sourceUrl?: string;
+  embedUrl?: string;
+  trendingScore?: number;
   behindTheScenes?: BehindTheScenesExtra[];
   submissionProof?: VideoSubmissionProof;
 }
@@ -119,7 +125,23 @@ export interface UserProfile {
   customPortfolioCategories?: string[];
 }
 
-export type ClipSourcePlatform = 'youtube' | 'vimeo' | 'x' | 'tiktok' | 'instagram' | 'web' | 'upload' | 'library';
+export type ClipSourcePlatform =
+  | 'youtube'
+  | 'vimeo'
+  | 'x'
+  | 'tiktok'
+  | 'instagram'
+  | 'pinterest'
+  | 'artstation'
+  | 'sakugabooru'
+  | 'sketchfab'
+  | 'giphy'
+  | 'unsplash'
+  | 'pexels'
+  | 'archive'
+  | 'web'
+  | 'upload'
+  | 'library';
 
 export interface ReferenceClip {
   id: string;
@@ -136,7 +158,7 @@ export interface ReferenceClip {
   sourceDescription?: string;
   uploadedMediaUrl?: string;
   storagePath?: string;
-  mediaType?: 'video' | 'image' | 'gif';
+  mediaType?: 'video' | 'image' | 'gif' | 'model3d';
   mimeType?: string;
   thumbnailUrl?: string;
   captureStatus?: 'queued' | 'processing' | 'ready' | 'failed';

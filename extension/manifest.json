@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Animation Reference — Clip & Save",
-  "version": "0.3.29",
-  "description": "Capture precise video moments from the web into your Animation Reference boards.",
+  "version": "0.4.0",
+  "description": "Save videos and images from any site to your Animation Reference boards, and capture precise video moments.",
   "homepage_url": "https://animationreference.org",
-  "permissions": ["activeTab", "scripting", "storage", "tabs"],
+  "permissions": ["activeTab", "contextMenus", "scripting", "storage", "tabs"],
   "host_permissions": [
     "http://*/*",
     "https://*/*",
@@ -15,11 +15,16 @@
       "matches": ["http://*/*", "https://*/*"],
       "js": ["floating-widget.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["save-rules.js", "save-button.js"],
+      "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["popup.html", "popup.css", "popup-embedded.css", "popup.js", "icon-128.png"],
+      "resources": ["popup.html", "popup.css", "popup-embedded.css", "popup.js", "icon-48.png", "icon-128.png"],
       "matches": ["http://*/*", "https://*/*"]
     }
   ],

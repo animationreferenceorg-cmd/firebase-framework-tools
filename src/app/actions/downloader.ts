@@ -224,7 +224,10 @@ function detectPlatform(url: string): string | null {
         if (hostname.includes('tiktok.com')) return 'tiktok';
         if (hostname.includes('twitter.com') || hostname.includes('x.com')) return 'twitter';
         if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) return 'youtube';
+        if (hostname.includes('vimeo.com')) return 'vimeo';
         if (hostname.includes('sakugabooru.com')) return 'sakugabooru';
+        if (hostname.includes('archive.org')) return 'archive';
+        if (hostname.includes('pexels.com')) return 'pexels';
         return null;
     } catch {
         return null;
@@ -258,11 +261,21 @@ async function getCookieFile(platform: string): Promise<string | null> {
 
 // --- Main Export ---
 
+export interface DownloadSocialOptions {
+    authorName?: string;
+    authorAvatar?: string;
+    authorUrl?: string;
+    title?: string;
+    description?: string;
+    tags?: string[];
+}
+
 export async function downloadSocialVideo(
     url: string,
     saveToFirestore: boolean = true,
     capturedMediaUrl?: string,
     onProgress?: (value: number, stage: string) => void | Promise<void>,
+    options?: DownloadSocialOptions,
 ) {
     if (!isValidUrl(url)) {
         console.error(`[Downloader] Invalid or blocked URL: ${url}`);
@@ -488,10 +501,10 @@ export async function downloadSocialVideo(
             }
         }
 
-        const title = info.title || 'Downloaded Video';
-        const description = info.description || `Imported from ${url}`;
-        const uploader = info.uploader || 'Unknown';
-        const tags = info.tags || [];
+        const title = options?.title || info.title || 'Downloaded Video';
+        const description = options?.description || info.description || `Imported from ${url}`;
+        const uploader = options?.authorName || info.uploader || (url.includes('instagram.com') ? '@instagram_creator' : 'Unknown');
+        const tags = options?.tags || info.tags || [];
         const duration = info.duration || 0;
         const width = info.width || 0;
         const height = info.height || 0;
@@ -582,16 +595,19 @@ export async function downloadSocialVideo(
             description: description || '',
             videoUrl: storedVideoUrl,
             thumbnailUrl: storedThumbnailUrl,
+            posterUrl: storedThumbnailUrl,
             tags,
             type: 'social',
             originalUrl: url,
+            sourceUrl: url,
             createdAt: new Date(),
             updatedAt: new Date(),
             uploader,
+            authorAvatar: options?.authorAvatar || null,
             duration,
             width,
             height,
-            status: 'draft',
+            status: 'published' as const,
             folderId: null,
             storagePath,
             externalBunnyId,

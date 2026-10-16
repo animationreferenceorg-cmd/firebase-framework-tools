@@ -1,3 +1,6 @@
+// Shared hover-save rules (file types, size caps, supported post links).
+import './save-rules.js';
+
 const DEFAULT_ORIGIN = 'https://animationreference.org';
 const sessionStore = chrome.storage.session || chrome.storage.local;
 const credentialStore = chrome.storage.local;
@@ -50,7 +53,7 @@ async function getToken() {
   return legacy || null;
 }
 
-const SUPPORTED_POST_URL = /^https?:\/\/(?:[^/]+\.)?(?:instagram\.com|youtube\.com|youtu\.be|tiktok\.com|vimeo\.com|x\.com|twitter\.com|facebook\.com|fb\.watch)\//i;
+const SUPPORTED_POST_URL = /^https?:\/\/(?:[^/]+\.)?(?:instagram\.com|youtube\.com|youtu\.be|tiktok\.com|vimeo\.com|x\.com|twitter\.com|facebook\.com|fb\.watch|pinterest\.com|pin\.it|artstation\.com|sakugabooru\.com|sketchfab\.com|giphy\.com|tenor\.com|unsplash\.com|pexels\.com|archive\.org)\//i;
 const resolveInFlight = new Map();
 const resolvedPostCache = new Map();
 const RESOLVE_CACHE_MS = 2 * 60 * 1000;
@@ -105,7 +108,7 @@ async function resolvePostInBrowserUncached(url) {
       func: async () => {
         // Social players hydrate after the document load event. Give the post
         // a moment to expose its signed media URL and creator details.
-        for (let attempt = 0; attempt < 12 && !document.querySelector('video'); attempt += 1) {
+        for (let attempt = 0; attempt < 12 && !document.querySelector('video') && !document.querySelector('article img, [role="main"] img, #main-view img, .pin-image, .artwork-image'); attempt += 1) {
           await new Promise((resolve) => setTimeout(resolve, 250));
         }
         const meta = (selector) => document.querySelector(selector)?.content || '';
@@ -157,6 +160,7 @@ async function resolvePostInBrowserUncached(url) {
         } else {
           title = ogTitle || document.title || caption;
         }
+        const imageThumb = video?.poster || meta('meta[property="og:image"]') || meta('meta[name="twitter:image"]') || document.querySelector('.pin-image img, .artwork-image img, article img')?.currentSrc || '';
         return {
           url: canonical,
           title,
@@ -164,8 +168,9 @@ async function resolvePostInBrowserUncached(url) {
           author: authorText,
           authorUrl: authorLink?.href || '',
           authorAvatar: avatar,
-          thumbnailUrl: video?.poster || meta('meta[property="og:image"]') || meta('meta[name="twitter:image"]'),
-          mediaUrl: video?.currentSrc || video?.src || '',
+          thumbnailUrl: imageThumb,
+          mediaUrl: video?.currentSrc || video?.src || imageThumb,
+          mediaType: video ? 'video' : location.hostname.includes('giphy') || (video?.src || '').endsWith('.gif') ? 'gif' : location.hostname.includes('sketchfab') ? 'model3d' : 'image',
           provider: location.hostname.replace(/^www\./, '').split('.')[0],
           duration: video && Number.isFinite(video.duration) ? video.duration : undefined,
           tags: [...new Set([...`${caption} ${description}`.matchAll(/#([\p{L}\p{N}_-]+)/gu)].map(match => match[1].toLowerCase()))].slice(0, 12),
@@ -340,4 +345,196 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
   })().then(sendResponse).catch((error) => sendResponse({ ok: false, status: 0, error: error.message }));
   return true;
+});
+
+// ---------------------------------------------------------------------------
+// Hover Save and right-click "Save to Animation Reference" (save-button.js).
+// The page script never sees credentials: it asks this worker for the user's
+// boards and hands it the save, which runs here with the stored token.
+// ---------------------------------------------------------------------------
+
+const RULES = globalThis.AR_SAVE_RULES;
+const SAVE_MENU_ID = 'animref-save';
+const BOOTSTRAP_CACHE_MS = 60_000;
+
+function createSaveMenu() {
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: SAVE_MENU_ID,
+      title: 'Save to Animation Reference',
+      contexts: ['image', 'video', 'link'],
+    });
+  });
+}
+chrome.runtime.onInstalled.addListener(createSaveMenu);
+chrome.runtime.onStartup.addListener(createSaveMenu);
+
+async function sendToSaveButton(tabId, message) {
+  try {
+    await chrome.tabs.sendMessage(tabId, message);
+  } catch {
+    // Pages opened before the extension was installed have no content script yet.
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['save-rules.js', 'save-button.js'] });
+    await chrome.tabs.sendMessage(tabId, message);
+  }
+}
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId !== SAVE_MENU_ID || !tab?.id || !/^https?:\/\//i.test(tab.url || '')) return;
+  const mediaType = info.mediaType === 'image' || info.mediaType === 'video' ? info.mediaType : null;
+  sendToSaveButton(tab.id, {
+    type: 'AR_SAVE_TARGET',
+    mediaType,
+    srcUrl: info.srcUrl || '',
+    linkUrl: mediaType ? '' : info.linkUrl || '',
+    pageUrl: info.pageUrl || tab.url,
+  }).catch((error) => console.warn('Animation Reference could not open Save on this page.', error));
+});
+
+async function quickBootstrap() {
+  const token = await getToken();
+  if (!token) return { ok: false, status: 401, error: 'Connect your Animation Reference account.' };
+  const origin = await getOrigin();
+  const cached = (await sessionStore.get('quickBootstrap')).quickBootstrap;
+  if (cached && cached.origin === origin && Date.now() - cached.at < BOOTSTRAP_CACHE_MS) return { ok: true, status: 200, data: cached.data };
+  const response = await fetch(`${origin}/api/extension/bootstrap`, { headers: { Authorization: `Bearer ${token}` } });
+  const data = await response.json().catch(() => ({}));
+  if (response.status === 401) {
+    await credentialStore.remove(['firebaseIdToken', 'firebaseRefreshToken', 'firebaseApiKey', 'firebaseTokenExpiresAt']);
+    return { ok: false, status: 401, error: 'Your session expired. Connect your account again.' };
+  }
+  if (!response.ok) return { ok: false, status: response.status, error: data.message || 'Your boards could not be loaded.' };
+  await sessionStore.set({ quickBootstrap: { at: Date.now(), origin, data } });
+  return { ok: true, status: 200, data };
+}
+
+function isHttpUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+function validSavePayload(payload) {
+  if (!payload || typeof payload !== 'object') return 'Nothing to save.';
+  if (payload.mode !== 'file' && payload.mode !== 'link') return 'This item can’t be saved directly.';
+  if (payload.kind !== 'image' && payload.kind !== 'video') return 'Only images and videos can be saved.';
+  if (typeof payload.boardId !== 'string' || !/^[A-Za-z0-9_-]{0,128}$/.test(payload.boardId)) return 'Choose a board.';
+  if (!isHttpUrl(payload.sourceUrl)) return 'This page can’t be credited as a source.';
+  if (payload.mode === 'file' && !isHttpUrl(payload.mediaUrl)) return 'This file can’t be downloaded.';
+  if (payload.mode === 'link' && !RULES.SUPPORTED_POST_URL.test(payload.sourceUrl)) return 'Only supported video posts can be saved by link.';
+  return null;
+}
+
+/** Download the media in the user's browser, with the same type and size limits as the upload API. */
+async function fetchMedia(mediaUrl, kind) {
+  let response = await fetch(mediaUrl, { credentials: 'omit', redirect: 'follow' });
+  // Some hosts only serve media to signed-in visitors; retry with the user's own cookies.
+  if (response.status === 401 || response.status === 403) response = await fetch(mediaUrl, { credentials: 'include', redirect: 'follow' });
+  if (!response.ok) throw new Error(`The site refused the download (${response.status}).`);
+
+  const type = RULES.resolveMediaType(response.headers.get('content-type'), response.url || mediaUrl);
+  const accepted = type && RULES.ACCEPTED_TYPES[type];
+  if (!accepted) throw new Error('This file type can’t be saved yet. Images: JPG, PNG, WebP, GIF. Videos: MP4, WebM, MOV.');
+  const limit = RULES.MAX_BYTES[accepted.kind];
+  const declared = Number(response.headers.get('content-length') || 0);
+  if (declared > limit) throw new Error(accepted.kind === 'video' ? 'Videos can be up to 250 MB.' : 'Images can be up to 25 MB.');
+
+  const reader = response.body?.getReader();
+  if (!reader) return { blob: await response.blob(), type, ext: accepted.ext, kind: accepted.kind };
+  const chunks = [];
+  let received = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    if (received > limit) {
+      await reader.cancel();
+      throw new Error(accepted.kind === 'video' ? 'Videos can be up to 250 MB.' : 'Images can be up to 25 MB.');
+    }
+    chunks.push(value);
+  }
+  return { blob: new Blob(chunks, { type }), type, ext: accepted.ext, kind: accepted.kind || kind };
+}
+
+async function quickSave(payload) {
+  const problem = validSavePayload(payload);
+  if (problem) return { ok: false, status: 422, error: problem };
+  const token = await getToken();
+  if (!token) return { ok: false, status: 401, error: 'Connect your Animation Reference account.' };
+  const origin = await getOrigin();
+  const title = String(payload.title || 'Saved reference').replace(/\s+/g, ' ').trim().slice(0, 120);
+
+  let response;
+  if (payload.mode === 'file') {
+    const media = await fetchMedia(payload.mediaUrl, payload.kind);
+    const form = new FormData();
+    form.set('file', media.blob, `reference.${media.ext}`);
+    form.set('title', title);
+    form.set('category', 'Acting');
+    form.set('tags', 'saved from web');
+    form.set('boardId', payload.boardId);
+    form.set('isPrivate', String(Boolean(payload.isPrivate)));
+    form.set('sourceUrl', payload.sourceUrl);
+    form.set('sourceTitle', String(payload.pageTitle || '').slice(0, 200));
+    if (payload.authorName) form.set('authorName', String(payload.authorName).slice(0, 100));
+    if (payload.authorUrl) form.set('authorUrl', String(payload.authorUrl).slice(0, 500));
+    if (payload.authorAvatar) form.set('authorAvatar', String(payload.authorAvatar).slice(0, 1000));
+    if (Number.isFinite(payload.duration) && payload.duration > 0) form.set('duration', String(payload.duration));
+    response = await fetch(`${origin}/api/clips/upload`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
+  } else {
+    const endTime = Number.isFinite(payload.duration) && payload.duration > 0 ? payload.duration : 60;
+    response = await fetch(`${origin}/api/clips`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() },
+      body: JSON.stringify({
+        sourceUrl: payload.sourceUrl,
+        startTime: 0,
+        endTime,
+        title,
+        category: 'Acting',
+        tags: ['saved from web'],
+        boardId: payload.boardId || undefined,
+        isPrivate: Boolean(payload.isPrivate),
+        thumbnailUrl: isHttpUrl(payload.thumbnailUrl) ? payload.thumbnailUrl : undefined,
+        mediaType: 'video',
+        sourceAuthorName: payload.authorName || undefined,
+        sourceAuthorUrl: payload.authorUrl || undefined,
+        sourceAuthorAvatar: payload.authorAvatar || undefined,
+        capturedMediaUrl: payload.mediaUrl || undefined,
+      }),
+    });
+  }
+
+  const data = await response.json().catch(() => ({}));
+  if (response.status === 401) {
+    await credentialStore.remove(['firebaseIdToken', 'firebaseRefreshToken', 'firebaseApiKey', 'firebaseTokenExpiresAt']);
+    return { ok: false, status: 401, error: 'Your session expired. Connect your account again.' };
+  }
+  if (!response.ok) return { ok: false, status: response.status, error: data.message || data.error || 'The save didn’t go through.' };
+  return { ok: true, status: response.status, data };
+}
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  const respond = (work) => {
+    work.then(sendResponse).catch((error) => sendResponse({ ok: false, status: 0, error: error?.message || 'Something went wrong.' }));
+    return true;
+  };
+  switch (message?.type) {
+    case 'AR_QUICK_BOOTSTRAP':
+      return respond(quickBootstrap());
+    case 'AR_QUICK_SAVE':
+      return respond(quickSave(message.payload));
+    case 'AR_OPEN_CLIP': {
+      const clipId = String(message.clipId || '');
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(clipId)) return false;
+      return respond(getOrigin().then((origin) => chrome.tabs.create({ url: `${origin}/clip/${clipId}`, active: true })).then(() => ({ ok: true })));
+    }
+    case 'AR_OPEN_WIDGET':
+      return respond(openWidgetForTab(sender.tab?.id).then(() => ({ ok: true })));
+    default:
+      return false;
+  }
 });

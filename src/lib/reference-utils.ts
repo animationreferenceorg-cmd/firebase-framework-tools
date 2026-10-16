@@ -9,13 +9,25 @@ export function normalizeHttpUrl(value: string): string {
 }
 
 export function detectClipPlatform(value: string): ClipSourcePlatform {
-  const host = new URL(value).hostname.toLowerCase().replace(/^www\./, '');
-  if (host === 'youtu.be' || host.endsWith('youtube.com')) return 'youtube';
-  if (host.endsWith('vimeo.com')) return 'vimeo';
-  if (host === 'x.com' || host.endsWith('twitter.com')) return 'x';
-  if (host.endsWith('tiktok.com')) return 'tiktok';
-  if (host.endsWith('instagram.com')) return 'instagram';
-  return 'web';
+  try {
+    const host = new URL(value).hostname.toLowerCase().replace(/^www\./, '');
+    if (host === 'youtu.be' || host.endsWith('youtube.com')) return 'youtube';
+    if (host.endsWith('vimeo.com')) return 'vimeo';
+    if (host === 'x.com' || host.endsWith('twitter.com')) return 'x';
+    if (host.endsWith('tiktok.com')) return 'tiktok';
+    if (host.endsWith('instagram.com')) return 'instagram';
+    if (host.endsWith('pinterest.com') || host === 'pin.it') return 'pinterest';
+    if (host.endsWith('artstation.com')) return 'artstation';
+    if (host.endsWith('sakugabooru.com')) return 'sakugabooru';
+    if (host.endsWith('sketchfab.com')) return 'sketchfab';
+    if (host.endsWith('giphy.com')) return 'giphy';
+    if (host.endsWith('unsplash.com')) return 'unsplash';
+    if (host.endsWith('pexels.com')) return 'pexels';
+    if (host.endsWith('archive.org')) return 'archive';
+    return 'web';
+  } catch {
+    return 'web';
+  }
 }
 
 export function slugifyReference(value: string): string {
@@ -32,3 +44,43 @@ export function secondsLabel(seconds: number): string {
   const remainder = (total % 60).toFixed(total % 1 ? 1 : 0).padStart(2, '0');
   return `${minutes}:${remainder}`;
 }
+
+export function getYouTubeId(url?: string | null): string | null {
+  if (!url) return null;
+  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/i);
+  return match ? match[1] : null;
+}
+
+export function getInstagramId(url?: string | null): string | null {
+  if (!url) return null;
+  const match = url.match(/(?:instagram\.com\/(?:p|reel|tv)\/([A-Za-z0-9_-]+))/i);
+  return match ? match[1] : null;
+}
+
+export function getVimeoId(url?: string | null): string | null {
+  if (!url) return null;
+  const match = url.match(/(?:vimeo\.com\/(?:video\/)?([0-9]+))/i);
+  return match ? match[1] : null;
+}
+
+export function isDirectPlayableVideoUrl(url?: string | null): boolean {
+  if (!url) return false;
+  const clean = url.toLowerCase();
+  if (clean.includes('reflix.dev')) return false;
+
+  // Direct video file extensions & HLS manifests from any CDN (Instagram CDN, Sakugabooru, Pinterest, Archive.org, Firebase, Bunny, etc.)
+  if (clean.includes('.mp4') || clean.includes('.webm') || clean.includes('playlist.m3u8') || clean.includes('.m3u8')) {
+    return true;
+  }
+
+  // Webpage post URLs that aren't raw video files
+  if (clean.includes('youtube.com') || clean.includes('youtu.be') || clean.includes('vimeo.com') || clean.includes('instagram.com') || clean.includes('tiktok.com')) {
+    return false;
+  }
+
+  if (clean.includes('b-cdn.net') || clean.includes('firebasestorage.googleapis.com') || clean.includes('storage.googleapis.com')) {
+    return true;
+  }
+  return false;
+}
+

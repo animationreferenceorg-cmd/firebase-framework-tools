@@ -121,9 +121,9 @@ export function ImmersiveHomeHeader({
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
               </span>
-              Live reference library
+              Global Reference Hub • Live Search across Web Sources
             </span>
-            {totalVideos > 0 && <span className="text-white/45">{totalVideos.toLocaleString()} clips</span>}
+            {totalVideos > 0 && <span className="text-white/45">Millions of cuts & models</span>}
           </div>
 
           <h1 className="max-w-3xl font-display text-5xl font-black leading-[0.9] tracking-[-0.055em] text-white sm:text-6xl md:text-7xl lg:text-[5.6rem]">
@@ -134,7 +134,7 @@ export function ImmersiveHomeHeader({
           </h1>
 
           <p className="mt-6 max-w-xl text-base font-medium leading-relaxed text-white/70 sm:text-lg">
-            589 animation references playing in one living library—ready to search, scrub, save, and use.
+            The central animation hub drawing in live turnarounds from ArtStation, pins from Pinterest, interactive 3D models from Sketchfab, and sakuga smear cuts from Sakugabooru.
           </p>
 
           <div className="mt-8 max-w-2xl">
@@ -149,7 +149,7 @@ export function ImmersiveHomeHeader({
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') scrollToLibrary();
                 }}
-                placeholder="Search movement, acting, combat, creatures…"
+                placeholder="Search across ArtStation, Pinterest, Sketchfab & Sakuga (e.g. dragon, turnaround, smear)…"
                 className="h-16 w-full bg-transparent pl-14 pr-24 text-base font-medium text-white outline-none placeholder:text-white/40"
               />
               {searchQuery ? (
@@ -163,6 +163,31 @@ export function ImmersiveHomeHeader({
               ) : (
                 <span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-xs font-bold text-white/35">Press /</span>
               )}
+            </div>
+
+            {/* Quick Hub Query Chips */}
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-bold text-zinc-400 mr-1">Quick Hub Queries:</span>
+              {[
+                'Character Turnaround',
+                'Sakuga Smears',
+                'Animated 3D Models',
+                'Combat Mechanics',
+                'Animal Locomotion',
+                'Visual Development'
+              ].map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => {
+                    onSearchChange(chip);
+                    scrollToLibrary();
+                  }}
+                  className="rounded-full bg-white/5 border border-white/10 px-2.5 py-1 text-[11px] font-semibold text-zinc-300 hover:bg-violet-600/30 hover:border-violet-500/50 hover:text-white transition-all"
+                >
+                  {chip}
+                </button>
+              ))}
             </div>
           </div>
 

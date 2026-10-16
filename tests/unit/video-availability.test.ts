@@ -28,7 +28,8 @@ describe('video availability', () => {
       .toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
     expect(sanitizeVideoUrl('https://www.youtube.com/embed/dQw4w9WgXcQ'))
       .toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    // Bunny HLS playlists are served as the original MP4 (verified to return video/mp4).
     expect(sanitizeVideoUrl('https://vz-1.b-cdn.net/g/playlist.m3u8'))
-      .toBe('https://vz-1.b-cdn.net/g/playlist.m3u8');
+      .toBe('https://vz-1.b-cdn.net/g/original?.mp4');
   });
 });

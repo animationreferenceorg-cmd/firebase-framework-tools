@@ -10,6 +10,7 @@ import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 import { MoodboardService } from '@/lib/moodboard-service';
 import { saveVideo, unsaveVideo } from '@/lib/firestore';
+import { trackHubSave } from '@/lib/hub-sync';
 import type { Video, MoodboardItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -116,9 +117,11 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
         try {
             if (isAllSaved) {
                 await unsaveVideo(user.uid, video.id);
+                trackHubSave(user.uid, undefined, video, 'unsave');
                 toast({ title: 'Removed from All Saves', description: video.title });
             } else {
                 await saveVideo(user.uid, video.id);
+                trackHubSave(user.uid, undefined, video, 'save');
                 toast({ title: 'Saved to All Saves! 📌', description: video.title });
             }
             await mutate();
@@ -136,15 +139,18 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                 let updatedItems: MoodboardItem[] = [];
 
                 if (currentHasVideo) {
-                    // Remove video from board
+                    // Remove video from board (Pinterest Rule #1: Only removes from personal board)
                     updatedItems = items.filter(
                         (i) => i.videoId !== video.id && i.videoData?.id !== video.id
                     );
                     await MoodboardService.saveMoodboard(user.uid, boardId, updatedItems);
+                    trackHubSave(user.uid, boardId, video, 'unsave');
                     toast({ title: 'Removed from board', description: `Removed from "${boardName}"` });
                 } else {
                     // Add video item to board using addReferenceToMoodboard so it's placed on canvas and inspiration list
                     await MoodboardService.addReferenceToMoodboard(user.uid, boardId, video);
+                    // Boost viral engagement and ingest into global library
+                    trackHubSave(user.uid, boardId, video, 'save');
 
                     // All saves also save to all saves
                     if (!isAllSaved) {
@@ -237,6 +243,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                 const newId = await MoodboardService.createMoodboard(user.uid, trimmed);
                 // Add video to new board using addReferenceToMoodboard
                 await MoodboardService.addReferenceToMoodboard(user.uid, newId, video);
+                trackHubSave(user.uid, newId, video, 'save');
 
                 // All saves also save to all saves
                 if (!isAllSaved) {

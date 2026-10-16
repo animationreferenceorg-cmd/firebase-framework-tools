@@ -11,27 +11,46 @@ export async function GET(request: NextRequest) {
   try {
     const identity = await requireFirebaseUser(request);
     const profile = await getTrustedProfile(identity.uid);
-    // Must be reference_boards, not the user's moodboards. POST /api/clips
-    // validates boardId against this top-level collection and rejects anything
-    // else with BOARD_FORBIDDEN — so offering moodboard ids here made every
-    // board-targeted save fail. isPrivate has to be the board's real value too,
-    // because the API requires the clip's privacy to match the board's.
-    const boardsSnap = await getFirestore()
-      .collection('reference_boards')
-      .where('ownerId', '==', identity.uid)
-      .limit(100)
-      .get();
-    const boards = boardsSnap.docs
-      .map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          title: data.title || 'Untitled board',
-          isPrivate: Boolean(data.isPrivate),
-          updatedAtSeconds: data.updatedAt?.seconds || data.createdAt?.seconds || 0,
-        };
+    const db = getFirestore();
+    const [boardsSnap, moodboardsSnap] = await Promise.all([
+      db.collection('reference_boards')
+        .where('ownerId', '==', identity.uid)
+        .limit(100)
+        .get(),
+      db.collection('users')
+        .doc(identity.uid)
+        .collection('moodboards')
+        .limit(100)
+        .get(),
+    ]);
+
+    const refBoards = boardsSnap.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        title: data.title || 'Untitled board',
+        isPrivate: Boolean(data.isPrivate),
+        updatedAtSeconds: data.updatedAt?.seconds || data.createdAt?.seconds || 0,
+      };
+    });
+
+    const moodboards = moodboardsSnap.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        title: data.name || data.title || 'Untitled board',
+        isPrivate: Boolean(data.isPrivate),
+        updatedAtSeconds: data.updatedAt?.seconds || data.createdAt?.seconds || 0,
+      };
+    });
+
+    const seenIds = new Set<string>();
+    const boards = [...refBoards, ...moodboards]
+      .filter((b) => {
+        if (seenIds.has(b.id)) return false;
+        seenIds.add(b.id);
+        return true;
       })
-      // Sorted here rather than with orderBy so the query needs no composite index.
       .sort((a, b) => b.updatedAtSeconds - a.updatedAtSeconds)
       .map(({ updatedAtSeconds, ...board }) => board);
     return NextResponse.json({

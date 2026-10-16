@@ -11,10 +11,15 @@ import { ImmersiveHomeHeader } from '@/components/home/ImmersiveHomeHeader';
 import { CommunityFeedShelf } from '@/components/home/CommunityFeedShelf';
 import { TrendingCommunityShelf } from '@/components/home/TrendingCommunityShelf';
 import { RecentlyViewedShelf } from '@/components/home/RecentlyViewedShelf';
+import { LiveWebDiscoveryShelf } from '@/components/home/LiveWebDiscoveryShelf';
+import { LiveWebSearchResults } from '@/components/home/LiveWebSearchResults';
+import type { UnifiedSearchResult } from '@/app/api/import/search/route';
+import { searchResultToVideo } from '@/lib/reference-hub';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from '@/components/motion/SectionHeading';
 import { filterAvailableVideos } from '@/lib/video-availability';
 import { mixReferences } from '@/lib/reference-mix';
+import { Globe, Loader2, Sparkles } from 'lucide-react';
 
 const VIDEOS_PER_PAGE = 30;
 
@@ -23,6 +28,11 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showPricingDialog, setShowPricingDialog] = useState(false);
+
+  // Live External Search State
+  const [externalVideos, setExternalVideos] = useState<Video[]>([]);
+  const [webResults, setWebResults] = useState<UnifiedSearchResult[]>([]);
+  const [webSearching, setWebSearching] = useState(false);
 
   // Pagination & Filters
   const [visibleCount, setVisibleCount] = useState(VIDEOS_PER_PAGE);
@@ -160,8 +170,27 @@ export default function HomePage() {
     setVisibleCount(VIDEOS_PER_PAGE);
   }, [activeTab, activeType, activePill, searchQuery]);
 
-  const visibleVideos = useMemo(() => filteredVideos.slice(0, visibleCount), [filteredVideos, visibleCount]);
-  const hasMore = visibleCount < filteredVideos.length;
+  // Unified Catalog: seamlessly blend local database clips and external hub results
+  const unifiedVideos = useMemo(() => {
+    if (!searchQuery.trim() || externalVideos.length === 0) {
+      return filteredVideos;
+    }
+
+    const set = new Set(filteredVideos.map(v => v.id));
+    const newExternals = externalVideos.filter(v => !set.has(v.id));
+
+    // Interleave local and external results evenly
+    const combined: Video[] = [];
+    const maxLen = Math.max(filteredVideos.length, newExternals.length);
+    for (let i = 0; i < maxLen; i++) {
+      if (i < filteredVideos.length) combined.push(filteredVideos[i]);
+      if (i < newExternals.length) combined.push(newExternals[i]);
+    }
+    return combined;
+  }, [filteredVideos, externalVideos, searchQuery]);
+
+  const visibleVideos = useMemo(() => unifiedVideos.slice(0, visibleCount), [unifiedVideos, visibleCount]);
+  const hasMore = visibleCount < unifiedVideos.length;
 
   // Load one bounded batch whenever the bottom sentinel enters the viewport.
   useEffect(() => {
@@ -169,19 +198,19 @@ export default function HomePage() {
     if (!sentinel || !hasMore) return;
 
     if (typeof IntersectionObserver === 'undefined') {
-      setVisibleCount(filteredVideos.length);
+      setVisibleCount(unifiedVideos.length);
       return;
     }
 
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
-        setVisibleCount(prev => Math.min(prev + 24, filteredVideos.length));
+        setVisibleCount(prev => Math.min(prev + 24, unifiedVideos.length));
       }
     }, { rootMargin: '200px' });
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, filteredVideos.length]);
+  }, [hasMore, unifiedVideos.length]);
 
   const heroVideos = useMemo(
     () => {
@@ -207,6 +236,36 @@ export default function HomePage() {
     [allVideos]
   );
 
+  // Debounced live web search across ArtStation, Pinterest, Sketchfab, Sakugabooru, Wikimedia
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setWebResults([]);
+      setExternalVideos([]);
+      setWebSearching(false);
+      return;
+    }
+
+    setWebSearching(true);
+    const handler = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/import/search?q=${encodeURIComponent(searchQuery.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          const items: UnifiedSearchResult[] = data.results || [];
+          setWebResults(items);
+          const converted = items.map(searchResultToVideo);
+          setExternalVideos(converted);
+        }
+      } catch (err) {
+        console.error('Failed to search external web sources:', err);
+      } finally {
+        setWebSearching(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
   return (
     <div className="min-h-screen space-y-12 pb-20 text-left text-foreground">
       <ImmersiveHomeHeader
@@ -225,32 +284,72 @@ export default function HomePage() {
         </Reveal>
       )}
 
-      {/* 3. SHELF: Monthly challenge + trending community references */}
+      {/* 3. SHELF: Live Web Integration (ArtStation, Pinterest, Sakugabooru, Locomotion) */}
+      {!searchQuery && (
+        <Reveal>
+          <LiveWebDiscoveryShelf />
+        </Reveal>
+      )}
+
+      {/* 4. SHELF: Monthly challenge + trending community references */}
       {!searchQuery && (
         <Reveal>
           <TrendingCommunityShelf />
         </Reveal>
       )}
 
-      {/* 4. SHELF: Community Portfolio Feed */}
+      {/* 5. SHELF: Community Portfolio Feed */}
       {!searchQuery && (
         <Reveal>
           <CommunityFeedShelf />
         </Reveal>
       )}
 
-      {/* 4. SHELF: Full Reference Discovery Catalog */}
+      {/* 6. CATALOG / SEARCH RESULTS */}
       <section id="reference-library" className="scroll-mt-28 space-y-5 pt-4">
         <SectionHeading
-          eyebrow={searchQuery ? 'Search results' : 'The library'}
+          eyebrow={searchQuery ? 'Universal Hub Search' : 'The library'}
           title={searchQuery ? <>Results for “{searchQuery}”</> : 'All reference clips'}
           aside={
             <span className="timecode rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-violet-200">
               <Film className="mr-1.5 inline h-3 w-3 -translate-y-px" />
-              {filteredVideos.length.toLocaleString()}
+              {unifiedVideos.length.toLocaleString()}
             </span>
           }
         />
+
+        {/* Global Reference Hub Search Active Banner */}
+        {searchQuery && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-500/30 bg-gradient-to-r from-violet-950/40 via-zinc-900/60 to-zinc-900/70 p-4 shadow-lg backdrop-blur-md">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <div>
+                <p className="text-xs font-bold text-white flex items-center gap-2">
+                  <span>Universal Reference Hub Active</span>
+                  <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-300">
+                    ArtStation • Pinterest • Sketchfab 3D • Sakuga
+                  </span>
+                </p>
+                <p className="text-[11px] text-zinc-400 mt-0.5">
+                  {webSearching
+                    ? `Broadcasting query "${searchQuery}" to live external 3D & animation engines…`
+                    : `Streaming ${externalVideos.length} external models & cuts alongside ${filteredVideos.length} library clips`}
+                </p>
+              </div>
+            </div>
+
+            {webSearching ? (
+              <div className="flex items-center gap-2 text-xs font-semibold text-violet-300">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Querying live web engines...
+              </div>
+            ) : (
+              <span className="text-xs text-zinc-400">
+                Total: <strong className="text-white">{unifiedVideos.length}</strong> matching references
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Filter Bar with Quick Pills */}
         <FilterBar
@@ -275,6 +374,15 @@ export default function HomePage() {
               />
             ))}
           </div>
+        ) : unifiedVideos.length === 0 && !webSearching && searchQuery ? (
+          <div className="rounded-2xl border border-white/10 bg-zinc-900/40 p-10 text-center space-y-3">
+            <p className="text-sm font-semibold text-zinc-300">
+              No references found for &quot;{searchQuery}&quot;
+            </p>
+            <p className="text-xs text-zinc-500 max-w-md mx-auto">
+              Try broader search terms like &quot;turnaround&quot;, &quot;walk&quot;, &quot;combat&quot;, or &quot;smear&quot;.
+            </p>
+          </div>
         ) : (
           <VideoGrid title="" videos={visibleVideos} columns={columns} />
         )}
@@ -282,14 +390,12 @@ export default function HomePage() {
         {/* Infinite Scroll Indicator */}
         {hasMore && (
           <div ref={loadMoreRef} className="flex justify-center py-8">
-            {/* The bouncing ball as a loader — squash on contact, stretch on
-                the way up. Reads as "working" and as animation at once. */}
             <div className="flex flex-col items-center gap-3 text-zinc-500">
               <div className="relative h-8 w-8">
                 <span className="absolute bottom-0 left-1/2 h-1 w-4 -translate-x-1/2 rounded-full bg-violet-400/30 animate-shadow-pulse" />
                 <span className="absolute bottom-1 left-1/2 -ml-2 h-4 w-4 origin-bottom rounded-full bg-gradient-to-b from-violet-300 to-violet-500 shadow-[0_0_14px_rgba(167,139,250,0.7)] animate-ball-bounce" />
               </div>
-              <span className="timecode text-[11px] tracking-wider">LOADING NEXT REEL</span>
+              <span className="timecode text-[11px] tracking-wider">LOADING MORE REFERENCES</span>
             </div>
           </div>
         )}

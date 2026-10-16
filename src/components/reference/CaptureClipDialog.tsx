@@ -21,8 +21,12 @@ import { CONTRIBUTION_CHANGED_EVENT } from '@/hooks/use-viewing-quota';
 interface OEmbedMeta {
   title?: string;
   authorName?: string;
+  authorUrl?: string;
   thumbnailUrl?: string;
+  mediaUrl?: string;
+  mediaType?: 'video' | 'image' | 'gif' | 'model3d';
   providerName?: string;
+  tags?: string[];
 }
 
 export function CaptureClipDialog({ onCreated, initialUrl, defaultOpen = false }: { onCreated?(): void; initialUrl?: string; defaultOpen?: boolean }) {
@@ -77,7 +81,7 @@ export function CaptureClipDialog({ onCreated, initialUrl, defaultOpen = false }
         setForm((prev) => ({
           ...prev,
           title: prev.title || meta.title || '',
-          tags: prev.tags || (meta.authorName ? `${meta.authorName.toLowerCase()}, ${meta.providerName?.toLowerCase() || ''}` : ''),
+          tags: prev.tags || (meta.tags?.length ? meta.tags.join(', ') : meta.authorName ? `${meta.authorName.toLowerCase()}, ${meta.providerName?.toLowerCase() || ''}` : ''),
         }));
       }
     } catch {
@@ -99,9 +103,9 @@ export function CaptureClipDialog({ onCreated, initialUrl, defaultOpen = false }
       const text = await navigator.clipboard.readText();
       if (text && text.startsWith('http')) {
         handleUrlChange(text);
-        toast({ title: 'Link pasted from clipboard', description: 'Fetching video metadata...' });
+        toast({ title: 'Link pasted from clipboard', description: 'Fetching reference metadata...' });
       } else {
-        toast({ variant: 'destructive', title: 'No valid link in clipboard', description: 'Copy a YouTube, Instagram, or video URL first.' });
+        toast({ variant: 'destructive', title: 'No valid link in clipboard', description: 'Copy a YouTube, Pinterest, ArtStation, Sakugabooru, or video URL first.' });
       }
     } catch {
       toast({ variant: 'destructive', title: 'Clipboard permission denied', description: 'Paste the link manually into the URL field.' });
@@ -116,16 +120,17 @@ export function CaptureClipDialog({ onCreated, initialUrl, defaultOpen = false }
     setSaveProgress(5);
     setSaveStage('Preparing reference…');
     let currentProgress = 5;
+    const isDirectMedia = oembedMeta?.mediaType && oembedMeta.mediaType !== 'video';
     const progressTimer = window.setInterval(() => {
       currentProgress = Math.min(90, currentProgress + (currentProgress < 40 ? 7 : currentProgress < 72 ? 4 : 1));
       setSaveProgress(currentProgress);
-      setSaveStage(currentProgress < 40 ? 'Downloading source video…' : currentProgress < 72 ? 'Uploading to Animation Reference…' : 'Processing playback…');
+      setSaveStage(isDirectMedia ? 'Saving reference to board…' : currentProgress < 40 ? 'Downloading source video…' : currentProgress < 72 ? 'Uploading to Animation Reference…' : 'Processing playback…');
     }, 700);
     try {
       const sourceUrl = normalizeHttpUrl(form.sourceUrl);
       const startTime = Number(form.startTime);
       const endTime = Number(form.endTime);
-      if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime) {
+      if (!isDirectMedia && (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime)) {
         throw new Error('The Out time must be after the In time.');
       }
       const token = await user.getIdToken();
@@ -133,16 +138,19 @@ export function CaptureClipDialog({ onCreated, initialUrl, defaultOpen = false }
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() },
         body: JSON.stringify({
-        sourceUrl,
-        startTime,
-        endTime,
-        title: form.title || oembedMeta?.title || 'Animation Reference Clip',
-        category: form.category,
-        tags: form.tags.split(',').map((tag) => tag.trim().toLowerCase()).filter(Boolean),
-        isPrivate: form.isPrivate,
-        boardId: form.boardId || undefined,
-        thumbnailUrl: oembedMeta?.thumbnailUrl || undefined,
-        sourceAuthorName: oembedMeta?.authorName || undefined,
+          sourceUrl,
+          startTime: isDirectMedia ? 0 : startTime,
+          endTime: isDirectMedia ? 5 : endTime,
+          title: form.title || oembedMeta?.title || 'Animation Reference Clip',
+          category: form.category,
+          tags: form.tags.split(',').map((tag) => tag.trim().toLowerCase()).filter(Boolean),
+          isPrivate: form.isPrivate,
+          boardId: form.boardId || undefined,
+          thumbnailUrl: oembedMeta?.thumbnailUrl || undefined,
+          sourceAuthorName: oembedMeta?.authorName || undefined,
+          sourceAuthorUrl: oembedMeta?.authorUrl || undefined,
+          mediaUrl: oembedMeta?.mediaUrl || undefined,
+          mediaType: oembedMeta?.mediaType || undefined,
         }),
       });
       const result = await response.json();
@@ -222,14 +230,14 @@ export function CaptureClipDialog({ onCreated, initialUrl, defaultOpen = false }
           {/* TAB 1: CLIP A LINK */}
           {activeTab === 'clip' && (
             <form onSubmit={submit} className="space-y-4">
-              <Field label="Video or Reel URL">
+              <Field label="Video or Reference URL">
                 <div className="relative flex items-center">
                   <Input
                     type="url"
                     required
                     value={form.sourceUrl}
                     onChange={(e) => handleUrlChange(e.target.value)}
-                    placeholder="YouTube, Vimeo, Instagram, TikTok..."
+                    placeholder="YouTube, Pinterest, ArtStation, Sakugabooru, Vimeo, TikTok..."
                     className="pr-28 border-white/10 bg-black/40 focus:border-purple-500"
                   />
                   <Button
@@ -249,7 +257,7 @@ export function CaptureClipDialog({ onCreated, initialUrl, defaultOpen = false }
               {fetchingMeta ? (
                 <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-purple-950/20 p-3 text-xs text-purple-300">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Fetching creator credit and video metadata...
+                  Fetching creator credit and reference metadata...
                 </div>
               ) : oembedMeta?.thumbnailUrl || oembedMeta?.title ? (
                 <div className="flex items-center gap-3 rounded-xl border border-purple-500/20 bg-purple-950/30 p-2.5">
@@ -257,7 +265,7 @@ export function CaptureClipDialog({ onCreated, initialUrl, defaultOpen = false }
                     <img src={oembedMeta.thumbnailUrl} alt="Thumbnail preview" className="h-12 w-16 rounded-lg object-cover border border-white/10" />
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold text-white">{oembedMeta.title || 'Video Reference'}</p>
+                    <p className="truncate text-xs font-semibold text-white">{oembedMeta.title || 'Reference Clip'}</p>
                     {oembedMeta.authorName && (
                       <p className="text-[11px] text-purple-300">Credit: {oembedMeta.authorName} ({oembedMeta.providerName || 'Web'})</p>
                     )}
@@ -276,30 +284,37 @@ export function CaptureClipDialog({ onCreated, initialUrl, defaultOpen = false }
                 />
               </Field>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="In (seconds)">
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    required
-                    value={form.startTime}
-                    onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-                    className="border-white/10 bg-black/40"
-                  />
-                </Field>
-                <Field label="Out (seconds)">
-                  <Input
-                    type="number"
-                    min="0.1"
-                    step="0.1"
-                    required
-                    value={form.endTime}
-                    onChange={(e) => setForm({ ...form, endTime: e.target.value })}
-                    className="border-white/10 bg-black/40"
-                  />
-                </Field>
-              </div>
+              {oembedMeta?.mediaType && oembedMeta.mediaType !== 'video' ? (
+                <div className="flex items-center justify-between rounded-xl border border-purple-500/20 bg-purple-950/20 px-3 py-2 text-xs text-purple-200">
+                  <span className="font-medium capitalize">{oembedMeta.mediaType === 'model3d' ? '3D Model Reference' : `${oembedMeta.mediaType} Reference`}</span>
+                  <span className="text-zinc-400">Timestamps not needed for static / 3D reference</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="In (seconds)">
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      required
+                      value={form.startTime}
+                      onChange={(e) => setForm({ ...form, startTime: e.target.value })}
+                      className="border-white/10 bg-black/40"
+                    />
+                  </Field>
+                  <Field label="Out (seconds)">
+                    <Input
+                      type="number"
+                      min="0.1"
+                      step="0.1"
+                      required
+                      value={form.endTime}
+                      onChange={(e) => setForm({ ...form, endTime: e.target.value })}
+                      className="border-white/10 bg-black/40"
+                    />
+                  </Field>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Category">

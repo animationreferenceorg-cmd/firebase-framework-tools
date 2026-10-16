@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import type { Video } from '@/lib/types';
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Rewind, FastForward, Camera, ExternalLink, Instagram, Film, Share2, Heart, Bookmark, FlipHorizontal } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Rewind, FastForward, Camera, ExternalLink, Instagram, Film, Share2, Heart, Bookmark, FlipHorizontal, Loader2, Sparkles } from 'lucide-react';
 import { CreatorBadge } from '@/components/CreatorBadge';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -23,6 +23,7 @@ import { isForeignKeyTarget, isKeyboardTarget, registerPlayer, setHoveredPlayer 
 import { getEntitlements } from '@/lib/plans';
 import { resolveLoop, shouldWrapLoop } from '@/lib/loop-range';
 import { isVideoSourceAvailable, sanitizeVideoUrl } from '@/lib/video-availability';
+import { getInstagramId, isDirectPlayableVideoUrl } from '@/lib/reference-utils';
 import { track } from '@/lib/analytics';
 import { useViewingQuota } from '@/hooks/use-viewing-quota';
 import { VideoQuotaSlate } from '@/components/VideoQuotaSlate';
@@ -166,12 +167,71 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
     const [playerReloadToken, setPlayerReloadToken] = React.useState(0);
     // Retries that failed again, so the overlay can say so instead of looking unchanged.
     const [failedRetries, setFailedRetries] = React.useState(0);
-    const cleanVideoUrl = React.useMemo(() => sanitizeVideoUrl(video.videoUrl), [video.videoUrl]);
+    const [pulledVideoUrl, setPulledVideoUrl] = React.useState<string | null>(null);
+    const [isPullingVideo, setIsPullingVideo] = React.useState(false);
+    const [pullError, setPullError] = React.useState<string | null>(null);
+
+    const effectiveUrl = pulledVideoUrl || video.videoUrl;
+    const cleanVideoUrl = React.useMemo(() => sanitizeVideoUrl(effectiveUrl), [effectiveUrl]);
+    const instagramId = React.useMemo(() => {
+        const raw = cleanVideoUrl || video.originalUrl || (video as any).sourceUrl || '';
+        return getInstagramId(raw);
+    }, [cleanVideoUrl, video.originalUrl, (video as any).sourceUrl]);
+    const isPlayableFile = React.useMemo(() => isDirectPlayableVideoUrl(cleanVideoUrl), [cleanVideoUrl]);
     // Hosted on a library that went offline: no retry can ever succeed.
-    const sourceGone = !isVideoSourceAvailable(cleanVideoUrl);
+    const sourceGone = !isVideoSourceAvailable(cleanVideoUrl) && !instagramId;
     const [fps, setFps] = React.useState<number>(video.fps || 24);
     const [isFlipped, setIsFlipped] = React.useState(false);
     const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+    const handlePullVideo = React.useCallback(async () => {
+        if (isPullingVideo) return;
+        setIsPullingVideo(true);
+        setPullError(null);
+        try {
+            const postUrl = video.originalUrl || (video as any).sourceUrl || (instagramId ? `https://www.instagram.com/reel/${instagramId}/` : '');
+            const res = await fetch('/api/social/pull', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    url: postUrl,
+                    videoId: video.id,
+                    authorName: video.uploader || (video as any).sourceAuthorName || undefined,
+                    authorAvatar: video.authorAvatar || (video as any).sourceAuthorAvatar || undefined,
+                    title: video.title,
+                }),
+            });
+            const data = await res.json();
+            if (data.success && data.video?.videoUrl) {
+                setPulledVideoUrl(data.video.videoUrl);
+                if (data.video.uploader && !video.uploader) {
+                    video.uploader = data.video.uploader;
+                }
+                if (data.video.authorAvatar && !video.authorAvatar) {
+                    video.authorAvatar = data.video.authorAvatar;
+                }
+                toast({
+                    title: "Pulled into Library!",
+                    description: `Now playing natively with frame stepping & studio tools. Tagged ${video.uploader || 'creator'}.`,
+                });
+            } else {
+                setPullError(data.error || 'Could not pull video from Instagram.');
+            }
+        } catch (err: any) {
+            setPullError(err?.message || 'Network error pulling video.');
+        } finally {
+            setIsPullingVideo(false);
+        }
+    }, [isPullingVideo, video, instagramId, toast]);
+
+    React.useEffect(() => {
+        if (instagramId && !isPlayableFile && !pulledVideoUrl && !isPullingVideo && !pullError) {
+            const timer = setTimeout(() => {
+                handlePullVideo();
+            }, 600);
+            return () => clearTimeout(timer);
+        }
+    }, [instagramId, isPlayableFile, pulledVideoUrl, isPullingVideo, pullError, handlePullVideo]);
 
     // Study tools: A–B loop, view filters and onion skin.
     const [viewMode, setViewMode] = React.useState<ViewMode>('normal');
@@ -579,7 +639,73 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                     className={cn("absolute inset-0 transition-transform duration-200", isFlipped && "-scale-x-100")}
                     style={{ filter: VIEW_MODE_FILTER[viewMode] }}
                 >
-                {!sourceGone && <Player
+                {instagramId && !isPlayableFile ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-zinc-950 via-[#100c18] to-purple-950/40 p-6 text-center select-text relative overflow-hidden">
+                        {(video.posterUrl || video.thumbnailUrl) && (
+                            <img
+                                src={video.posterUrl || video.thumbnailUrl}
+                                alt=""
+                                className="absolute inset-0 w-full h-full object-cover opacity-20 filter blur-sm pointer-events-none"
+                            />
+                        )}
+                        <div className="relative z-10 flex flex-col items-center max-w-md gap-4">
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15">
+                                <Instagram className="w-4 h-4 text-pink-400" />
+                                <span className="text-xs font-semibold text-zinc-200">
+                                    Instagram Post by {video.uploader ? (video.uploader.startsWith('@') ? video.uploader : `@${video.uploader}`) : 'Original Creator'}
+                                </span>
+                            </div>
+
+                            <div>
+                                <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+                                    Pull into Studio Player
+                                </h3>
+                                <p className="text-xs sm:text-sm text-zinc-400 mt-1 leading-relaxed">
+                                    Ingesting Instagram reference into your library for frame-by-frame scrubbing (&lt; &gt; keys), speed controls, loop tools, and onion skinning.
+                                </p>
+                            </div>
+
+                            {pullError && (
+                                <p className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-lg px-3 py-1.5">
+                                    {pullError}
+                                </p>
+                            )}
+
+                            <div className="flex flex-wrap items-center justify-center gap-3 mt-1">
+                                <Button
+                                    onClick={handlePullVideo}
+                                    disabled={isPullingVideo}
+                                    className="bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs sm:text-sm h-10 px-5 rounded-xl shadow-lg shadow-purple-600/30 gap-2 cursor-pointer"
+                                >
+                                    {isPullingVideo ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin text-purple-200" />
+                                            <span>Pulling into Studio…</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles className="w-4 h-4 text-amber-300" />
+                                            <span>Pull &amp; Play with Frame Controls</span>
+                                        </>
+                                    )}
+                                </Button>
+
+                                {(video.originalUrl || (video as any).sourceUrl) && (
+                                    <a
+                                        href={video.originalUrl || (video as any).sourceUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white px-3 py-2 rounded-xl border border-white/10 hover:border-white/20 transition-colors"
+                                    >
+                                        <ExternalLink className="w-3.5 h-3.5" />
+                                        <span>View on Instagram</span>
+                                    </a>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                ) : !sourceGone && (
+                    <Player
                     key={`${video.id}-${playerReloadToken}`}
                     playerRef={playerRef}
                     url={cleanVideoUrl}
@@ -625,7 +751,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                             } : {}
                         }
                     }}
-                />}
+                />)}
                 {onionSupported && (
                     <OnionSkinOverlay
                         ref={onionRef}
@@ -644,7 +770,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                 </div>
 
                 {/* Never strand the user on a black player when a source fails. */}
-                {(videoError || sourceGone) && (
+                {(videoError || sourceGone) && (!instagramId || isPlayableFile) && (
                     <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm rounded-lg gap-4 p-6 text-center">
                         <div className="w-16 h-16 bg-gradient-to-tr from-pink-500 to-purple-500 rounded-full flex items-center justify-center shadow-xl animate-bounce">
                             {video.originalUrl?.toLowerCase().includes('instagram.com') ? (

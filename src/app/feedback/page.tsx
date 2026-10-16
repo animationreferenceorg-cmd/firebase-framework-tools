@@ -192,7 +192,7 @@ export default function FeedbackPage() {
               <div className="h-10 w-10 md:h-12 md:w-12 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-700 p-0.5 shrink-0 shadow-[0_0_20px_-3px_rgba(34,197,94,0.4)] border border-green-400/40">
                 <div className="w-full h-full rounded-2xl bg-[#0f0c1d] flex items-center justify-center overflow-hidden relative">
                   <Image
-                    src="/site-icon.png"
+                    src="/icon.png"
                     alt="Animation Reference"
                     width={48}
                     height={48}

@@ -72,7 +72,7 @@ export default async function SeoLandingPage({ params }: Props) {
         "@type": "VideoObject",
         "name": video.title,
         "description": video.description || `Animation reference video: ${video.title}`,
-        "thumbnailUrl": video.thumbnailUrl || '/site-icon.png',
+        "thumbnailUrl": video.thumbnailUrl || '/icon.png',
         "uploadDate": video.createdAt && (video.createdAt as any).seconds 
             ? new Date((video.createdAt as any).seconds * 1000).toISOString() 
             : new Date().toISOString(),

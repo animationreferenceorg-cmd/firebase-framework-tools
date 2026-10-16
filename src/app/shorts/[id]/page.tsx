@@ -53,7 +53,7 @@ export async function generateMetadata(
       siteName: 'Animation Reference',
       images: [
         {
-          url: video.thumbnailUrl || '/logo.png',
+          url: video.thumbnailUrl || '/icon.png',
           width: 1200,
           height: 630,
           alt: video.title,
@@ -66,7 +66,7 @@ export async function generateMetadata(
       card: 'summary_large_image',
       title: video.title,
       description: video.description,
-      images: [video.thumbnailUrl || '/logo.png'],
+      images: [video.thumbnailUrl || '/icon.png'],
     },
   };
 }
@@ -85,7 +85,7 @@ export default async function ShortFilmDetailPage(props: PageProps) {
     '@type': 'VideoObject',
     name: video.title,
     description: video.description || 'Watch this animation short on Animation Reference.',
-    thumbnailUrl: video.thumbnailUrl || video.posterUrl || `${BASE_URL}/site-icon.png`,
+    thumbnailUrl: video.thumbnailUrl || video.posterUrl || `${BASE_URL}/icon.png`,
     contentUrl: video.videoUrl || undefined,
     embedUrl: pageUrl,
     url: pageUrl,
@@ -96,7 +96,7 @@ export default async function ShortFilmDetailPage(props: PageProps) {
       '@type': 'Organization',
       name: 'Animation Reference',
       url: BASE_URL,
-      logo: { '@type': 'ImageObject', url: `${BASE_URL}/site-icon.png` },
+      logo: { '@type': 'ImageObject', url: `${BASE_URL}/icon.png` },
     },
   };
 

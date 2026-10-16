@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     description: '100% human-crafted animation library, frame-by-frame controls, playblast compare, and clean animator portfolios.',
     url: 'https://animationreference.org/artstation-alternative',
     type: 'website',
-    images: [{ url: '/site-icon.png', width: 800, height: 800, alt: 'Animation Reference' }],
+    images: [{ url: '/icon.png', width: 1024, height: 1024, alt: 'Animation Reference' }],
   },
 };
 
@@ -75,7 +75,7 @@ const COMPARISON_ROWS = [
   {
     feature: 'Curated Motion Library',
     artstation: 'Scattered user uploads with no motion tags',
-    animref: '8,100+ tagged references (walks, combat, creatures, acting)',
+    animref: '589 curated reference clips for frame-by-frame study',
     winner: true,
   },
   {
@@ -117,7 +117,7 @@ const FAQS = [
   },
   {
     q: 'What does the Free plan include vs Pro?',
-    a: 'Free accounts get access to browse and study the 8,100+ reference library with frame-by-frame controls, create public boards, and build a public portfolio. Pro ($5/month or $45/year, with a $1 intro first month) unlocks unlimited references, side-by-side playblast compare, private boards, MP4 reference downloads, and PureRef exports.',
+    a: 'Free accounts can browse and study the 589-clip library with frame-by-frame controls, create public boards, and build a public portfolio. Pro ($5/month or $45/year, with a $1 intro first month) unlocks unlimited references, side-by-side playblast compare, private boards, MP4 reference downloads, and PureRef exports.',
   },
 ];
 
@@ -167,7 +167,7 @@ export default function ArtstationAlternativePage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             <Button asChild size="lg" className="w-full sm:w-auto bg-purple-600 hover:bg-purple-500 text-white font-semibold px-8 shadow-xl shadow-purple-900/40">
               <Link href="/home">
-                Explore 8,000+ References Free
+                Explore 589 References Free
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Link>
             </Button>
@@ -373,7 +373,7 @@ export default function ArtstationAlternativePage() {
       <section className="py-16 text-center border-t border-white/[0.08] bg-zinc-950/80">
         <h2 className="text-2xl font-bold text-white mb-3">Ready for a better animation platform?</h2>
         <p className="text-xs text-zinc-400 max-w-md mx-auto mb-6">
-          Join thousands of 2D and 3D animators studying reference and sharing real human work.
+          Join 2D and 3D animators studying reference and sharing real human work.
         </p>
         <Button asChild size="default" className="bg-purple-600 hover:bg-purple-500 text-white font-semibold px-6">
           <Link href="/home">

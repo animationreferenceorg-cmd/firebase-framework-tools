@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     description: 'Host your demo reel and animation shot breakdowns with frame-by-frame controls, timing charts, and recruiter-friendly presentation.',
     url: 'https://animationreference.org/portfolio',
     type: 'website',
-    images: [{ url: '/site-icon.png', width: 800, height: 800, alt: 'Animation Reference Portfolio' }],
+    images: [{ url: '/icon.png', width: 1024, height: 1024, alt: 'Animation Reference Portfolio' }],
   },
 };
 

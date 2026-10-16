@@ -420,7 +420,7 @@ export default function LandingPage() {
                         Ready to level up your animation shots?
                     </h2>
                     <p className="text-lg sm:text-xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
-                        Join thousands of student, indie, and studio animators building their personal reference library today.
+                        Join student, indie, and studio animators building their personal reference library today.
                     </p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                         <Button asChild size="lg" className="h-16 px-10 rounded-2xl text-lg font-bold bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-[0_0_40px_rgba(147,51,234,0.5)] border border-purple-400/30 transition-all hover:scale-105 cursor-pointer">

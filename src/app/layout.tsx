@@ -31,10 +31,10 @@ import { GoogleAnalytics } from '@/components/layout/GoogleAnalytics';
 export const metadata: Metadata = {
   metadataBase: new URL('https://animationreference.org'),
   title: {
-    default: 'Animation Reference | 8,000+ Curated References & Animator Portfolios',
+    default: 'Animation Reference | 589 Curated Clips & Animator Portfolios',
     template: '%s | Animation Reference',
   },
-  description: 'Study 8,000+ curated animation references with frame-by-frame controls, playblast comparison, and animator portfolios. The human-crafted ArtStation alternative for 2D & 3D animators.',
+  description: 'Study 589 curated animation clips with frame-by-frame controls, playblast comparison, and animator portfolios. A creator-first study tool for 2D & 3D animators.',
   keywords: [
     'animation reference',
     'artstation alternative',
@@ -54,18 +54,18 @@ export const metadata: Metadata = {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || 'f4VjQ3aKx_7H2q0pXz_auth_placeholder',
   },
   icons: {
-    icon: '/site-icon.png',
-    shortcut: '/site-icon.png',
-    apple: '/site-icon.png',
+    icon: '/icon.png',
+    shortcut: '/icon.png',
+    apple: '/icon.png',
   },
   openGraph: {
     title: 'Animation Reference | Frame-by-Frame Motion Study & Portfolios',
-    description: 'Over 8,000 curated animation clips, frame scrubbing, side-by-side playblast compare, and clean animator portfolios. The creator-first alternative to ArtStation.',
+    description: '589 curated animation clips, frame scrubbing, side-by-side playblast compare, and clean animator portfolios.',
     images: [
       {
-        url: '/site-icon.png',
-        width: 800,
-        height: 800,
+        url: '/icon.png',
+        width: 1024,
+        height: 1024,
         alt: 'Animation Reference Logo',
       },
     ],
@@ -75,8 +75,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Animation Reference | Frame-by-Frame Motion Study & Portfolios',
-    description: 'Over 8,000 curated animation clips, frame scrubbing, side-by-side playblast compare, and clean animator portfolios.',
-    images: ['/site-icon.png'],
+    description: '589 curated animation clips, frame scrubbing, side-by-side playblast compare, and clean animator portfolios.',
+    images: ['/icon.png'],
   },
   alternates: {
     canonical: '/',
@@ -88,14 +88,6 @@ const websiteSchema = {
   '@type': 'WebSite',
   name: 'Animation Reference',
   url: 'https://animationreference.org',
-  potentialAction: {
-    '@type': 'SearchAction',
-    target: {
-      '@type': 'EntryPoint',
-      urlTemplate: 'https://animationreference.org/tags/{search_term_string}',
-    },
-    'query-input': 'required name=search_term_string',
-  },
 };
 
 const organizationSchema = {
@@ -103,7 +95,7 @@ const organizationSchema = {
   '@type': 'Organization',
   name: 'Animation Reference',
   url: 'https://animationreference.org',
-  logo: 'https://animationreference.org/site-icon.png',
+  logo: 'https://animationreference.org/icon.png',
   sameAs: [
     'https://twitter.com/animreference',
   ],

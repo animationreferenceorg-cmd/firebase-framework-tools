@@ -261,7 +261,7 @@ export default function FeedbackPage() {
                         <div className="flex-shrink-0">
                           <div className="relative h-9 w-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center border border-primary/30">
                             <Image
-                              src="/site-icon.png"
+                              src="/icon.png"
                               alt="Animation Reference"
                               width={36}
                               height={36}

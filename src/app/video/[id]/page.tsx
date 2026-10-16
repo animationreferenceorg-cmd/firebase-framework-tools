@@ -97,7 +97,7 @@ export async function generateMetadata(
             siteName: 'Animation Reference',
             images: [
                 {
-                    url: video.thumbnailUrl || '/logo.png',
+                    url: video.thumbnailUrl || '/icon.png',
                     width: video.width || 1200,
                     height: video.height || 630,
                     alt: video.title,
@@ -120,7 +120,7 @@ export async function generateMetadata(
             card: 'summary_large_image',
             title: video.title,
             description,
-            images: [video.thumbnailUrl || '/logo.png'],
+            images: [video.thumbnailUrl || '/icon.png'],
         },
     };
 }
@@ -139,7 +139,7 @@ export default async function VideoPage({ params }: Props) {
         '@type': 'VideoObject',
         name: video.title,
         description: buildDescription(video),
-        thumbnailUrl: video.thumbnailUrl || video.posterUrl || `${BASE_URL}/site-icon.png`,
+        thumbnailUrl: video.thumbnailUrl || video.posterUrl || `${BASE_URL}/icon.png`,
         contentUrl: video.videoUrl || undefined,
         embedUrl: pageUrl,
         uploadDate: toIsoDate((video as Video & { createdAt?: unknown }).createdAt),
@@ -154,7 +154,7 @@ export default async function VideoPage({ params }: Props) {
             '@type': 'Organization',
             name: 'Animation Reference',
             url: BASE_URL,
-            logo: { '@type': 'ImageObject', url: `${BASE_URL}/site-icon.png` },
+            logo: { '@type': 'ImageObject', url: `${BASE_URL}/icon.png` },
         },
     };
 

@@ -13,6 +13,7 @@ import {
 import type { Video } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { VideoPlayer } from '@/components/VideoPlayer';
+import { ArtworkDetailModal } from '@/components/reference/ArtworkDetailModal';
 import { SideBySideCompareModal } from '@/components/reference/SideBySideCompareModal';
 import { ContactSheetModal } from '@/components/reference/ContactSheetModal';
 import { ProDownloadButton } from '@/components/ProDownloadButton';
@@ -31,6 +32,12 @@ type VideoFullscreenViewerProps = {
 };
 
 export function VideoFullscreenViewer({ video, title, description, onClose }: VideoFullscreenViewerProps) {
+    // If reference is an artwork or project without a playable video stream,
+    // open the dedicated interactive artwork & project asset viewer
+    if (!video.videoUrl && (video.posterUrl || video.thumbnailUrl)) {
+        return <ArtworkDetailModal item={video} isOpen={true} onClose={onClose} />;
+    }
+
     const originalIsInstagram = video.originalUrl?.toLowerCase().includes('instagram.com');
     const { userProfile } = useUser();
     const entitlements = getEntitlements(userProfile);

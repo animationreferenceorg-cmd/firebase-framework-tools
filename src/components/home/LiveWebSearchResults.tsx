@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Bookmark, 
   Box,
@@ -12,18 +12,83 @@ import {
   Pin, 
   Sparkles, 
   Zap, 
-  Film 
+  Film,
+  Play,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import type { UnifiedSearchResult } from '@/app/api/import/search/route';
+import type { Video } from '@/lib/types';
+import { searchResultToVideo } from '@/lib/reference-hub';
+import { VideoFullscreenViewer } from '@/components/VideoFullscreenViewer';
+import { ArtworkDetailModal } from '@/components/reference/ArtworkDetailModal';
 
 interface LiveWebSearchResultsProps {
   query: string;
   results: UnifiedSearchResult[];
   loading: boolean;
   className?: string;
+}
+
+function HoverVideo({ src, poster, isHovered }: { src: string; poster?: string; isHovered: boolean }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (isHovered) {
+      el.play().catch(() => {});
+    } else {
+      el.pause();
+      el.currentTime = 0;
+    }
+  }, [isHovered]);
+
+  return (
+    <video
+      ref={videoRef}
+      src={src}
+      poster={poster}
+      playsInline
+      muted
+      loop
+      preload="metadata"
+      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+    />
+  );
+}
+
+function SafeImage({ src, fallbackSrc, alt }: { src: string; fallbackSrc?: string; alt: string }) {
+  const [imgSrc, setImgSrc] = useState(src);
+  const [failedOnce, setFailedOnce] = useState(false);
+
+  useEffect(() => {
+    setImgSrc(src);
+    setFailedOnce(false);
+  }, [src]);
+
+  const handleError = () => {
+    if (!failedOnce && src) {
+      setFailedOnce(true);
+      setImgSrc(`/api/proxy/image?url=${encodeURIComponent(src)}`);
+    } else if (fallbackSrc && imgSrc !== fallbackSrc) {
+      setImgSrc(fallbackSrc);
+    }
+  };
+
+  return (
+    <img
+      src={imgSrc}
+      alt={alt}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={handleError}
+      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+    />
+  );
 }
 
 export function LiveWebSearchResults({ query, results, loading, className = '' }: LiveWebSearchResultsProps) {
@@ -34,6 +99,25 @@ export function LiveWebSearchResults({ query, results, loading, className = '' }
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [sourceFilter, setSourceFilter] = useState<string>('all');
+
+  // Interactive View Modals
+  const [selectedArtwork, setSelectedArtwork] = useState<UnifiedSearchResult | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  const [active3DModel, setActive3DModel] = useState<UnifiedSearchResult | null>(null);
+
+  const handleCardClick = (item: UnifiedSearchResult) => {
+    if (item.embedUrl || item.source === 'sketchfab' || item.mediaType === 'model3d') {
+      setActive3DModel(item);
+    } else if (
+      item.mediaType === 'video' ||
+      (item.mediaUrl && (item.mediaUrl.endsWith('.mp4') || item.mediaUrl.endsWith('.webm')))
+    ) {
+      const converted = searchResultToVideo(item);
+      setSelectedVideo(converted);
+    } else {
+      setSelectedArtwork(item);
+    }
+  };
 
   const handleSaveItem = async (item: UnifiedSearchResult, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -69,7 +153,7 @@ export function LiveWebSearchResults({ query, results, loading, className = '' }
       });
 
       if (!res.ok) throw new Error('Could not save to library');
-      setSavedIds(prev => new Set([...prev, item.id]));
+      setSavedIds((prev) => new Set([...prev, item.id]));
       toast({
         title: 'Saved to library!',
         description: `"${item.title.slice(0, 40)}..." is now in your collection.`,
@@ -139,53 +223,58 @@ export function LiveWebSearchResults({ query, results, loading, className = '' }
     }
   };
 
-  const filteredResults = sourceFilter === 'all' 
-    ? results 
-    : results.filter(r => r.source === sourceFilter);
+  const filteredResults =
+    sourceFilter === 'all'
+      ? results
+      : results.filter((r) => r.source === sourceFilter);
 
-  const availableSources = Array.from(new Set(results.map(r => r.source)));
+  const sourcesAvailable = Array.from(new Set(results.map((r) => r.source)));
 
   return (
-    <div className={`space-y-6 ${className}`}>
-      {/* Sub-Filter pills if multiple sources returned */}
-      {availableSources.length > 1 && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          <button
-            onClick={() => setSourceFilter('all')}
-            className={`rounded-full px-3 py-1 text-xs font-bold transition-all ${
-              sourceFilter === 'all'
-                ? 'bg-violet-600 text-white'
-                : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            All Sources ({results.length})
-          </button>
-          {availableSources.map(src => {
-            const count = results.filter(r => r.source === src).length;
-            const label = src === 'artstation' ? 'ArtStation'
-              : src === 'pinterest' ? 'Pinterest'
-              : src === 'sakugabooru' ? 'Sakugabooru'
-              : src === 'wikimedia' ? 'Wikimedia'
-              : src === 'archive' ? 'Archive'
-              : src;
-            return (
+    <div className={`space-y-4 ${className}`}>
+      {/* Search Header & Filter Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+        <div className="flex items-center gap-2">
+          <Globe className="h-5 w-5 text-violet-400 animate-pulse" />
+          <h2 className="text-base font-bold text-white tracking-wide">
+            Live Web References
+          </h2>
+          <span className="rounded-full bg-violet-500/20 px-2.5 py-0.5 text-xs font-semibold text-violet-300">
+            {results.length} found
+          </span>
+        </div>
+
+        {/* Source Pills */}
+        {sourcesAvailable.length > 1 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => setSourceFilter('all')}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors cursor-pointer ${
+                sourceFilter === 'all'
+                  ? 'bg-violet-600 text-white'
+                  : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              All Sources
+            </button>
+            {sourcesAvailable.map((src) => (
               <button
                 key={src}
                 onClick={() => setSourceFilter(src)}
-                className={`rounded-full px-3 py-1 text-xs font-bold transition-all ${
+                className={`rounded-full px-3 py-1 text-xs font-semibold capitalize transition-colors cursor-pointer ${
                   sourceFilter === src
                     ? 'bg-violet-600 text-white'
                     : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
                 }`}
               >
-                {label} ({count})
+                {src}
               </button>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
 
-      {/* Loading State */}
+      {/* Grid Results */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 py-4">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -201,7 +290,9 @@ export function LiveWebSearchResults({ query, results, loading, className = '' }
           <p className="text-sm font-semibold text-zinc-300">
             No live external results for &quot;{query}&quot;
           </p>
-          <p className="text-xs text-zinc-500 mt-1">Try another search keyword such as &quot;walk cycle&quot;, &quot;character turnaround&quot;, or &quot;smear frame&quot;.</p>
+          <p className="text-xs text-zinc-500 mt-1">
+            Try another search keyword such as &quot;walk cycle&quot;, &quot;character turnaround&quot;, or &quot;smear frame&quot;.
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -209,39 +300,31 @@ export function LiveWebSearchResults({ query, results, loading, className = '' }
             const isSaved = savedIds.has(item.id);
             const isSaving = savingId === item.id;
             const isHovered = hoveredId === item.id;
+            const isVideo =
+              item.mediaType === 'video' ||
+              (item.mediaUrl && (item.mediaUrl.endsWith('.mp4') || item.mediaUrl.endsWith('.webm')));
 
             return (
               <div
                 key={item.id}
                 onMouseEnter={() => setHoveredId(item.id)}
                 onMouseLeave={() => setHoveredId(null)}
-                className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/70 transition-all duration-300 hover:border-violet-500/40 hover:shadow-[0_8px_30px_rgba(124,58,237,0.15)]"
+                onClick={() => handleCardClick(item)}
+                className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/70 transition-all duration-300 hover:border-violet-500/40 hover:shadow-[0_8px_30px_rgba(124,58,237,0.15)] cursor-pointer"
               >
                 {/* Media Container */}
                 <div className="relative aspect-[4/3] w-full overflow-hidden bg-black/60">
-                  {item.mediaType === 'video' ? (
-                    <video
+                  {isVideo ? (
+                    <HoverVideo
                       src={item.mediaUrl}
                       poster={item.thumbnailUrl}
-                      playsInline
-                      muted
-                      loop
-                      autoPlay={isHovered}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      isHovered={isHovered}
                     />
                   ) : (
-                    <img
+                    <SafeImage
                       src={item.mediaUrl || item.thumbnailUrl}
+                      fallbackSrc={item.thumbnailUrl}
                       alt={item.title}
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        const target = e.currentTarget;
-                        if (target.src !== item.thumbnailUrl && item.thumbnailUrl) {
-                          target.src = item.thumbnailUrl;
-                        }
-                      }}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   )}
 
@@ -256,8 +339,17 @@ export function LiveWebSearchResults({ query, results, loading, className = '' }
                     </span>
                   </div>
 
+                  {/* Play Indicator for Videos */}
+                  {isVideo && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className={`flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md transition-all ${isHovered ? 'scale-75 opacity-0' : 'scale-100 opacity-90'}`}>
+                        <Play className="h-5 w-5 fill-white ml-0.5" />
+                      </div>
+                    </div>
+                  )}
+
                   {/* Quick Action Overlay */}
-                  <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1.5 opacity-90 transition-opacity">
+                  <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1.5 opacity-90 transition-opacity z-10">
                     <a
                       href={item.sourceUrl}
                       target="_blank"
@@ -325,6 +417,63 @@ export function LiveWebSearchResults({ query, results, loading, className = '' }
             );
           })}
         </div>
+      )}
+
+      {/* Artwork Project Viewer Modal */}
+      {selectedArtwork && (
+        <ArtworkDetailModal
+          item={selectedArtwork}
+          isOpen={Boolean(selectedArtwork)}
+          onClose={() => setSelectedArtwork(null)}
+        />
+      )}
+
+      {/* Video Fullscreen Player Dialog */}
+      {selectedVideo && (
+        <div className="fixed inset-0 z-[260]">
+          <VideoFullscreenViewer
+            video={selectedVideo}
+            title={selectedVideo.title}
+            description={selectedVideo.description}
+            onClose={() => setSelectedVideo(null)}
+          />
+        </div>
+      )}
+
+      {/* 3D Model Inspector Modal */}
+      {active3DModel && (
+        <Dialog open={Boolean(active3DModel)} onOpenChange={() => setActive3DModel(null)}>
+          <DialogContent className="max-w-4xl border-white/10 bg-zinc-950/95 p-6 backdrop-blur-2xl">
+            <DialogTitle className="flex items-center justify-between text-lg font-bold text-white">
+              <span className="flex items-center gap-2">
+                <Box className="h-5 w-5 text-[#1CAAD9]" />
+                {active3DModel.title}
+              </span>
+              <a
+                href={active3DModel.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-white"
+              >
+                View on Sketchfab <ExternalLink className="h-3 w-3" />
+              </a>
+            </DialogTitle>
+            <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-black mt-4">
+              {active3DModel.embedUrl ? (
+                <iframe
+                  src={active3DModel.embedUrl}
+                  title={active3DModel.title}
+                  allow="autoplay; fullscreen; xr-spatial-tracking"
+                  className="h-full w-full border-0"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-zinc-500">
+                  3D Embed Not Available
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

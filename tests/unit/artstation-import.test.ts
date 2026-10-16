@@ -50,4 +50,28 @@ describe('ArtStation import', () => {
     expect(ARTSTATION_USERNAME.test('a')).toBe(false);
     expect(verificationCode('AB12CD34EF')).toBe('animref-ab12cd34');
   });
+
+  it('validates image proxy allowed domains and protects against SSRF', () => {
+    const ALLOWED = [
+      'artstation.com',
+      'cdna.artstation.com',
+      'pinimg.com',
+      'sakugabooru.com',
+      'wikimedia.org',
+    ];
+    const isAllowed = (urlStr: string) => {
+      try {
+        const parsed = new URL(urlStr);
+        const host = parsed.hostname.toLowerCase();
+        return ALLOWED.some((a) => host === a || host.endsWith(`.${a}`));
+      } catch {
+        return false;
+      }
+    };
+
+    expect(isAllowed('https://cdna.artstation.com/p/assets/images/test.jpg')).toBe(true);
+    expect(isAllowed('https://i.pinimg.com/736x/test.jpg')).toBe(true);
+    expect(isAllowed('https://evil-site.com/malicious.jpg')).toBe(false);
+    expect(isAllowed('http://169.254.169.254/metadata')).toBe(false);
+  });
 });

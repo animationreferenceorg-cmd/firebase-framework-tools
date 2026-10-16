@@ -23,10 +23,72 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import type { UnifiedSearchResult } from '@/app/api/import/search/route';
+import type { Video } from '@/lib/types';
+import { searchResultToVideo } from '@/lib/reference-hub';
+import { VideoFullscreenViewer } from '@/components/VideoFullscreenViewer';
+import { ArtworkDetailModal } from '@/components/reference/ArtworkDetailModal';
 import Link from 'next/link';
 
 interface LiveWebDiscoveryShelfProps {
   className?: string;
+}
+
+function HoverVideo({ src, poster, isHovered }: { src: string; poster?: string; isHovered: boolean }) {
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+
+  React.useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (isHovered) {
+      el.play().catch(() => {});
+    } else {
+      el.pause();
+      el.currentTime = 0;
+    }
+  }, [isHovered]);
+
+  return (
+    <video
+      ref={videoRef}
+      src={src}
+      poster={poster}
+      playsInline
+      muted
+      loop
+      preload="metadata"
+      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+    />
+  );
+}
+
+function SafeImage({ src, fallbackSrc, alt }: { src: string; fallbackSrc?: string; alt: string }) {
+  const [imgSrc, setImgSrc] = React.useState(src);
+  const [failedOnce, setFailedOnce] = React.useState(false);
+
+  React.useEffect(() => {
+    setImgSrc(src);
+    setFailedOnce(false);
+  }, [src]);
+
+  const handleError = () => {
+    if (!failedOnce && src) {
+      setFailedOnce(true);
+      setImgSrc(`/api/proxy/image?url=${encodeURIComponent(src)}`);
+    } else if (fallbackSrc && imgSrc !== fallbackSrc) {
+      setImgSrc(fallbackSrc);
+    }
+  };
+
+  return (
+    <img
+      src={imgSrc}
+      alt={alt}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={handleError}
+      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+    />
+  );
 }
 
 export function LiveWebDiscoveryShelf({ className = '' }: LiveWebDiscoveryShelfProps) {
@@ -40,6 +102,8 @@ export function LiveWebDiscoveryShelf({ className = '' }: LiveWebDiscoveryShelfP
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(20);
   const [active3DModel, setActive3DModel] = useState<UnifiedSearchResult | null>(null);
+  const [selectedArtwork, setSelectedArtwork] = useState<UnifiedSearchResult | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
 
   const fetchRandomizedStream = async () => {
     setLoading(true);
@@ -245,36 +309,29 @@ export function LiveWebDiscoveryShelf({ className = '' }: LiveWebDiscoveryShelfP
                 <div 
                   className="relative aspect-[4/3] w-full overflow-hidden bg-black/60 cursor-pointer"
                   onClick={() => {
-                    if (item.embedUrl) {
+                    if (item.embedUrl || is3D) {
                       setActive3DModel(item);
-                    } else if (item.sourceUrl) {
-                      window.open(item.sourceUrl, '_blank', 'noopener,noreferrer');
+                    } else if (
+                      item.mediaType === 'video' ||
+                      (item.mediaUrl && (item.mediaUrl.endsWith('.mp4') || item.mediaUrl.endsWith('.webm')))
+                    ) {
+                      setSelectedVideo(searchResultToVideo(item));
+                    } else {
+                      setSelectedArtwork(item);
                     }
                   }}
                 >
-                  {item.mediaType === 'video' ? (
-                    <video
+                  {item.mediaType === 'video' || (item.mediaUrl && (item.mediaUrl.endsWith('.mp4') || item.mediaUrl.endsWith('.webm'))) ? (
+                    <HoverVideo
                       src={item.mediaUrl}
                       poster={item.thumbnailUrl}
-                      playsInline
-                      muted
-                      loop
-                      autoPlay={isHovered}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      isHovered={isHovered}
                     />
                   ) : (
-                    <img
+                    <SafeImage
                       src={item.mediaUrl || item.thumbnailUrl}
+                      fallbackSrc={item.thumbnailUrl}
                       alt={item.title}
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        const target = e.currentTarget;
-                        if (target.src !== item.thumbnailUrl && item.thumbnailUrl) {
-                          target.src = item.thumbnailUrl;
-                        }
-                      }}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   )}
 
@@ -451,6 +508,27 @@ export function LiveWebDiscoveryShelf({ className = '' }: LiveWebDiscoveryShelfP
               />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Artwork Project Viewer Modal */}
+      {selectedArtwork && (
+        <ArtworkDetailModal
+          item={selectedArtwork}
+          isOpen={Boolean(selectedArtwork)}
+          onClose={() => setSelectedArtwork(null)}
+        />
+      )}
+
+      {/* Video Fullscreen Player Dialog */}
+      {selectedVideo && (
+        <div className="fixed inset-0 z-[260]">
+          <VideoFullscreenViewer
+            video={selectedVideo}
+            title={selectedVideo.title}
+            description={selectedVideo.description}
+            onClose={() => setSelectedVideo(null)}
+          />
         </div>
       )}
     </section>

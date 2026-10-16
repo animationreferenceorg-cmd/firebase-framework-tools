@@ -361,6 +361,9 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   };
 
   const imageUrl = (video.isShort || poster) ? (video.posterUrl || video.thumbnailUrl) : (video.thumbnailUrl || video.posterUrl);
+  const [proxyImgUrl, setProxyImgUrl] = useState<string | null>(null);
+  const [proxyTried, setProxyTried] = useState(false);
+  const effectiveImageUrl = proxyImgUrl || imageUrl;
   const aspectRatio = (video.isShort || poster) ? "aspect-[2/3]" : "aspect-[3/4] md:aspect-video";
 
   // Bypass Next.js image optimizer for external CDNs that block server-side fetches (403)
@@ -408,15 +411,16 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           )}
         >
           {!isImageLoaded && <Skeleton className="absolute inset-0" />}
-          {imageUrl && !hasImageError ? (
+          {effectiveImageUrl && !hasImageError ? (
               <Image
                 loading={priority ? undefined : "lazy"}
                 priority={priority}
-                src={imageUrl}
+                src={effectiveImageUrl}
                 alt={video.title}
                 fill
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 unoptimized={isExternalCdn}
+                referrerPolicy="no-referrer"
                 className={cn(
                   "w-full h-full object-cover transition-opacity duration-300",
                   (!isImageLoaded || (isHovered && video.videoUrl && isCommunityVideo)) && "opacity-0"
@@ -424,8 +428,13 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
                 data-ai-hint={video.dataAiHint}
                 onLoad={() => setIsImageLoaded(true)}
                 onError={() => {
-                  setHasImageError(true);
-                  setIsImageLoaded(true);
+                  if (!proxyTried && isExternalCdn && imageUrl && !imageUrl.startsWith('data:') && !imageUrl.startsWith('/api/proxy')) {
+                    setProxyTried(true);
+                    setProxyImgUrl(`/api/proxy/image?url=${encodeURIComponent(imageUrl)}`);
+                  } else {
+                    setHasImageError(true);
+                    setIsImageLoaded(true);
+                  }
                 }}
               />
           ) : isCommunityVideo && video.videoUrl ? (
@@ -506,13 +515,14 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           {!isImageLoaded && <Skeleton className="absolute inset-0" />}
           
           {/* Main Social Background / Thumbnail */}
-          {imageUrl && !hasImageError ? (
+          {effectiveImageUrl && !hasImageError ? (
             <>
               <Image loading="lazy"
-                src={imageUrl}
+                src={effectiveImageUrl}
                 alt={video.title}
                 fill
                 unoptimized={isExternalCdn}
+                referrerPolicy="no-referrer"
                 className={cn(
                   "w-full h-full object-cover transition-transform duration-500",
                   isHovered && !isPlayerOpen ? "scale-[1.06]" : "scale-100",
@@ -521,8 +531,13 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
                 data-ai-hint={video.dataAiHint}
                 onLoad={() => setIsImageLoaded(true)}
                 onError={() => {
-                  setHasImageError(true);
-                  setIsImageLoaded(true);
+                  if (!proxyTried && isExternalCdn && imageUrl && !imageUrl.startsWith('data:') && !imageUrl.startsWith('/api/proxy')) {
+                    setProxyTried(true);
+                    setProxyImgUrl(`/api/proxy/image?url=${encodeURIComponent(imageUrl)}`);
+                  } else {
+                    setHasImageError(true);
+                    setIsImageLoaded(true);
+                  }
                 }}
               />
             </>

@@ -12,9 +12,12 @@ export interface UnifiedSearchResult {
   mediaUrl: string;
   mediaType: 'video' | 'image' | 'gif' | 'model3d';
   authorName?: string;
+  authorAvatar?: string;
   tags: string[];
   description?: string;
   embedUrl?: string;
+  hasMultipleAssets?: boolean;
+  hashId?: string;
 }
 
 // Curated Pinterest animation & vis dev reference feeds
@@ -124,8 +127,6 @@ export async function GET(request: NextRequest) {
                 for (const item of data.data || []) {
                   if (!item.url) continue;
                   const cover = item.smaller_square_cover_url || '';
-                  const highResCover = cover.replace('/smaller_square/', '/large/');
-                  const isVideo = Boolean(item.icons?.video || item.icons?.video_clip);
                   const is3D = Boolean(item.icons?.model3d || item.icons?.marmoset);
                   results.push({
                     id: `as_${item.id}`,
@@ -133,11 +134,14 @@ export async function GET(request: NextRequest) {
                     source: 'artstation',
                     sourceUrl: item.url,
                     thumbnailUrl: cover,
-                    mediaUrl: highResCover || cover,
-                    mediaType: isVideo ? 'video' : is3D ? 'model3d' : 'image',
+                    mediaUrl: cover,
+                    mediaType: is3D ? 'model3d' : 'image',
                     authorName: item.user?.full_name || item.user?.username || 'ArtStation Artist',
+                    authorAvatar: item.user?.medium_avatar_url || '',
+                    hasMultipleAssets: Boolean(item.icons?.multiple_images),
+                    hashId: item.hash_id,
                     tags: ['artstation', 'vis-dev', 'concept-art', 'turnaround', 'reference'],
-                    description: `By ${item.user?.full_name || item.user?.username} on ArtStation`,
+                    description: `By ${item.user?.full_name || item.user?.username || 'Artist'} on ArtStation`,
                   });
                 }
               }

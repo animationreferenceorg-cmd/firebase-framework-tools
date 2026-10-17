@@ -271,6 +271,8 @@ export interface PortfolioItem {
   /** Original post when imported from another site (e.g. ArtStation). */
   sourceUrl?: string;
   importedFrom?: 'artstation';
+  authorUsername?: string;
+  hashId?: string;
   createdAt: any;
   updatedAt: any;
 }

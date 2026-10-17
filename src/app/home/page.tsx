@@ -309,7 +309,7 @@ export default function HomePage() {
       <section id="reference-library" className="scroll-mt-28 space-y-5 pt-4">
         <SectionHeading
           eyebrow={searchQuery ? 'Universal Hub Search' : 'The library'}
-          title={searchQuery ? <>Results for “{searchQuery}”</> : 'All reference clips'}
+          title={searchQuery ? <>Results for “{searchQuery}”</> : 'All references & 3D models'}
           aside={
             <span className="timecode rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-violet-200">
               <Film className="mr-1.5 inline h-3 w-3 -translate-y-px" />

@@ -46,7 +46,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
     return {
         title: `${name} Animation Reference — ${entry.videos.length} Clips${pageSuffix}`,
-        description: `Browse ${entry.videos.length} curated ${entry.tag} animation reference clips. Study ${entry.tag} timing, spacing, posing and motion. Free frame-by-frame animation reference for animators, game developers & motion designers.`,
+        description: `Browse millions of ${entry.tag} animation references, turnarounds & 3D models integrated across ArtStation, Sketchfab, Pinterest, and community libraries. Free frame-by-frame study for animators & game developers.`,
         keywords,
         alternates: {
             canonical,
@@ -182,7 +182,7 @@ export default async function TagPage({ params, searchParams }: Props) {
                     {name} Animation Reference
                 </h1>
                 <p className="text-muted-foreground leading-relaxed">
-                    {entry.videos.length} curated {entry.tag} animation reference clips for animators, game developers
+                    Millions of {entry.tag} animation references, turnarounds &amp; 3D models integrated across ArtStation, Sketchfab, Pinterest, and community libraries for animators, game developers
                     and motion designers. Open any clip for frame-by-frame playback to study the timing, spacing and
                     posing of real {entry.tag} motion{relatedTags.length > 0 && (
                         <> — often studied together with {relatedTags.slice(0, 3).map(t => t.tag).join(', ')}</>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
     ArrowLeft, 
     ExternalLink, 
@@ -8,7 +8,8 @@ import {
     Split, 
     LayoutGrid, 
     BookmarkPlus, 
-    Sparkles
+    Sparkles,
+    X
 } from 'lucide-react';
 import type { Video } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -69,6 +70,16 @@ export function VideoFullscreenViewer({ video, title, description, onClose }: Vi
         setShowSaveModal(true);
     };
 
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [onClose]);
+
     return (
         <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-[#080611] text-white">
             <header className="relative z-[210] flex h-16 shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-[#0d0a18]/95 px-3 backdrop-blur-xl sm:px-5">
@@ -92,10 +103,16 @@ export function VideoFullscreenViewer({ video, title, description, onClose }: Vi
                                     ? "bg-amber-500/10 border-amber-500/30 text-amber-300"
                                     : "bg-white/5 border-white/10 text-zinc-300"
                             )}
-                            title={`Daily reference quota: ${quota.todayRemaining} of ${quota.limit} clips left today. Resets tomorrow. Previously opened clips stay playable anytime.`}
+                            title={
+                                quota.isGuest
+                                    ? `Guest reference quota: ${quota.todayRemaining} of ${quota.limit} free clips left. Create an account to unlock 35 clips every day!`
+                                    : `Daily reference quota: ${quota.todayRemaining} of ${quota.limit} clips left today. Resets tomorrow. Previously opened clips stay playable anytime.`
+                            }
                         >
                             <span className={cn("w-1.5 h-1.5 rounded-full", quota.hasReachedLimit ? "bg-amber-400" : "bg-purple-400")} />
-                            <span>{quota.todayRemaining}/{quota.limit} left today</span>
+                            <span>
+                                {quota.todayRemaining}/{quota.limit} {quota.isGuest ? 'guest free' : 'left today'}
+                            </span>
                         </div>
                     )}
                 </div>
@@ -159,11 +176,31 @@ export function VideoFullscreenViewer({ video, title, description, onClose }: Vi
                             <span className="hidden lg:inline">Source</span>
                         </a>
                     )}
+
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={onClose}
+                        className="h-9 w-9 shrink-0 rounded-xl border border-white/15 bg-white/5 text-zinc-300 hover:bg-red-500/20 hover:text-white hover:border-red-500/40 transition-all cursor-pointer ml-1"
+                        title="Close Viewer (Esc)"
+                    >
+                        <X className="h-4 w-4" />
+                    </Button>
                 </div>
             </header>
 
-            <main className="min-h-0 flex-1 overflow-y-auto">
-                <div className="mx-auto flex min-h-full w-full max-w-[1500px] flex-col justify-center px-3 py-4 sm:px-6 sm:py-6 lg:px-10">
+            <main 
+                className="min-h-0 flex-1 overflow-y-auto cursor-pointer"
+                onClick={(e) => {
+                    if (e.target === e.currentTarget) onClose();
+                }}
+            >
+                <div 
+                    className="mx-auto flex min-h-full w-full max-w-[1500px] flex-col justify-center px-3 py-4 sm:px-6 sm:py-6 lg:px-10 cursor-default"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) onClose();
+                    }}
+                >
                     <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-[0_24px_80px_-24px_rgba(124,58,237,0.45)] sm:rounded-2xl">
                         <VideoPlayer video={video} startsPaused={false} muted enforceViewingQuota />
                     </div>

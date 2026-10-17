@@ -5,6 +5,7 @@ import { useUser } from './use-user';
 import { contributionBonus, getEntitlements } from '@/lib/plans';
 import { countPublicSharesToday } from '@/lib/contribution';
 import {
+  GUEST_UNLOCKED_LIMIT,
   FREE_DAILY_UNLOCKED_LIMIT,
   QUOTA_CHANGED_EVENT,
   ALL_TIME_UNLOCKED_STORAGE_KEY,
@@ -42,21 +43,28 @@ function useContributionBonus(uid: string | undefined, enabled: boolean): number
 export function useViewingQuota() {
   const { userProfile, loading } = useUser();
   const ready = !loading;
-  const rawLimit = getEntitlements(userProfile).limits.maxUnlockedReferences;
-  const unlimited = !Number.isFinite(rawLimit);
   const uid = userProfile?.uid;
-  const bonus = useContributionBonus(uid, !unlimited);
-  const baseLimit = unlimited ? Infinity : (rawLimit || FREE_DAILY_UNLOCKED_LIMIT);
-  const limit = unlimited ? Infinity : baseLimit + bonus;
+  const isAuthenticated = Boolean(uid);
+  const isGuest = !isAuthenticated;
+
+  const rawLimit = getEntitlements(userProfile).limits.maxUnlockedReferences;
+  const unlimited = isAuthenticated && !Number.isFinite(rawLimit);
+  const bonus = useContributionBonus(uid, isAuthenticated && !unlimited);
+  const baseLimit = isGuest
+    ? GUEST_UNLOCKED_LIMIT
+    : unlimited
+    ? Infinity
+    : (rawLimit || FREE_DAILY_UNLOCKED_LIMIT);
+  const limit = unlimited ? Infinity : baseLimit + (isGuest ? 0 : bonus);
   const profileList = (userProfile as { unlockedReferences?: string[] } | null)?.unlockedReferences;
 
   const [status, setStatus] = useState(() =>
-    getDailyQuotaStatus(profileList, Number.isFinite(limit) ? limit : FREE_DAILY_UNLOCKED_LIMIT)
+    getDailyQuotaStatus(profileList, Number.isFinite(limit) ? limit : FREE_DAILY_UNLOCKED_LIMIT, isGuest)
   );
 
   const refresh = useCallback(() => {
-    setStatus(getDailyQuotaStatus(profileList, Number.isFinite(limit) ? limit : FREE_DAILY_UNLOCKED_LIMIT));
-  }, [profileList, limit]);
+    setStatus(getDailyQuotaStatus(profileList, Number.isFinite(limit) ? limit : FREE_DAILY_UNLOCKED_LIMIT, isGuest));
+  }, [profileList, limit, isGuest]);
 
   useEffect(() => {
     refresh();
@@ -80,28 +88,30 @@ export function useViewingQuota() {
   const unlockedIds = status.allTimeUnlockedIds;
   const unlockedCount = unlockedIds.length;
   const todayCount = status.todayCount;
-  const todayRemaining = unlimited ? Infinity : Math.max(0, limit - todayCount);
+  const todayRemaining = status.todayRemaining;
   const remaining = todayRemaining;
-  const hasReachedLimit = ready && !unlimited && todayCount >= limit;
+  const hasReachedLimit = ready && !unlimited && status.hasReachedLimit;
 
   const isVideoUnlocked = useCallback(
     (videoId: string) => unlimited || !videoId || unlockedIds.includes(videoId),
     [unlimited, unlockedIds]
   );
 
-  /** Records a deliberate view. Returns allowed=false only when daily quota is used up and video is new. */
+  /** Records a deliberate view. Returns allowed=false when quota is exhausted and reference is new. */
   const attemptUnlock = useCallback(
     async (videoId: string): Promise<{ allowed: boolean; alreadyUnlocked: boolean }> => {
       if (!ready || unlimited || !videoId) return { allowed: true, alreadyUnlocked: true };
-      const res = await unlockReference(videoId, uid, profileList, limit);
+      const res = await unlockReference(videoId, uid, profileList, limit, isGuest);
       refresh();
       return { allowed: res.success, alreadyUnlocked: res.alreadyUnlocked };
     },
-    [ready, unlimited, uid, profileList, limit, refresh]
+    [ready, unlimited, uid, profileList, limit, isGuest, refresh]
   );
 
   return {
     ready,
+    isAuthenticated,
+    isGuest,
     unlimited,
     loading,
     unlockedIds,

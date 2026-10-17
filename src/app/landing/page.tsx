@@ -185,7 +185,7 @@ export default function LandingPage() {
 
                     {/* Subheadline */}
                     <p className="text-base sm:text-lg md:text-xl text-zinc-200 mb-10 max-w-2xl mx-auto leading-relaxed drop-shadow-lg font-medium">
-                        Curated reference library for animators. Analyze frame-by-frame, build visual reference boards, and study movement from the world&apos;s leading studios.
+                        Universal reference library for animators. Millions of references integrated across ArtStation, Sketchfab 3D, Pinterest, and Sakugabooru. Analyze frame-by-frame, build visual reference boards, and study movement from the world&apos;s leading studios.
                     </p>
 
                     {/* CTAs */}
@@ -206,8 +206,8 @@ export default function LandingPage() {
                     {/* Quick Stats Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pt-16 max-w-3xl mx-auto w-full">
                         <div className="p-4 rounded-2xl glass-panel text-center">
-                            <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">589</div>
-                            <div className="text-xs text-zinc-400 font-medium mt-0.5">Curated Reference Clips</div>
+                            <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">Millions</div>
+                            <div className="text-xs text-zinc-400 font-medium mt-0.5">Universal References (ArtStation, Sketchfab, Pinterest &amp; Sakuga)</div>
                         </div>
                         <div className="p-4 rounded-2xl glass-panel text-center">
                             <div className="text-2xl sm:text-3xl font-black text-purple-400 tracking-tight">Frame 0</div>
@@ -384,12 +384,12 @@ export default function LandingPage() {
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 text-left">
                         <div className="space-y-2">
                             <span className="text-xs font-bold uppercase tracking-wider text-purple-400">Hand-Picked Vault</span>
-                            <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">Featured Reference Clips</h2>
+                            <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">Featured References &amp; 3D Models</h2>
                             <p className="text-zinc-400 text-sm sm:text-base">Top-tier animation references selected by animators for study and breakdown.</p>
                         </div>
                         <Button asChild variant="ghost" className="text-purple-300 hover:text-white hover:bg-white/5 w-fit font-semibold text-sm">
                             <Link href="/home" className="flex items-center gap-1.5">
-                                Browse all 589 clips <ArrowRight className="w-4 h-4" />
+                                Browse all clips <ArrowRight className="w-4 h-4" />
                             </Link>
                         </Button>
                     </div>
@@ -456,7 +456,7 @@ export default function LandingPage() {
                             <ul className="space-y-2 text-xs text-zinc-400">
                                 <li><Link href="/home" className="hover:text-white transition-colors">Discover Library</Link></li>
                                 <li><Link href="/categories" className="hover:text-white transition-colors">All Categories</Link></li>
-                                <li><Link href="/references" className="hover:text-white transition-colors">Reference Clips</Link></li>
+                                <li><Link href="/references" className="hover:text-white transition-colors">Universal References</Link></li>
                                 <li><Link href="/shorts" className="hover:text-white transition-colors">Short Films</Link></li>
                             </ul>
                         </div>

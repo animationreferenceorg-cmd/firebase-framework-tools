@@ -43,19 +43,38 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const upstreamRes = await fetch(targetUrl, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        Referer: `${parsed.protocol}//${parsed.hostname}/`,
-        Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-      },
-      next: { revalidate: 86400 },
-    });
+    const urlsToTry = [targetUrl];
+    if (hostname.includes('artstation.com') && (targetUrl.includes('/smaller_square/') || targetUrl.includes('/small_square/'))) {
+      const largeVersion = targetUrl.replace(/\/smaller_square\/|\/small_square\//, '/large/');
+      const smallSquareVersion = targetUrl.replace(/\/smaller_square\//, '/small_square/');
+      urlsToTry.unshift(smallSquareVersion);
+      urlsToTry.unshift(largeVersion);
+    }
 
-    if (!upstreamRes.ok) {
-      return new NextResponse(`Upstream failed with status ${upstreamRes.status}`, {
-        status: upstreamRes.status,
+    let upstreamRes: Response | null = null;
+    for (const tryUrl of urlsToTry) {
+      try {
+        const res = await fetch(tryUrl, {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            Referer: `${parsed.protocol}//${parsed.hostname}/`,
+            Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+          },
+          next: { revalidate: 86400 },
+        });
+        if (res.ok) {
+          upstreamRes = res;
+          break;
+        }
+      } catch {
+        // try next fallback
+      }
+    }
+
+    if (!upstreamRes || !upstreamRes.ok) {
+      return new NextResponse(`Upstream failed`, {
+        status: upstreamRes?.status || 502,
       });
     }
 

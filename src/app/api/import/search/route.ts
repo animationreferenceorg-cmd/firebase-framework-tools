@@ -13,6 +13,7 @@ export interface UnifiedSearchResult {
   mediaType: 'video' | 'image' | 'gif' | 'model3d';
   authorName?: string;
   authorAvatar?: string;
+  authorUsername?: string;
   tags: string[];
   description?: string;
   embedUrl?: string;
@@ -127,17 +128,19 @@ export async function GET(request: NextRequest) {
                 for (const item of data.data || []) {
                   if (!item.url) continue;
                   const cover = item.smaller_square_cover_url || '';
+                  const highResCover = cover.replace('/smaller_square/', '/small_square/');
                   const is3D = Boolean(item.icons?.model3d || item.icons?.marmoset);
                   results.push({
                     id: `as_${item.id}`,
                     title: item.title || 'ArtStation Artwork',
                     source: 'artstation',
                     sourceUrl: item.url,
-                    thumbnailUrl: cover,
-                    mediaUrl: cover,
+                    thumbnailUrl: highResCover || cover,
+                    mediaUrl: highResCover || cover,
                     mediaType: is3D ? 'model3d' : 'image',
                     authorName: item.user?.full_name || item.user?.username || 'ArtStation Artist',
                     authorAvatar: item.user?.medium_avatar_url || '',
+                    authorUsername: item.user?.username || '',
                     hasMultipleAssets: Boolean(item.icons?.multiple_images),
                     hashId: item.hash_id,
                     tags: ['artstation', 'vis-dev', 'concept-art', 'turnaround', 'reference'],

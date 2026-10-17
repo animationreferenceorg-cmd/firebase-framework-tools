@@ -1,7 +1,8 @@
 import { db } from './firebase';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 
-export const FREE_DAILY_UNLOCKED_LIMIT = 25;
+export const GUEST_UNLOCKED_LIMIT = 25; // Signed-out guests get 25 references all-time before needing an account
+export const FREE_DAILY_UNLOCKED_LIMIT = 35; // Signed-in free users get 35 references per day before needing Pro
 export const FREE_UNLOCKED_LIMIT = FREE_DAILY_UNLOCKED_LIMIT;
 
 export const ALL_TIME_UNLOCKED_STORAGE_KEY = 'animref_unlocked_references';
@@ -124,34 +125,53 @@ export function getUnlockedReferenceIds(userUnlockedList?: string[]): string[] {
 }
 
 /**
- * Returns comprehensive daily quota status: today's count, remaining daily allowance,
- * whether the 25 daily limit is reached, and all-time unlocked IDs.
+ * Returns comprehensive quota status:
+ * - For signed-out guests: 25 all-time reference limit before needing an account.
+ * - For signed-in users: 35 daily reference limit before needing Pro.
+ * - For both: Any previously viewed reference remains 100% free to rewatch anytime!
  */
 export function getDailyQuotaStatus(
   userUnlockedList?: string[],
-  limit = FREE_DAILY_UNLOCKED_LIMIT
+  limit = FREE_DAILY_UNLOCKED_LIMIT,
+  isGuest = false
 ): {
   date: string;
   todayCount: number;
   todayRemaining: number;
   limit: number;
   isDailyLimitReached: boolean;
+  isGuestLimitReached: boolean;
+  hasReachedLimit: boolean;
   todayUnlockedIds: string[];
   allTimeUnlockedIds: string[];
+  isGuest: boolean;
 } {
   const daily = getDailyQuotaData();
-  const todayCount = daily.todayUnlockedIds.length;
-  const todayRemaining = Math.max(0, limit - todayCount);
   const allTimeUnlockedIds = getUnlockedReferenceIds(userUnlockedList);
+  const effectiveLimit = isGuest ? GUEST_UNLOCKED_LIMIT : limit;
+
+  const todayCount = daily.todayUnlockedIds.length;
+  const guestCount = allTimeUnlockedIds.length;
+
+  const todayRemaining = isGuest
+    ? Math.max(0, GUEST_UNLOCKED_LIMIT - guestCount)
+    : Math.max(0, limit - todayCount);
+
+  const isDailyLimitReached = !isGuest && todayCount >= limit;
+  const isGuestLimitReached = isGuest && guestCount >= GUEST_UNLOCKED_LIMIT;
+  const hasReachedLimit = isGuest ? isGuestLimitReached : isDailyLimitReached;
 
   return {
     date: daily.date,
-    todayCount,
+    todayCount: isGuest ? guestCount : todayCount,
     todayRemaining,
-    limit,
-    isDailyLimitReached: todayCount >= limit,
+    limit: effectiveLimit,
+    isDailyLimitReached,
+    isGuestLimitReached,
+    hasReachedLimit,
     todayUnlockedIds: daily.todayUnlockedIds,
     allTimeUnlockedIds,
+    isGuest,
   };
 }
 
@@ -172,15 +192,17 @@ export function isReferenceUnlocked(
 
 /**
  * Records a reference unlock.
- * - If the video has already been watched before: Allowed for free without consuming daily quota!
- * - If new and user reached their 25 daily quota: Returns success: false (blocked until tomorrow or Pro).
- * - If new and user has quota: Consumes 1 daily quota, saves to all-time, and dispatches event.
+ * - If the video has already been watched before: Allowed for free without consuming quota!
+ * - If guest and reached 25 guest limit: Returns success: false (must create free account).
+ * - If signed-in and reached 35 daily limit: Returns success: false (blocked until tomorrow or Pro).
+ * - If within quota: Consumes 1 quota, saves, and dispatches event.
  */
 export async function unlockReference(
   videoId: string,
   uid?: string,
   userUnlockedList?: string[],
-  limit = FREE_DAILY_UNLOCKED_LIMIT
+  limit = FREE_DAILY_UNLOCKED_LIMIT,
+  isGuest = false
 ): Promise<{
   success: boolean;
   alreadyUnlocked: boolean;
@@ -188,7 +210,12 @@ export async function unlockReference(
   ids: string[];
   todayCount: number;
   todayRemaining: number;
+  isGuestLimit?: boolean;
+  isDailyLimit?: boolean;
 }> {
+  const guestMode = isGuest || !uid;
+  const effectiveLimit = guestMode ? GUEST_UNLOCKED_LIMIT : limit;
+
   if (!videoId) {
     return {
       success: false,
@@ -196,7 +223,7 @@ export async function unlockReference(
       count: 0,
       ids: [],
       todayCount: 0,
-      todayRemaining: limit,
+      todayRemaining: effectiveLimit,
     };
   }
 
@@ -210,13 +237,28 @@ export async function unlockReference(
       alreadyUnlocked: true,
       count: allTime.length,
       ids: allTime,
-      todayCount: daily.todayUnlockedIds.length,
-      todayRemaining: Math.max(0, limit - daily.todayUnlockedIds.length),
+      todayCount: guestMode ? allTime.length : daily.todayUnlockedIds.length,
+      todayRemaining: guestMode
+        ? Math.max(0, GUEST_UNLOCKED_LIMIT - allTime.length)
+        : Math.max(0, limit - daily.todayUnlockedIds.length),
     };
   }
 
-  // 2. Check if daily quota of 25 is exhausted
-  if (daily.todayUnlockedIds.length >= limit) {
+  // 2. Check if guest limit (25 all-time) is exhausted
+  if (guestMode && allTime.length >= GUEST_UNLOCKED_LIMIT) {
+    return {
+      success: false,
+      alreadyUnlocked: false,
+      count: allTime.length,
+      ids: allTime,
+      todayCount: allTime.length,
+      todayRemaining: 0,
+      isGuestLimit: true,
+    };
+  }
+
+  // 3. Check if daily quota (35 daily) is exhausted for signed-in users
+  if (!guestMode && daily.todayUnlockedIds.length >= limit) {
     return {
       success: false,
       alreadyUnlocked: false,
@@ -224,11 +266,12 @@ export async function unlockReference(
       ids: allTime,
       todayCount: daily.todayUnlockedIds.length,
       todayRemaining: 0,
+      isDailyLimit: true,
     };
   }
 
-  // 3. New video within daily quota: add to today and all-time
-  const updatedToday = [videoId, ...daily.todayUnlockedIds];
+  // 4. New video within quota: add to all-time, and to today's count if signed in
+  const updatedToday = [videoId, ...daily.todayUnlockedIds.filter((id) => id !== videoId)];
   const updatedAllTime = [videoId, ...allTime.filter((id) => id !== videoId)];
 
   saveDailyQuotaData({ date: daily.date, todayUnlockedIds: updatedToday });
@@ -250,12 +293,15 @@ export async function unlockReference(
     }
   }
 
+  const finalTodayCount = guestMode ? updatedAllTime.length : updatedToday.length;
+  const finalRemaining = Math.max(0, effectiveLimit - finalTodayCount);
+
   return {
     success: true,
     alreadyUnlocked: false,
     count: updatedAllTime.length,
     ids: updatedAllTime,
-    todayCount: updatedToday.length,
-    todayRemaining: Math.max(0, limit - updatedToday.length),
+    todayCount: finalTodayCount,
+    todayRemaining: finalRemaining,
   };
 }

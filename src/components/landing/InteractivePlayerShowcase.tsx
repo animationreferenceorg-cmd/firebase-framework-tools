@@ -623,7 +623,7 @@ export function InteractivePlayerShowcase() {
         </div>
 
         <div className="text-emerald-400 font-medium flex items-center gap-1.5">
-          <Check className="w-3.5 h-3.5" /> 589 Reference Clips Included
+          <Check className="w-3.5 h-3.5" /> Millions of References &amp; 3D Models Included
         </div>
       </div>
 
@@ -651,7 +651,7 @@ export function InteractivePlayerShowcase() {
           </Button>
           <Button asChild variant="outline" className="border-white/20 text-white hover:bg-white/10 font-semibold">
             <Link href="/home">
-              Browse 589 Free
+              Browse Millions Free
             </Link>
           </Button>
         </div>

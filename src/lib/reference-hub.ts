@@ -27,6 +27,10 @@ export function searchResultToVideo(item: UnifiedSearchResult): Video {
     categoryIds: ['external-hub', item.source, is3D ? '3d' : '2d'],
     categories: [item.source, is3D ? '3D Models' : 'Concept & Vis Dev'],
     author_name: item.authorName || `@${item.source}`,
+    authorUsername: item.authorUsername,
+    hashId: item.hashId,
+    authorAvatar: item.authorAvatar,
+    sourceUrl: item.sourceUrl,
     originalUrl: item.sourceUrl,
     status: 'published',
     isShort: false,
@@ -36,7 +40,8 @@ export function searchResultToVideo(item: UnifiedSearchResult): Video {
     // Preserve custom provider metadata
     dataAiHint: `${item.source} ${item.tags.join(' ')}`,
     ...((item.embedUrl ? { embedUrl: item.embedUrl } : {}) as any),
-  };
+    source: item.source,
+  } as Video;
 }
 
 /**

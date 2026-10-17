@@ -75,7 +75,7 @@ const COMPARISON_ROWS = [
   {
     feature: 'Curated Motion Library',
     artstation: 'Scattered user uploads with no motion tags',
-    animref: '589 curated reference clips for frame-by-frame study',
+    animref: 'Millions of references & 3D models integrated across ArtStation, Sketchfab, Pinterest, and Sakugabooru for frame-by-frame study',
     winner: true,
   },
   {
@@ -117,7 +117,7 @@ const FAQS = [
   },
   {
     q: 'What does the Free plan include vs Pro?',
-    a: 'Free accounts can browse and study the 589-clip library with frame-by-frame controls, create public boards, and build a public portfolio. Pro ($5/month or $45/year, with a $1 intro first month) unlocks unlimited references, side-by-side playblast compare, private boards, MP4 reference downloads, and PureRef exports.',
+    a: 'Free accounts can browse and study the reference library with frame-by-frame controls, create public boards, and build a public portfolio. Pro ($5/month or $45/year, with a $1 intro first month) unlocks unlimited references, side-by-side playblast compare, private boards, MP4 reference downloads, and PureRef exports.',
   },
 ];
 
@@ -167,7 +167,7 @@ export default function ArtstationAlternativePage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             <Button asChild size="lg" className="w-full sm:w-auto bg-purple-600 hover:bg-purple-500 text-white font-semibold px-8 shadow-xl shadow-purple-900/40">
               <Link href="/home">
-                Explore 589 References Free
+                Explore Reference Library Free
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Link>
             </Button>

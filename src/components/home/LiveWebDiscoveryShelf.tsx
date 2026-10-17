@@ -125,6 +125,18 @@ export function LiveWebDiscoveryShelf({ className = '' }: LiveWebDiscoveryShelfP
     fetchRandomizedStream();
   }, []);
 
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (active3DModel) setActive3DModel(null);
+        if (selectedArtwork) setSelectedArtwork(null);
+        if (selectedVideo) setSelectedVideo(null);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [active3DModel, selectedArtwork, selectedVideo]);
+
   const handleSaveItem = async (item: UnifiedSearchResult, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) {
@@ -443,11 +455,11 @@ export function LiveWebDiscoveryShelf({ className = '' }: LiveWebDiscoveryShelfP
       {/* Interactive 3D Model Modal */}
       {active3DModel && active3DModel.embedUrl && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md"
+          className="fixed inset-0 z-[270] flex items-center justify-center bg-black/85 p-4 backdrop-blur-md cursor-pointer"
           onClick={() => setActive3DModel(null)}
         >
           <div 
-            className="relative flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/15 bg-zinc-950 shadow-2xl"
+            className="relative flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/15 bg-zinc-950 shadow-2xl cursor-default"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}

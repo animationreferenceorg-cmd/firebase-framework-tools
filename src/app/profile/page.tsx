@@ -28,7 +28,6 @@ import { PortfolioItemCard } from '@/components/portfolio/PortfolioItemCard';
 import { PortfolioHeroBanner } from '@/components/portfolio/PortfolioHeroBanner';
 import { UploadPortfolioItemModal } from '@/components/portfolio/UploadPortfolioItemModal';
 import { ImportArtStationDialog } from '@/components/portfolio/ImportArtStationDialog';
-import { UploadAnnouncementBanner } from '@/components/portfolio/UploadAnnouncementBanner';
 import { EditPortfolioItemModal } from '@/components/portfolio/EditPortfolioItemModal';
 import { PortfolioFounderDealModal } from '@/components/portfolio/PortfolioFounderDealModal';
 import { PortfolioItemDetailModal } from '@/components/portfolio/PortfolioItemDetailModal';
@@ -640,13 +639,6 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
-
-        {/* Upload Fix Announcement Banner */}
-        <UploadAnnouncementBanner
-          onUploadClick={() => setIsUploadOpen(true)}
-          source="profile"
-          className="mt-6"
-        />
 
         {/* Main Profile Tabs */}
         <div className="mt-8">

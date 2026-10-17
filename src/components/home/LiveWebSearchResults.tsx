@@ -105,6 +105,18 @@ export function LiveWebSearchResults({ query, results, loading, className = '' }
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [active3DModel, setActive3DModel] = useState<UnifiedSearchResult | null>(null);
 
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (active3DModel) setActive3DModel(null);
+        if (selectedArtwork) setSelectedArtwork(null);
+        if (selectedVideo) setSelectedVideo(null);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [active3DModel, selectedArtwork, selectedVideo]);
+
   const handleCardClick = (item: UnifiedSearchResult) => {
     if (item.embedUrl || item.source === 'sketchfab' || item.mediaType === 'model3d') {
       setActive3DModel(item);

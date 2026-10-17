@@ -8,7 +8,6 @@ import { PortfolioItemCard } from '@/components/portfolio/PortfolioItemCard';
 import { PortfolioItemDetailModal } from '@/components/portfolio/PortfolioItemDetailModal';
 import { SaveToBoardModal } from '@/components/SaveToBoardModal';
 import { UploadPortfolioItemModal } from '@/components/portfolio/UploadPortfolioItemModal';
-import { UploadAnnouncementBanner } from '@/components/portfolio/UploadAnnouncementBanner';
 import { FilterBar, TabOption, TypeOption, PillOption } from '@/components/FilterBar';
 import { CaptureClipDialog } from '@/components/reference/CaptureClipDialog';
 import { useAuth } from '@/hooks/use-auth';
@@ -240,9 +239,6 @@ export default function CommunityFeedPage() {
         </div>
       </div>
 
-      {/* Upload Fix Announcement Banner */}
-      <UploadAnnouncementBanner onUploadClick={handleOpenUploadModal} source="feed" />
-
       {/* 2. Hero Call-To-Action: Promote Portfolio Uploads */}
       <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-950/60 via-zinc-950 to-black p-5 shadow-2xl sm:rounded-3xl sm:p-10">
         <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-purple-600/15 blur-[100px] rounded-full pointer-events-none" />
@@ -257,7 +253,7 @@ export default function CommunityFeedPage() {
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white leading-tight tracking-tight">
               Share Your Motion. <br />
               <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-amber-300 bg-clip-text text-transparent">
-                Community Uploads Are Back!
+                Community Showcase &amp; Portfolio.
               </span>
             </h2>
 

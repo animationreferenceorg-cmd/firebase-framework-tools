@@ -242,6 +242,9 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
       countedVideoViewRef.current = true;
       incrementVideoViewCount(video.id).catch(() => {});
     }
+    if (!alreadyUnlocked && video.id && !previewBlocked) {
+      quota.attemptUnlock(video.id);
+    }
   };
 
   const handlePlayClick = (e: React.MouseEvent) => {
@@ -654,6 +657,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
                 unlockedCount={quota.unlockedCount}
                 todayCount={quota.todayCount}
                 limit={quota.limit}
+                isGuest={quota.isGuest}
                 onBrowseUnlocked={() => setIsPlayerOpen(false)}
               />
             ) : (
@@ -868,6 +872,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
             unlockedCount={quota.unlockedCount}
             todayCount={quota.todayCount}
             limit={quota.limit}
+            isGuest={quota.isGuest}
             onBrowseUnlocked={() => setIsPlayerOpen(false)}
           />
         ) : (

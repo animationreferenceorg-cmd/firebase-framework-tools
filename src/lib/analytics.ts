@@ -18,6 +18,7 @@ export const ANALYTICS_EVENTS = [
   'drawover_saved',
   'export_completed',
   'upgrade_prompt_viewed',
+  'upgrade_prompt_clicked',
   'checkout_started',
   'checkout_completed',
   'subscription_canceled',

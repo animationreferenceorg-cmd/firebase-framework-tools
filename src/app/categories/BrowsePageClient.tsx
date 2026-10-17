@@ -479,7 +479,7 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
 
                         {/* Subheadline */}
                         <p className="text-lg md:text-xl text-zinc-100 mb-6 max-w-2xl mx-auto leading-relaxed drop-shadow-lg font-medium">
-                            Browse 589 curated animation clips. Filter by 2D, 3D, source, and categories below.
+                            Browse millions of curated animation clips. Filter by 2D, 3D, source, and categories below.
                         </p>
                     </div>
                 </BrowseHero>
@@ -596,7 +596,7 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
                                     </h1>
 
                                     <p className="text-sm md:text-base text-zinc-300 max-w-5xl font-medium leading-relaxed">
-                                        {filteredVideos.length} curated {categoryName} animation reference clips for animators, game developers and motion designers. Open any clip for frame-by-frame playback to study the timing, spacing and posing of real {categoryName} motion — often studied together with staging, cinematic, animation.
+                                        Millions of {categoryName} animation references, turnarounds &amp; 3D models integrated across ArtStation, Sketchfab, Pinterest, and community libraries. Open any reference for frame-by-frame study of real {categoryName} motion and staging.
                                     </p>
                                 </div>
 

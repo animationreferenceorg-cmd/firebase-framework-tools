@@ -31,10 +31,10 @@ import { GoogleAnalytics } from '@/components/layout/GoogleAnalytics';
 export const metadata: Metadata = {
   metadataBase: new URL('https://animationreference.org'),
   title: {
-    default: 'Animation Reference | 589 Curated Clips & Animator Portfolios',
+    default: 'Animation Reference | Millions of References & Animator Portfolios',
     template: '%s | Animation Reference',
   },
-  description: 'Study 589 curated animation clips with frame-by-frame controls, playblast comparison, and animator portfolios. A creator-first study tool for 2D & 3D animators.',
+  description: 'Study millions of animation references, 3D models, and clips with live integration across ArtStation, Sketchfab, Pinterest, and Sakugabooru. Frame-by-frame controls, playblast comparison, and animator portfolios.',
   keywords: [
     'animation reference',
     'artstation alternative',
@@ -60,7 +60,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Animation Reference | Frame-by-Frame Motion Study & Portfolios',
-    description: '589 curated animation clips, frame scrubbing, side-by-side playblast compare, and clean animator portfolios.',
+    description: 'Millions of animation references, 3D models, and clips integrated with ArtStation, Sketchfab, Pinterest, and Sakugabooru with frame scrubbing, side-by-side playblast compare, and clean animator portfolios.',
     images: [
       {
         url: '/icon.png',
@@ -75,7 +75,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Animation Reference | Frame-by-Frame Motion Study & Portfolios',
-    description: '589 curated animation clips, frame scrubbing, side-by-side playblast compare, and clean animator portfolios.',
+    description: 'Millions of animation references, 3D models, and clips integrated with ArtStation, Sketchfab, Pinterest, and Sakugabooru with frame scrubbing, side-by-side playblast compare, and clean animator portfolios.',
     images: ['/icon.png'],
   },
   alternates: {

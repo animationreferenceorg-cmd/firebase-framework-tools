@@ -251,13 +251,25 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
     const quota = useViewingQuota();
     const isBlockedByQuota = enforceViewingQuota && quota.hasReachedLimit && !quota.isVideoUnlocked(video.id);
 
-    // A reference is "unlocked" when it actually starts playing in the library viewer.
-    const recordQuotaView = () => {
+    // A reference is "unlocked" when it actually plays in the viewer.
+    const recordQuotaView = React.useCallback(() => {
         if (!enforceViewingQuota || !video.id) return;
         quota.attemptUnlock(video.id).then(({ allowed }) => {
             if (!allowed) setIsPlaying(false);
         });
-    };
+    }, [enforceViewingQuota, video.id, quota]);
+
+    // Count view when video plays or mounts with autoPlay/active playback
+    React.useEffect(() => {
+        if (!enforceViewingQuota || !video?.id) return;
+        if (isBlockedByQuota) {
+            setIsPlaying(false);
+            return;
+        }
+        if (isPlaying) {
+            recordQuotaView();
+        }
+    }, [video?.id, enforceViewingQuota, isBlockedByQuota, isPlaying, recordQuotaView]);
 
     // Onion skin decodes frames from the file itself, so embeds (YouTube etc.) can't use it.
     const onionSupported = mediaEl !== null && typeof cleanVideoUrl === 'string' && cleanVideoUrl.length > 0 && !cleanVideoUrl.includes('youtube.com') && !cleanVideoUrl.includes('youtu.be');
@@ -602,6 +614,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                     unlockedCount={quota.unlockedCount}
                     todayCount={quota.todayCount}
                     limit={quota.limit}
+                    isGuest={quota.isGuest}
                 />
             </div>
         );

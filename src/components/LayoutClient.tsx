@@ -282,6 +282,11 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                 </div>
                                 <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-white/50 mt-2">
                                     <Link href="/artstation-alternative" className="text-purple-300 hover:text-purple-200 font-semibold transition-colors">ArtStation Alternative</Link>
+                                    <Link href="/pureref-alternative" className="text-purple-300 hover:text-purple-200 font-semibold transition-colors">PureRef Alternative</Link>
+                                    <Link href="/sakugabooru-alternative" className="text-purple-300 hover:text-purple-200 font-semibold transition-colors">Sakugabooru Alternative</Link>
+                                    <Link href="/frame-by-frame-player" className="text-purple-300 hover:text-purple-200 font-semibold transition-colors">Frame-by-Frame Player</Link>
+                                    <Link href="/animation-reference-library" className="text-purple-300 hover:text-purple-200 font-semibold transition-colors">Reference Library</Link>
+                                    <Link href="/reflix-alternative" className="text-purple-300 hover:text-purple-200 font-semibold transition-colors">Reflix Alternative</Link>
                                     <Link href="/portfolio" className="text-zinc-300 hover:text-white transition-colors">Animator Portfolio</Link>
                                     <Link href="/pricing" className="text-zinc-300 hover:text-white transition-colors">Pricing &amp; Pro</Link>
                                     <Link href="/blog" className="hover:text-white/70 transition-colors">Blog</Link>

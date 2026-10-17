@@ -114,6 +114,14 @@ const softwareApplicationSchema = {
       price: '0.00',
       priceCurrency: 'USD',
       name: 'Free Plan',
+      description: '35 daily references, unlimited visual boards, and 100% free frame-by-frame player.',
+    },
+    {
+      '@type': 'Offer',
+      price: '1.00',
+      priceCurrency: 'USD',
+      name: 'Pro First Month Intro Offer',
+      description: '$1 intro offer for your first month of Pro. Unlimited 4K reference study, playblast compare, and downloads.',
     },
     {
       '@type': 'Offer',
@@ -121,6 +129,13 @@ const softwareApplicationSchema = {
       priceCurrency: 'USD',
       name: 'Pro Monthly Membership',
       description: 'Unlimited 4K frame-by-frame study, side-by-side playblast comparison, private boards, and reference video downloads.',
+    },
+    {
+      '@type': 'Offer',
+      price: '45.00',
+      priceCurrency: 'USD',
+      name: 'Pro Annual Membership',
+      description: 'Annual Pro membership ($3.75/mo equivalent) with unlimited 4K reference study, private boards, and priority features.',
     },
   ],
 };

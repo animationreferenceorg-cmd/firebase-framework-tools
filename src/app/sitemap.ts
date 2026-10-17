@@ -26,6 +26,36 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 1.0,
         },
         {
+            url: `${BASE_URL}/reflix-alternative`,
+            lastModified: new Date(),
+            changeFrequency: 'daily',
+            priority: 0.95,
+        },
+        {
+            url: `${BASE_URL}/pureref-alternative`,
+            lastModified: new Date(),
+            changeFrequency: 'daily',
+            priority: 0.95,
+        },
+        {
+            url: `${BASE_URL}/sakugabooru-alternative`,
+            lastModified: new Date(),
+            changeFrequency: 'daily',
+            priority: 0.95,
+        },
+        {
+            url: `${BASE_URL}/frame-by-frame-player`,
+            lastModified: new Date(),
+            changeFrequency: 'daily',
+            priority: 0.95,
+        },
+        {
+            url: `${BASE_URL}/animation-reference-library`,
+            lastModified: new Date(),
+            changeFrequency: 'daily',
+            priority: 0.95,
+        },
+        {
             url: `${BASE_URL}/portfolio`,
             lastModified: new Date(),
             changeFrequency: 'weekly',

@@ -436,7 +436,7 @@ export default function LandingPage() {
             {/* 7. Comprehensive Modern Footer */}
             <footer className="border-t border-white/10 py-16 bg-[#08060f]/80 backdrop-blur-xl text-left">
                 <div className="container mx-auto px-6">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-12 border-b border-white/5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-8 pb-12 border-b border-white/5">
                         {/* Brand Column */}
                         <div className="space-y-4 md:col-span-1">
                             <div className="flex items-center gap-2.5">
@@ -455,6 +455,7 @@ export default function LandingPage() {
                             <h4 className="text-xs font-bold uppercase tracking-wider text-white">Explore</h4>
                             <ul className="space-y-2 text-xs text-zinc-400">
                                 <li><Link href="/home" className="hover:text-white transition-colors">Discover Library</Link></li>
+                                <li><Link href="/animation-reference-library" className="hover:text-purple-300 transition-colors">Reference Vault</Link></li>
                                 <li><Link href="/categories" className="hover:text-white transition-colors">All Categories</Link></li>
                                 <li><Link href="/references" className="hover:text-white transition-colors">Universal References</Link></li>
                                 <li><Link href="/shorts" className="hover:text-white transition-colors">Short Films</Link></li>
@@ -465,17 +466,30 @@ export default function LandingPage() {
                         <div className="space-y-3">
                             <h4 className="text-xs font-bold uppercase tracking-wider text-white">Creative Tools</h4>
                             <ul className="space-y-2 text-xs text-zinc-400">
-                                <li><Link href="/paint" className="hover:text-white transition-colors">Paint Studio (Beta)</Link></li>
+                                <li><Link href="/frame-by-frame-player" className="hover:text-purple-300 transition-colors">Frame-by-Frame Player</Link></li>
                                 <li><Link href="/moodboard" className="hover:text-white transition-colors">Visual Boards</Link></li>
+                                <li><Link href="/paint" className="hover:text-white transition-colors">Paint Studio (Beta)</Link></li>
                                 <li><Link href="/feed" className="hover:text-white transition-colors">Community Feed</Link></li>
                                 <li><Link href="/profile?tab=portfolio" className="hover:text-white transition-colors">Submit Portfolio</Link></li>
                             </ul>
                         </div>
 
-                        {/* Column 4: Platform & Legal */}
+                        {/* Column 4: Compare */}
+                        <div className="space-y-3">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-purple-300">Alternatives</h4>
+                            <ul className="space-y-2 text-xs text-zinc-400">
+                                <li><Link href="/artstation-alternative" className="hover:text-white transition-colors">ArtStation Alternative</Link></li>
+                                <li><Link href="/pureref-alternative" className="hover:text-white transition-colors">PureRef Alternative</Link></li>
+                                <li><Link href="/sakugabooru-alternative" className="hover:text-white transition-colors">Sakugabooru Alternative</Link></li>
+                                <li><Link href="/reflix-alternative" className="hover:text-white transition-colors">Reflix Alternative</Link></li>
+                            </ul>
+                        </div>
+
+                        {/* Column 5: Platform & Legal */}
                         <div className="space-y-3">
                             <h4 className="text-xs font-bold uppercase tracking-wider text-white">Platform</h4>
                             <ul className="space-y-2 text-xs text-zinc-400">
+                                <li><Link href="/pricing" className="text-purple-300 hover:text-purple-200 font-semibold transition-colors">Pricing ($1 Intro)</Link></li>
                                 <li><Link href="/feedback" className="hover:text-white transition-colors">Send Feedback</Link></li>
                                 <li><Link href="/dmca" className="hover:text-white transition-colors">DMCA Guidelines</Link></li>
                                 <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>

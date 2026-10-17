@@ -127,6 +127,15 @@ export default async function TopicResourcePage({ params }: { params: Promise<{ 
   if (!topic) notFound();
   const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: topic.faqs.map(faq => ({ '@type': 'Question', name: faq.question, acceptedAnswer: { '@type': 'Answer', text: faq.answer } })) };
   const articleSchema = { '@context': 'https://schema.org', '@type': 'Article', headline: topic.title, description: topic.description, url: `${BASE_URL}/resources/${topic.slug}`, publisher: { '@type': 'Organization', name: 'Animation Reference', url: BASE_URL } };
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: BASE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Resources', item: `${BASE_URL}/resources` },
+      { '@type': 'ListItem', position: 3, name: topic.title, item: `${BASE_URL}/resources/${topic.slug}` },
+    ],
+  };
 
   return <main className="container mx-auto max-w-5xl px-4 py-12 md:px-8">
     <nav aria-label="Breadcrumb" className="mb-8 text-sm text-muted-foreground"><Link href="/" className="hover:text-foreground">Home</Link><span className="mx-2">/</span><Link href="/resources" className="hover:text-foreground">Resources</Link><span className="mx-2">/</span><span className="text-foreground">{topic.title}</span></nav>
@@ -139,5 +148,6 @@ export default async function TopicResourcePage({ params }: { params: Promise<{ 
     </article>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
   </main>;
 }

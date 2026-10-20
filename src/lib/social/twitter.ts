@@ -8,17 +8,13 @@ export async function postToTwitter(opts: {
   videoUrl?: string;
   caption: string;
 }): Promise<PostResult> {
-  const apiKey = process.env.X_API_KEY || process.env.TWITTER_API_KEY;
-  const apiSecret = process.env.X_API_KEY_SECRET || process.env.TWITTER_API_SECRET;
-  const accessToken = process.env.X_ACCESS_TOKEN || process.env.TWITTER_ACCESS_TOKEN;
-  const accessTokenSecret = process.env.X_ACCESS_TOKEN_SECRET || process.env.TWITTER_ACCESS_TOKEN_SECRET;
-  const bearerToken = process.env.X_BEARER_TOKEN || process.env.TWITTER_BEARER_TOKEN;
+  const userAccessToken = process.env.X_ACCESS_TOKEN || process.env.TWITTER_ACCESS_TOKEN;
 
-  if ((!apiKey || !accessToken) && !bearerToken) {
+  if (!userAccessToken) {
     return {
       platform: 'twitter',
       success: false,
-      error: 'X (Twitter) API credentials (X_API_KEY, X_ACCESS_TOKEN or X_BEARER_TOKEN) are missing.',
+      error: 'An X OAuth 2 user access token (X_ACCESS_TOKEN) is required to publish.',
     };
   }
 
@@ -30,9 +26,7 @@ export async function postToTwitter(opts: {
       'Content-Type': 'application/json',
     };
 
-    if (bearerToken) {
-      headers['Authorization'] = `Bearer ${bearerToken}`;
-    }
+    headers['Authorization'] = `Bearer ${userAccessToken}`;
 
     // Call X API v2 Tweet creation endpoint
     const res = await fetch('https://api.twitter.com/2/tweets', {

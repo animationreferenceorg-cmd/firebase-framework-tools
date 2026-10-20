@@ -10,6 +10,30 @@ import type { UnifiedSearchResult } from '@/app/api/import/search/route';
 export function searchResultToVideo(item: UnifiedSearchResult): Video {
   const isVideo = item.mediaType === 'video';
   const is3D = item.source === 'sketchfab' || item.mediaType === 'model3d';
+  const isArtStation = item.source === 'artstation';
+  const isPinterest = item.source === 'pinterest';
+
+  const specializedTags: string[] = [];
+  const specializedCategories: string[] = [item.source];
+  const specializedCategoryIds: string[] = ['external-hub', item.source];
+
+  if (is3D) {
+    specializedTags.push('3d-models', '3d-model', '3d', 'turnaround', 'rigged');
+    specializedCategories.push('3D Models');
+    specializedCategoryIds.push('3d-models', '3d');
+  } else if (isArtStation) {
+    specializedTags.push('visdev', 'visual-development', 'concept-art', 'character-art');
+    specializedCategories.push('VisDev', 'Visual Development');
+    specializedCategoryIds.push('visdev', 'visual-development');
+  } else if (isPinterest) {
+    specializedTags.push('character-design', 'model-sheet', 'pose-reference', 'anatomy');
+    specializedCategories.push('Character Design', 'Model Sheet');
+    specializedCategoryIds.push('character-design');
+  } else if (isVideo) {
+    specializedTags.push('animations', 'animation-clip', '2d-animation');
+    specializedCategories.push('Animations');
+    specializedCategoryIds.push('animations');
+  }
 
   return {
     id: item.id,
@@ -19,13 +43,9 @@ export function searchResultToVideo(item: UnifiedSearchResult): Video {
     thumbnailUrl: item.thumbnailUrl,
     posterUrl: item.mediaUrl || item.thumbnailUrl,
     videoUrl: isVideo ? item.mediaUrl : '',
-    tags: [
-      ...item.tags,
-      item.source,
-      is3D ? '3d-model' : isVideo ? 'animation-clip' : 'character-art',
-    ],
-    categoryIds: ['external-hub', item.source, is3D ? '3d' : '2d'],
-    categories: [item.source, is3D ? '3D Models' : 'Concept & Vis Dev'],
+    tags: Array.from(new Set([...item.tags, item.source, ...specializedTags])),
+    categoryIds: Array.from(new Set(specializedCategoryIds)),
+    categories: Array.from(new Set(specializedCategories)),
     author_name: item.authorName || `@${item.source}`,
     authorUsername: item.authorUsername,
     hashId: item.hashId,
@@ -40,6 +60,7 @@ export function searchResultToVideo(item: UnifiedSearchResult): Video {
     // Preserve custom provider metadata
     dataAiHint: `${item.source} ${item.tags.join(' ')}`,
     ...((item.embedUrl ? { embedUrl: item.embedUrl } : {}) as any),
+    mediaType: item.mediaType,
     source: item.source,
   } as Video;
 }

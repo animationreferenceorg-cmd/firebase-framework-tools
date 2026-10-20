@@ -133,31 +133,39 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
   const isLiked = isLikedProp || (currentUserId && item.likedBy ? item.likedBy.includes(currentUserId) : false);
   const isSaved = isSavedProp;
 
+  const mediaUrl = item.mediaUrl ? item.mediaUrl.trim() : '';
+  const ytMatch = mediaUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]{11})/i);
+  const youtubeId = ytMatch?.[1] || null;
+  const vimeoMatch = mediaUrl.match(/(?:vimeo\.com\/(?:video\/|channels\/\w+\/)?|player\.vimeo\.com\/video\/)(\d+)/i);
+  const vimeoId = vimeoMatch?.[1] || null;
+
   const computedThumbnail = (() => {
     const directThumb = item.thumbnailUrl || (item as any).posterUrl;
     if (directThumb) return directThumb;
-    if (!item.mediaUrl) return null;
-    const url = item.mediaUrl.trim();
-    const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]{11})/i);
-    if (ytMatch && ytMatch[1]) return `https://i.ytimg.com/vi/${ytMatch[1]}/hqdefault.jpg`;
-    const vimeoMatch = url.match(/(?:vimeo\.com\/(?:video\/|channels\/\w+\/)?|player\.vimeo\.com\/video\/)(\d+)/i);
-    if (vimeoMatch && vimeoMatch[1]) return `https://vumbnail.com/${vimeoMatch[1]}.jpg`;
-    if (/\.(png|jpg|jpeg|webp|gif|svg|avif)($|\?)/i.test(url) || url.startsWith('data:image/')) return url;
+    if (!mediaUrl) return null;
+    if (youtubeId) return `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg`;
+    if (vimeoId) return `https://vumbnail.com/${vimeoId}.jpg`;
+    if (/\.(png|jpg|jpeg|webp|gif|svg|avif)($|\?)/i.test(mediaUrl) || mediaUrl.startsWith('data:image/')) return mediaUrl;
     return null;
   })();
 
   const [dynamicThumb, setDynamicThumb] = useState<string | null>(
-    () => (item.mediaUrl ? clientThumbCache.get(item.mediaUrl) || null : null)
+    () => (mediaUrl ? clientThumbCache.get(mediaUrl) || null : null)
   );
 
   const effectiveThumbnail = computedThumbnail || dynamicThumb;
 
   const isDirectVideoFile = Boolean(
-    item.mediaUrl &&
-    (item.mediaType === 'video_file' || /\.(mp4|webm|mov|m4v)($|\?)/i.test(item.mediaUrl) || item.mediaUrl.includes('firebasestorage')) &&
-    !item.mediaUrl.includes('youtube.com') &&
-    !item.mediaUrl.includes('youtu.be') &&
-    !item.mediaUrl.includes('vimeo.com')
+    mediaUrl &&
+    !youtubeId &&
+    !vimeoId &&
+    item.mediaType !== 'image' &&
+    (item.mediaType === 'video_file' ||
+      (item.mediaType as string) === 'video' ||
+      /\.(mp4|webm|mov|m4v)($|\?)/i.test(mediaUrl) ||
+      mediaUrl.includes('firebasestorage.googleapis.com') ||
+      mediaUrl.includes('storage.googleapis.com') ||
+      mediaUrl.includes('b-cdn.net'))
   );
 
   const handleVideoLoadedData = (e: React.SyntheticEvent<HTMLVideoElement>) => {
@@ -172,7 +180,7 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
         ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
         if (dataUrl && dataUrl.length > 200) {
-          if (item.mediaUrl) clientThumbCache.set(item.mediaUrl, dataUrl);
+          if (mediaUrl) clientThumbCache.set(mediaUrl, dataUrl);
           setDynamicThumb(dataUrl);
         }
       }
@@ -186,7 +194,12 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
     if (!v) return;
 
     if (isHovered) {
+      v.muted = true;
+      v.defaultMuted = true;
+
       const attemptPlay = () => {
+        if (!v) return;
+        v.muted = true;
         const playPromise = v.play();
         if (playPromise !== undefined) {
           playPromise
@@ -199,13 +212,13 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
         attemptPlay();
       } else {
         v.addEventListener('canplay', attemptPlay, { once: true });
-        v.load();
+        v.addEventListener('loadeddata', attemptPlay, { once: true });
       }
     } else {
       v.pause();
       setIsVideoPlaying(false);
       try {
-        v.currentTime = 0.001;
+        v.currentTime = 0;
       } catch {}
     }
   }, [isHovered]);
@@ -281,23 +294,48 @@ export const PortfolioItemCard: React.FC<PortfolioItemCardProps> = ({
           </div>
         )}
 
-        {/* Video Player for hover playback or direct video file initial frame preview */}
-        {isDirectVideoFile && cardInView && (isHovered || !effectiveThumbnail) && (
+        {/* Native video hover preview */}
+        {isDirectVideoFile && (
           <video
             ref={videoRef}
-            src={item.mediaUrl ? `${item.mediaUrl}#t=0.001` : undefined}
+            src={cardInView || isHovered ? (mediaUrl || undefined) : undefined}
             poster={effectiveThumbnail || undefined}
-            preload={isHovered ? "auto" : "metadata"}
+            preload="metadata"
             muted
             loop
             playsInline
             onLoadedData={handleVideoLoadedData}
             className={cn(
-              "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none z-0",
-              isHovered || !effectiveThumbnail ? "opacity-100" : "opacity-0",
-              isHovered ? "scale-105" : "scale-100"
+              "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none z-[5]",
+              isHovered ? "opacity-100 scale-105" : "opacity-0 scale-100"
             )}
           />
+        )}
+
+        {/* YouTube hover preview for YouTube community submissions */}
+        {youtubeId && isHovered && (
+          <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-[5] bg-black">
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeId}&modestbranding=1&playsinline=1`}
+              className="w-full h-full scale-125 object-cover pointer-events-none"
+              tabIndex={-1}
+              loading="lazy"
+              allow="autoplay"
+            />
+          </div>
+        )}
+
+        {/* Vimeo hover preview for Vimeo community submissions */}
+        {vimeoId && isHovered && (
+          <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-[5] bg-black">
+            <iframe
+              src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&muted=1&loop=1&background=1&autopause=0`}
+              className="w-full h-full scale-125 object-cover pointer-events-none"
+              tabIndex={-1}
+              loading="lazy"
+              allow="autoplay"
+            />
+          </div>
         )}
       </div>
 

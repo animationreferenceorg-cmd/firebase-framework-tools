@@ -8,6 +8,8 @@ import { getSnapshotVideos } from '@/lib/videoSnapshot';
 import type { Video, Category } from '@/lib/types';
 import { filterAvailableVideos, isVideoSourceAvailable } from '@/lib/video-availability';
 import { findCategoryThumbnailMatch } from '@/lib/category-utils';
+import { fetchLiveHubReferences } from '@/lib/reference-hub';
+import { mixReferences } from '@/lib/reference-mix';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Construction, Grid, X, Search, Loader2, Sparkles, Heart, Share2 } from 'lucide-react';
@@ -206,10 +208,15 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
         setVisibleCount(VIDEOS_PER_PAGE);
 
         try {
-            // The whole published library comes from the free static snapshot,
-            // so filters and search below cover every video, not just loaded pages.
-            const videos = await getSnapshotVideos();
-            setAllVideos(filterAvailableVideos(videos.filter(v => !v.isShort)));
+            const snapshotVideos = await getSnapshotVideos().catch(() => [] as Video[]);
+            const filteredSnapshot = filterAvailableVideos(snapshotVideos.filter(v => !v.isShort));
+            if (filteredSnapshot.length > 0) {
+                setAllVideos(mixReferences(filteredSnapshot));
+                setLoading(false);
+            }
+
+            const liveHub = await fetchLiveHubReferences().catch(() => [] as Video[]);
+            setAllVideos(mixReferences([...filteredSnapshot, ...liveHub]));
         } catch (error) {
             console.error("Error fetching videos:", error);
         } finally {
@@ -315,7 +322,43 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
         };
 
         // 4. Sort / Filter by Tab
-        if (activeTab === 'community') {
+        if (activeTab === 'animations') {
+            result = result.filter(v => {
+                const source = (v.source || '').toLowerCase();
+                const is3D = source === 'sketchfab' || (v as any).mediaType === 'model3d' || !!(v as any).embedUrl || v.id.startsWith('sf_');
+                const isVid = !!v.videoUrl && (v.videoUrl.includes('.mp4') || v.videoUrl.includes('.webm') || v.type === 'video');
+                const tags = (v.tags || []).map(t => t.toLowerCase());
+                const cats = (v.categories || []).concat(v.categoryIds || []).map(c => c.toLowerCase());
+                return !is3D && (isVid || tags.some(t => t.includes('animat') || t.includes('sakuga') || t.includes('cut') || t.includes('clip') || t.includes('smear')) || cats.some(c => c.includes('animat')));
+            });
+        } else if (activeTab === '3d-models') {
+            result = result.filter(v => {
+                const source = (v.source || '').toLowerCase();
+                const is3D = source === 'sketchfab' || (v as any).mediaType === 'model3d' || !!(v as any).embedUrl || v.id.startsWith('sf_');
+                const tags = (v.tags || []).map(t => t.toLowerCase());
+                const cats = (v.categories || []).concat(v.categoryIds || []).map(c => c.toLowerCase());
+                return is3D || tags.some(t => t === '3d-model' || t === '3d-models' || t === '3d model' || t.includes('turnaround') || t.includes('rigged')) || cats.some(c => c.toLowerCase() === '3d models' || c.toLowerCase() === '3d model');
+            });
+        } else if (activeTab === 'visdev') {
+            result = result.filter(v => {
+                const source = (v.source || '').toLowerCase();
+                const isPin = source === 'pinterest' || v.id.startsWith('pin_');
+                const is3D = source === 'sketchfab' || (v as any).mediaType === 'model3d' || !!(v as any).embedUrl || v.id.startsWith('sf_');
+                if (isPin || is3D) return false;
+                const isArtStation = source === 'artstation' || v.id.startsWith('as_');
+                const tags = (v.tags || []).map(t => t.toLowerCase());
+                const cats = (v.categories || []).concat(v.categoryIds || []).map(c => c.toLowerCase());
+                return isArtStation || tags.some(t => t.includes('visdev') || t.includes('vis-dev') || t.includes('concept') || t.includes('visual development') || t.includes('matte') || t.includes('environment')) || cats.some(c => c.includes('visdev') || c.includes('concept') || c.includes('visual development'));
+            });
+        } else if (activeTab === 'character-design') {
+            result = result.filter(v => {
+                const source = (v.source || '').toLowerCase();
+                const isPin = source === 'pinterest' || v.id.startsWith('pin_');
+                const tags = (v.tags || []).map(t => t.toLowerCase());
+                const cats = (v.categories || []).concat(v.categoryIds || []).map(c => c.toLowerCase());
+                return isPin || tags.some(t => t.includes('character-design') || t.includes('character design') || t.includes('model-sheet') || t.includes('model sheet') || t.includes('pose') || t.includes('anatomy') || t.includes('expression')) || cats.some(c => c.includes('character design') || c.includes('model sheet'));
+            });
+        } else if (activeTab === 'community') {
             // Community: JUST tagged accounts and portfolio / user uploaded videos
             result = result.filter(v => 
                 !!v.uploader || 

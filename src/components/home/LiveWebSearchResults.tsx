@@ -40,10 +40,24 @@ function HoverVideo({ src, poster, isHovered }: { src: string; poster?: string; 
     const el = videoRef.current;
     if (!el) return;
     if (isHovered) {
-      el.play().catch(() => {});
+      el.muted = true;
+      el.defaultMuted = true;
+      const attemptPlay = () => {
+        if (!el) return;
+        el.muted = true;
+        el.play().catch(() => {});
+      };
+      if (el.readyState >= 2) {
+        attemptPlay();
+      } else {
+        el.addEventListener('canplay', attemptPlay, { once: true });
+        el.addEventListener('loadeddata', attemptPlay, { once: true });
+      }
     } else {
       el.pause();
-      el.currentTime = 0;
+      try {
+        el.currentTime = 0;
+      } catch {}
     }
   }, [isHovered]);
 

@@ -1,11 +1,13 @@
-import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { getSocialPlatformConfig } from '@/lib/social/socialManager';
+import { apiErrorResponse, requireAdmin } from '@/lib/api-auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    await requireAdmin(request);
     const config = getSocialPlatformConfig();
-    return NextResponse.json({ success: true, config });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Failed to fetch status' }, { status: 500 });
+    return Response.json({ success: true, config });
+  } catch (error) {
+    return apiErrorResponse(error);
   }
 }

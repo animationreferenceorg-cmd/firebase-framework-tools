@@ -1,46 +1,33 @@
-import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { z } from 'zod';
 import { dispatchSocialPost } from '@/lib/social/socialManager';
-import type { PostRequest } from '@/lib/social/types';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { getSnapshotVideoById } from '@/lib/videoSnapshot.server';
+import { ApiError, apiErrorResponse, requireAdmin } from '@/lib/api-auth';
+import { getFirestore } from '@/lib/firebase-admin';
+import type { Video } from '@/lib/types';
 
-export async function POST(req: Request) {
+const requestSchema = z.object({
+  videoId: z.string().trim().min(1).max(200),
+  platforms: z.array(z.enum(['instagram', 'twitter', 'linkedin'])).min(1).max(3),
+  customCaptions: z.record(z.enum(['instagram', 'twitter', 'linkedin']), z.string().max(2_200)).optional(),
+});
+
+export async function POST(req: NextRequest) {
   try {
-    const body: PostRequest = await req.json();
-
-    if (!body.videoId || !body.platforms || body.platforms.length === 0) {
-      return NextResponse.json(
-        { error: 'Missing required parameters: videoId and platforms array are required.' },
-        { status: 400 }
-      );
-    }
-
-    let video: any = null;
-
-    // Try fetching from Firestore first if DB exists
-    if (db) {
-      const docRef = doc(db, 'videos', body.videoId);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        video = { id: docSnap.id, ...docSnap.data() };
-      }
-    }
-
-    // Fallback to static snapshot if video not found in Firestore
-    if (!video) {
-      video = getSnapshotVideoById(body.videoId);
-    }
+    await requireAdmin(req);
+    const parsed = requestSchema.safeParse(await req.json().catch(() => ({})));
+    if (!parsed.success) throw new ApiError(422, 'INVALID_POST', 'Choose a video, at least one supported platform, and valid captions.');
+    const body = parsed.data;
+    const docSnap = await getFirestore().collection('videos').doc(body.videoId).get();
+    const video = docSnap.exists ? ({ id: docSnap.id, ...(docSnap.data() as Omit<Video, 'id'>) } as Video) : null;
 
     if (!video) {
-      return NextResponse.json({ error: `Video with ID ${body.videoId} not found.` }, { status: 404 });
+      throw new ApiError(404, 'VIDEO_NOT_FOUND', 'The selected video no longer exists.');
     }
 
     const log = await dispatchSocialPost(video, body, 'manual');
 
-    return NextResponse.json({ success: true, log });
-  } catch (err: any) {
-    console.error('Error in /api/social/post API route:', err);
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+    return Response.json({ success: true, log });
+  } catch (error) {
+    return apiErrorResponse(error);
   }
 }

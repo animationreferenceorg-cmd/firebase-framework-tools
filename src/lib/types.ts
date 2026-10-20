@@ -52,6 +52,8 @@ export interface Video {
   repinCount?: number;
   sourcePlatform?: string;
   sourceUrl?: string;
+  source?: string;
+  mediaType?: 'video' | 'image' | 'gif' | 'model3d';
   embedUrl?: string;
   trendingScore?: number;
   behindTheScenes?: BehindTheScenesExtra[];

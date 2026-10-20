@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { useState, useRef, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { Heart, Maximize, Share2, PlayCircle, Play, Bookmark } from 'lucide-react';
+import { Heart, Maximize, Share2, PlayCircle, Play, Bookmark, Box, Palette, Sparkles } from 'lucide-react';
 
 import { CreatorBadge } from '@/components/CreatorBadge';
 import { Button } from '@/components/ui/button';
@@ -127,7 +127,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
 
   const isSocialType = video.type === 'social' || (video.type as string) === 'instagram';
   const isSocialLink = video.originalUrl && (video.originalUrl.includes('instagram.com') || video.originalUrl.includes('tiktok.com'));
-  const isCommunityVideo = isSocialType || isSocialLink || !!video.uploader;
+  const isCommunityVideo = isSocialType || isSocialLink || !!video.uploader || !!video.isPortfolio || !!video.author_name;
 
   const isLikedProp = useMemo(() => {
     return userProfile?.likedVideoIds?.includes(video.id) ?? false;
@@ -142,6 +142,11 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   const [likeCountDelta, setLikeCountDelta] = useState(0);
   const [showSaveToBoard, setShowSaveToBoard] = useState(false);
   const targetVideoUrl = video.videoUrl || video.originalUrl || (video as any).sourceUrl || '';
+  const playableVideoUrl = isPlayableVideoUrl(video.videoUrl)
+    ? video.videoUrl
+    : isPlayableVideoUrl(targetVideoUrl)
+      ? targetVideoUrl
+      : undefined;
   const youtubeId = useMemo(() => getYouTubeId(targetVideoUrl), [targetVideoUrl]);
   const instagramId = useMemo(() => getInstagramId(targetVideoUrl), [targetVideoUrl]);
   const vimeoId = useMemo(() => getVimeoId(targetVideoUrl), [targetVideoUrl]);
@@ -149,6 +154,10 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   const isLiked = optimisticLiked !== null ? optimisticLiked : isLikedProp;
   const isSaved = optimisticSaved !== null ? optimisticSaved : isSavedProp;
   const displayLikeCount = Math.max(0, (video.likeCount ?? 0) + likeCountDelta);
+
+  const is3DModel = video.source === 'sketchfab' || (video as any).mediaType === 'model3d' || !!(video as any).embedUrl || video.id.startsWith('sf_') || (video.tags || []).some(t => t === '3d-model' || t === '3d-models');
+  const isCharacterDesign = video.source === 'pinterest' || video.id.startsWith('pin_') || (video.tags || []).some(t => t === 'character-design' || t === 'model-sheet');
+  const isVisDev = !isCharacterDesign && !is3DModel && (video.source === 'artstation' || video.id.startsWith('as_') || (video.tags || []).some(t => t === 'visdev' || t === 'vis-dev'));
 
   useEffect(() => {
     const videoElem = videoRef.current;
@@ -166,7 +175,14 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
       }
 
       if (!videoElem) return;
+
+      // Ensure muted DOM property is explicitly set to satisfy browser autoplay policies
+      videoElem.muted = true;
+      videoElem.defaultMuted = true;
+
       const attemptPlay = () => {
+        if (!videoElem) return;
+        videoElem.muted = true;
         const playPromise = videoElem.play();
         if (playPromise !== undefined) {
           playPromise.catch(() => {});
@@ -177,7 +193,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
         attemptPlay();
       } else {
         videoElem.addEventListener('canplay', attemptPlay, { once: true });
-        videoElem.load();
+        videoElem.addEventListener('loadeddata', attemptPlay, { once: true });
       }
     } else {
       clearQuotaTimer();
@@ -415,35 +431,34 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
         >
           {!isImageLoaded && <Skeleton className="absolute inset-0" />}
           {effectiveImageUrl && !hasImageError ? (
-              <Image
-                loading={priority ? undefined : "lazy"}
-                priority={priority}
-                src={effectiveImageUrl}
-                alt={video.title}
-                fill
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                unoptimized={isExternalCdn}
-                referrerPolicy="no-referrer"
-                className={cn(
-                  "w-full h-full object-cover transition-opacity duration-300",
-                  (!isImageLoaded || (isHovered && video.videoUrl && isCommunityVideo)) && "opacity-0"
-                )}
-                data-ai-hint={video.dataAiHint}
-                onLoad={() => setIsImageLoaded(true)}
-                onError={() => {
-                  if (!proxyTried && isExternalCdn && imageUrl && !imageUrl.startsWith('data:') && !imageUrl.startsWith('/api/proxy')) {
-                    setProxyTried(true);
-                    setProxyImgUrl(`/api/proxy/image?url=${encodeURIComponent(imageUrl)}`);
-                  } else {
-                    setHasImageError(true);
-                    setIsImageLoaded(true);
-                  }
-                }}
-              />
-          ) : isCommunityVideo && video.videoUrl ? (
+            <Image
+              loading={priority ? undefined : "lazy"}
+              priority={priority}
+              src={effectiveImageUrl}
+              alt={video.title}
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              unoptimized={isExternalCdn}
+              referrerPolicy="no-referrer"
+              className={cn(
+                "w-full h-full object-cover transition-opacity duration-300",
+                !isImageLoaded && "opacity-0"
+              )}
+              data-ai-hint={video.dataAiHint}
+              onLoad={() => setIsImageLoaded(true)}
+              onError={() => {
+                if (!proxyTried && isExternalCdn && imageUrl && !imageUrl.startsWith('data:') && !imageUrl.startsWith('/api/proxy')) {
+                  setProxyTried(true);
+                  setProxyImgUrl(`/api/proxy/image?url=${encodeURIComponent(imageUrl)}`);
+                } else {
+                  setHasImageError(true);
+                  setIsImageLoaded(true);
+                }
+              }}
+            />
+          ) : isCommunityVideo && playableVideoUrl ? (
             <video
-              ref={videoRef}
-              src={cardInView ? videoUrlForPreview : undefined}
+              src={cardInView || isHovered ? getPreviewUrl(playableVideoUrl) : undefined}
               preload="metadata"
               muted
               playsInline
@@ -457,10 +472,52 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           ) : (
             <div className={cn(
               "absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-purple-900/40 to-pink-900/40 border border-white/5",
-              (isHovered && video.videoUrl && isCommunityVideo) && "opacity-0"
+              isHovered && playableVideoUrl && isCommunityVideo && "opacity-0"
             )}>
               <PlayCircle className="h-10 w-10 text-white/40 mb-2" />
               <span className="text-white/70 font-medium px-4 text-center text-sm line-clamp-2 w-full">{displayTitle}</span>
+            </div>
+          )}
+
+          {/* Native video hover preview for shorts/posters */}
+          {playableVideoUrl && (
+            <video
+              ref={videoRef}
+              src={cardInView || isHovered ? getPreviewUrl(playableVideoUrl) : undefined}
+              preload="metadata"
+              muted
+              loop
+              playsInline
+              className={cn(
+                "absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none z-[5]",
+                isHovered && !isPlayerOpen ? "opacity-100 scale-105" : "opacity-0 scale-100"
+              )}
+            />
+          )}
+
+          {/* YouTube hover preview for shorts/posters */}
+          {youtubeId && isHovered && !isPlayerOpen && (
+            <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-[5] bg-black">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeId}&modestbranding=1&playsinline=1`}
+                className="w-full h-full scale-125 object-cover pointer-events-none"
+                tabIndex={-1}
+                loading="lazy"
+                allow="autoplay"
+              />
+            </div>
+          )}
+
+          {/* Vimeo hover preview for shorts/posters */}
+          {vimeoId && isHovered && !isPlayerOpen && (
+            <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-[5] bg-black">
+              <iframe
+                src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&muted=1&loop=1&background=1&autopause=0`}
+                className="w-full h-full scale-125 object-cover pointer-events-none"
+                tabIndex={-1}
+                loading="lazy"
+                allow="autoplay"
+              />
             </div>
           )}
           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/card:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
@@ -544,9 +601,9 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
                 }}
               />
             </>
-          ) : video.videoUrl ? (
+          ) : playableVideoUrl ? (
             <video
-              src={cardInView ? videoUrlForPreview : undefined}
+              src={cardInView || isHovered ? getPreviewUrl(playableVideoUrl) : undefined}
               preload="metadata"
               muted
               playsInline
@@ -567,10 +624,10 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           )}
 
           {/* Native video hover preview */}
-          {video.videoUrl && isPlayableVideoUrl(video.videoUrl) && (
+          {playableVideoUrl && (
             <video
               ref={videoRef}
-              src={cardInView ? getPreviewUrl(video.videoUrl) : undefined}
+              src={cardInView || isHovered ? getPreviewUrl(playableVideoUrl) : undefined}
               preload="metadata"
               muted
               loop
@@ -582,6 +639,32 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
             />
           )}
 
+          {/* YouTube hover preview for YouTube community cards */}
+          {youtubeId && !isPlayerOpen && isHovered && (
+            <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-[5] bg-black">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeId}&modestbranding=1&playsinline=1`}
+                className="w-full h-full scale-125 object-cover pointer-events-none"
+                tabIndex={-1}
+                loading="lazy"
+                allow="autoplay"
+              />
+            </div>
+          )}
+
+          {/* Vimeo hover preview for Vimeo community cards */}
+          {vimeoId && !isPlayerOpen && isHovered && (
+            <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-[5] bg-black">
+              <iframe
+                src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&muted=1&loop=1&background=1&autopause=0`}
+                className="w-full h-full scale-125 object-cover pointer-events-none"
+                tabIndex={-1}
+                loading="lazy"
+                allow="autoplay"
+              />
+            </div>
+          )}
+
           {/* Dark Overlay Gradient (always visible on hover to make text readable) */}
           <div className={cn(
             "absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none transition-opacity duration-300 z-10",
@@ -590,6 +673,24 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
 
           {/* Subtle creator badge — top-left, always visible for community videos */}
           <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} avatarUrl={video.authorAvatar || (video as any).author_avatar || (video as any).creatorAvatar} />
+
+          {/* Streamed Media Type Pill (Top Right) */}
+          {is3DModel ? (
+            <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-950/80 backdrop-blur-md border border-cyan-400/40 text-cyan-300 text-[10px] font-bold shadow-lg pointer-events-none">
+              <Box className="w-3 h-3 text-cyan-300" />
+              <span>3D Model</span>
+            </div>
+          ) : isCharacterDesign ? (
+            <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-950/80 backdrop-blur-md border border-rose-400/40 text-rose-300 text-[10px] font-bold shadow-lg pointer-events-none">
+              <Sparkles className="w-3 h-3 text-rose-300" />
+              <span>Char Design</span>
+            </div>
+          ) : isVisDev ? (
+            <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-950/80 backdrop-blur-md border border-sky-400/40 text-sky-300 text-[10px] font-bold shadow-lg pointer-events-none">
+              <Palette className="w-3 h-3 text-sky-300" />
+              <span>VisDev</span>
+            </div>
+          ) : null}
 
           {/* Bottom Actions Bar (High Z-Index so buttons STAY visible when video plays) */}
           <div className={cn(
@@ -733,9 +834,9 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
               setIsImageLoaded(true);
             }}
           />
-        ) : video.videoUrl && isPlayableVideoUrl(video.videoUrl) ? (
+        ) : playableVideoUrl ? (
           <video
-            src={cardInView ? getPreviewUrl(video.videoUrl) : undefined}
+            src={cardInView || isHovered ? getPreviewUrl(playableVideoUrl) : undefined}
             preload="metadata"
             muted
             playsInline
@@ -756,10 +857,10 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           )}
         
         {/* Native video hover preview for standard cards */}
-        {video.videoUrl && !video.isShort && !poster && isPlayableVideoUrl(video.videoUrl) && (
+        {playableVideoUrl && !video.isShort && !poster && (
           <video
             ref={videoRef}
-            src={cardInView || isHovered ? getPreviewUrl(video.videoUrl) : undefined}
+            src={cardInView || isHovered ? getPreviewUrl(playableVideoUrl) : undefined}
             preload="metadata"
             muted
             loop
@@ -802,7 +903,22 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
         <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} avatarUrl={video.authorAvatar || (video as any).author_avatar || (video as any).creatorAvatar} />
 
         {/* Pinterest-style Community Pin / Save Badge (Top Right) */}
-        {((video.saveCount && video.saveCount > 0) || (video.repinCount && video.repinCount > 0)) ? (
+        {is3DModel ? (
+          <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-950/80 backdrop-blur-md border border-cyan-400/40 text-cyan-300 text-[10px] font-bold shadow-lg pointer-events-none">
+            <Box className="w-3 h-3 text-cyan-300" />
+            <span>3D Model</span>
+          </div>
+        ) : isCharacterDesign ? (
+          <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-950/80 backdrop-blur-md border border-rose-400/40 text-rose-300 text-[10px] font-bold shadow-lg pointer-events-none">
+            <Sparkles className="w-3 h-3 text-rose-300" />
+            <span>Char Design</span>
+          </div>
+        ) : isVisDev ? (
+          <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-950/80 backdrop-blur-md border border-sky-400/40 text-sky-300 text-[10px] font-bold shadow-lg pointer-events-none">
+            <Palette className="w-3 h-3 text-sky-300" />
+            <span>VisDev</span>
+          </div>
+        ) : ((video.saveCount && video.saveCount > 0) || (video.repinCount && video.repinCount > 0)) ? (
           <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md border border-purple-500/30 text-purple-200 text-[10px] font-semibold shadow-md pointer-events-none">
             <Bookmark className="w-2.5 h-2.5 fill-purple-400 text-purple-400" />
             <span>{video.saveCount || video.repinCount}</span>

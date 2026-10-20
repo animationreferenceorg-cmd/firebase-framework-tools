@@ -19,7 +19,15 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Settings2 } from 'lucide-react';
 
-export type TabOption = 'featured' | 'community' | 'trending' | 'latest';
+export type TabOption =
+    | 'featured'
+    | 'animations'
+    | '3d-models'
+    | 'visdev'
+    | 'character-design'
+    | 'community'
+    | 'trending'
+    | 'latest';
 export type TypeOption = 'all' | '2D' | '3D';
 export type PillOption = 'all' | 'locomotion' | 'combat' | 'acting' | 'creature' | 'mechanics' | 'vfx' | 'shorts';
 
@@ -83,12 +91,14 @@ export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, 
             {/* Sub Row: Tabs and Controls */}
             <div className="flex min-w-0 flex-col justify-between gap-3 pt-1 sm:pt-2 md:flex-row md:items-center md:gap-4">
             {/* Left Tabs */}
-            <div className="-mx-1 flex w-[calc(100%+0.5rem)] touch-pan-x items-center gap-6 overflow-x-auto px-1 pb-3 scrollbar-none no-scrollbar md:mx-0 md:w-auto md:gap-8 md:overflow-visible md:px-0 md:pb-0">
-                {/* One underline shared across tabs, so it slides to the new
-                    selection. The old version gave Featured/Trending a purple
-                    active state and Community/Latest a white one. */}
+            <div className="-mx-1 flex w-[calc(100%+0.5rem)] touch-pan-x items-center gap-4 sm:gap-6 overflow-x-auto px-1 pb-3 scrollbar-none no-scrollbar md:mx-0 md:w-auto md:gap-7 md:overflow-visible md:px-0 md:pb-0">
+                {/* One underline shared across tabs, so it slides to the new selection */}
                 {([
                     ['featured', 'Featured'],
+                    ['animations', 'Animations'],
+                    ['3d-models', '3D Models'],
+                    ['visdev', 'VisDev'],
+                    ['character-design', 'Character Design'],
                     ['community', 'Community'],
                     ['trending', 'Trending'],
                     ['latest', 'Latest'],
@@ -98,7 +108,7 @@ export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, 
                         onClick={() => setActiveTab(id)}
                         aria-pressed={activeTab === id}
                         className={cn(
-                            "relative min-h-10 shrink-0 py-2 text-sm font-semibold transition-colors md:min-h-0 md:py-0",
+                            "relative min-h-10 shrink-0 py-2 text-sm font-semibold whitespace-nowrap transition-colors md:min-h-0 md:py-0 cursor-pointer",
                             activeTab === id ? "text-white" : "text-zinc-500 hover:text-zinc-300"
                         )}
                     >

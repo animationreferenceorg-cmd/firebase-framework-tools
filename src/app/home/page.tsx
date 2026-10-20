@@ -14,7 +14,8 @@ import { RecentlyViewedShelf } from '@/components/home/RecentlyViewedShelf';
 import { LiveWebDiscoveryShelf } from '@/components/home/LiveWebDiscoveryShelf';
 import { LiveWebSearchResults } from '@/components/home/LiveWebSearchResults';
 import type { UnifiedSearchResult } from '@/app/api/import/search/route';
-import { searchResultToVideo } from '@/lib/reference-hub';
+import { searchResultToVideo, fetchLiveHubReferences } from '@/lib/reference-hub';
+import { getPublicPortfolioItems, portfolioItemToVideo } from '@/lib/portfolio-service';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from '@/components/motion/SectionHeading';
 import { filterAvailableVideos } from '@/lib/video-availability';
@@ -59,19 +60,37 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    let isCurrent = true;
     const fetchData = async () => {
       setLoading(true);
       try {
-        const videos = await getSnapshotVideos();
-        // Shuffled once per visit; tabs and filters keep this mixed order.
-        setAllVideos(mixReferences(filterAvailableVideos(videos)));
+        // 1. Fast initial load of snapshot references so grid displays immediately
+        const snapshotVids = await getSnapshotVideos().catch(() => [] as Video[]);
+        if (!isCurrent) return;
+        const available = filterAvailableVideos(snapshotVids);
+        if (available.length > 0) {
+          setAllVideos(mixReferences(available));
+          setLoading(false);
+        }
+
+        // 2. Concurrently fetch and blend live streamed content (Sketchfab 3D, ArtStation VisDev, Pinterest Design, Community)
+        const [liveHub, portfolioItems] = await Promise.all([
+          fetchLiveHubReferences().catch(() => [] as Video[]),
+          getPublicPortfolioItems({ limitCount: 30 }).catch(() => [] as any[]),
+        ]);
+        if (!isCurrent) return;
+
+        const communityVids = (portfolioItems || []).map(portfolioItemToVideo);
+        const blended = [...available, ...liveHub, ...communityVids];
+        setAllVideos(mixReferences(blended));
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
-        setLoading(false);
+        if (isCurrent) setLoading(false);
       }
     };
     fetchData();
+    return () => { isCurrent = false; };
   }, []);
 
   // Filtered Videos
@@ -137,8 +156,48 @@ export default function HomePage() {
     }
 
     // --- Tab Specific Rules ---
-    if (activeTab === 'community') {
-      // Community: JUST tagged accounts and portfolio / user uploaded videos
+    if (activeTab === 'animations') {
+      // Animations: Video clips, animation cuts, sakuga choreography, 2D/3D shots
+      result = result.filter(v => {
+        const source = (v.source || '').toLowerCase();
+        const is3D = source === 'sketchfab' || (v as any).mediaType === 'model3d' || !!(v as any).embedUrl || v.id.startsWith('sf_');
+        const isVid = !!v.videoUrl && (v.videoUrl.includes('.mp4') || v.videoUrl.includes('.webm') || v.type === 'video');
+        const tags = (v.tags || []).map(t => t.toLowerCase());
+        const cats = (v.categories || []).concat(v.categoryIds || []).map(c => c.toLowerCase());
+        return !is3D && (isVid || tags.some(t => t.includes('animat') || t.includes('sakuga') || t.includes('cut') || t.includes('clip') || t.includes('smear')) || cats.some(c => c.includes('animat')));
+      });
+    } else if (activeTab === '3d-models') {
+      // 3D Models: Sketchfab interactive 3D models, rigs, and 3D turnarounds
+      result = result.filter(v => {
+        const source = (v.source || '').toLowerCase();
+        const is3D = source === 'sketchfab' || (v as any).mediaType === 'model3d' || !!(v as any).embedUrl || v.id.startsWith('sf_');
+        const tags = (v.tags || []).map(t => t.toLowerCase());
+        const cats = (v.categories || []).concat(v.categoryIds || []).map(c => c.toLowerCase());
+        return is3D || tags.some(t => t === '3d-model' || t === '3d-models' || t === '3d model' || t.includes('turnaround') || t.includes('rigged')) || cats.some(c => c.toLowerCase() === '3d models' || c.toLowerCase() === '3d model');
+      });
+    } else if (activeTab === 'visdev') {
+      // VisDev: ArtStation visual development, concept art, backgrounds, matte painting
+      result = result.filter(v => {
+        const source = (v.source || '').toLowerCase();
+        const isPin = source === 'pinterest' || v.id.startsWith('pin_');
+        const is3D = source === 'sketchfab' || (v as any).mediaType === 'model3d' || !!(v as any).embedUrl || v.id.startsWith('sf_');
+        if (isPin || is3D) return false;
+        const isArtStation = source === 'artstation' || v.id.startsWith('as_');
+        const tags = (v.tags || []).map(t => t.toLowerCase());
+        const cats = (v.categories || []).concat(v.categoryIds || []).map(c => c.toLowerCase());
+        return isArtStation || tags.some(t => t.includes('visdev') || t.includes('vis-dev') || t.includes('concept') || t.includes('visual development') || t.includes('matte') || t.includes('environment')) || cats.some(c => c.includes('visdev') || c.includes('concept') || c.includes('visual development'));
+      });
+    } else if (activeTab === 'character-design') {
+      // Character Design: Pinterest model sheets, pose references, anatomy studies
+      result = result.filter(v => {
+        const source = (v.source || '').toLowerCase();
+        const isPin = source === 'pinterest' || v.id.startsWith('pin_');
+        const tags = (v.tags || []).map(t => t.toLowerCase());
+        const cats = (v.categories || []).concat(v.categoryIds || []).map(c => c.toLowerCase());
+        return isPin || tags.some(t => t.includes('character-design') || t.includes('character design') || t.includes('model-sheet') || t.includes('model sheet') || t.includes('pose') || t.includes('anatomy') || t.includes('expression')) || cats.some(c => c.includes('character design') || c.includes('model sheet'));
+      });
+    } else if (activeTab === 'community') {
+      // Community: Tagged accounts and portfolio / user uploaded references
       result = result.filter(v => 
         !!v.uploader || 
         !!v.author_name || 
@@ -148,7 +207,7 @@ export default function HomePage() {
         !!v.originalUrl
       );
     } else if (activeTab === 'trending') {
-      // Trending: Whoever has most likes (sorted descending by likeCount)
+      // Trending: Highest likes & views
       result = [...result].sort((a, b) => {
         const likesA = a.likeCount ?? 0;
         const likesB = b.likeCount ?? 0;
@@ -158,10 +217,10 @@ export default function HomePage() {
         return viewsB - viewsA;
       });
     } else if (activeTab === 'latest') {
-      // Latest: Latest uploaded references (newest first by createdAt)
+      // Latest: Newest first by timestamp
       result = [...result].sort((a, b) => getVideoTimestamp(b) - getVideoTimestamp(a));
     }
-    // Featured: keeps the randomized, anime-balanced order from mixReferences.
+    // Featured: keeps the natural randomized, anime-balanced order from mixReferences
 
     return result;
   }, [allVideos, activeTab, activeType, activePill, searchQuery]);

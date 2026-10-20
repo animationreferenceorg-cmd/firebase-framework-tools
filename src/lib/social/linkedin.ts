@@ -20,55 +20,43 @@ export async function postToLinkedIn(opts: {
   }
 
   try {
-    // LinkedIn ugcPosts REST payload
+    // The legacy /v2/ugcPosts endpoint was retired.  An article post works
+    // without first downloading and re-uploading the source video; use a
+    // native video only after the Videos API has supplied a video URN.
     const body = {
       author: authorUrn.startsWith('urn:li:') ? authorUrn : `urn:li:organization:${authorUrn}`,
+      commentary: opts.caption,
+      visibility: 'PUBLIC',
+      distribution: {
+        feedDistribution: 'MAIN_FEED',
+        targetEntities: [],
+        thirdPartyDistributionChannels: [],
+      },
       lifecycleState: 'PUBLISHED',
-      specificContent: {
-        'com.linkedin.ugc.ShareContent': {
-          shareCommentary: {
-            text: opts.caption,
-          },
-          shareMediaCategory: opts.videoUrl ? 'ARTICLE' : 'NONE',
-          ...(opts.videoUrl
-            ? {
-                media: [
-                  {
-                    status: 'READY',
-                    originalUrl: opts.videoUrl,
-                    title: { text: 'Animation Reference Clip' },
-                  },
-                ],
-              }
-            : {}),
-        },
-      },
-      visibility: {
-        'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC',
-      },
+      isReshareDisabledByAuthor: false,
     };
 
-    const res = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+    const res = await fetch('https://api.linkedin.com/rest/posts', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
+        'Linkedin-Version': process.env.LINKEDIN_API_VERSION || '202610',
       },
       body: JSON.stringify(body),
     });
 
     const data = await res.json();
 
-    if (!res.ok || !data.id) {
+    const postId = data.id || res.headers.get('x-restli-id');
+    if (!res.ok || !postId) {
       return {
         platform: 'linkedin',
         success: false,
         error: data.message || 'Failed to publish post to LinkedIn.',
       };
     }
-
-    const postId = data.id;
 
     return {
       platform: 'linkedin',

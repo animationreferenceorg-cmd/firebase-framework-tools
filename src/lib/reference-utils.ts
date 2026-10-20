@@ -69,16 +69,36 @@ export function isDirectPlayableVideoUrl(url?: string | null): boolean {
   if (clean.includes('reflix.dev')) return false;
 
   // Direct video file extensions & HLS manifests from any CDN (Instagram CDN, Sakugabooru, Pinterest, Archive.org, Firebase, Bunny, etc.)
-  if (clean.includes('.mp4') || clean.includes('.webm') || clean.includes('playlist.m3u8') || clean.includes('.m3u8')) {
+  if (
+    clean.includes('.mp4') ||
+    clean.includes('.webm') ||
+    clean.includes('.mov') ||
+    clean.includes('.m4v') ||
+    clean.includes('playlist.m3u8') ||
+    clean.includes('.m3u8') ||
+    clean.startsWith('blob:')
+  ) {
     return true;
   }
 
   // Webpage post URLs that aren't raw video files
-  if (clean.includes('youtube.com') || clean.includes('youtu.be') || clean.includes('vimeo.com') || clean.includes('instagram.com') || clean.includes('tiktok.com')) {
+  if (
+    clean.includes('youtube.com') ||
+    clean.includes('youtu.be') ||
+    clean.includes('vimeo.com') ||
+    clean.includes('instagram.com/p/') ||
+    clean.includes('instagram.com/reel/') ||
+    clean.includes('tiktok.com/@')
+  ) {
     return false;
   }
 
-  if (clean.includes('b-cdn.net') || clean.includes('firebasestorage.googleapis.com') || clean.includes('storage.googleapis.com')) {
+  if (
+    clean.includes('b-cdn.net') ||
+    clean.includes('firebasestorage.googleapis.com') ||
+    clean.includes('storage.googleapis.com') ||
+    clean.includes('cloudinary.com')
+  ) {
     return true;
   }
   return false;

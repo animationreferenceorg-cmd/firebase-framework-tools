@@ -47,6 +47,11 @@ export interface SocialPlatformConfig {
     enabled: boolean;
     hasCredentials: boolean;
   };
+  facebook: {
+    enabled: boolean;
+    hasCredentials: boolean;
+    pageId?: string;
+  };
 }
 
 export interface BotScheduleConfig {

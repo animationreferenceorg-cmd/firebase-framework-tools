@@ -10,11 +10,10 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 import type { Video } from '@/lib/types';
 import type { SocialPlatform, SocialPlatformConfig, SocialPostLog } from '@/lib/social/types';
 import { generateAllCaptions } from '@/lib/social/captionBuilder';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Share2, Instagram, Twitter, Linkedin, Sparkles, CheckCircle2, AlertCircle, RefreshCw, Send, Bot, Clock } from 'lucide-react';
 
 export default function SocialAdminPage() {
@@ -40,35 +39,34 @@ export default function SocialAdminPage() {
   const [posting, setPosting] = useState<boolean>(false);
   const [botRunning, setBotRunning] = useState<boolean>(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  const authHeaders = async () => {
+    if (!user) throw new Error('Sign in with an admin account to manage social publishing.');
+    return { Authorization: `Bearer ${await user.getIdToken()}` };
+  };
 
   const fetchData = async () => {
     setLoading(true);
     try {
       // 1. Fetch platform config status
-      const configRes = await fetch('/api/social/status');
+      const configRes = await fetch('/api/social/status', { headers: await authHeaders() });
       const configData = await configRes.json();
       if (configData.config) {
         setPlatformConfig(configData.config);
       }
 
-      // 2. Fetch videos from Firestore
-      if (db) {
-        const videoSnap = await getDocs(collection(db, 'videos'));
-        const vList = videoSnap.docs
-          .map(d => ({ id: d.id, ...d.data() } as Video))
-          .filter(v => v.status === 'published' || !v.status);
-        setVideos(vList);
-
-        if (vList.length > 0) {
-          setSelectedVideoId(vList[0].id);
-          setSelectedVideo(vList[0]);
-        }
-
-        // 3. Fetch recent post logs
-        const logSnap = await getDocs(query(collection(db, 'social_posts'), orderBy('createdAt', 'desc'), limit(15)));
-        const lList = logSnap.docs.map(d => ({ id: d.id, ...d.data() } as SocialPostLog));
-        setLogs(lList);
+      // 2. The server returns both sources and history after verifying the admin ID token.
+      const dataRes = await fetch('/api/social/data', { headers: await authHeaders() });
+      const socialData = await dataRes.json();
+      if (!dataRes.ok) throw new Error(socialData.message || 'Could not load social publishing data.');
+      const vList = (socialData.videos || []) as Video[];
+      setVideos(vList);
+      if (vList.length > 0) {
+        setSelectedVideoId(vList[0].id);
+        setSelectedVideo(vList[0]);
       }
+      setLogs((socialData.logs || []) as SocialPostLog[]);
     } catch (err) {
       console.error('Error fetching social admin data:', err);
     } finally {
@@ -77,8 +75,8 @@ export default function SocialAdminPage() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (user) fetchData();
+  }, [user]);
 
   // Update generated captions when selected video changes
   useEffect(() => {
@@ -125,7 +123,7 @@ export default function SocialAdminPage() {
     try {
       const res = await fetch('/api/social/post', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({
           videoId: selectedVideoId,
           platforms: activePlatforms,
@@ -158,7 +156,7 @@ export default function SocialAdminPage() {
   const handleTriggerBotNow = async () => {
     setBotRunning(true);
     try {
-      const res = await fetch('/api/social/cron');
+      const res = await fetch('/api/social/cron', { method: 'POST', headers: await authHeaders() });
       const data = await res.json();
       if (res.ok && data.success) {
         toast({

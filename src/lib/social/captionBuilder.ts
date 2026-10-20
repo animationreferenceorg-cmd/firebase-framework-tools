@@ -36,7 +36,7 @@ function formatHashtags(tags?: string[], limit: number = 6): string {
  * copy, and don't bury the credit under hashtags.
  */
 export function generateCaption(platform: SocialPlatform, opts: PlatformCaptionOptions): string {
-  const { title, description, authorName, tags } = opts;
+  const { title, description, authorName, tags, pageUrl } = opts;
   const handle = authorName ? `@${authorName.replace(/\s+/g, '')}` : null;
   const hook = handle ? `Incredible animation work by ${handle} 🎬` : `🎬 ${title}`;
   const hashtags = formatHashtags(tags, 8);
@@ -52,7 +52,7 @@ export function generateCaption(platform: SocialPlatform, opts: PlatformCaptionO
     case 'twitter': {
       // Twitter 280 character limit handling
       const hashtagsTwitter = formatHashtags(tags, 3);
-      const ctaText = `\nCheck out more animations at animationreference.org`;
+      const ctaText = pageUrl ? `\n${pageUrl}` : `\nCheck out more animations at animationreference.org`;
       const creditTwitter = handle ? `\nBy ${handle}` : '';
 
       const fixedLength = ctaText.length + creditTwitter.length + hashtagsTwitter.length + 5;
@@ -67,7 +67,8 @@ export function generateCaption(platform: SocialPlatform, opts: PlatformCaptionO
       const descSnippet = description ? `\n\n${description.slice(0, 300)}${description.length > 300 ? '...' : ''}` : '';
       const linkedinTags = formatHashtags(tags, 6);
       const titleLine = handle ? `\n\n${title}` : '';
-      return `${hook}${titleLine}${descSnippet}\n\nCheck out more animations at animationreference.org\n\n${linkedinTags}`;
+      const cta = pageUrl ? `View the clip: ${pageUrl}` : 'Check out more animations at animationreference.org';
+      return `${hook}${titleLine}${descSnippet}\n\n${cta}\n\n${linkedinTags}`;
     }
 
     default:

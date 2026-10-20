@@ -2,10 +2,9 @@ import { postToInstagram } from './instagram';
 import { postToTwitter } from './twitter';
 import { postToLinkedIn } from './linkedin';
 import { generateCaption } from './captionBuilder';
-import type { PostRequest, PostResult, SocialPlatform, SocialPostLog, SocialPlatformConfig } from './types';
+import type { PostRequest, PostResult, SocialPostLog, SocialPlatformConfig } from './types';
 import type { Video } from '../types';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getFirestore } from '../firebase-admin';
 import { isVideoSourceAvailable } from '@/lib/video-availability';
 
 const BASE_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://animationreference.org';
@@ -21,12 +20,19 @@ export function getSocialPlatformConfig(): SocialPlatformConfig {
       accountId: process.env.INSTAGRAM_ACCOUNT_ID,
     },
     twitter: {
-      enabled: Boolean((process.env.X_API_KEY && process.env.X_ACCESS_TOKEN) || process.env.X_BEARER_TOKEN),
-      hasCredentials: Boolean(process.env.X_API_KEY || process.env.X_BEARER_TOKEN),
+      // A write-capable OAuth 2 user token is sent as a Bearer token. An app-only
+      // bearer token can read API v2 but cannot create a post.
+      enabled: Boolean(process.env.X_ACCESS_TOKEN || process.env.TWITTER_ACCESS_TOKEN),
+      hasCredentials: Boolean(process.env.X_ACCESS_TOKEN || process.env.TWITTER_ACCESS_TOKEN),
     },
     linkedin: {
       enabled: Boolean(process.env.LINKEDIN_ACCESS_TOKEN && (process.env.LINKEDIN_ORGANIZATION_URN || process.env.LINKEDIN_PERSON_URN)),
       hasCredentials: Boolean(process.env.LINKEDIN_ACCESS_TOKEN),
+    },
+    facebook: {
+      enabled: Boolean(process.env.FACEBOOK_PAGE_ID && (process.env.META_PAGE_ACCESS_TOKEN || process.env.META_ACCESS_TOKEN)),
+      hasCredentials: Boolean(process.env.FACEBOOK_PAGE_ID),
+      pageId: process.env.FACEBOOK_PAGE_ID,
     },
   };
 }
@@ -88,16 +94,15 @@ export async function dispatchSocialPost(
     triggeredBy,
   };
 
-  // Save log in Firestore if DB is initialized
-  if (db) {
-    try {
-      await addDoc(collection(db, 'social_posts'), {
-        ...log,
-        createdAt: serverTimestamp(),
-      });
-    } catch (err) {
-      console.error('Failed to store social post log in Firestore:', err);
-    }
+  // This module only runs on the server.  Using Admin SDK keeps post history
+  // private even when the client Firestore rules intentionally deny it.
+  try {
+    await getFirestore().collection('social_posts').add({
+      ...log,
+      createdAt: Date.now(),
+    });
+  } catch (err) {
+    console.error('Failed to store social post log in Firestore:', err);
   }
 
   return log;
@@ -107,12 +112,9 @@ export async function dispatchSocialPost(
  * Select candidate videos for automated daily bot posting
  */
 export async function selectDailyBotVideo(): Promise<Video | null> {
-  if (!db) return null;
-
   try {
-    const videosRef = collection(db, 'videos');
-    const q = query(videosRef, orderBy('createdAt', 'desc'), limit(50));
-    const snapshot = await getDocs(q);
+    const db = getFirestore();
+    const snapshot = await db.collection('videos').orderBy('createdAt', 'desc').limit(50).get();
 
     if (snapshot.empty) return null;
 
@@ -123,9 +125,7 @@ export async function selectDailyBotVideo(): Promise<Video | null> {
     if (publishedVideos.length === 0) return null;
 
     // Fetch recently posted video IDs from social_posts collection
-    const postsRef = collection(db, 'social_posts');
-    const postsQuery = query(postsRef, orderBy('createdAt', 'desc'), limit(30));
-    const postsSnapshot = await getDocs(postsQuery);
+    const postsSnapshot = await db.collection('social_posts').orderBy('createdAt', 'desc').limit(30).get();
     const recentlyPostedIds = new Set(postsSnapshot.docs.map(doc => doc.data().videoId));
 
     // Pick a video that has not been posted recently

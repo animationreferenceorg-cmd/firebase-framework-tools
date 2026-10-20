@@ -22,6 +22,7 @@ import {
   Info,
   Palette,
   ExternalLink as LinkIcon,
+  Box,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SaveToBoardModal } from '@/components/SaveToBoardModal';
@@ -51,6 +52,9 @@ export function ArtworkDetailModal({ item, isOpen, onClose }: ArtworkDetailModal
   const sourceUrl = (item as any).sourceUrl || (item as any).originalUrl || '';
   const source = (item as any).source || 'artstation';
   const hashId = (item as any).hashId || '';
+  const isSketchfab = source === 'sketchfab' || (item as any).mediaType === 'model3d' || !!(item as any).embedUrl;
+  const isPinterest = source === 'pinterest';
+  const embedUrl = (item as any).embedUrl || '';
 
   // Active displayed asset
   const [activeImage, setActiveImage] = useState<string>(initialImage);
@@ -272,10 +276,22 @@ export function ArtworkDetailModal({ item, isOpen, onClose }: ArtworkDetailModal
           </Button>
 
           {/* Provider Pill */}
-          <span className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-[#13AFF0]/15 px-2.5 py-1 text-xs font-bold text-[#13AFF0] border border-[#13AFF0]/30 shadow-[0_0_12px_rgba(19,175,240,0.2)] shrink-0">
-            <Palette className="h-3.5 w-3.5" />
-            ArtStation Post
-          </span>
+          {isSketchfab ? (
+            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-[#1caad9]/15 px-2.5 py-1 text-xs font-bold text-[#1caad9] border border-[#1caad9]/30 shadow-[0_0_12px_rgba(28,170,217,0.2)] shrink-0">
+              <Box className="h-3.5 w-3.5" />
+              Sketchfab 3D Model
+            </span>
+          ) : isPinterest ? (
+            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-[#E60023]/15 px-2.5 py-1 text-xs font-bold text-[#ff4d6d] border border-[#E60023]/30 shadow-[0_0_12px_rgba(230,0,35,0.2)] shrink-0">
+              <Sparkles className="h-3.5 w-3.5" />
+              Pinterest Reference
+            </span>
+          ) : (
+            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-[#13AFF0]/15 px-2.5 py-1 text-xs font-bold text-[#13AFF0] border border-[#13AFF0]/30 shadow-[0_0_12px_rgba(19,175,240,0.2)] shrink-0">
+              <Palette className="h-3.5 w-3.5" />
+              ArtStation Post
+            </span>
+          )}
 
           {quota.ready && !quota.unlimited && (
             <div
@@ -367,17 +383,24 @@ export function ArtworkDetailModal({ item, isOpen, onClose }: ArtworkDetailModal
             <span className="hidden xl:inline ml-1.5">Project Info</span>
           </Button>
 
-          {/* External ArtStation Link */}
+          {/* External Provider Link */}
           {activeSourceUrl && (
             <a
               href={activeSourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-9 items-center gap-1.5 rounded-xl border border-[#13AFF0]/30 bg-[#13AFF0]/10 px-2.5 sm:px-3 text-xs font-bold text-[#13AFF0] hover:bg-[#13AFF0]/20 hover:text-white transition-all"
-              title="Open full post on ArtStation"
+              className={cn(
+                "flex h-9 items-center gap-1.5 rounded-xl border px-2.5 sm:px-3 text-xs font-bold transition-all",
+                isSketchfab
+                  ? "border-[#1caad9]/30 bg-[#1caad9]/10 text-[#1caad9] hover:bg-[#1caad9]/20 hover:text-white"
+                  : isPinterest
+                    ? "border-[#E60023]/30 bg-[#E60023]/10 text-[#ff4d6d] hover:bg-[#E60023]/20 hover:text-white"
+                    : "border-[#13AFF0]/30 bg-[#13AFF0]/10 text-[#13AFF0] hover:bg-[#13AFF0]/20 hover:text-white"
+              )}
+              title={`Open original on ${isSketchfab ? 'Sketchfab' : isPinterest ? 'Pinterest' : 'ArtStation'}`}
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">ArtStation</span>
+              <span className="hidden sm:inline">{isSketchfab ? 'Sketchfab' : isPinterest ? 'Pinterest' : 'ArtStation'}</span>
             </a>
           )}
 
@@ -478,7 +501,17 @@ export function ArtworkDetailModal({ item, isOpen, onClose }: ArtworkDetailModal
               style={{ transform: `scale(${zoom})` }}
               onClick={(e) => e.stopPropagation()}
             >
-              {currentDisplayUrl ? (
+              {embedUrl ? (
+                <div className="relative w-[90vw] max-w-5xl h-[72vh] rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_70px_rgba(0,0,0,0.9)] bg-black">
+                  <iframe
+                    src={embedUrl}
+                    title={activeTitle}
+                    className="w-full h-full border-0"
+                    allow="autoplay; fullscreen; xr-spatial-tracking"
+                    allowFullScreen
+                  />
+                </div>
+              ) : currentDisplayUrl ? (
                 <img
                   src={currentDisplayUrl}
                   alt={activeTitle}

@@ -63,7 +63,7 @@ describe('entitlements', () => {
     const e = getEntitlements({});
     expect(e.access).toBe('free');
     // Creating is unlimited; viewing other people's references is metered.
-    expect(e.limits).toEqual({ maxBoards: Infinity, maxSavedReferences: Infinity, maxPortfolioPosts: Infinity, maxUnlockedReferences: 25 });
+    expect(e.limits).toEqual({ maxBoards: Infinity, maxSavedReferences: Infinity, maxPortfolioPosts: Infinity, maxUnlockedReferences: 35 });
     expect(e.canUsePrivateWorkspace || e.canUploadPrivateMedia || e.canComparePlayblast || e.canRemoveWatermark).toBe(false);
   });
 

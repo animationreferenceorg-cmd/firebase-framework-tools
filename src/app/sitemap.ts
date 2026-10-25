@@ -147,6 +147,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 0.9,
         },
         ...[
+            'human-walk-cycle-animation-reference',
+            'real-life-animation-reference',
             'walk-cycle-animation-reference',
             'run-cycle-animation-reference',
             'punch-animation-reference',
@@ -157,6 +159,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             'speech-animation-reference',
             'moving-hold-animation-reference',
             'sword-swing-animation-reference',
+            'character-turnaround-animation-reference',
+            'storyboard-animation-reference',
+            'transformers-mecha-animation-reference',
+            'spider-man-acrobatic-animation-reference',
+            'squash-and-stretch-animation-reference',
+            'martial-arts-combat-animation-reference',
+            'quadruped-animal-walk-cycle-reference',
+            'dance-and-parkour-animation-reference',
         ].map(slug => ({
             url: `${BASE_URL}/resources/${slug}`,
             lastModified: new Date(),

@@ -17,20 +17,22 @@ export function searchResultToVideo(item: UnifiedSearchResult): Video {
   const specializedCategories: string[] = [item.source];
   const specializedCategoryIds: string[] = ['external-hub', item.source];
 
+  // Only tab-level tags here. Specific concept tags (storyboard, turnaround…)
+  // are added by the search route from each item's own metadata.
   if (is3D) {
-    specializedTags.push('3d-models', '3d-model', '3d', 'turnaround', 'rigged');
+    specializedTags.push('3d-models', '3d-model');
     specializedCategories.push('3D Models');
     specializedCategoryIds.push('3d-models', '3d');
   } else if (isArtStation) {
-    specializedTags.push('visdev', 'visual-development', 'concept-art', 'character-art');
-    specializedCategories.push('VisDev', 'Visual Development');
+    specializedTags.push('visdev');
+    specializedCategories.push('VisDev');
     specializedCategoryIds.push('visdev', 'visual-development');
   } else if (isPinterest) {
-    specializedTags.push('character-design', 'model-sheet', 'pose-reference', 'anatomy');
-    specializedCategories.push('Character Design', 'Model Sheet');
+    specializedTags.push('character-design');
+    specializedCategories.push('Character Design');
     specializedCategoryIds.push('character-design');
   } else if (isVideo) {
-    specializedTags.push('animations', 'animation-clip', '2d-animation');
+    specializedTags.push('animations');
     specializedCategories.push('Animations');
     specializedCategoryIds.push('animations');
   }

@@ -33,6 +33,7 @@ import { cn } from '@/lib/utils';
 import type { Video } from '@/lib/types';
 import type { UnifiedSearchResult } from '@/app/api/import/search/route';
 import type { ArtStationAsset } from '@/app/api/import/artstation-project/route';
+import { classifyText, generateRichTags } from '@/lib/search-intent';
 
 export interface ArtworkDetailModalProps {
   item: UnifiedSearchResult | Video;
@@ -64,6 +65,18 @@ export function ArtworkDetailModal({ item, isOpen, onClose }: ArtworkDetailModal
   const [resolvedAuthor, setResolvedAuthor] = useState<string>(authorName);
   const [resolvedUsername, setResolvedUsername] = useState<string>(authorUsername);
   const [resolvedAvatar, setResolvedAvatar] = useState<string>(authorAvatar);
+
+  // Dynamic rich tags across taxonomy (principles, studios, character types, concepts)
+  const displayTags = React.useMemo(() => {
+    const rich = generateRichTags({
+      title: rawTitle,
+      tags: Array.isArray((item as any).tags) ? (item as any).tags : [],
+      description: projectDescription || (item as any).description,
+      authorName: resolvedAuthor,
+      source,
+    });
+    return rich.slice(0, 14);
+  }, [item, rawTitle, projectDescription, resolvedAuthor, source]);
 
   // Dynamic project assets & artist portfolio
   const [assets, setAssets] = useState<ArtStationAsset[]>([]);
@@ -244,7 +257,7 @@ export function ArtworkDetailModal({ item, isOpen, onClose }: ArtworkDetailModal
     thumbnailUrl: activeImage,
     posterUrl: activeImage,
     videoUrl: '',
-    tags: (item as any).tags || [source, 'concept-art', 'turnaround', 'vis-dev'],
+    tags: displayTags,
     categoryIds: ['external-hub', source],
     categories: [source === 'artstation' ? 'ArtStation' : 'Visual Development'],
     author_name: resolvedAuthor,
@@ -610,7 +623,7 @@ export function ArtworkDetailModal({ item, isOpen, onClose }: ArtworkDetailModal
                   Reference Tags
                 </h4>
                 <div className="flex flex-wrap gap-1.5">
-                  {['artstation', 'turnaround', 'vis-dev', 'concept-art', 'character-design', 'model-sheet'].map((tag) => (
+                  {displayTags.map((tag) => (
                     <span
                       key={tag}
                       className="rounded-lg bg-white/5 px-2.5 py-1 text-[11px] font-medium text-zinc-300 border border-white/5"

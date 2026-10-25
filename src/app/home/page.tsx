@@ -11,7 +11,6 @@ import { ImmersiveHomeHeader } from '@/components/home/ImmersiveHomeHeader';
 import { CommunityFeedShelf } from '@/components/home/CommunityFeedShelf';
 import { TrendingCommunityShelf } from '@/components/home/TrendingCommunityShelf';
 import { RecentlyViewedShelf } from '@/components/home/RecentlyViewedShelf';
-import { LiveWebDiscoveryShelf } from '@/components/home/LiveWebDiscoveryShelf';
 import { LiveWebSearchResults } from '@/components/home/LiveWebSearchResults';
 import type { UnifiedSearchResult } from '@/app/api/import/search/route';
 import { searchResultToVideo, fetchLiveHubReferences } from '@/lib/reference-hub';
@@ -20,6 +19,7 @@ import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from '@/components/motion/SectionHeading';
 import { filterAvailableVideos } from '@/lib/video-availability';
 import { mixReferences } from '@/lib/reference-mix';
+import { parseSearchIntent, scoreVideoRelevance } from '@/lib/search-intent';
 import { Globe, Loader2, Sparkles } from 'lucide-react';
 
 const VIDEOS_PER_PAGE = 30;
@@ -97,14 +97,14 @@ export default function HomePage() {
   const filteredVideos = useMemo(() => {
     let result = allVideos.filter(v => activePill === 'shorts' ? v.isShort : !v.isShort);
 
-    // Search Query
+    // Search Query with Animation Domain Intent & Relevance Scoring
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(v => 
-        v.title.toLowerCase().includes(q) ||
-        (v.description || '').toLowerCase().includes(q) ||
-        (v.tags || []).some(t => t.toLowerCase().includes(q))
-      );
+      const intent = parseSearchIntent(searchQuery);
+      result = result
+        .map(v => ({ video: v, score: scoreVideoRelevance(v, intent) }))
+        .filter(x => x.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(x => x.video);
     }
 
     // Helper to get numeric timestamp for sorting (newest first)
@@ -231,21 +231,25 @@ export default function HomePage() {
 
   // Unified Catalog: seamlessly blend local database clips and external hub results
   const unifiedVideos = useMemo(() => {
-    if (!searchQuery.trim() || externalVideos.length === 0) {
+    if (!searchQuery.trim()) {
       return filteredVideos;
     }
 
+    if (externalVideos.length === 0) {
+      return filteredVideos;
+    }
+
+    const intent = parseSearchIntent(searchQuery);
     const set = new Set(filteredVideos.map(v => v.id));
     const newExternals = externalVideos.filter(v => !set.has(v.id));
 
-    // Interleave local and external results evenly
-    const combined: Video[] = [];
-    const maxLen = Math.max(filteredVideos.length, newExternals.length);
-    for (let i = 0; i < maxLen; i++) {
-      if (i < filteredVideos.length) combined.push(filteredVideos[i]);
-      if (i < newExternals.length) combined.push(newExternals[i]);
-    }
-    return combined;
+    // Combine local library matches with external hub results (Sketchfab, ArtStation, Pinterest, Sakuga)
+    const combined = [...filteredVideos, ...newExternals];
+    return combined
+      .map(v => ({ video: v, score: scoreVideoRelevance(v, intent) }))
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(x => x.video);
   }, [filteredVideos, externalVideos, searchQuery]);
 
   const visibleVideos = useMemo(() => unifiedVideos.slice(0, visibleCount), [unifiedVideos, visibleCount]);
@@ -343,14 +347,7 @@ export default function HomePage() {
         </Reveal>
       )}
 
-      {/* 3. SHELF: Live Web Integration (ArtStation, Pinterest, Sakugabooru, Locomotion) */}
-      {!searchQuery && (
-        <Reveal>
-          <LiveWebDiscoveryShelf />
-        </Reveal>
-      )}
-
-      {/* 4. SHELF: Monthly challenge + trending community references */}
+      {/* 3. SHELF: Monthly challenge + trending community references */}
       {!searchQuery && (
         <Reveal>
           <TrendingCommunityShelf />
@@ -367,7 +364,7 @@ export default function HomePage() {
       {/* 6. CATALOG / SEARCH RESULTS */}
       <section id="reference-library" className="scroll-mt-28 space-y-5 pt-4">
         <SectionHeading
-          eyebrow={searchQuery ? 'Universal Hub Search' : 'The library'}
+          eyebrow={searchQuery ? 'Search' : 'The library'}
           title={searchQuery ? <>Results for “{searchQuery}”</> : 'All references & 3D models'}
           aside={
             <span className="timecode rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-violet-200">
@@ -376,39 +373,6 @@ export default function HomePage() {
             </span>
           }
         />
-
-        {/* Global Reference Hub Search Active Banner */}
-        {searchQuery && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-500/30 bg-gradient-to-r from-violet-950/40 via-zinc-900/60 to-zinc-900/70 p-4 shadow-lg backdrop-blur-md">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <div>
-                <p className="text-xs font-bold text-white flex items-center gap-2">
-                  <span>Universal Reference Hub Active</span>
-                  <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-300">
-                    ArtStation • Pinterest • Sketchfab 3D • Sakuga
-                  </span>
-                </p>
-                <p className="text-[11px] text-zinc-400 mt-0.5">
-                  {webSearching
-                    ? `Broadcasting query "${searchQuery}" to live external 3D & animation engines…`
-                    : `Streaming ${externalVideos.length} external models & cuts alongside ${filteredVideos.length} library clips`}
-                </p>
-              </div>
-            </div>
-
-            {webSearching ? (
-              <div className="flex items-center gap-2 text-xs font-semibold text-violet-300">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Querying live web engines...
-              </div>
-            ) : (
-              <span className="text-xs text-zinc-400">
-                Total: <strong className="text-white">{unifiedVideos.length}</strong> matching references
-              </span>
-            )}
-          </div>
-        )}
 
         {/* Filter Bar with Quick Pills */}
         <FilterBar

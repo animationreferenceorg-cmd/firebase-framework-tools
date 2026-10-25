@@ -175,20 +175,49 @@ function getCategoryVideos(category: Category): Video[] {
         const all = getAllSnapshotVideos();
         const matches = all.filter(v => (v.categoryIds || []).includes(category.id));
 
-        // Top up with clips that share the category's tags so newly imported
-        // reference clips (which have tags but no categoryIds) surface too.
-        if (matches.length < CATEGORY_VIDEO_LIMIT && category.tags?.length) {
-            const catTags = new Set(category.tags.map(t => t.toLowerCase()));
+        // Top up with clips that share the category's tags, aliases, or title keywords
+        if (matches.length < CATEGORY_VIDEO_LIMIT) {
+            const catSlug = normalizeSlug(category.slug || category.title || '');
+            const aliases = CATEGORY_ALIASES[catSlug] || CATEGORY_ALIASES[category.id] || [];
+            const searchTerms = new Set([
+                ...(category.tags || []).map(t => t.toLowerCase()),
+                catSlug,
+                ...aliases
+            ]);
             const seen = new Set(matches.map(v => v.id));
+            const wordPatterns = Array.from(searchTerms)
+                .filter(t => t.length >= 3)
+                .map(t => new RegExp(`\\b${t.replace(/-/g, '[-\\s]?')}\\w*\\b`, 'i'));
+
             for (let i = 0; i < all.length && matches.length < CATEGORY_VIDEO_LIMIT; i++) {
                 const v = all[i];
                 if (seen.has(v.id)) continue;
-                if ((v.tags || []).some(t => catTags.has(t.toLowerCase()))) {
+                const vTags = v.tags || [];
+                let isMatch = false;
+
+                for (const t of vTags) {
+                    const s = slugifyTag(t);
+                    if (searchTerms.has(s) || searchTerms.has(t.toLowerCase())) {
+                        isMatch = true;
+                        break;
+                    }
+                    if (wordPatterns.some(p => p.test(t))) {
+                        isMatch = true;
+                        break;
+                    }
+                }
+
+                if (!isMatch && wordPatterns.some(p => p.test(v.title || ''))) {
+                    isMatch = true;
+                }
+
+                if (isMatch) {
                     matches.push(v);
                     seen.add(v.id);
                 }
             }
         }
+
 
         const getTs = (v: any): number => {
             if (typeof v.createdAt === 'number' && !isNaN(v.createdAt) && v.createdAt > 0) return v.createdAt;

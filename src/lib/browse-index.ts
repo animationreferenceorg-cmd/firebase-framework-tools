@@ -178,10 +178,29 @@ export function buildBrowseIndex(categories: Category[], videos: Video[]): Brows
  */
 export function matchScore(textLower: string, queryLower: string): number {
     if (!queryLower) return 1;
-    if (textLower === queryLower) return 4;
-    if (textLower.startsWith(queryLower)) return 3;
-    if (textLower.split(/[\s\-_/]+/).some((w) => w.startsWith(queryLower))) return 2;
-    if (textLower.includes(queryLower)) return 1;
+    const cleanText = textLower.trim().toLowerCase();
+    const cleanQuery = queryLower.trim().toLowerCase();
+    if (cleanText === cleanQuery) return 5;
+    if (cleanText.startsWith(cleanQuery)) return 4;
+
+    // Compound unification: "turn around" <-> "turnaround"
+    const textNoSpace = cleanText.replace(/[\s\-_/]+/g, '');
+    const queryNoSpace = cleanQuery.replace(/[\s\-_/]+/g, '');
+    if (textNoSpace === queryNoSpace) return 4;
+    if (textNoSpace.includes(queryNoSpace)) return 3;
+
+    // Multi-token match across words
+    const queryTokens = cleanQuery.split(/[\s\-_/]+/).filter(Boolean);
+    if (queryTokens.length > 1) {
+        const textTokens = cleanText.split(/[\s\-_/]+/).filter(Boolean);
+        const matchesAll = queryTokens.every(qt => textTokens.some(tt => tt.includes(qt) || qt.includes(tt)));
+        if (matchesAll) return 3;
+        const matchesSome = queryTokens.some(qt => textTokens.some(tt => tt.startsWith(qt)));
+        if (matchesSome) return 2;
+    }
+
+    if (cleanText.split(/[\s\-_/]+/).some((w) => w.startsWith(cleanQuery))) return 2;
+    if (cleanText.includes(cleanQuery)) return 1;
     return 0;
 }
 

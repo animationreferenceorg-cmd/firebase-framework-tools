@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { parseSearchIntent, scoreVideoRelevance, classifyText, generateRichTags } from '@/lib/search-intent';
 
 export const runtime = 'nodejs';
 export const revalidate = 1800; // 30 min cache
@@ -46,6 +47,7 @@ export async function GET(request: NextRequest) {
   const source = searchParams.get('source') || 'all';
   const isExplore = !rawQuery || searchParams.get('mode') === 'explore';
 
+  const intent = parseSearchIntent(rawQuery);
   const query = rawQuery || 'animation reference';
   const results: UnifiedSearchResult[] = [];
 
@@ -53,13 +55,16 @@ export async function GET(request: NextRequest) {
     const promises: Promise<void>[] = [];
 
     // 1. Sketchfab (Interactive 3D Animated Models, Rigs & Characters)
-    if (source === 'all' || source === 'sketchfab') {
+    // Skipped for concepts that don't exist as 3D models (storyboards, lip sync…).
+    const sketchfabQuery = isExplore ? 'character animation' : intent.externalQueries.sketchfab;
+    if ((source === 'all' || source === 'sketchfab') && sketchfabQuery) {
       promises.push(
         (async () => {
           try {
-            const sketchfabQuery = isExplore ? 'character animation' : query;
+            const animatedParam = isExplore || intent.externalQueries.sketchfabAnimated === true ? '&animated=true' : '';
+            const categoryParam = !isExplore && intent.externalQueries.sketchfabCategory ? `&categories=${encodeURIComponent(intent.externalQueries.sketchfabCategory)}` : '';
             const res = await fetch(
-              `https://api.sketchfab.com/v3/models?q=${encodeURIComponent(sketchfabQuery)}&animated=true&sort_by=-likeCount&per_page=24`,
+              `https://api.sketchfab.com/v3/models?q=${encodeURIComponent(sketchfabQuery)}${animatedParam}${categoryParam}&sort_by=-likeCount&per_page=24`,
               {
                 headers: {
                   'User-Agent': 'AnimationReference/1.0 (+https://animationreference.org)',
@@ -91,7 +96,7 @@ export async function GET(request: NextRequest) {
                   mediaType: 'model3d',
                   embedUrl: `https://sketchfab.com/models/${model.uid}/embed?autostart=1&preload=1&ui_controls=0`,
                   authorName: model.user?.displayName || model.user?.username || 'Sketchfab Creator',
-                  tags: ['3d-model', 'rigged', 'character', 'sketchfab', ...tags.slice(0, 5)],
+                  tags: ['3d-model', 'sketchfab', ...tags.slice(0, 8)],
                   description: model.description?.slice(0, 160) || `Interactive 3D model by ${model.user?.displayName || 'Creator'}`,
                 });
               }
@@ -107,7 +112,7 @@ export async function GET(request: NextRequest) {
     if (source === 'all' || source === 'artstation') {
       const artQueries = isExplore
         ? ['visual development', 'character turnaround', '3d character model']
-        : [query, `${query} turnaround`];
+        : intent.externalQueries.artstation;
 
       for (const q of artQueries) {
         promises.push(
@@ -143,7 +148,9 @@ export async function GET(request: NextRequest) {
                     authorUsername: item.user?.username || '',
                     hasMultipleAssets: Boolean(item.icons?.multiple_images),
                     hashId: item.hash_id,
-                    tags: ['artstation', 'vis-dev', 'concept-art', 'turnaround', 'reference'],
+                    // ArtStation's API only exposes a title, so carry over the
+                    // concept of the query that surfaced this project.
+                    tags: ['artstation', 'visdev', ...classifyText(q)],
                     description: `By ${item.user?.full_name || item.user?.username || 'Artist'} on ArtStation`,
                   });
                 }
@@ -199,10 +206,10 @@ export async function GET(request: NextRequest) {
                   .trim() || 'Character Design Reference';
 
                 if (!isExplore && rawQuery) {
-                  const needle = rawQuery.toLowerCase();
-                  if (!cleanTitle.toLowerCase().includes(needle) && !feedName.includes(needle)) {
-                    continue;
-                  }
+                  // Pinterest RSS can't be searched, so only keep pins whose own
+                  // title passes the same strict gate as every other result.
+                  const pinProbe: any = { id: 'pin_probe', title: cleanTitle, tags: [], description: '' };
+                  if (scoreVideoRelevance(pinProbe, intent) <= 0) continue;
                 }
 
                 const pinId = pinUrl.split('/').filter(Boolean).pop() || Math.random().toString(36).slice(2);
@@ -215,7 +222,7 @@ export async function GET(request: NextRequest) {
                   mediaUrl: highResImg,
                   mediaType: highResImg.endsWith('.gif') ? 'gif' : 'image',
                   authorName: `@${feedName} on Pinterest`,
-                  tags: ['pinterest', 'character-design', 'pose', 'visdev', 'reference'],
+                  tags: ['pinterest', ...(feedName.startsWith('characterdesign') ? ['character-design'] : feedName === 'posemuse' ? ['pose'] : [])],
                   description: cleanTitle,
                 });
 
@@ -233,7 +240,7 @@ export async function GET(request: NextRequest) {
     if (source === 'all' || source === 'sakugabooru') {
       const sakugaQueries = isExplore
         ? ['order:score', 'smears', 'effects']
-        : [query.toLowerCase().replace(/\s+/g, '_')];
+        : intent.externalQueries.sakugabooru;
 
       for (const tags of sakugaQueries) {
         promises.push(
@@ -258,7 +265,7 @@ export async function GET(request: NextRequest) {
                       mediaUrl: post.file_url,
                       mediaType: post.file_url.endsWith('.gif') ? 'gif' : 'video',
                       authorName: post.author || 'Sakugabooru Animator',
-                      tags: ['sakugabooru', '2d', 'smear', ...postTags.slice(0, 6)],
+                      tags: ['sakugabooru', '2d', ...postTags.slice(0, 30)],
                       description: `Source: ${post.source || 'Anime'}. Tags: ${postTags.slice(0, 5).join(', ')}`,
                     });
                   }
@@ -273,11 +280,11 @@ export async function GET(request: NextRequest) {
     }
 
     // 5. Wikimedia Commons (Locomotion, Anatomy Studies, Muybridge Plates)
-    if (source === 'all' || source === 'wikimedia') {
+    if ((source === 'all' || source === 'wikimedia') && (isExplore || intent.externalQueries.wikimedia)) {
       promises.push(
         (async () => {
           try {
-            const wikiSearch = isExplore ? 'Muybridge locomotion animal human' : `${query} locomotion`;
+            const wikiSearch = isExplore ? 'Muybridge locomotion animal human' : query;
             const wikiUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(
               wikiSearch + ' filetype:bitmap|video'
             )}&gsrnamespace=6&prop=imageinfo&iiprop=url|mime|extmetadata&format=json&origin=*`;
@@ -306,7 +313,7 @@ export async function GET(request: NextRequest) {
                   mediaUrl: info.url,
                   mediaType: isVideo ? 'video' : mime.includes('gif') ? 'gif' : 'image',
                   authorName: info.extmetadata?.Artist?.value?.replace(/<[^>]*>/g, '') || 'Public Domain / Wikimedia',
-                  tags: ['locomotion', 'study', 'anatomy', 'muybridge'],
+                  tags: ['wikimedia', 'study'],
                   description: info.extmetadata?.ImageDescription?.value?.replace(/<[^>]*>/g, '').slice(0, 150) || rawTitle,
                 });
               }
@@ -319,7 +326,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 6. Internet Archive (Historic Stunts & Slapstick Animation Mechanics)
-    if (source === 'all' || source === 'archive') {
+    if ((source === 'all' || source === 'archive') && (isExplore || intent.externalQueries.archive)) {
       promises.push(
         (async () => {
           try {
@@ -345,7 +352,7 @@ export async function GET(request: NextRequest) {
                   mediaUrl: `https://archive.org/download/${doc.identifier}/${doc.identifier}.mp4`,
                   mediaType: 'video',
                   authorName: doc.creator || 'Internet Archive',
-                  tags: ['archive', 'vintage', 'stunt', 'timing'],
+                  tags: ['archive', 'vintage'],
                   description: (doc.description || '').slice(0, 150),
                 });
               }
@@ -359,24 +366,53 @@ export async function GET(request: NextRequest) {
 
     await Promise.allSettled(promises);
 
-    // De-duplicate items by id
+    // De-duplicate items by id, and dynamically tag each one across our rich taxonomy
+    // (studios, IPs, mechanics, principles, styles) based on its own metadata.
     const seen = new Set<string>();
     const uniqueResults: UnifiedSearchResult[] = [];
     for (const item of results) {
       if (!seen.has(item.id)) {
         seen.add(item.id);
+        const rich = generateRichTags({
+          title: item.title,
+          tags: item.tags,
+          description: item.description,
+          authorName: item.authorName,
+          source: item.source,
+        });
+        item.tags = rich;
         uniqueResults.push(item);
       }
     }
 
-    // Fully randomize/shuffle the combined stream
-    const randomizedResults = shuffleArray(uniqueResults);
+    // When exploring, randomize naturally. When searching, keep ONLY items that
+    // pass the strict concept gate and rank them by relevance.
+    let finalResults: UnifiedSearchResult[];
+    if (isExplore) {
+      finalResults = shuffleArray(uniqueResults);
+    } else {
+      finalResults = uniqueResults
+        .map((item) => {
+          const fakeVideo: any = {
+            id: item.id,
+            title: item.title,
+            description: item.description,
+            tags: item.tags,
+            source: item.source,
+            mediaType: item.mediaType,
+          };
+          return { item, score: scoreVideoRelevance(fakeVideo, intent) };
+        })
+        .filter((x) => x.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map((x) => x.item);
+    }
 
     return NextResponse.json({
       query: rawQuery,
       mode: isExplore ? 'explore' : 'search',
-      count: randomizedResults.length,
-      results: randomizedResults,
+      count: finalResults.length,
+      results: finalResults,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Search failed', results: [] }, { status: 500 });

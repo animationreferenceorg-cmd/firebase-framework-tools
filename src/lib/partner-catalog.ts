@@ -2,6 +2,7 @@ import type { Category, Video } from './types';
 import { getAllSnapshotVideos, getSnapshotVideoById, getRelatedSnapshotVideos, getAllTags, slugifyTag } from './videoSnapshot.server';
 import { getFirestore } from './firebase-admin';
 import { SITE_URL, PartnerApiError } from './partner-api';
+import { parseSearchIntent, scoreVideoRelevance } from './search-intent';
 
 // Read models for the partner API. Everything here is derived from the static
 // videos snapshot (public/data/videos-snapshot.json), which is regenerated on
@@ -117,24 +118,25 @@ export interface VideoQuery {
  */
 export function queryPartnerVideos(params: VideoQuery): Video[] {
   const all = getAllSnapshotVideos();
-  const needle = params.q?.trim().toLowerCase() || '';
+  const needle = params.q?.trim() || '';
   const tagSlug = params.tag ? slugifyTag(params.tag) : '';
+  const intent = needle ? parseSearchIntent(needle) : null;
 
   let matches = all.filter((video) => {
     if (tagSlug && !(video.tags || []).some((t) => slugifyTag(t) === tagSlug)) return false;
     if (params.categoryId && !(video.categoryIds || []).includes(params.categoryId)) return false;
     if (params.minDuration !== undefined && (video.duration ?? 0) < params.minDuration) return false;
     if (params.maxDuration !== undefined && (video.duration ?? Number.MAX_SAFE_INTEGER) > params.maxDuration) return false;
-    if (needle) {
-      const haystack = `${video.title || ''} ${video.description || ''} ${(video.tags || []).join(' ')}`.toLowerCase();
-      if (!haystack.includes(needle)) return false;
+    if (intent) {
+      const score = scoreVideoRelevance(video, intent);
+      if (score <= 0) return false;
     }
     return true;
   });
 
-  if (params.sort === 'relevance' && needle) {
+  if (params.sort === 'relevance' && intent) {
     matches = matches
-      .map((video) => ({ video, score: relevanceScore(video, needle) }))
+      .map((video) => ({ video, score: scoreVideoRelevance(video, intent) }))
       .sort((a, b) => b.score - a.score || createdMillis(b.video) - createdMillis(a.video))
       .map((entry) => entry.video);
   } else if (params.sort === 'oldest') {

@@ -9,6 +9,13 @@ export function isAnimeReference(video: Video): boolean {
   return /sakugabooru\.com/i.test(`${video.videoUrl || ''} ${video.originalUrl || ''}`);
 }
 
+export function isSpecialReference(video: Video): boolean {
+  const is3D = video.source === 'sketchfab' || (video as any).mediaType === 'model3d' || video.id.startsWith('sf_');
+  const isVisDev = video.source === 'artstation' || video.id.startsWith('as_');
+  const isChar = video.source === 'pinterest' || video.id.startsWith('pin_');
+  return is3D || isVisDev || isChar;
+}
+
 export function shuffle<T>(items: T[]): T[] {
   const result = [...items];
   for (let i = result.length - 1; i > 0; i--) {
@@ -19,23 +26,41 @@ export function shuffle<T>(items: T[]): T[] {
 }
 
 /**
- * Randomizes references and interleaves anime with everything else so every
- * visit shows a fresh, balanced mix. Call it on the client only (e.g. after a
- * fetch in an effect) — a random order during render breaks hydration.
+ * Randomizes references and evenly interleaves 3D models, VisDev, character design,
+ * and live reference with anime cuts so the entire stream is balanced and diverse.
  */
 export function mixReferences(videos: Video[]): Video[] {
-  const anime = shuffle(videos.filter(isAnimeReference));
-  const other = shuffle(videos.filter((v) => !isAnimeReference(v)));
+  const special = shuffle(videos.filter(isSpecialReference));
+  const anime = shuffle(videos.filter((v) => !isSpecialReference(v) && isAnimeReference(v)));
+  const regular = shuffle(videos.filter((v) => !isSpecialReference(v) && !isAnimeReference(v)));
+
   const mixed: Video[] = [];
+  let s = 0;
   let a = 0;
-  let o = 0;
-  while (a < anime.length || o < other.length) {
-    const animeTurn = (mixed.length + 1) % ANIME_EVERY_NTH === 0;
-    if (o >= other.length || (animeTurn && a < anime.length)) {
+  let r = 0;
+
+  // Pattern: every 4th item insert a special 3D/VisDev/Design card; interleave regular and anime
+  while (s < special.length || a < anime.length || r < regular.length) {
+    const specialTurn = (mixed.length + 1) % 4 === 0 && s < special.length;
+    if (specialTurn) {
+      mixed.push(special[s++]);
+      continue;
+    }
+
+    const animeTurn = (mixed.length + 1) % ANIME_EVERY_NTH === 0 && a < anime.length;
+    if (animeTurn) {
       mixed.push(anime[a++]);
-    } else {
-      mixed.push(other[o++]);
+      continue;
+    }
+
+    if (r < regular.length) {
+      mixed.push(regular[r++]);
+    } else if (a < anime.length) {
+      mixed.push(anime[a++]);
+    } else if (s < special.length) {
+      mixed.push(special[s++]);
     }
   }
+
   return mixed;
 }

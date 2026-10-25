@@ -281,10 +281,25 @@ export default function BrowsePageClient({ initialCategoryId }: BrowsePageClient
 
         // 2b. Filter by Tag (from the directory tag explorer)
         if (selectedTag) {
-            result = result.filter(v =>
-                v.tags?.some(t => t.toLowerCase() === selectedTag)
-            );
+            const cleanTag = selectedTag.toLowerCase().trim();
+            const tagSlug = cleanTag.replace(/[^a-z0-9]+/g, '-');
+            const wordRegex = new RegExp(`\\b${tagSlug.replace(/-/g, '[-\\s]?')}\\w*\\b`, 'i');
+
+            result = result.filter(v => {
+                const tags = v.tags?.map(t => t.toLowerCase()) || [];
+                // Direct exact match
+                if (tags.some(t => t === cleanTag || t.replace(/[^a-z0-9]+/g, '-') === tagSlug)) return true;
+                // Compound match (e.g. "walk-cycle" matches "walk")
+                if (cleanTag.length >= 3 && tags.some(t => {
+                    const s = t.replace(/[^a-z0-9]+/g, '-');
+                    return s.startsWith(tagSlug + '-') || s.endsWith('-' + tagSlug) || s.includes('-' + tagSlug + '-') || wordRegex.test(t);
+                })) return true;
+                // Title match if cleanTag is meaningful
+                if (cleanTag.length >= 4 && wordRegex.test(v.title || '')) return true;
+                return false;
+            });
         }
+
 
         // 3. Filter by Type (2D / 3D)
         if (activeType !== 'all') {

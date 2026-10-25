@@ -111,17 +111,79 @@ export function getTagIndex(): TagIndex {
 }
 
 export function getTagBySlug(slug: string): { tag: string; videos: Video[] } | null {
-    const fromIndex = getTagIndex().bySlug.get(slug);
-    if (fromIndex) return fromIndex;
     const snap = load();
-    const cleanSlug = slug.toLowerCase().trim();
-    const matches = snap.videos.filter(v => (v.tags || []).some(t => slugifyTag(t) === cleanSlug));
-    if (matches.length > 0) {
-        const foundTag = matches[0].tags?.find(t => slugifyTag(t) === cleanSlug) || slug;
-        return { tag: foundTag, videos: matches };
+    const cleanSlug = slugifyTag(slug);
+    if (!cleanSlug) return null;
+
+    const fromIndex = getTagIndex().bySlug.get(cleanSlug);
+    let tagName = fromIndex?.tag;
+    const exactVideos = fromIndex?.videos || [];
+
+    const seen = new Set<string>(exactVideos.map(v => v.id));
+    const allMatches: Video[] = [...exactVideos];
+
+    if (!tagName) {
+        for (const v of snap.videos) {
+            for (const t of v.tags || []) {
+                if (slugifyTag(t) === cleanSlug) {
+                    tagName = t;
+                    if (!seen.has(v.id)) {
+                        seen.add(v.id);
+                        allMatches.push(v);
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!tagName) {
+        tagName = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    // Expand with compound & related tag references
+    // For example, "walk" encompasses "walk-cycle", "walking", etc.
+    const wordPattern = new RegExp(`\\b${cleanSlug.replace(/-/g, '[-\\s]?')}\\w*\\b`, 'i');
+
+    for (const v of snap.videos) {
+        if (seen.has(v.id)) continue;
+        const tags = v.tags || [];
+        let matches = false;
+
+        for (const t of tags) {
+            const s = slugifyTag(t);
+            // Compound slug match (e.g. "walk-cycle" matches "walk", "spider-man" matches "spider")
+            if (s.startsWith(cleanSlug + '-') || s.endsWith('-' + cleanSlug) || s.includes('-' + cleanSlug + '-')) {
+                matches = true;
+                break;
+            }
+            // Root word boundary match (e.g. "walking" matches "walk")
+            if (cleanSlug.length >= 3 && wordPattern.test(t)) {
+                matches = true;
+                break;
+            }
+        }
+
+        // Title match for meaningful terms
+        if (!matches && cleanSlug.length >= 4) {
+            const title = (v.title || '').toLowerCase();
+            if (wordPattern.test(title)) {
+                matches = true;
+            }
+        }
+
+        if (matches) {
+            seen.add(v.id);
+            allMatches.push(v);
+        }
+    }
+
+    if (allMatches.length > 0) {
+        return { tag: tagName, videos: allMatches };
     }
     return null;
 }
+
 
 export function getAllTags(): { slug: string; tag: string; videos: Video[] }[] {
     return [...getTagIndex().bySlug.entries()].map(([slug, entry]) => ({ slug, ...entry }));

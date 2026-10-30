@@ -15,6 +15,7 @@ import {
   Share2,
   MessageSquare,
   Flag,
+  Key,
 } from 'lucide-react';
 import { useUser } from '@/hooks/use-user';
 import { useRouter } from 'next/navigation';
@@ -35,7 +36,8 @@ function AdminNav() {
     { href: '/admin/shorts', label: 'Short Films', icon: Film },
     { href: '/admin/blog', label: 'Articles', icon: BookOpen },
     { href: '/admin/feedback', label: 'Feedback & Responses', icon: MessageSquare },
-  { href: '/admin/reports', label: 'Content Reports', icon: Flag },
+    { href: '/admin/reports', label: 'Content Reports', icon: Flag },
+    { href: '/admin/exclusive-links', label: 'Exclusive Links', icon: Key },
     { href: '/admin/bunny', label: 'Bunny Sync', icon: Video },
   ];
 

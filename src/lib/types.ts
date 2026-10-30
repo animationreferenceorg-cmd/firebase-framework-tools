@@ -125,6 +125,31 @@ export interface UserProfile {
   twitterUrl?: string;
   instagramUrl?: string;
   customPortfolioCategories?: string[];
+  exclusiveLinkClaimed?: {
+    code: string;
+    claimedAt: string;
+    note?: string;
+  };
+}
+
+export interface ExclusiveLink {
+  id: string;
+  code: string;
+  note?: string;
+  status: 'active' | 'redeemed' | 'revoked' | 'expired';
+  plan: 'pro';
+  tier?: 'pro' | 'student_unlimited';
+  durationMonths?: number | null; // null = lifetime
+  expiresAt?: string | null;
+  createdBy: string;
+  createdAt: string;
+  redeemedBy?: {
+    uid: string;
+    email?: string | null;
+    displayName?: string | null;
+  } | null;
+  redeemedAt?: string | null;
+  timesUsed: number;
 }
 
 export type ClipSourcePlatform =

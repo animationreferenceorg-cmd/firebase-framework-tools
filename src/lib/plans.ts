@@ -306,7 +306,10 @@ export function describeAccess(profile: EntitlementProfile | null | undefined): 
     case 'admin':
       return { badge: 'ADMIN', title: 'Admin', price: '—', description: 'Full access for site administrators.' };
     case 'student_unlimited':
-      return { badge: 'SJSU VIP', title: 'SJSU Unlimited Pass', price: '$0/mo', description: 'Complimentary Pro access for verified SJSU students.' };
+      if ((profile as any)?.isStudent) {
+        return { badge: 'SJSU VIP', title: 'SJSU Unlimited Pass', price: '$0/mo', description: 'Complimentary Pro access for verified SJSU students.' };
+      }
+      return { badge: 'VIP PRO', title: 'Complimentary Pro Pass', price: '$0/mo', description: 'Exclusive complimentary Pro access.' };
     case 'pro': {
       if (profile?.plan === 'pro_annual') return { badge: 'PRO', title: 'Pro (annual)', price: `${formatUsd(PRO_ANNUAL_CENTS)}/yr`, description: 'Unlimited reference boards and private workspaces.' };
       if (profile?.plan === 'pro_monthly') return { badge: 'PRO', title: 'Pro', price: `${formatUsd(PRO_MONTHLY_CENTS)}/mo`, description: 'Unlimited reference boards and private workspaces.' };

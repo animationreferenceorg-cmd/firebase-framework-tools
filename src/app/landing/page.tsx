@@ -154,7 +154,7 @@ export default function LandingPage() {
                         </Link>
                         <Button asChild size="sm" className="rounded-full px-5 py-2 text-xs font-bold bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-950/40 border border-purple-400/30 hover:scale-105 transition-all cursor-pointer">
                             <Link href="/home">
-                                Open App <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                                Open the Library <ArrowRight className="w-3.5 h-3.5 ml-1" />
                             </Link>
                         </Button>
                     </div>
@@ -175,17 +175,17 @@ export default function LandingPage() {
                     {/* Headline */}
                     <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight mb-8 leading-[1.1] max-w-5xl mx-auto drop-shadow-2xl">
                         <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/75">
-                            Master the Art of
+                            Frame-by-frame reference study
                         </span>
                         <br />
                         <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-fuchsia-300 to-indigo-400">
-                            Motion & Timing
+                            for 2D and 3D animators.
                         </span>
                     </h1>
 
                     {/* Subheadline */}
                     <p className="text-base sm:text-lg md:text-xl text-zinc-200 mb-10 max-w-2xl mx-auto leading-relaxed drop-shadow-lg font-medium">
-                        Universal reference library for animators. Millions of references integrated across ArtStation, Sketchfab 3D, Pinterest, and Sakugabooru. Analyze frame-by-frame, build visual reference boards, and study movement from the world&apos;s leading studios.
+                        Universal reference library for animators. Millions of references integrated across ArtStation, Sketchfab 3D, Pinterest, and Sakugabooru. Built for Maya, Blender, and 2D artists to scrub at exact 24 FPS, compare playblasts side-by-side, and build shot reference boards.
                     </p>
 
                     {/* CTAs */}
@@ -237,10 +237,10 @@ export default function LandingPage() {
                             </h2>
                             <div className="space-y-4 text-base sm:text-lg text-zinc-400 leading-relaxed">
                                 <p>
-                                    Finding quality animation references is tedious—finding <span className="text-white font-semibold">studio-grade motion breakdowns</span> without noise is even harder.
+                                    Stop struggling with generic media players that drop frames, desync audio, and choke on 1s and 2s. Finding quality references shouldn&apos;t mean wrestling with 15 browser tabs or broken video players.
                                 </p>
                                 <p>
-                                    We created this platform as an uncompromising workstation for animators. Whether you&apos;re refining delicate <span className="text-purple-300">facial dialogue</span>, dissecting explosive <span className="text-purple-300">combat locomotion</span>, or studying live-action body mechanics, everything is indexed and ready to scrub frame-by-frame.
+                                    For animators migrating after <span className="text-white font-semibold">Reflix went down</span>: your saved study library will never disappear here. We built an uncompromising workstation for Maya, Blender, and 2D artists to scrub exact 24 FPS timing, organize shot-specific boards, and compare playblasts without noise.
                                 </p>
                             </div>
 
@@ -273,25 +273,25 @@ export default function LandingPage() {
                         <div className="grid gap-5">
                             {[
                                 { 
-                                    title: "Smart Discovery", 
-                                    desc: "Locate references by action, emotion, character type, or camera angle instantly.", 
-                                    icon: Compass, 
-                                    glow: "from-blue-500/20 to-purple-500/5",
-                                    badge: "Fast Filter"
-                                },
-                                { 
-                                    title: "Frame Analysis", 
-                                    desc: "Deconstruct keyframes and spacing with precision stepping, looping, and slow motion.", 
+                                    title: "Frame-by-Frame Study & Playblast Comparison", 
+                                    desc: "Step through any reference at exact 24 FPS, loop sub-second beats, and compare your Maya/Blender playblasts side-by-side without dropped frames.", 
                                     icon: SlidersHorizontal, 
                                     glow: "from-purple-500/20 to-pink-500/5",
-                                    badge: "Studio Tools"
+                                    badge: "Core Study Job"
                                 },
                                 { 
-                                    title: "Curated Studio Quality", 
-                                    desc: "Every clip is handpicked for production relevance—from legendary feature films to top game reels.", 
+                                    title: "Shot Reference Boards & Visual Vaults", 
+                                    desc: "Organize references per shot, per character, or per project. Ditch messy desktop folders with searchable, private boards that never get lost.", 
+                                    icon: Compass, 
+                                    glow: "from-blue-500/20 to-purple-500/5",
+                                    badge: "Workflow Job"
+                                },
+                                { 
+                                    title: "Recruiter-Facing Portfolio & Shot Breakdowns", 
+                                    desc: "Host your reel with interactive frame scrubbing, shot breakdowns, and a verified artist profile that proves your mechanics to studios.", 
                                     icon: ShieldCheck, 
                                     glow: "from-fuchsia-500/20 to-indigo-500/5",
-                                    badge: "Verified"
+                                    badge: "Career Job"
                                 },
                             ].map((feature, i) => {
                                 const Icon = feature.icon;

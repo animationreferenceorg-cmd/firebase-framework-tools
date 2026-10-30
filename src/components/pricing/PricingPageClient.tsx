@@ -89,6 +89,11 @@ const FAQ = [
     a: 'Students at partner schools can get free unlimited access. San José State students can activate it with their @sjsu.edu email.',
     link: { href: '/sjsu', label: 'SJSU Student Pass' },
   },
+  {
+    q: 'How are the clips in the library licensed?',
+    a: 'Animation Reference aggregates clips strictly for educational study, non-commercial reference analysis, and fair-use motion deconstruction. Full copyright remains with the original animation studios, creators, and rights holders. If you are a rights holder wishing to request removal of a clip, please view our DMCA Guidelines for instant processing.',
+    link: { href: '/dmca', label: 'DMCA Guidelines' },
+  },
 ];
 
 function CellValue({ value, pro }: { value: Cell; pro?: boolean }) {

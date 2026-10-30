@@ -161,6 +161,26 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   const isCharacterDesign = video.source === 'pinterest' || video.id.startsWith('pin_') || (video.tags || []).some(t => t === 'character-design' || t === 'model-sheet');
   const isVisDev = !isCharacterDesign && !is3DModel && (video.source === 'artstation' || video.id.startsWith('as_') || (video.tags || []).some(t => t === 'visdev' || t === 'vis-dev'));
 
+  const sourceBadge = useMemo(() => {
+    const src = (video.sourcePlatform || video.source || '').toLowerCase();
+    const url = (video.videoUrl || video.thumbnailUrl || video.originalUrl || '').toLowerCase();
+    const id = (video.id || '').toLowerCase();
+
+    if (src === 'artstation' || id.startsWith('as_') || url.includes('artstation.com')) {
+      return { name: 'ArtStation', color: 'bg-sky-950/85 border-sky-400/40 text-sky-300' };
+    }
+    if (src === 'sketchfab' || id.startsWith('sf_') || url.includes('sketchfab.com')) {
+      return { name: 'Sketchfab 3D', color: 'bg-cyan-950/85 border-cyan-400/40 text-cyan-300' };
+    }
+    if (src === 'pinterest' || id.startsWith('pin_') || url.includes('pinimg.com') || url.includes('pinterest.com')) {
+      return { name: 'Pinterest', color: 'bg-rose-950/85 border-rose-400/40 text-rose-300' };
+    }
+    if (src === 'sakugabooru' || id.startsWith('sakuga') || url.includes('sakugabooru.com')) {
+      return { name: 'Sakugabooru', color: 'bg-purple-950/85 border-purple-400/40 text-purple-300' };
+    }
+    return null;
+  }, [video]);
+
   useEffect(() => {
     const videoElem = videoRef.current;
 
@@ -676,8 +696,12 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           {/* Subtle creator badge — top-left, always visible for community videos */}
           <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} avatarUrl={video.authorAvatar || (video as any).author_avatar || (video as any).creatorAvatar} />
 
-          {/* Streamed Media Type Pill (Top Right) */}
-          {is3DModel ? (
+          {/* Streamed Media Type & Source Platform Pill (Top Right) */}
+          {sourceBadge ? (
+            <div className={cn("absolute top-2.5 right-2.5 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full backdrop-blur-md border text-[10px] font-bold shadow-lg pointer-events-none", sourceBadge.color)}>
+              <span>{sourceBadge.name}</span>
+            </div>
+          ) : is3DModel ? (
             <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-950/80 backdrop-blur-md border border-cyan-400/40 text-cyan-300 text-[10px] font-bold shadow-lg pointer-events-none">
               <Box className="w-3 h-3 text-cyan-300" />
               <span>3D Model</span>
@@ -904,8 +928,12 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
         {/* Subtle creator badge — top-left, always visible for any video with uploader/originalUrl */}
         <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} avatarUrl={video.authorAvatar || (video as any).author_avatar || (video as any).creatorAvatar} />
 
-        {/* Pinterest-style Community Pin / Save Badge (Top Right) */}
-        {is3DModel ? (
+        {/* Pinterest-style Community Pin / Save Badge & Source Badge (Top Right) */}
+        {sourceBadge ? (
+          <div className={cn("absolute top-2.5 right-2.5 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full backdrop-blur-md border text-[10px] font-bold shadow-lg pointer-events-none", sourceBadge.color)}>
+            <span>{sourceBadge.name}</span>
+          </div>
+        ) : is3DModel ? (
           <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-950/80 backdrop-blur-md border border-cyan-400/40 text-cyan-300 text-[10px] font-bold shadow-lg pointer-events-none">
             <Box className="w-3 h-3 text-cyan-300" />
             <span>3D Model</span>

@@ -119,6 +119,10 @@ const FAQS = [
     q: 'What does the Free plan include vs Pro?',
     a: 'Free accounts can browse and study the reference library with frame-by-frame controls, create public boards, and build a public portfolio. Pro ($5/month or $45/year, with a $1 intro first month) unlocks unlimited references, side-by-side playblast compare, private boards, MP4 reference downloads, and PureRef exports.',
   },
+  {
+    q: 'How are the clips in the library licensed?',
+    a: 'Animation Reference aggregates clips strictly for educational study, non-commercial reference analysis, and fair-use motion deconstruction. Full copyright remains with original studios and creators. If you are a copyright holder wishing to request removal of a clip, view our DMCA Guidelines (https://animationreference.org/dmca) for instant processing.',
+  },
 ];
 
 export default function ArtstationAlternativePage() {

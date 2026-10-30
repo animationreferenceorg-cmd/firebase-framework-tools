@@ -24,6 +24,26 @@ function clipsByTags(tags, count = 9) {
 
 const POSTS = [
   {
+    slug: 'smear-frames-in-3d-animation-guide',
+    title: 'Smear Frames in 3D Animation: Maya and Blender Guide',
+    tags: ['Smears', 'Combat', 'Impact Frames', 'VFX & Effects'],
+    keywords: [
+      'smear frames in 3d animation',
+      'maya smear frame tutorial',
+      'blender smear frame',
+      '3d animation multiples',
+      'stylized 3d animation',
+      'sakuga smears in 3d',
+      'animation reference study'
+    ],
+    excerpt: 'Smear frames give fast 3D motion an authored silhouette that motion blur cannot match. A practical Maya and Blender guide to blendshapes, lattices, and multi-limbs.',
+    content: `Smear frames in 3D animation are deliberately distorted meshes or duplicated limbs rendered on fast-moving frames, giving 3D computer animation the blurred, stretched kinetic energy of traditional hand-drawn smears.
+
+Motion blur and smears solve fundamentally different visual problems. Blur is a rendering artifact: it says "this object moved fast" by averaging positions across the camera shutter window. A smear is an authored pose: it says "this motion has a shape," with a silhouette you designed on 1s that reads with punchy clarity at 24fps.
+
+To study smears frame by frame from real animated films and games, use Animation Reference (https://animationreference.org/category/smears) and the dedicated Frame-by-Frame Player (https://animationreference.org/frame-by-frame-player).`,
+  },
+  {
     slug: 'photoshop-frame-by-frame-animation-plugin',
     title: 'Photoshop Frame by Frame Animation Plugin: Real Options',
     tags: ['Smears', 'Walk Cycle', 'Impact Frames', 'Combat'],

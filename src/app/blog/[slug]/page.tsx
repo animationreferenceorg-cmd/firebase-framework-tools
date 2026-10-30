@@ -150,6 +150,38 @@ const ENRICHED_BLOG_CONTENT: Record<string, {
             'Buying abandoned CEP animation panels that crash on current Photoshop versions without UXP support.',
             'Drawing full-resolution 4K canvases during the rough phase rather than testing motion on a lightweight canvas first.'
         ]
+    },
+    'smear-frames-in-3d-animation-guide': {
+        openingDef: 'Smear frames in 3D animation are deliberately distorted meshes or duplicated limbs rendered on fast-moving frames, giving 3D computer animation the blurred, stretched kinetic energy of traditional hand-drawn smears.',
+        sections: [
+            {
+                heading: 'The Mechanics of Authored Smears vs. Render Motion Blur',
+                body: 'Motion blur is an automatic shutter simulation that averages pixel movement, frequently producing soft gray smearing that obscures line of action. In contrast, an authored smear is a deliberately sculpted pose keyed on 1s that preserves a crisp, readable silhouette. Stylized 3D animators author smears to control the exact arc, squash, and visual momentum of fast-moving body parts.'
+            },
+            {
+                heading: 'Maya Blendshape & Lattice Smear Rigs',
+                body: 'In Autodesk Maya, artists create blendshape targets from contact pose duplicates, sculpting extreme displacement along the velocity vector. By keying blendshape weights to 1 on the smear frame with stepped tangents, the distortion snaps cleanly. For non-linear limb arcs, lattices wired to dedicated smear controls allow animators to bend and stretch geometry without compromising the underlying skin cluster weights.'
+            },
+            {
+                heading: 'Blender Shape Keys & Non-Destructive Modifiers',
+                body: 'Blender animators utilize Shape Keys and Lattice modifiers placed after the Armature modifier in the stack. Animating shape key values from 0 to 1 to 0 across consecutive frames creates instant snap. Crucially, smear geometry should remain isolated in a secondary bone collection or proxy group to keep the core deformation rig clean for close-ups and dialogue scenes.'
+            },
+            {
+                heading: 'Frame Timing at 24 FPS vs. 60 FPS Game Engines',
+                body: 'At cinematic 24 frames per second, a single-frame smear persists for approximately 42 milliseconds, providing enough exposure for the retina to register speed. At 60 FPS in real-time game engines, a single frame lasts only 16.6 milliseconds, which viewers perceive as a jarring glitch. Game animators should hold smears across 2 to 3 frames or tie mesh displacement directly to bone translation velocity.'
+            }
+        ],
+        timingChart: [
+            { phase: 'Anticipation Coil & Windup', frameRange: 'Frames 1 - 3 (0.00s - 0.12s)', focus: 'Weight shifts to rear foot, limb pre-loads, energy stores along tension axis.' },
+            { phase: 'Authored Smear / Multiple', frameRange: 'Frame 4 (0.16s - 1 frame only)', focus: 'Extreme mesh elongation, multi-limb fans, or smear brush along line of action.' },
+            { phase: 'Contact Frame & Impact', frameRange: 'Frame 5 (0.20s)', focus: 'Solid un-smeared contact pose lands, peak compression, visual clarity.' },
+            { phase: 'Secondary Recoil & Settle', frameRange: 'Frames 6 - 12 (0.24s - 0.50s)', focus: 'Inertia dissipation, clavicle counter-tilt, and balance recovery.' }
+        ],
+        pitfalls: [
+            'Deforming base render geometry destructively, causing vertices to glitch in adjacent shots.',
+            'Relying exclusively on camera motion blur for stylized action, creating unreadable gray haze.',
+            'Holding single-frame smears at 60 FPS without compensating for high refresh rates.'
+        ]
     }
 };
 

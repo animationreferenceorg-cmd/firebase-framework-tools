@@ -9,7 +9,6 @@ import { VideoGrid } from '@/components/VideoGrid';
 import { PricingDialog } from '@/components/PricingDialog';
 import { ImmersiveHomeHeader } from '@/components/home/ImmersiveHomeHeader';
 import { CommunityFeedShelf } from '@/components/home/CommunityFeedShelf';
-import { TrendingCommunityShelf } from '@/components/home/TrendingCommunityShelf';
 import { RecentlyViewedShelf } from '@/components/home/RecentlyViewedShelf';
 import { LiveWebSearchResults } from '@/components/home/LiveWebSearchResults';
 import type { UnifiedSearchResult } from '@/app/api/import/search/route';
@@ -345,13 +344,6 @@ export default function HomePage() {
       {!searchQuery && (
         <Reveal>
           <RecentlyViewedShelf videos={allVideos} />
-        </Reveal>
-      )}
-
-      {/* 3. SHELF: Monthly challenge + trending community references */}
-      {!searchQuery && (
-        <Reveal>
-          <TrendingCommunityShelf />
         </Reveal>
       )}
 

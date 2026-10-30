@@ -743,7 +743,9 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
 
                             {pullError && (
                                 <p className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-lg px-3 py-1.5">
-                                    {pullError}
+                                    {pullError.toLowerCase().includes('bunny')
+                                      ? 'Could not prepare video for streaming. You can open the original post below.'
+                                      : pullError}
                                 </p>
                             )}
 

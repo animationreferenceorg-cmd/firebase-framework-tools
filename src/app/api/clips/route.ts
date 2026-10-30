@@ -334,7 +334,9 @@ export async function POST(request: NextRequest) {
           captureStatus: 'failed',
           captureStage: 'Capture failed',
           captureProgress: 100,
-          syncError: error.message || 'Capture failed.',
+          syncError: error?.message && !error.message.toLowerCase().includes('bunny')
+            ? error.message
+            : 'Capture failed. The source video could not be processed.',
           updatedAt: FieldValue.serverTimestamp(),
         });
       }

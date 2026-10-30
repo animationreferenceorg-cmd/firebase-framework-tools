@@ -65,7 +65,11 @@ export function ReferenceClipCard({ clip, onDeleted, onTagClick, onColorClick }:
           ) : isFailed ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/75 p-4 text-center">
               <span className="rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs font-bold text-red-300">Upload failed</span>
-              <p className="line-clamp-2 text-[11px] text-zinc-400">{clip.syncError || 'The source video could not be captured.'}</p>
+              <p className="line-clamp-2 text-[11px] text-zinc-400">
+                {clip.syncError && !clip.syncError.toLowerCase().includes('bunny')
+                  ? clip.syncError
+                  : 'The source video could not be captured.'}
+              </p>
             </div>
           ) : (
             <div className="absolute inset-0 grid place-items-center bg-black/10 transition group-hover:bg-black/30">

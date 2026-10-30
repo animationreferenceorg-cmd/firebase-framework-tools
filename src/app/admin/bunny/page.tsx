@@ -33,6 +33,7 @@ export default function BunnyAdminPage() {
     const [importedGuids, setImportedGuids] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [configError, setConfigError] = useState<string | null>(null);
     const [previewVideo, setPreviewVideo] = useState<BunnyVideo | null>(null);
     const [isImporting, setIsImporting] = useState(false);
     const [importProgress, setImportProgress] = useState<{ current: number, total: number } | null>(null);
@@ -79,8 +80,15 @@ export default function BunnyAdminPage() {
             if (search) params.set('search', search);
 
             const res = await fetch(`/api/admin/bunny/list?${params.toString()}`);
-            if (!res.ok) throw new Error('Failed to fetch videos');
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                setConfigError(errData.error || 'Bunny video sync is not configured or unavailable.');
+                setAllBunnyVideos([]);
+                setVideos([]);
+                return;
+            }
 
+            setConfigError(null);
             const data = await res.json();
             const fetchedVideos: BunnyVideo[] = data.items || [];
 
@@ -92,7 +100,7 @@ export default function BunnyAdminPage() {
 
         } catch (error) {
             console.error(error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to load videos from Bunny.net' });
+            setConfigError('Unable to connect to video sync service.');
         } finally {
             setLoading(false);
         }
@@ -272,6 +280,13 @@ export default function BunnyAdminPage() {
                     <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                 </Button>
             </div>
+
+            {configError && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
+                    <p className="font-semibold">Sync Notice</p>
+                    <p className="text-xs text-amber-300/80 mt-1">{configError}</p>
+                </div>
+            )}
 
             <Card>
                 <CardHeader>

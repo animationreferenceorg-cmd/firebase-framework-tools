@@ -134,7 +134,7 @@ export function ReferenceClipPlayer({ clip, className = '' }: { clip: ReferenceC
           ) : (
             <div className="flex flex-col items-center justify-center gap-2 p-6 text-center text-xs text-zinc-400">
               <Loader2 className="h-6 w-6 animate-spin text-purple-400" />
-              <p className="font-semibold text-white">Scraping video to Bunny CDN…</p>
+              <p className="font-semibold text-white">Preparing video stream…</p>
               <p className="text-[11px] text-zinc-500">Processing video for frame-by-frame playback.</p>
             </div>
           )}

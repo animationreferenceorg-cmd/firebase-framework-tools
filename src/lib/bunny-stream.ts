@@ -35,7 +35,7 @@ export async function waitForBunnyVideo(guid: string, timeoutMs = 120_000): Prom
   while (Date.now() - started < timeoutMs) {
     const video = await getBunnyVideoStatus(guid);
     if (video?.status === 4) return video;
-    if (video?.status === 5 || video?.status === 6) throw new Error('Bunny Stream could not process this video.');
+    if (video?.status === 5 || video?.status === 6) throw new Error('Video transcoding failed on CDN.');
     await new Promise((resolve) => setTimeout(resolve, 1500));
   }
   throw new Error('Video processing took too long. Please try again.');

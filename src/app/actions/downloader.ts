@@ -47,6 +47,15 @@ function runCommand(command: string, args: string[], options: any = {}): Promise
     });
 }
 
+function sanitizeUserFacingError(msg?: string): string {
+    if (!msg) return 'Video could not be processed. Please check source URL.';
+    const lower = msg.toLowerCase();
+    if (lower.includes('bunny') || lower.includes('b-cdn') || lower.includes('econnrefused') || lower.includes('etimedout')) {
+        return 'Could not process video for streaming. Please try again.';
+    }
+    return msg;
+}
+
 function isValidUrl(url: string): boolean {
     try {
         const parsed = new URL(url);
@@ -348,39 +357,43 @@ export async function downloadSocialVideo(
                 let externalBunnyId: string | null = null;
 
                 if (apiKey && libraryId) {
-                    console.log(`[Downloader] Uploading to Bunny Stream library ${libraryId}...`);
-                    const createRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos`, {
-                        method: 'POST',
-                        headers: {
-                            'AccessKey': apiKey,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ title: postInfo.source || `Sakugabooru Post #${postInfo.id}` })
-                    });
-                    if (!createRes.ok) {
-                        throw new Error(`Failed to create video on Bunny Stream: ${createRes.statusText}`);
+                    try {
+                        console.log(`[Downloader] Uploading to Bunny Stream library ${libraryId}...`);
+                        const createRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos`, {
+                            method: 'POST',
+                            headers: {
+                                'AccessKey': apiKey,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ title: postInfo.source || `Sakugabooru Post #${postInfo.id}` })
+                        });
+                        if (createRes.ok) {
+                            const createData = await createRes.json() as any;
+                            const guid = createData.guid;
+                            if (guid) {
+                                const fileBuffer = fs.readFileSync(tempFilePath);
+                                const uploadRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${guid}`, {
+                                    method: 'PUT',
+                                    headers: {
+                                        'AccessKey': apiKey,
+                                        'Content-Type': 'application/octet-stream'
+                                    },
+                                    body: fileBuffer
+                                });
+                                if (uploadRes.ok) {
+                                    videoUrl = `https://${bunnyHost}/${guid}/playlist.m3u8`;
+                                    thumbnailUrl = `https://${bunnyHost}/${guid}/thumbnail.jpg`;
+                                    externalBunnyId = guid;
+                                }
+                            }
+                        }
+                    } catch (bunnyErr: any) {
+                        console.warn('[Downloader] Bunny upload failed, falling back to Firebase Storage:', bunnyErr?.message);
                     }
-                    const createData = await createRes.json() as any;
-                    const guid = createData.guid;
+                }
 
-                    const fileBuffer = fs.readFileSync(tempFilePath);
-                    const uploadRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${guid}`, {
-                        method: 'PUT',
-                        headers: {
-                            'AccessKey': apiKey,
-                            'Content-Type': 'application/octet-stream'
-                        },
-                        body: fileBuffer
-                    });
-                    if (!uploadRes.ok) {
-                        throw new Error(`Failed to upload binary to Bunny Stream: ${uploadRes.statusText}`);
-                    }
-
-                    videoUrl = `https://${bunnyHost}/${guid}/playlist.m3u8`;
-                    thumbnailUrl = `https://${bunnyHost}/${guid}/thumbnail.jpg`;
-                    externalBunnyId = guid;
-                } else {
-                    console.log('[Downloader] Bunny credentials not configured. Falling back to Firebase Storage.');
+                if (!videoUrl) {
+                    console.log('[Downloader] Storing reference in Firebase Storage.');
                     const storage = getFirebaseStorage();
                     const bucket = storage.bucket();
                     const destination = `videos/sakugabooru-${postInfo.id}.mp4`;
@@ -463,7 +476,7 @@ export async function downloadSocialVideo(
             } catch (error: any) {
                 console.error('[Downloader] Sakugabooru Direct Fetch Error:', error);
                 if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
-                return { success: false, error: error.message };
+                return { success: false, error: sanitizeUserFacingError(error?.message) };
             }
         }
 
@@ -546,33 +559,43 @@ export async function downloadSocialVideo(
         let externalBunnyId: string | null = null;
 
         if (bunnyApiKey && bunnyLibraryId) {
-            await onProgress?.(55, 'Uploading video');
-            const createRes = await fetch(`https://video.bunnycdn.com/library/${bunnyLibraryId}/videos`, {
-                method: 'POST',
-                headers: { AccessKey: bunnyApiKey, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: title || `Reference ${uniqueId}` }),
-            });
-            if (!createRes.ok) throw new Error(`Could not create the Bunny Stream video (${createRes.status}).`);
-            const created = await createRes.json() as { guid?: string };
-            if (!created.guid) throw new Error('Bunny Stream did not return a video id.');
-            externalBunnyId = created.guid;
+            try {
+                await onProgress?.(55, 'Uploading video');
+                const createRes = await fetch(`https://video.bunnycdn.com/library/${bunnyLibraryId}/videos`, {
+                    method: 'POST',
+                    headers: { AccessKey: bunnyApiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: title || `Reference ${uniqueId}` }),
+                });
+                if (createRes.ok) {
+                    const created = await createRes.json() as { guid?: string };
+                    if (created.guid) {
+                        externalBunnyId = created.guid;
+                        const uploadRes = await fetch(`https://video.bunnycdn.com/library/${bunnyLibraryId}/videos/${externalBunnyId}`, {
+                            method: 'PUT',
+                            headers: { AccessKey: bunnyApiKey, 'Content-Type': 'application/octet-stream' },
+                            body: fs.readFileSync(tempFilePath),
+                        });
+                        if (uploadRes.ok) {
+                            await onProgress?.(76, 'Processing playback');
+                            const encoded = await waitForBunnyVideo(externalBunnyId).catch(() => null);
+                            storedVideoUrl = (encoded && encoded.availableResolutions)
+                              ? bunnyMp4Url(externalBunnyId, encoded.availableResolutions)
+                              : `https://${bunnyHost}/${externalBunnyId}/playlist.m3u8`;
+                            storedThumbnailUrl = `https://${bunnyHost}/${externalBunnyId}/thumbnail.jpg`;
+                            storagePath = `bunny/${bunnyLibraryId}/${externalBunnyId}`;
+                            await onProgress?.(94, 'Finalizing reference');
+                        }
+                    }
+                }
+            } catch (bunnyErr: any) {
+                console.warn('[Downloader] Bunny upload failed, falling back to Firebase Storage:', bunnyErr?.message);
+                storedVideoUrl = '';
+                storagePath = '';
+                externalBunnyId = null;
+            }
+        }
 
-            const uploadRes = await fetch(`https://video.bunnycdn.com/library/${bunnyLibraryId}/videos/${externalBunnyId}`, {
-                method: 'PUT',
-                headers: { AccessKey: bunnyApiKey, 'Content-Type': 'application/octet-stream' },
-                body: fs.readFileSync(tempFilePath),
-            });
-            if (!uploadRes.ok) throw new Error(`Could not upload the video to Bunny Stream (${uploadRes.status}).`);
-
-            await onProgress?.(76, 'Processing playback');
-            const encoded = await waitForBunnyVideo(externalBunnyId).catch(() => null);
-            storedVideoUrl = (encoded && encoded.availableResolutions)
-              ? bunnyMp4Url(externalBunnyId, encoded.availableResolutions)
-              : `https://${bunnyHost}/${externalBunnyId}/playlist.m3u8`;
-            storedThumbnailUrl = `https://${bunnyHost}/${externalBunnyId}/thumbnail.jpg`;
-            storagePath = `bunny/${bunnyLibraryId}/${externalBunnyId}`;
-            await onProgress?.(94, 'Finalizing reference');
-        } else {
+        if (!storedVideoUrl) {
             const storage = getFirebaseStorage();
             const bucket = storage.bucket();
             storagePath = `reference-imports/${uniqueId}.mp4`;
@@ -641,6 +664,6 @@ export async function downloadSocialVideo(
     } catch (error: any) {
         console.error('[Downloader] Fatal Error:', error);
         if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeUserFacingError(error?.message) };
     }
 }

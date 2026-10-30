@@ -9,6 +9,7 @@ import { ArrowRight, Sparkles, Film, CheckCircle2, ChevronRight, Activity, Slide
 import Link from 'next/link';
 import { filterAvailableVideos } from '@/lib/video-availability';
 import { getAllSnapshotVideos } from '@/lib/videoSnapshot.server';
+import { STATIC_BLOG_POSTS } from '@/lib/static-blog-posts';
 
 export const dynamic = 'force-dynamic';
 
@@ -117,6 +118,38 @@ const ENRICHED_BLOG_CONTENT: Record<string, {
             'Ignoring edge alignment: rotating the blade flat-side forward during a cutting stroke.',
             'Stopping the sword instantly at the target without overshoot or muscular resistance recoil.'
         ]
+    },
+    'photoshop-frame-by-frame-animation-plugin': {
+        openingDef: 'A Photoshop frame by frame animation plugin is a specialized tool that extends Photoshop\'s Timeline with keyboard frame stepping, custom onion skinning, and sprite sheet export for 2D animators.',
+        sections: [
+            {
+                heading: 'Native Timeline Capabilities vs. Third-Party Plugins',
+                body: 'Photoshop already supports frame-by-frame animation out of the box using frame animation mode or video layers. You can set individual frame delays, toggle layer visibility, preview loops, and export GIFs or PNG sequences without installing any extra software. Plugins earn their price tag primarily by introducing keyboard shortcuts for stepping forward and backward, multi-frame ghosting controls, and automated sprite sheet packing for game developers.'
+            },
+            {
+                heading: 'Why Studying Reference Outside Photoshop Saves Hours',
+                body: 'While Photoshop can host short rough tests under a couple hundred frames, scrubbing reference video inside a Photoshop PSD document quickly creates noticeable playback lag on 1s. Professional 2D and 3D animators keep video study separate from drawing: use our studio-grade Frame-by-Frame Reference Player to dissect sakuga smears, athletic weight shifts, and contact poses at full 24 FPS with draw-over tools before laying down a single keyframe in your drawing software.'
+            },
+            {
+                heading: 'UXP vs. Legacy CEP Architecture: Avoiding Broken Plugins',
+                body: 'Adobe has transitioned Photoshop from legacy CEP and Flash-based panels to modern UXP (Unified Extensibility Platform). Many popular animation extensions sold between 2018 and 2022 rely on deprecated APIs and fail to load on modern Photoshop releases. Before purchasing any plugin, verify that the developer actively maintains a UXP build and supports your exact Photoshop major version.'
+            },
+            {
+                heading: 'The 1s and 2s Roughing Workflow in Photoshop',
+                body: 'For student reels and body mechanics studies, start with a lightweight 960x540 canvas to guarantee instant timeline scrubbing. Animate on 2s (12 drawings per second) to establish key poses, contact frames, and arcs. Reserve drawing on 1s strictly for high-velocity smears, explosive impacts, and weapon arcs. Once your sequence is locked, you can render out an image sequence or showcase your test directly on your Animation Reference portfolio.'
+            }
+        ],
+        timingChart: [
+            { phase: 'Reference Study & Pose Breakdown', frameRange: 'Step 1 (Pre-drawing)', focus: 'Scrub clips frame-by-frame in Animation Reference, trace force arcs and center of gravity.' },
+            { phase: 'Thumbnailing & Contact Keys on 2s', frameRange: 'Frames 1, 3, 5, 7...', focus: 'Establish key poses and extreme reversals on low-res Photoshop canvas.' },
+            { phase: 'Smears, Breakdowns & In-Betweens on 1s', frameRange: 'Frames 2, 4, 6...', focus: 'Add fast motion smears, anticipations, and cushion into contact poses.' },
+            { phase: 'Export, Comp & Portfolio Hosting', frameRange: 'Step 4 (Final output)', focus: 'Render numbered PNGs or GIFs and publish to your online animation portfolio.' }
+        ],
+        pitfalls: [
+            'Attempting to scrub heavy video reference directly inside Photoshop layers, causing memory bloat and playback lag.',
+            'Buying abandoned CEP animation panels that crash on current Photoshop versions without UXP support.',
+            'Drawing full-resolution 4K canvases during the rough phase rather than testing motion on a lightweight canvas first.'
+        ]
     }
 };
 
@@ -144,7 +177,168 @@ async function getPostBySlug(slug: string): Promise<BlogPost | null> {
     } catch (error) {
         console.error("Error fetching SEO page by slug:", error);
     }
-    return null;
+    const staticMatch = STATIC_BLOG_POSTS.find(p => p.slug === slug);
+    return staticMatch || null;
+}
+
+function parseInlineMarkdown(text: string): React.ReactNode[] {
+    const parts: React.ReactNode[] = [];
+    const tokenRegex = /(\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*|\*([^*]+)\*|`([^`]+)`)/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = tokenRegex.exec(text)) !== null) {
+        if (match.index > lastIndex) {
+            parts.push(text.slice(lastIndex, match.index));
+        }
+
+        if (match[2] && match[3]) {
+            const label = match[2];
+            const url = match[3];
+            const isInternal = url.startsWith('/') || url.includes('animationreference.org');
+            const href = url.replace('https://animationreference.org', '') || '/';
+            if (isInternal) {
+                parts.push(
+                    <Link key={match.index} href={href} className="text-purple-400 hover:text-purple-300 underline underline-offset-4 font-medium transition-colors">
+                        {label}
+                    </Link>
+                );
+            } else {
+                parts.push(
+                    <a key={match.index} href={url} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-4 font-medium transition-colors">
+                        {label}
+                    </a>
+                );
+            }
+        } else if (match[4]) {
+            parts.push(<strong key={match.index} className="font-semibold text-white">{match[4]}</strong>);
+        } else if (match[5]) {
+            parts.push(<em key={match.index} className="italic text-zinc-200">{match[5]}</em>);
+        } else if (match[6]) {
+            parts.push(<code key={match.index} className="px-1.5 py-0.5 rounded bg-white/10 font-mono text-purple-200 text-sm">{match[6]}</code>);
+        }
+
+        lastIndex = tokenRegex.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+        parts.push(text.slice(lastIndex));
+    }
+
+    return parts;
+}
+
+function RenderMarkdownContent({ content }: { content: string }) {
+    const lines = content.split('\n');
+    const elements: React.ReactNode[] = [];
+    let i = 0;
+
+    while (i < lines.length) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        if (!trimmed) {
+            i++;
+            continue;
+        }
+
+        if (trimmed === '---') {
+            elements.push(<hr key={i} className="border-white/10 my-8" />);
+            i++;
+            continue;
+        }
+
+        if (trimmed.startsWith('### ')) {
+            elements.push(
+                <h3 key={i} className="text-xl sm:text-2xl font-bold text-white mt-8 mb-3 tracking-tight">
+                    {parseInlineMarkdown(trimmed.replace(/^###\s+/, ''))}
+                </h3>
+            );
+            i++;
+            continue;
+        }
+
+        if (trimmed.startsWith('## ')) {
+            elements.push(
+                <h2 key={i} className="text-2xl sm:text-3xl font-extrabold text-white mt-12 mb-4 tracking-tight border-b border-white/5 pb-3">
+                    {parseInlineMarkdown(trimmed.replace(/^##\s+/, ''))}
+                </h2>
+            );
+            i++;
+            continue;
+        }
+
+        if (trimmed.startsWith('|')) {
+            const tableLines: string[] = [];
+            while (i < lines.length && lines[i].trim().startsWith('|')) {
+                tableLines.push(lines[i].trim());
+                i++;
+            }
+
+            if (tableLines.length >= 2) {
+                const headerCells = tableLines[0].split('|').map(c => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+                const isSeparator = tableLines[1].includes('---');
+                const startRow = isSeparator ? 2 : 1;
+                const rows = tableLines.slice(startRow).map(r => r.split('|').map(c => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1));
+
+                elements.push(
+                    <div key={`table-${i}`} className="overflow-x-auto rounded-xl border border-white/10 my-6 bg-black/40">
+                        <table className="w-full text-left text-sm">
+                            <thead className="border-b border-white/10 text-xs uppercase tracking-wider text-purple-300 bg-white/[0.03]">
+                                <tr>
+                                    {headerCells.map((h, hIdx) => (
+                                        <th key={hIdx} className="py-3 px-4 font-bold">{parseInlineMarkdown(h)}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5 text-zinc-300">
+                                {rows.map((row, rIdx) => (
+                                    <tr key={rIdx} className="hover:bg-white/[0.02]">
+                                        {row.map((cell, cIdx) => (
+                                            <td key={cIdx} className="py-3 px-4">{parseInlineMarkdown(cell)}</td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                );
+            }
+            continue;
+        }
+
+        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            const listItems: string[] = [];
+            while (i < lines.length && (lines[i].trim().startsWith('- ') || lines[i].trim().startsWith('* '))) {
+                listItems.push(lines[i].trim().replace(/^[-*]\s+/, ''));
+                i++;
+            }
+            elements.push(
+                <ul key={`list-${i}`} className="space-y-2.5 my-4">
+                    {listItems.map((item, lIdx) => (
+                        <li key={lIdx} className="flex items-start gap-2.5 text-zinc-300 leading-relaxed">
+                            <span className="h-1.5 w-1.5 rounded-full bg-purple-400 mt-2.5 shrink-0" />
+                            <span>{parseInlineMarkdown(item)}</span>
+                        </li>
+                    ))}
+                </ul>
+            );
+            continue;
+        }
+
+        const paraLines: string[] = [];
+        while (i < lines.length && lines[i].trim() && !lines[i].trim().startsWith('#') && !lines[i].trim().startsWith('|') && !lines[i].trim().startsWith('- ') && !lines[i].trim().startsWith('* ') && lines[i].trim() !== '---') {
+            paraLines.push(lines[i].trim());
+            i++;
+        }
+        elements.push(
+            <p key={`p-${i}`} className="text-zinc-300 text-base sm:text-lg leading-relaxed my-4">
+                {parseInlineMarkdown(paraLines.join(' '))}
+            </p>
+        );
+    }
+
+    return <div className="space-y-2">{elements}</div>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -270,8 +464,8 @@ export default async function SeoLandingPage({ params }: Props) {
 
                     {/* Original Blog Content if present */}
                     {post.content && post.content.trim().length > 0 && (
-                        <div className="prose prose-invert prose-purple max-w-none text-zinc-300 text-lg leading-relaxed space-y-6 whitespace-pre-wrap">
-                            {post.content}
+                        <div className="prose prose-invert prose-purple max-w-none text-zinc-300 text-lg leading-relaxed space-y-6">
+                            <RenderMarkdownContent content={post.content} />
                         </div>
                     )}
 

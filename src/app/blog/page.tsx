@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { BlogPost } from '@/lib/types';
+import { STATIC_BLOG_POSTS } from '@/lib/static-blog-posts';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,19 +24,26 @@ export const metadata: Metadata = {
 };
 
 async function getPosts(): Promise<BlogPost[]> {
+    let posts: BlogPost[] = [];
     try {
         const q = query(collection(db, 'blogPosts'), where('status', '==', 'published'));
         const snap = await getDocs(q);
-        const posts = snap.docs.map(d => ({ id: d.id, ...d.data() } as BlogPost));
-        return posts.sort((a, b) => {
-            const ta = a.createdAt?.seconds || 0;
-            const tb = b.createdAt?.seconds || 0;
-            return tb - ta;
-        });
+        posts = snap.docs.map(d => ({ id: d.id, ...d.data() } as BlogPost));
     } catch (e) {
-        console.error('Failed to load blog posts', e);
-        return [];
+        console.error('Failed to load blog posts from Firestore, using static list', e);
     }
+    const knownSlugs = new Set(posts.map(p => p.slug));
+    for (const sp of STATIC_BLOG_POSTS) {
+        if (!knownSlugs.has(sp.slug)) {
+            posts.push(sp);
+            knownSlugs.add(sp.slug);
+        }
+    }
+    return posts.sort((a, b) => {
+        const ta = a.createdAt?.seconds || 0;
+        const tb = b.createdAt?.seconds || 0;
+        return tb - ta;
+    });
 }
 
 export default async function BlogIndexPage() {

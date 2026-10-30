@@ -3,6 +3,7 @@ import { MetadataRoute } from 'next';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getAllSnapshotVideos, getTagIndex, toIsoDate } from '@/lib/videoSnapshot.server';
+import { STATIC_BLOG_POSTS } from '@/lib/static-blog-posts';
 
 const BASE_URL = 'https://animationreference.org';
 
@@ -200,20 +201,37 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         });
 
         // 3. Blog Posts
-        const blogQuery = query(
-            collection(db, 'blogPosts'),
-            where('status', '==', 'published')
-        );
-        const blogSnapshot = await getDocs(blogQuery);
-        const blogRoutes: MetadataRoute.Sitemap = blogSnapshot.docs.map((doc) => {
-            const data = doc.data();
-            return {
-                url: `${BASE_URL}/blog/${data.slug}`,
-                lastModified: new Date(),
-                changeFrequency: 'weekly',
-                priority: 0.7,
-            };
-        });
+        let blogRoutes: MetadataRoute.Sitemap = [];
+        try {
+            const blogQuery = query(
+                collection(db, 'blogPosts'),
+                where('status', '==', 'published')
+            );
+            const blogSnapshot = await getDocs(blogQuery);
+            blogRoutes = blogSnapshot.docs.map((doc) => {
+                const data = doc.data();
+                return {
+                    url: `${BASE_URL}/blog/${data.slug}`,
+                    lastModified: new Date(),
+                    changeFrequency: 'weekly',
+                    priority: 0.7,
+                };
+            });
+        } catch {}
+
+        const knownBlogUrls = new Set(blogRoutes.map(b => b.url));
+        for (const post of STATIC_BLOG_POSTS) {
+            const url = `${BASE_URL}/blog/${post.slug}`;
+            if (!knownBlogUrls.has(url)) {
+                blogRoutes.push({
+                    url,
+                    lastModified: new Date(),
+                    changeFrequency: 'weekly',
+                    priority: 0.7,
+                });
+                knownBlogUrls.add(url);
+            }
+        }
 
         // 4a. Short films — not part of the static video snapshot, so read
         // directly from Firestore (same pattern as categories/blog above).

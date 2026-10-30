@@ -24,6 +24,27 @@ function clipsByTags(tags, count = 9) {
 
 const POSTS = [
   {
+    slug: 'photoshop-frame-by-frame-animation-plugin',
+    title: 'Photoshop Frame by Frame Animation Plugin: Real Options',
+    tags: ['Smears', 'Walk Cycle', 'Impact Frames', 'Combat'],
+    keywords: [
+      'photoshop frame by frame animation plugin',
+      'photoshop animation plugin',
+      'photoshop 2d animation',
+      'photoshop timeline onion skin',
+      'photoshop sprite sheet export',
+      'animation reference study'
+    ],
+    excerpt: "Photoshop's native Timeline handles basic 1s and 2s, onion skinning, and GIF exports. Here is when to buy a plugin, when to stay native, and why dedicated reference tools beat both.",
+    content: `A Photoshop frame by frame animation plugin is a third-party extension designed to enhance Photoshop's native Timeline panel with keyboard frame stepping, advanced onion skinning, and sprite sheet export.
+
+Short answer: you don't need a Photoshop frame by frame animation plugin for most student reel work. Photoshop's built-in Timeline already handles frame-by-frame on 1s or 2s, onion skinning, GIF export, and sprite sheets; plugins mainly add onion-skin controls, video layer timing, and export niceties. If your deliverable is a walk cycle or body mechanics test under a few hundred frames, stay in Photoshop. If you're frame-stepping sakuga for reference or building a reel, a dedicated tool will serve you better, and this guide maps each option to the specific use case where it wins.
+
+The pain starts with frame stepping and study. The Timeline has no scrub bar with per-frame thumbnails, no frame numbering overlay, and no way to loop a range at variable speed while you draw over it. Onion skinning exists only as a limited video-layer feature, not true multi-frame ghosting. Export automation is another gap: sprite sheets and numbered PNG sequences need manual layer slicing or scripting.
+
+Plugins patch playback controls, onion skinning, and export. But if your actual job is studying sakuga clips frame-by-frame and building reference boards for your reel, a dedicated player like Animation Reference (https://animationreference.org/frame-by-frame-player) does that without a Photoshop license at all.`,
+  },
+  {
     slug: 'sword-animation-reference-guide',
     title: 'Sword Animation Reference: How to Study Blade Combat Frame by Frame',
     tags: ['sword', 'greatsword', 'slash', 'spin slash'],

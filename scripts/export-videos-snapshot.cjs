@@ -134,5 +134,11 @@ function toMillis(val) {
   fs.writeFileSync(OUT_FILE, JSON.stringify(videos));
   const mb = (fs.statSync(OUT_FILE).size / 1024 / 1024).toFixed(2);
   console.log(`Exported ${videos.length} published videos to ${path.relative(process.cwd(), OUT_FILE)} (${mb} MB)`);
+
+  const INITIAL_FILE = path.join(path.dirname(OUT_FILE), 'initial-videos.json');
+  const initialVideos = videos.slice(0, 60);
+  fs.writeFileSync(INITIAL_FILE, JSON.stringify(initialVideos));
+  const initialKb = (fs.statSync(INITIAL_FILE).size / 1024).toFixed(1);
+  console.log(`Exported ${initialVideos.length} initial videos to ${path.relative(process.cwd(), INITIAL_FILE)} (${initialKb} KB)`);
   process.exit(0);
 })().catch(e => { console.error('FATAL:', e); process.exit(1); });

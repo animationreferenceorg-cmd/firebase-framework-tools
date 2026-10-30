@@ -80,9 +80,9 @@ function Player({ playerRef, video, url, config, ...props }: any) {
         startFragPrefetch: true,
         capLevelToPlayerSize: true,
         progressive: true,
-        backBufferLength: 30,
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
+        backBufferLength: 20,
+        maxBufferLength: 20,
+        maxMaxBufferLength: 40,
         maxBufferSize: 30 * 1000 * 1000,
         lowLatencyMode: false,
         ...fileConfig.hlsOptions,
@@ -106,6 +106,7 @@ function Player({ playerRef, video, url, config, ...props }: any) {
                     attributes: {
                         preload: 'auto',
                         playsInline: true,
+                        crossOrigin: 'anonymous',
                         poster,
                         ...fileConfig.attributes,
                     }
@@ -322,9 +323,17 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
         const frameTime = 1 / fps;
         const internalPlayer = playerRef.current.getInternalPlayer();
         if (internalPlayer && typeof (internalPlayer as HTMLVideoElement).currentTime === 'number') {
+            const vid = internalPlayer as HTMLVideoElement;
             const newTime = direction === 'forward'
-                ? Math.min(duration, (internalPlayer as HTMLVideoElement).currentTime + frameTime)
-                : Math.max(0, (internalPlayer as HTMLVideoElement).currentTime - frameTime);
+                ? Math.min(duration || 9999, vid.currentTime + frameTime)
+                : Math.max(0, vid.currentTime - frameTime);
+            vid.currentTime = newTime;
+            if (duration > 0) setPlayed(newTime / duration);
+        } else if (playerRef.current) {
+            const cur = playerRef.current.getCurrentTime() || 0;
+            const newTime = direction === 'forward'
+                ? Math.min(duration || 9999, cur + frameTime)
+                : Math.max(0, cur - frameTime);
             playerRef.current.seekTo(newTime, 'seconds');
             if (duration > 0) setPlayed(newTime / duration);
         }
@@ -534,19 +543,59 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
         }
     }
 
+    const seekRafRef = React.useRef<number | null>(null);
+    const pendingSeekFractionRef = React.useRef<number | null>(null);
+
+    const performThrottledSeek = React.useCallback((fraction: number) => {
+        pendingSeekFractionRef.current = fraction;
+        if (seekRafRef.current !== null) return;
+
+        seekRafRef.current = requestAnimationFrame(() => {
+            seekRafRef.current = null;
+            const target = pendingSeekFractionRef.current;
+            if (target === null || !playerRef.current) return;
+
+            const internal = playerRef.current.getInternalPlayer() as HTMLVideoElement | null;
+            if (internal && typeof (internal as any).fastSeek === 'function' && duration > 0) {
+                try {
+                    (internal as any).fastSeek(target * duration);
+                } catch {
+                    playerRef.current.seekTo(target, 'fraction');
+                }
+            } else if (playerRef.current) {
+                playerRef.current.seekTo(target, 'fraction');
+            }
+        });
+    }, [duration]);
+
+    React.useEffect(() => {
+        return () => {
+            if (seekRafRef.current !== null) {
+                cancelAnimationFrame(seekRafRef.current);
+            }
+        };
+    }, []);
+
     const handleSeekMouseDown = () => {
         setIsSeeking(true);
     };
 
     const handleSeekChange = (value: number[]) => {
-        setPlayed(value[0]);
-        if (playerRef.current) {
-            playerRef.current.seekTo(value[0]);
-        }
+        const fraction = value[0];
+        setPlayed(fraction);
+        performThrottledSeek(fraction);
     };
 
     const handleSeekMouseUp = () => {
         setIsSeeking(false);
+        if (seekRafRef.current !== null) {
+            cancelAnimationFrame(seekRafRef.current);
+            seekRafRef.current = null;
+        }
+        if (playerRef.current && pendingSeekFractionRef.current !== null) {
+            playerRef.current.seekTo(pendingSeekFractionRef.current, 'fraction');
+            pendingSeekFractionRef.current = null;
+        }
     };
 
     const handlePlaybackRateChange = (value: number[]) => {

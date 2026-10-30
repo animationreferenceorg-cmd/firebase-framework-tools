@@ -646,7 +646,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           )}
 
           {/* Native video hover preview */}
-          {playableVideoUrl && (
+          {playableVideoUrl && !video.isShort && !poster && isHovered && !isPlayerOpen && (
             <video
               ref={videoRef}
               src={getPreviewUrl(playableVideoUrl)}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { getSnapshotVideos } from '@/lib/videoSnapshot';
+import { getInitialVideos, getSnapshotVideos } from '@/lib/videoSnapshot';
 import type { Video } from '@/lib/types';
 import { Film } from 'lucide-react';
 import { FilterBar, TabOption, TypeOption, PillOption } from '@/components/FilterBar';
@@ -62,24 +62,25 @@ export default function HomePage() {
   useEffect(() => {
     let isCurrent = true;
     const fetchData = async () => {
-      setLoading(true);
-      try {
-        // 1. Fast initial load of snapshot references so grid displays immediately
-        const snapshotVids = await getSnapshotVideos().catch(() => [] as Video[]);
-        if (!isCurrent) return;
-        const available = filterAvailableVideos(snapshotVids);
-        if (available.length > 0) {
-          setAllVideos(mixReferences(available));
-          setLoading(false);
-        }
+      // 1. Instant initial render (< 50ms) with lightweight initial batch
+      const initial = await getInitialVideos().catch(() => [] as Video[]);
+      if (initial.length > 0 && isCurrent) {
+        setAllVideos(mixReferences(initial));
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
 
-        // 2. Concurrently fetch and blend live streamed content (Sketchfab 3D, ArtStation VisDev, Pinterest Design, Community)
-        const [liveHub, portfolioItems] = await Promise.all([
+      try {
+        // 2. Concurrently stream full snapshot + live hub & community references
+        const [snapshotVids, liveHub, portfolioItems] = await Promise.all([
+          getSnapshotVideos().catch(() => [] as Video[]),
           fetchLiveHubReferences().catch(() => [] as Video[]),
           getPublicPortfolioItems({ limitCount: 30 }).catch(() => [] as any[]),
         ]);
         if (!isCurrent) return;
 
+        const available = filterAvailableVideos(snapshotVids);
         const communityVids = (portfolioItems || []).map(portfolioItemToVideo);
         const blended = [...available, ...liveHub, ...communityVids];
         setAllVideos(mixReferences(blended));

@@ -1,6 +1,6 @@
 
 import type { Metadata } from 'next';
-import { Bricolage_Grotesque, JetBrains_Mono } from 'next/font/google';
+import { Bricolage_Grotesque, JetBrains_Mono, Inter } from 'next/font/google';
 import './globals.css';
 import { AmbientBackdrop } from '@/components/motion/AmbientBackdrop';
 
@@ -19,6 +19,14 @@ const mono = JetBrains_Mono({
   variable: '--font-mono',
   display: 'swap',
   weight: ['400', '500', '700'],
+});
+
+// Clean body font, self-hosted at build time to prevent render-blocking CSS requests.
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
 });
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/use-auth';
@@ -149,10 +157,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${display.variable} ${mono.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${display.variable} ${mono.variable} ${inter.variable}`} suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://commondatastorage.googleapis.com" />
         <link rel="preconnect" href="https://storage.googleapis.com" />
         <link rel="preconnect" href="https://firebasestorage.googleapis.com" />
@@ -160,7 +166,10 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://www.sakugabooru.com" />
         <link rel="preconnect" href="https://vz-79893c7f-720.b-cdn.net" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://vz-79893c7f-720.b-cdn.net" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link rel="preconnect" href="https://upload.wikimedia.org" />
+        <link rel="dns-prefetch" href="https://upload.wikimedia.org" />
+        <link rel="preconnect" href="https://i.ytimg.com" />
+        <link rel="dns-prefetch" href="https://i.ytimg.com" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}

@@ -4,6 +4,9 @@ import { getStripe } from '@/lib/stripe';
 import { getFirestore } from '@/lib/firebase-admin';
 import { handleStripeEvent } from '@/lib/stripe-webhook';
 import { createWebhookDeps } from '@/lib/stripe-sync';
+import { analytics } from '@heycatch/sdk';
+
+analytics.init({ projectKey: 'hck_pk_ZH7SVbyuigr81Wgmsh7TJ9q_NaGxQyXb' });
 
 export async function POST(req: Request) {
     const body = await req.text();
@@ -33,6 +36,20 @@ export async function POST(req: Request) {
         const result = await handleStripeEvent(event, createWebhookDeps(stripe, getFirestore()));
         if (result.handled && result.userIds.length) {
             console.log(`[Webhook] ${event.type} synced customer ${result.customerId} -> ${result.userIds.length} user(s)`);
+            if (event.type === 'checkout.session.completed' || event.type === 'customer.subscription.created') {
+                for (const uid of result.userIds) {
+                    await analytics.setIdentity(uid, { plan: 'pro' });
+                    await analytics.trackEvent(
+                        'subscription_started',
+                        { plan: 'pro' },
+                        { userId: uid },
+                    );
+                }
+            } else if (event.type === 'customer.subscription.deleted') {
+                for (const uid of result.userIds) {
+                    await analytics.setIdentity(uid, { plan: 'free' });
+                }
+            }
         }
         return NextResponse.json({ received: true });
     } catch (error) {

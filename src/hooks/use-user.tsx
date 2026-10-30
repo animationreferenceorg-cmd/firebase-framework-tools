@@ -5,6 +5,7 @@ import { createContext, useContext, ReactNode, useEffect, useState, useCallback,
 import { useAuth } from './use-auth';
 import type { UserProfile } from '@/lib/types';
 import { getUserProfile, createUserProfile } from '@/lib/firestore';
+import { analytics } from '@heycatch/sdk';
 
 
 interface UserContextType {
@@ -30,6 +31,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const currentUid = authUser?.uid || null;
 
     if (!currentUid) {
+      if (lastFetchedUidRef.current) {
+        analytics.resetIdentity();
+      }
       setUserProfile(null);
       setLoading(false);
       lastFetchedUidRef.current = null;
@@ -52,6 +56,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
       // The email lives in Firebase Auth, not the public profile document.
       setUserProfile(profile ? { ...profile, email: authUser?.email ?? profile.email ?? null } : null);
       lastFetchedUidRef.current = currentUid;
+      analytics.setIdentity(
+        currentUid,
+        {
+          email: authUser?.email ?? profile?.email ?? undefined,
+          name: (profile as any)?.displayName ?? authUser?.displayName ?? undefined,
+          plan: (profile as any)?.isPro ? 'pro' : ((profile as any)?.plan ?? 'free'),
+        },
+        {
+          signup_date: authUser?.metadata?.creationTime ? new Date(authUser.metadata.creationTime).toISOString() : undefined,
+        }
+      );
     } catch (error) {
       console.error("Failed to fetch user profile:", error);
       setUserProfile(null);

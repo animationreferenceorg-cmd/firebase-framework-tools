@@ -27,6 +27,7 @@ import { LayoutClient } from '@/components/LayoutClient';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { GoogleAnalytics } from '@/components/layout/GoogleAnalytics';
+import { HeyCatchInit } from '@/components/HeyCatchInit';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://animationreference.org'),
@@ -170,6 +171,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased" suppressHydrationWarning={true}>
+        <HeyCatchInit />
         <GoogleAnalytics />
         <AmbientBackdrop />
         <FirebaseClientProvider>

@@ -3,6 +3,12 @@ const nextConfig = {
   output: 'standalone',
   async redirects() {
     return [
+      // HeyCatch channel attribution short links
+      {
+        source: '/:l([a-z0-9])',
+        destination: '/?utm_source=heycatch&utm_campaign=:l',
+        permanent: false,
+      },
       // Main Hub & References Redirects
       {
         source: '/browse',

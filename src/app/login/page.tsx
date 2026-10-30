@@ -7,6 +7,7 @@ import {
   signInWithEmailAndPassword, 
   signInWithPopup,
   GoogleAuthProvider,
+  getAdditionalUserInfo,
   type User 
 } from 'firebase/auth';
 import { useFirebase } from '@/firebase';
@@ -17,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Clapperboard, Sparkles, ArrowRight, ShieldCheck, Mail, Lock as LockIcon, CheckCircle2 } from 'lucide-react';
 import { createUserProfile } from '@/lib/firestore';
+import { analytics } from '@heycatch/sdk';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -68,6 +70,8 @@ export default function LoginPage() {
     try {
       if (action === 'signUp') {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        analytics.setIdentity(userCredential.user.uid, { email });
+        analytics.trackEvent('signup_completed');
         await handleAuthSuccess(userCredential.user);
         toast({ title: "Account created!", description: "Welcome to Animation Reference." });
       } else {
@@ -130,6 +134,14 @@ export default function LoginPage() {
     try {
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
+      const additionalInfo = getAdditionalUserInfo(userCredential);
+      if (additionalInfo?.isNewUser) {
+        analytics.setIdentity(userCredential.user.uid, {
+          email: userCredential.user.email ?? undefined,
+          name: userCredential.user.displayName ?? undefined,
+        });
+        analytics.trackEvent('signup_completed');
+      }
       await handleAuthSuccess(userCredential.user);
       toast({ title: "Signed in with Google!", description: "Welcome to Animation Reference." });
     } catch (error: any) {

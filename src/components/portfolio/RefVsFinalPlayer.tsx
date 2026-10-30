@@ -28,7 +28,14 @@ export function RefVsFinalPlayer({ referenceUrl, finalUrl, poster, referenceClip
       if (el.canPlayType('application/vnd.apple.mpegurl')) { el.src = src; continue; }
       import('hls.js').then(({ default: Hls }) => {
         if (cancelled || !Hls.isSupported()) return;
-        const hls = new Hls();
+        const hls = new Hls({
+          enableWorker: true,
+          startFragPrefetch: true,
+          capLevelToPlayerSize: true,
+          progressive: true,
+          backBufferLength: 30,
+          maxBufferLength: 30,
+        });
         hls.loadSource(src);
         hls.attachMedia(el);
         instances.push(hls);

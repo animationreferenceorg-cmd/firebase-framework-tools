@@ -52,7 +52,7 @@ export function sanitizeVideoUrl(url?: string | null): string {
   }
   // Convert Bunny CDN HLS playlist.m3u8 into universal MP4 stream
   if (target.includes('b-cdn.net') && target.includes('playlist.m3u8')) {
-    return target.replace('playlist.m3u8', 'original?.mp4');
+    return target.replace('playlist.m3u8', 'play_720p.mp4');
   }
   return target;
 }

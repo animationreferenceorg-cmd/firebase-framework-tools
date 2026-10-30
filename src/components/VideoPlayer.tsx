@@ -75,6 +75,18 @@ function Player({ playerRef, video, url, config, ...props }: any) {
         : ReactPlayer;
     const poster = video.posterUrl || video.thumbnailUrl;
     const fileConfig = config?.file || {};
+    const optimizedHlsOptions = {
+        enableWorker: true,
+        startFragPrefetch: true,
+        capLevelToPlayerSize: true,
+        progressive: true,
+        backBufferLength: 30,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        maxBufferSize: 30 * 1000 * 1000,
+        lowLatencyMode: false,
+        ...fileConfig.hlsOptions,
+    };
 
     return (
         <PlayerComponent
@@ -87,8 +99,10 @@ function Player({ playerRef, video, url, config, ...props }: any) {
             playsinline
             config={{
                 ...config,
+                hlsOptions: optimizedHlsOptions,
                 file: {
                     ...fileConfig,
+                    hlsOptions: optimizedHlsOptions,
                     attributes: {
                         preload: 'auto',
                         playsInline: true,
@@ -759,7 +773,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                     loop={loop}
                     config={{
                         file: {
-                            attributes: showCaptureButton ? {
+                            attributes: (showCaptureButton || (typeof cleanVideoUrl === 'string' && (cleanVideoUrl.includes('b-cdn.net') || cleanVideoUrl.includes('storage.googleapis.com')))) ? {
                                 crossOrigin: 'anonymous'
                             } : {}
                         }

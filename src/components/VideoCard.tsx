@@ -29,7 +29,9 @@ function getPreviewUrl(url?: string): string | undefined {
   if (!url) return undefined;
   let targetUrl: string | undefined = url.trim();
   if (targetUrl.includes('playlist.m3u8')) {
-    targetUrl = targetUrl.replace('playlist.m3u8', 'original?.mp4');
+    targetUrl = targetUrl.replace('playlist.m3u8', 'play_480p.mp4');
+  } else if (targetUrl.includes('b-cdn.net') && targetUrl.includes('play_720p.mp4')) {
+    targetUrl = targetUrl.replace('play_720p.mp4', 'play_480p.mp4');
   } else if (targetUrl.startsWith('<iframe')) {
     const match = targetUrl.match(/src=["']([^"']+)["']/);
     targetUrl = match ? match[1] : undefined;
@@ -458,7 +460,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
             />
           ) : isCommunityVideo && playableVideoUrl ? (
             <video
-              src={cardInView || isHovered ? getPreviewUrl(playableVideoUrl) : undefined}
+              src={cardInView ? getPreviewUrl(playableVideoUrl) : undefined}
               preload="metadata"
               muted
               playsInline
@@ -480,11 +482,11 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           )}
 
           {/* Native video hover preview for shorts/posters */}
-          {playableVideoUrl && (
+          {playableVideoUrl && isHovered && (
             <video
               ref={videoRef}
-              src={cardInView || isHovered ? getPreviewUrl(playableVideoUrl) : undefined}
-              preload="metadata"
+              src={getPreviewUrl(playableVideoUrl)}
+              preload="auto"
               muted
               loop
               playsInline
@@ -603,7 +605,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
             </>
           ) : playableVideoUrl ? (
             <video
-              src={cardInView || isHovered ? getPreviewUrl(playableVideoUrl) : undefined}
+              src={cardInView ? getPreviewUrl(playableVideoUrl) : undefined}
               preload="metadata"
               muted
               playsInline
@@ -627,8 +629,8 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           {playableVideoUrl && (
             <video
               ref={videoRef}
-              src={cardInView || isHovered ? getPreviewUrl(playableVideoUrl) : undefined}
-              preload="metadata"
+              src={getPreviewUrl(playableVideoUrl)}
+              preload="auto"
               muted
               loop
               playsInline
@@ -836,7 +838,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           />
         ) : playableVideoUrl ? (
           <video
-            src={cardInView || isHovered ? getPreviewUrl(playableVideoUrl) : undefined}
+            src={cardInView ? getPreviewUrl(playableVideoUrl) : undefined}
             preload="metadata"
             muted
             playsInline
@@ -857,11 +859,11 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           )}
         
         {/* Native video hover preview for standard cards */}
-        {playableVideoUrl && !video.isShort && !poster && (
+        {playableVideoUrl && !video.isShort && !poster && isHovered && (
           <video
             ref={videoRef}
-            src={cardInView || isHovered ? getPreviewUrl(playableVideoUrl) : undefined}
-            preload="metadata"
+            src={getPreviewUrl(playableVideoUrl)}
+              preload="auto"
             muted
             loop
             playsInline

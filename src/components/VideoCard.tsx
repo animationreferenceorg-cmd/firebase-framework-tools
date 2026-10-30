@@ -28,10 +28,13 @@ import type { Video } from '@/lib/types';
 function getPreviewUrl(url?: string): string | undefined {
   if (!url) return undefined;
   let targetUrl: string | undefined = url.trim();
-  if (targetUrl.includes('playlist.m3u8')) {
+  if (targetUrl.includes('b-cdn.net')) {
+    targetUrl = targetUrl
+      .replace('playlist.m3u8', 'play_480p.mp4')
+      .replace('play_1080p.mp4', 'play_480p.mp4')
+      .replace('play_720p.mp4', 'play_480p.mp4');
+  } else if (targetUrl.includes('playlist.m3u8')) {
     targetUrl = targetUrl.replace('playlist.m3u8', 'play_480p.mp4');
-  } else if (targetUrl.includes('b-cdn.net') && targetUrl.includes('play_720p.mp4')) {
-    targetUrl = targetUrl.replace('play_720p.mp4', 'play_480p.mp4');
   } else if (targetUrl.startsWith('<iframe')) {
     const match = targetUrl.match(/src=["']([^"']+)["']/);
     targetUrl = match ? match[1] : undefined;
@@ -229,7 +232,15 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
 
   // A card can unmount mid-hover (filtering a grid) with the timer still
   // pending; it must not fire against a video nobody is looking at anymore.
-  useEffect(() => clearQuotaTimer, []);
+  useEffect(() => {
+    return () => {
+      clearQuotaTimer();
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!isHovered) return;
@@ -248,17 +259,21 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
 
   const handleMouseEnter = () => {
     setCardInView(true);
-    beginWatch(hoverKey, 'hover');
     if (video.isShort || poster) return;
-    setIsHovered(true);
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    hoverTimeoutRef.current = setTimeout(() => {
+      beginWatch(hoverKey, 'hover');
+      setIsHovered(true);
+    }, 140);
   };
 
   const handleMouseLeave = () => {
-    endWatch(hoverKey);
-    if (video.isShort || poster) return;
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
     }
+    endWatch(hoverKey);
+    if (video.isShort || poster) return;
     setIsHovered(false);
   };
 
@@ -502,16 +517,19 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           )}
 
           {/* Native video hover preview for shorts/posters */}
-          {playableVideoUrl && isHovered && (
+          {playableVideoUrl && isHovered && !isPlayerOpen && (
             <video
               ref={videoRef}
               src={getPreviewUrl(playableVideoUrl)}
               preload="auto"
+              autoPlay
               muted
               loop
               playsInline
+              disablePictureInPicture
+              disableRemotePlayback
               className={cn(
-                "absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none z-[5]",
+                "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none z-[5]",
                 isHovered && !isPlayerOpen ? "opacity-100 scale-105" : "opacity-0 scale-100"
               )}
             />
@@ -651,11 +669,14 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
               ref={videoRef}
               src={getPreviewUrl(playableVideoUrl)}
               preload="auto"
+              autoPlay
               muted
               loop
               playsInline
+              disablePictureInPicture
+              disableRemotePlayback
               className={cn(
-                "absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none z-[5]",
+                "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none z-[5]",
                 isHovered && !isPlayerOpen ? "opacity-100 scale-[1.06]" : "opacity-0 scale-100"
               )}
             />
@@ -883,16 +904,19 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           )}
         
         {/* Native video hover preview for standard cards */}
-        {playableVideoUrl && !video.isShort && !poster && isHovered && (
+        {playableVideoUrl && !video.isShort && !poster && isHovered && !isPlayerOpen && (
           <video
             ref={videoRef}
             src={getPreviewUrl(playableVideoUrl)}
-              preload="auto"
+            preload="auto"
+            autoPlay
             muted
             loop
             playsInline
+            disablePictureInPicture
+            disableRemotePlayback
             className={cn(
-              "absolute inset-0 w-full h-full object-cover transition-[opacity,transform] duration-700 ease-out-expo pointer-events-none z-[5]",
+              "absolute inset-0 w-full h-full object-cover transition-[opacity,transform] duration-300 ease-out-expo pointer-events-none z-[5]",
               isHovered && !isPlayerOpen ? "opacity-100 scale-[1.06]" : "opacity-0 scale-100"
             )}
           />

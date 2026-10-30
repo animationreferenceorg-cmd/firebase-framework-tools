@@ -9,8 +9,8 @@ export const dynamic = 'force-dynamic';
 const BASE_URL = 'https://animationreference.org';
 
 export const metadata: Metadata = {
-    title: 'Todas las Etiquetas - Referencia de Animación | A-Z Index',
-    description: 'Explora todas las etiquetas de animación (1,600+). Acceso rápido a referencias de movimiento, mecánica corporal, actuación y más. Gratuito para animadores.',
+    title: 'Etiquetas de Animación en Español',
+    description: 'Explora etiquetas de referencia de animación: mecánica corporal, combate, y locomoción con reproductor cuadro por cuadro para animadores.',
     keywords: ['etiquetas de animación', 'índice de animación', 'referencia de animación', 'tutorial animación'],
     alternates: {
         canonical: `${BASE_URL}/es/tags`,

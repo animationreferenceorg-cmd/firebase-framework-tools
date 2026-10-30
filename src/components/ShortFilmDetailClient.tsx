@@ -63,13 +63,15 @@ function RatingSelector({ onRate, hasRated, onRated }: { onRate: (rating: number
   );
 }
 
-function ShortDetailSkeleton() {
+function ShortDetailSkeleton({ title }: { title?: string }) {
   return (
     <main>
       <div className="relative w-full h-[56.25vw] max-h-[850px] min-h-[400px] bg-muted">
         <Skeleton className="w-full h-full" />
       </div>
       <div className="container mx-auto px-4 md:px-6 py-8">
+        <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{title || "Animation Reference Short Film"}</h1>
+        <p className="text-muted-foreground text-sm mb-6">Animation Reference Short Films is a curated theater of independent and student animation projects.</p>
         <div className="mt-16">
           <Skeleton className="h-8 w-1/4 mb-4" />
           <div className="flex space-x-4">
@@ -99,7 +101,7 @@ function ShortDetailSkeleton() {
  * This is the client component that handles all the data fetching,
  * state management, and rendering for the short film detail page.
  */
-export function ShortFilmDetailClient({ id }: { id: string }) {
+export function ShortFilmDetailClient({ id, initialVideo }: { id: string; initialVideo?: Video | null }) {
   const [video, setVideo] = useState<Video | null>(null);
   const [relatedVideos, setRelatedVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
@@ -189,7 +191,7 @@ export function ShortFilmDetailClient({ id }: { id: string }) {
 
 
   if (loading) {
-    return <ShortDetailSkeleton />;
+    return <ShortDetailSkeleton title={video?.title} />;
   }
 
   if (!video) {
@@ -212,6 +214,7 @@ export function ShortFilmDetailClient({ id }: { id: string }) {
         <div className="flex flex-col md:flex-row gap-8">
           <div className="flex-1">
             <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{video.title}</h1>
+            <p className="text-sm text-purple-300 font-medium mb-2">{video.title} is an animated short film showcasing character acting, timing, and cinematic staging.</p>
             <p className="text-muted-foreground">{video.description}</p>
           </div>
           <div className="flex md:flex-col items-start md:items-end gap-4">
@@ -270,6 +273,8 @@ export function ShortFilmDetailClient({ id }: { id: string }) {
                       <div className="relative aspect-video w-full overflow-hidden bg-zinc-900">
                         {extra.mediaType === 'image' || extra.thumbnailUrl ? (
                           <img
+                            width={480}
+                            height={270}
                             src={extra.thumbnailUrl || extra.mediaUrl}
                             alt={extra.title}
                             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -319,6 +324,8 @@ export function ShortFilmDetailClient({ id }: { id: string }) {
                       <div className="flex items-center justify-center overflow-hidden rounded-xl bg-black max-h-[75vh]">
                         {extra.mediaType === 'image' ? (
                           <img
+                            width={1280}
+                            height={720}
                             src={extra.mediaUrl}
                             alt={extra.title}
                             className="max-h-[72vh] w-auto object-contain"

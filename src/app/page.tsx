@@ -4,8 +4,8 @@ import LandingPage from '@/app/landing/page';
 const BASE_URL = 'https://animationreference.org';
 
 export const metadata: Metadata = {
-  title: 'Animation Reference - Millions of Free Animation Clips & References',
-  description: 'Browse millions of free animation reference clips organized by tag. Study body mechanics, acting, combat, locomotion & more. Frame-by-frame analysis for animators, game developers & motion designers. Build your professional portfolio and get discovered by studios.',
+  title: { absolute: 'Animation Reference | Free Animation Clips & Library' },
+  description: 'Browse millions of animation reference clips organized by tag. Study body mechanics, combat, and acting with frame-by-frame playback and animator portfolios.',
   keywords: [
     'animation reference',
     'animation tutorial',

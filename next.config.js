@@ -1,8 +1,48 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+          {
+            key: 'Content-Security-Policy-Report-Only',
+            value: "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;",
+          },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
+      // Canonical Category Aliases (c_duplicate_titles)
+      {
+        source: '/category/walk',
+        destination: '/category/walking',
+        permanent: true,
+      },
+      {
+        source: '/category/balance',
+        destination: '/category/body-mechanics',
+        permanent: true,
+      },
       // HeyCatch channel attribution short links
       {
         source: '/:l([a-z0-9])',

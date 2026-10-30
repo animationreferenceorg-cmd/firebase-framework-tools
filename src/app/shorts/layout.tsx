@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Short Animated Films | Animation Reference',
+  title: 'Short Animated Films Showcase',
   description: 'Watch award-winning short animated films and student shorts, with detailed breakdowns of the animation, acting, and craft behind each one.',
   alternates: {
     canonical: '/shorts',

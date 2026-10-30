@@ -1,127 +1,112 @@
-
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Play, MousePointer2, Keyboard, Layout, Maximize2, Layers, Sparkles, ArrowRight } from 'lucide-react';
+import { Play, MousePointer2, Keyboard, Layout, Maximize2, Layers, Sparkles, ArrowRight, ChevronRight, Sliders } from 'lucide-react';
 
 export const metadata: Metadata = {
-    title: 'The Ultimate Guide to Analyzing Animation Reference (Frame-by-Frame)',
-    description: 'Learn the professional workflow for studying animation reference. Deconstruct timing, spacing, and mechanics using frame-by-frame analysis.',
+    title: 'How to Analyze Animation Reference Guide',
+    description: 'Learn how to study and deconstruct animation reference frame by frame. Master keyframe timing, spacing arcs, and physical center of gravity.',
     keywords: 'how to analyze animation reference, study animation mechanics, frame-by-frame analysis, animation timing and spacing',
     alternates: { canonical: 'https://animationreference.org/resources/how-to-analyze-animation-reference' },
 };
 
+const RELATED_GUIDES = [
+    { title: 'Best Animation Reference Websites', href: '/resources/best-animation-reference-websites' },
+    { title: 'Personal Animation Vault Guide', href: '/resources/personal-animation-vault' },
+    { title: 'Human Walk Cycle Animation Reference', href: '/resources/human-walk-cycle-animation-reference' },
+    { title: 'Body Mechanics Animation Reference', href: '/resources/body-mechanics-animation-reference' },
+    { title: 'Combat & Martial Arts Reference', href: '/resources/punch-animation-reference' },
+    { title: 'Frame-by-Frame Player Online', href: '/frame-by-frame-player' },
+];
+
 export default function AnalysisGuide() {
     return (
-        <div className="min-h-screen bg-[#030014] text-white -mt-24">
-            {/* Masterclass Hero */}
-            <section className="relative pt-48 pb-32 border-b border-white/5">
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 -z-10" />
-                <div className="container mx-auto px-6">
-                    <div className="max-w-4xl">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-bold tracking-widest uppercase mb-8">
-                            Technical Deep-Dive
-                        </div>
-                        <h1 className="text-5xl md:text-8xl font-black mb-8 leading-[1.05]">
-                            Animation <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Analysis</span>
-                        </h1>
-                        <p className="text-2xl text-zinc-400 leading-relaxed max-w-2xl">
-                            Watching reference isn't the same as studying it. Learn the professional frame-by-frame workflow to deconstruct world-class motion.
+        <div className="min-h-screen bg-[#030014] text-white selection:bg-purple-500/30 -mt-24">
+            <section className="relative pt-44 pb-24 overflow-hidden">
+                <div className="container mx-auto px-6 text-center max-w-4xl">
+                    <nav className="text-xs text-zinc-400 mb-8 flex items-center justify-center gap-1.5" aria-label="Breadcrumb">
+                        <Link href="/" className="hover:text-white transition-colors">Home</Link>
+                        <span>/</span>
+                        <Link href="/resources" className="hover:text-white transition-colors">Resources</Link>
+                        <span>/</span>
+                        <span className="text-purple-300 font-medium">How to Analyze Animation Reference</span>
+                    </nav>
+
+                    <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight mb-6 leading-tight">
+                        How to Analyze Animation Reference Frame by Frame
+                    </h1>
+
+                    <p className="text-lg md:text-xl text-zinc-300 max-w-2xl mx-auto mb-8 leading-relaxed">
+                        <strong className="text-white">Animation reference analysis</strong> is the systematic breakdown of physical video footage into fundamental timing intervals, center of gravity vectors, and anatomical silhouette keys.
+                    </p>
+                </div>
+            </section>
+
+            <main className="py-12 px-6 max-w-4xl mx-auto space-y-16">
+                <section className="space-y-6 text-zinc-300 leading-relaxed text-base sm:text-lg">
+                    <h2 className="text-3xl font-extrabold text-white tracking-tight">Watching vs. Actively Studying Motion</h2>
+                    <p>
+                        There is a profound distinction between casually viewing a reference video and deconstructing its kinetic anatomy. Novice animators frequently play a reference clip on repeat, attempt to memorize the overall impression, and then begin keyframing from visual memory. This invariably leads to floaty timing, missed contact beats, and rubbery limbs.
+                    </p>
+                    <p>
+                        Professional animators treat reference as data. They step through footage frame by frame, measuring exact timecode intervals between anticipation, exertion, contact, and overshoot. By mapping the movement to mathematical frames at 24 FPS, you uncover subtle biomechanical realities that the human eye misses at full playback speed.
+                    </p>
+                </section>
+
+                <section className="space-y-8">
+                    <h2 className="text-3xl font-extrabold text-white tracking-tight">The 4-Step Reference Breakdown Methodology</h2>
+
+                    <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-6 md:p-8 space-y-3">
+                        <div className="text-xs font-bold uppercase tracking-wider text-purple-400">Step 01</div>
+                        <h3 className="text-xl font-bold text-white">Isolate the Root &amp; Center of Gravity</h3>
+                        <p className="text-zinc-300 leading-relaxed">
+                            Do not look at the limbs first. Track the character's pelvis and hips. Trace the vertical elevation curve (the up and down beats) and the horizontal progression. Notice where the center of mass hangs over the support base before every step, jump, or turn.
                         </p>
                     </div>
-                </div>
-            </section>
 
-            {/* The 3-Step Workflow */}
-            <section className="py-32 container mx-auto px-6">
-                <div className="grid lg:grid-cols-3 gap-12">
-                    {[
-                        { 
-                            step: '01', 
-                            title: 'Active Observation', 
-                            desc: 'Before scrubbing, watch the clip at full speed. Look for the "Golden Pose" and the overall silhouette.',
-                            icon: <Play className="h-8 w-8 text-blue-400" />
-                        },
-                        { 
-                            step: '02', 
-                            title: 'Mechanical Deconstruction', 
-                            desc: 'Use frame-by-frame controls to find the exact frame where weight shifts and force is exerted.',
-                            icon: <Keyboard className="h-8 w-8 text-purple-400" />
-                        },
-                        { 
-                            step: '03', 
-                            title: 'Abstracting Shapes', 
-                            desc: 'Look past the character to see the arcs, smears, and lines of action that drive the motion.',
-                            icon: <Layers className="h-8 w-8 text-pink-400" />
-                        }
-                    ].map((item, i) => (
-                        <div key={i} className="space-y-6 group">
-                            <div className="text-6xl font-black text-white/5 group-hover:text-white/10 transition-colors">{item.step}</div>
-                            <div className="h-16 w-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
-                                {item.icon}
-                            </div>
-                            <h3 className="text-2xl font-bold">{item.title}</h3>
-                            <p className="text-zinc-400 leading-relaxed">{item.desc}</p>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
-            {/* Feature Breakdown (Visual) */}
-            <section className="py-32 bg-zinc-950 relative overflow-hidden">
-                <div className="container mx-auto px-6">
-                    <div className="flex flex-col lg:flex-row items-center gap-24">
-                        <div className="flex-1 space-y-12">
-                            <h2 className="text-4xl md:text-6xl font-bold leading-tight">Built for <span className="text-blue-400">Deep Study</span></h2>
-                            <div className="space-y-8">
-                                {[
-                                    { title: 'Frame Precision', desc: 'Use , and . keys to step through animation with zero lag.', icon: <Keyboard /> },
-                                    { title: 'Loop Customization', desc: 'Select specific regions to analyze a single action repeatedly.', icon: <Layout /> },
-                                    { title: 'Full-Screen Immersion', desc: 'Remove distractions and focus entirely on the motion arcs.', icon: <Maximize2 /> }
-                                ].map((feat, i) => (
-                                    <div key={i} className="flex gap-6">
-                                        <div className="mt-1 text-blue-400">{feat.icon}</div>
-                                        <div>
-                                            <h4 className="text-xl font-bold mb-2">{feat.title}</h4>
-                                            <p className="text-zinc-400">{feat.desc}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="flex-1 w-full">
-                            <div className="relative aspect-video rounded-3xl border border-white/10 bg-black shadow-2xl overflow-hidden group">
-                                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent" />
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="text-center space-y-4">
-                                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur-md">
-                                            <Sparkles className="h-4 w-4 text-blue-400" />
-                                            <span className="text-sm font-medium">Interactive Player Preview</span>
-                                        </div>
-                                        <p className="text-zinc-500 text-sm">Sign in to try the precision player</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-6 md:p-8 space-y-3">
+                        <div className="text-xs font-bold uppercase tracking-wider text-purple-400">Step 02</div>
+                        <h3 className="text-xl font-bold text-white">Identify Golden Key Poses</h3>
+                        <p className="text-zinc-300 leading-relaxed">
+                            Step through to identify the extreme points of motion: the maximum anticipation pose, the extreme force application pose, and the deepest settle pose. Capture these silhouettes as clear thumbnail sketches before touching your 3D digital rig or 2D canvas.
+                        </p>
                     </div>
-                </div>
-            </section>
 
-            {/* Final CTA */}
-            <section className="py-32 bg-gradient-to-t from-blue-900/20 to-transparent">
-                <div className="container mx-auto px-6 text-center space-y-8">
-                    <h2 className="text-4xl md:text-6xl font-bold">Start your first study today.</h2>
-                    <p className="text-xl text-zinc-400 max-w-2xl mx-auto">Access the world's most curated library and start analyzing motion like a professional.</p>
-                    <div className="pt-8">
-                        <Button asChild size="lg" className="h-16 px-12 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xl group">
-                            <Link href="/login?tab=sign-up">
-                                Get Started <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-1 transition-transform" />
+                    <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-6 md:p-8 space-y-3">
+                        <div className="text-xs font-bold uppercase tracking-wider text-purple-400">Step 03</div>
+                        <h3 className="text-xl font-bold text-white">Measure Spacing Arcs &amp; Inbetweens</h3>
+                        <p className="text-zinc-300 leading-relaxed">
+                            Count the exact frame numbers. How many frames does the anticipation take? How many frames does the primary action last? Notice that real human actions often accelerate rapidly across 2 frames, then spend 8-12 frames settling into an overshoot arc.
+                        </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-6 md:p-8 space-y-3">
+                        <div className="text-xs font-bold uppercase tracking-wider text-purple-400">Step 04</div>
+                        <h3 className="text-xl font-bold text-white">Exaggerate and Stylize the Motion</h3>
+                        <p className="text-zinc-300 leading-relaxed">
+                            Never rotoscope reference 1:1. Live-action movement copied verbatim looks stiff and lifeless when applied to stylized rigs. Take the physical truth from the reference, push the silhouette clarity by 20%, sharpen the acceleration beats, and add dynamic squash and stretch.
+                        </p>
+                    </div>
+                </section>
+            </main>
+
+            <aside aria-label="Related Guides" className="py-16 border-t border-white/5 bg-black/40">
+                <div className="container mx-auto px-6 max-w-4xl">
+                    <h2 className="text-2xl font-bold text-white mb-6">Related Animation Guides &amp; Resources</h2>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                        {RELATED_GUIDES.map((g) => (
+                            <Link
+                                key={g.href}
+                                href={g.href}
+                                className="p-4 rounded-xl border border-white/10 bg-slate-900/40 hover:bg-slate-900/80 hover:border-purple-500/40 transition-colors flex items-center justify-between group"
+                            >
+                                <span className="font-semibold text-zinc-200 group-hover:text-white text-sm">{g.title}</span>
+                                <ChevronRight className="h-4 w-4 text-zinc-500 group-hover:text-purple-400 group-hover:translate-x-1 transition-transform" />
                             </Link>
-                        </Button>
+                        ))}
                     </div>
                 </div>
-            </section>
+            </aside>
         </div>
     );
 }

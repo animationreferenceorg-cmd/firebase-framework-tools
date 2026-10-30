@@ -16,8 +16,8 @@ import { Button } from '@/components/ui/button';
 import { InteractivePlayerShowcase } from '@/components/landing/InteractivePlayerShowcase';
 
 export const metadata: Metadata = {
-  title: 'The Sakugabooru Alternative with Frame-by-Frame Controls & Moodboards',
-  description: 'Study 2D anime animation cuts and sakuga with precision. Step frame-by-frame, set A–B loops, analyze smears and FX timing, and save clips to moodboards.',
+  title: 'Sakugabooru Alternative for Anime Study',
+  description: 'Study 2D anime animation cuts and sakuga with precision. Step frame-by-frame, set AB loops, analyze smears and FX timing, and save clips to visual boards.',
   keywords: [
     'sakugabooru alternative',
     'sakuga animation reference',

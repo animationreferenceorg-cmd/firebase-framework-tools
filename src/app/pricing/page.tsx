@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { PricingPageClient } from '@/components/pricing/PricingPageClient';
 
 export const metadata: Metadata = {
-  title: 'Pricing — Free vs Pro ($1 First Month) | Animation Reference',
-  description: 'Try Pro for $1 your first month, then $5/month. Compare Animation Reference Free vs Pro plans. Unlock unlimited reference studies, private boards, playblast compare, and video downloads.',
+  title: 'Pricing: Free vs Pro Plans',
+  description: 'Compare Free and Pro animator plans. Unlock unlimited reference video study, private boards, side-by-side playblast comparison, and clip downloads.',
   alternates: { canonical: 'https://animationreference.org/pricing' },
   openGraph: {
     title: 'Animation Reference Pricing | $1 First Month Intro Offer',

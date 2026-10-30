@@ -21,8 +21,8 @@ import { HeroBackgroundVideo } from '@/components/landing/HeroBackgroundVideo';
 import { InteractivePlayerShowcase } from '@/components/landing/InteractivePlayerShowcase';
 
 export const metadata: Metadata = {
-  title: 'PureRef for Video & Online Moodboards | Animation Reference',
-  description: 'Looking for a PureRef alternative that plays video and works in the cloud? Animation Reference combines frame-by-frame video reference, 1-click contact sheets, and unlimited boards on any browser.',
+  title: 'PureRef Alternative for Video Boards',
+  description: 'A cloud-based PureRef alternative for video reference. Organize animation clips into unlimited visual boards with native frame-by-frame controls.',
   keywords: [
     'pureref alternative',
     'pureref online',

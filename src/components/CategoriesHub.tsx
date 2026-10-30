@@ -79,8 +79,8 @@ export function CategoriesHub() {
 
     return (
         <div className="min-h-screen bg-transparent text-white overflow-x-hidden font-sans pb-24 -mt-32 pt-32">
-            {/* 1. Hero — same video-background treatment as the home screen */}
-            {heroVideo && (
+            {/* 1. Hero — Always renders semantic H1 */}
+            {heroVideo ? (
                 <BrowseHero video={heroVideo}>
                     <div className="w-full h-full flex flex-col justify-center items-center text-center pb-20 animate-fade-in-up">
                         {/* Badge */}
@@ -101,9 +101,9 @@ export function CategoriesHub() {
                             </span>
                         </h1>
 
-                        {/* Subheadline */}
+                        {/* Subheadline with opening definition */}
                         <p className="text-lg md:text-xl text-zinc-100 mb-10 max-w-2xl mx-auto leading-relaxed drop-shadow-lg font-medium">
-                            Discover millions of animation clips organized by category and tag. Study the best animation, then build and share your portfolio.
+                            Animation Reference Categories is a directory of motion reference collections organized by animation style, locomotion, and physics. Study curated clips and build your portfolio.
                         </p>
 
                         {/* Category search bar */}
@@ -121,6 +121,47 @@ export function CategoriesHub() {
                         </div>
                     </div>
                 </BrowseHero>
+            ) : (
+                <div className="relative w-full min-h-[460px] flex items-center justify-center bg-zinc-950/80 pt-12 pb-16 px-4">
+                    <div className="w-full h-full flex flex-col justify-center items-center text-center pb-20 animate-fade-in-up">
+                        {/* Badge */}
+                        <div className="flex justify-center mb-8 animate-fade-in">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black/40 border border-white/10 backdrop-blur-md shadow-[0_0_30px_-5px_rgba(109,40,217,0.3)]">
+                                <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
+                                <span className="text-sm font-medium text-purple-100/90">Study & Showcase Your Work</span>
+                            </div>
+                        </div>
+
+                        {/* Headline */}
+                        <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tight mb-6 leading-[1.1] max-w-5xl mx-auto drop-shadow-2xl">
+                            <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/70">
+                                Browse Animation
+                            </span>{' '}
+                            <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 animate-gradient-x">
+                                References
+                            </span>
+                        </h1>
+
+                        {/* Subheadline with opening definition */}
+                        <p className="text-lg md:text-xl text-zinc-100 mb-10 max-w-2xl mx-auto leading-relaxed drop-shadow-lg font-medium">
+                            Animation Reference Categories is a directory of motion reference collections organized by animation style, locomotion, and physics. Study curated clips and build your portfolio.
+                        </p>
+
+                        {/* Category search bar */}
+                        <div className="w-full max-w-2xl mx-auto px-3 sm:px-0 relative group">
+                            <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
+                            <div className="relative">
+                                <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-5 sm:h-6 w-5 sm:w-6 text-zinc-400 group-focus-within:text-purple-400 transition-colors" />
+                                <Input
+                                    placeholder="Search categories & tags..."
+                                    className="pl-12 sm:pl-14 h-12 sm:h-16 bg-black/60 backdrop-blur-xl border-white/10 text-sm sm:text-base md:text-lg lg:text-xl rounded-2xl focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all placeholder:text-zinc-400 text-white shadow-2xl"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* 2. Directory — full width, driven by the hero search */}

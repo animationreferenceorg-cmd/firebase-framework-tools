@@ -45,8 +45,8 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     ];
 
     return {
-        title: `${name} Animation Reference — ${entry.videos.length} Clips${pageSuffix}`,
-        description: `Browse millions of ${entry.tag} animation references, turnarounds & 3D models integrated across ArtStation, Sketchfab, Pinterest, and community libraries. Free frame-by-frame study for animators & game developers.`,
+        title: `${name} Animation References${pageSuffix}`,
+        description: `Study ${entry.tag} animation references with frame-by-frame scrubbing. Curated clips, turnarounds, and breakdowns for 2D, 3D, and game animators.`,
         keywords,
         alternates: {
             canonical,
@@ -182,13 +182,14 @@ export default async function TagPage({ params, searchParams }: Props) {
                     {name} Animation Reference
                 </h1>
                 <p className="text-muted-foreground leading-relaxed">
-                    Millions of {entry.tag} animation references, turnarounds &amp; 3D models integrated across ArtStation, Sketchfab, Pinterest, and community libraries for animators, game developers
-                    and motion designers. Open any clip for frame-by-frame playback to study the timing, spacing and
-                    posing of real {entry.tag} motion{relatedTags.length > 0 && (
+                    <strong className="text-foreground">{name} animation reference</strong> is a motion study collection for 2D, 3D, and game animators. Open any clip for frame-by-frame playback to examine timing, arcs, and contact poses{relatedTags.length > 0 && (
                         <> — often studied together with {relatedTags.slice(0, 3).map(t => t.tag).join(', ')}</>
                     )}.
                 </p>
             </header>
+
+            {/* H2 for semantic hierarchy */}
+            <h2 className="text-xl font-bold text-foreground mb-4">{name} Motion Clips ({entry.videos.length})</h2>
 
             {/* Video grid — with interactive VideoCard theater player modal */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">

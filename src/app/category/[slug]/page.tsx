@@ -259,8 +259,10 @@ export async function generateMetadata(
         };
     }
 
-    const title = category.seoTitle || `Animation References of ${category.title} | AnimationReference.org`;
-    const description = category.seoDescription || category.description || `Browse the best curated ${category.title} animation references. High-quality clips for professional artists.`;
+    const canonicalSlug = category.slug || normalizeSlug(category.title) || slug;
+    const rawTitle = category.title.endsWith('Animation') ? category.title : `${category.title} Animation`;
+    const title = `${rawTitle} References`;
+    const description = `Study ${category.title} animation references with frame-by-frame controls. Curated motion clips, timing breakdowns, and visual boards for animators.`;
 
     const ogImage = category.imageUrl && !category.imageUrl.startsWith('data:') && !category.imageUrl.includes('reflix.dev')
         ? category.imageUrl
@@ -269,7 +271,7 @@ export async function generateMetadata(
     return {
         title: title,
         description: description,
-        alternates: { canonical: `https://animationreference.org/category/${slug}` },
+        alternates: { canonical: `https://animationreference.org/category/${canonicalSlug}` },
         openGraph: {
             title: title,
             description: description,
@@ -289,6 +291,11 @@ export default async function Page({ params }: Props) {
             redirect(`/tags/${slugifyTag(tagMatch.tag)}`);
         }
         notFound();
+    }
+
+    const canonicalSlug = category.slug || normalizeSlug(category.title);
+    if (canonicalSlug && normalizeSlug(slug) !== normalizeSlug(canonicalSlug)) {
+        redirect(`/category/${canonicalSlug}`);
     }
 
     const videos = getCategoryVideos(category);
@@ -381,7 +388,7 @@ export default async function Page({ params }: Props) {
                         </h1>
 
                         <p className="text-lg md:text-xl text-zinc-100 mb-12 max-w-2xl mx-auto leading-relaxed drop-shadow-lg font-medium opacity-90">
-                            {category.description || `The industry's most comprehensive collection of ${category.title.toLowerCase()} animation references for professional artists.`}
+                            <span className="font-semibold">{category.title} animation reference</span> is a curated collection of motion clips, timing charts, and body mechanics for 2D, 3D, and game artists. Study contact poses and balance frame by frame.
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
@@ -416,7 +423,7 @@ export default async function Page({ params }: Props) {
                                     {category.title} References
                                 </h2>
                                 <span className="text-sm text-zinc-400">
-                                    {videos.length} {videos.length === 1 ? 'clip' : 'clips'}
+                                    {videos.length} {videos.length === 1 ? 'clip' : 'clips'} indexed in catalog
                                 </span>
                             </div>
                             <VideoGrid title="" videos={videos} columns={4} />
@@ -591,7 +598,7 @@ export default async function Page({ params }: Props) {
                                             </div>
                                         </div>
                                         <div className="space-y-2">
-                                            <h4 className="text-sm font-medium text-white/80 truncate">{video.title}</h4>
+                                            <h3 className="text-sm font-medium text-white/80 truncate">{video.title}</h3>
                                             <div className="h-1 lg:w-1/2 bg-white/5 rounded-full" />
                                         </div>
                                     </div>
@@ -639,7 +646,7 @@ export default async function Page({ params }: Props) {
             {/* 7. SEMANTIC KEYWORD FOOTER (SEO) */}
             <section className="py-24 border-t border-white/5 bg-black/40">
                 <div className="container mx-auto px-6">
-                    <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-8 text-center">Semantic Animation Lexicon</h3>
+                    <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-8 text-center">Semantic Animation Lexicon</h2>
                     <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm text-zinc-600">
                         {[
                             'Frame-by-frame analysis', 'Timing and Spacing', 'Squash and Stretch',

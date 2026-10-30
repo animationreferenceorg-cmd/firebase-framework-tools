@@ -21,8 +21,8 @@ import { HeroBackgroundVideo } from '@/components/landing/HeroBackgroundVideo';
 import { InteractivePlayerShowcase } from '@/components/landing/InteractivePlayerShowcase';
 
 export const metadata: Metadata = {
-  title: 'The ArtStation Alternative for Animators | 100% Human Motion, Zero AI Noise',
-  description: 'Frustrated with ArtStation? Animation Reference is the animator-first portfolio & reference platform with frame-by-frame scrubbing, playblast compare, and zero AI clutter.',
+  title: 'ArtStation Alternative for Animators',
+  description: 'Animation Reference is the animator portfolio platform with frame scrubbing, playblast compare, and a human motion reference library with zero AI clutter.',
   keywords: [
     'artstation alternative',
     'artstation alternative for animators',
@@ -92,7 +92,7 @@ const COMPARISON_ROWS = [
   },
   {
     feature: 'Pricing',
-    artstation: '$11.95/month (ArtStation Plus)',
+    artstation: '$11.95/month (ArtStation Plus, source: artstation.com/subscribe)',
     animref: '$5.00/month or $45/year ($1 first month intro offer)',
     winner: true,
   },
@@ -161,7 +161,7 @@ export default function ArtstationAlternativePage() {
           </h1>
 
           <p className="max-w-2xl mx-auto text-base sm:text-lg text-zinc-300 leading-relaxed drop-shadow">
-            Tired of unmoderated AI noise and crushed video compression? Animation Reference gives 2D &amp; 3D animators studio-grade frame-by-frame scrubbing, synchronized playblast comparison, and clean professional portfolios.
+            <strong className="text-white">Animation Reference</strong> is a dedicated portfolio and reference platform designed specifically for animators. Study motion frame by frame, compare playblasts, and present reels with zero AI clutter.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">

@@ -50,10 +50,16 @@ async function getVideo(id: string): Promise<Video | null> {
 }
 
 function buildDescription(video: Video): string {
-    if (video.description) return video.description;
-    const tags = (video.tags || []).slice(0, 5).join(', ');
-    const secs = video.duration ? `${video.duration.toFixed(1)}s ` : '';
-    return `${secs}animation reference clip${tags ? ` — ${tags}` : ''}. Study the timing, spacing and posing frame by frame on Animation Reference.`;
+    const raw = (video.description || '').trim();
+    if (raw.length >= 110 && raw.length <= 160) return raw;
+    const tags = (video.tags || []).slice(0, 3).join(', ');
+    const tagPart = tags ? ` covering ${tags}` : '';
+    const desc = `${video.title || 'Animation clip'} is a motion reference for animators${tagPart}. Study timing, spacing, and posing frame by frame.`;
+    if (desc.length >= 110 && desc.length <= 160) return desc;
+    if (desc.length > 160) return desc.slice(0, 157) + '...';
+    const padded = `${desc} Free online frame player.`;
+    if (padded.length > 160) return padded.slice(0, 157) + '...';
+    return padded;
 }
 
 export async function generateMetadata(
@@ -79,10 +85,10 @@ export async function generateMetadata(
 
     const previousImages = (await parent).openGraph?.images || [];
     const pageUrl = `${BASE_URL}/video/${id}`;
+    const cleanTitle = video.title.length > 28 ? video.title.slice(0, 25) + '...' : video.title;
     const primaryTag = video.tags?.[0];
-    const title = primaryTag
-        ? `${video.title} | ${primaryTag.replace(/\b\w/g, c => c.toUpperCase())} Animation Reference`
-        : `${video.title} | Animation Reference`;
+    const tagWord = primaryTag ? primaryTag.replace(/\b\w/g, c => c.toUpperCase()).slice(0, 14) : 'Motion';
+    const title = `${cleanTitle} | ${tagWord} Reference`;
     const description = buildDescription(video);
 
     return {
@@ -185,7 +191,7 @@ export default async function VideoPage({ params }: Props) {
                 <section className="container mx-auto px-4 md:px-8 py-12">
                     <h2 className="text-2xl font-bold text-foreground mb-2">Related Animation References</h2>
                     <p className="text-sm text-muted-foreground mb-6">
-                        More clips that share tags with “{video.title}”.
+                        <strong className="text-foreground">{video.title}</strong> is an animation reference clip for studying motion, timing, and body mechanics. Explore related clips below.
                     </p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                         {related.map(r => (

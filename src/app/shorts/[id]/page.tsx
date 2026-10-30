@@ -36,15 +36,20 @@ export async function generateMetadata(
 
   if (!video) {
     return {
-      title: 'Short Not Found - Animation Reference',
+      title: `Short Film #${id}`,
+      description: 'Watch curated animation short films and student projects with frame-by-frame study tools on Animation Reference.',
     };
   }
 
   const previousImages = (await parent).openGraph?.images || [];
+  const cleanTitle = video.title.length > 35 ? video.title.slice(0, 32) + '...' : video.title;
+  const desc = video.description && video.description.length >= 110 && video.description.length <= 160
+    ? video.description
+    : `${video.title} is an animated short film for studying motion and acting. Step frame by frame on Animation Reference.`;
 
   return {
-    title: `${video.title} - Animation Reference`,
-    description: video.description || 'Watch this animation short on Animation Reference.',
+    title: `${cleanTitle} - Short Film`,
+    description: desc,
     alternates: { canonical: `${BASE_URL}/shorts/${id}` },
     openGraph: {
       title: video.title,
@@ -76,7 +81,7 @@ export default async function ShortFilmDetailPage(props: PageProps) {
   const video = await getShort(params.id);
 
   if (!video) {
-    return <ShortFilmDetailClient id={params.id} />;
+    return <ShortFilmDetailClient id={params.id} initialVideo={video} />;
   }
 
   const pageUrl = `${BASE_URL}/shorts/${params.id}`;

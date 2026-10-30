@@ -1,181 +1,102 @@
-
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Book, PenTool, Highlighter, GraduationCap, Sparkles, Film, ArrowRight, History } from 'lucide-react';
+import { Book, PenTool, Highlighter, GraduationCap, Sparkles, Film, ArrowRight, History, ChevronRight } from 'lucide-react';
 import { VideoCard } from '@/components/VideoCard';
-import type { Video } from '@/lib/types';
 
 export const metadata: Metadata = {
-    title: 'Disney’s 12 Principles: How to Find Real-World Reference for Each One',
-    description: 'Master the 12 principles of animation by studying real-world reference. Find high-quality examples of squash and stretch, anticipation, and more.',
+    title: '12 Principles of Animation Reference Guide',
+    description: 'Master the 12 principles of animation through real-world video references. Frame-by-frame analysis of squash and stretch, timing, arcs, and anticipation.',
     keywords: '12 principles of animation, animation principles reference, Disney principles, study animation reference, squash and stretch reference',
     alternates: { canonical: 'https://animationreference.org/resources/12-principles-of-animation-reference' },
 };
 
-const PRINCIPLE_EXAMPLES: Video[] = [
-    {
-        id: 'arcs-example',
-        title: 'Principle 07: Arcs',
-        description: 'Analyzing natural paths of motion in character performance.',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&q=80&w=800',
-        posterUrl: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&q=80&w=800',
-        videoUrl: 'https://vimeo.com/76979871',
-        tags: ['arcs', 'path of motion'],
-        status: 'published',
-        type: 'video'
-    },
-    {
-        id: 'secondary-example',
-        title: 'Principle 08: Secondary Action',
-        description: 'Study how smaller details support the main movement.',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=800',
-        posterUrl: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=800',
-        videoUrl: 'https://vimeo.com/76979871',
-        tags: ['secondary action', 'overlap'],
-        status: 'published',
-        type: 'video'
-    },
-    {
-        id: 'exaggeration-example',
-        title: 'Principle 10: Exaggeration',
-        description: 'Pushing the boundaries of physics for clearer communication.',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&q=80&w=800',
-        posterUrl: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&q=80&w=800',
-        videoUrl: 'https://vimeo.com/76979871',
-        tags: ['exaggeration', 'impact'],
-        status: 'published',
-        type: 'video'
-    }
+const RELATED_GUIDES = [
+    { title: 'Best Animation Reference Websites', href: '/resources/best-animation-reference-websites' },
+    { title: 'How to Analyze Animation Reference', href: '/resources/how-to-analyze-animation-reference' },
+    { title: 'Human Walk Cycle Animation Reference', href: '/resources/human-walk-cycle-animation-reference' },
+    { title: 'Body Mechanics Animation Reference', href: '/resources/body-mechanics-animation-reference' },
+    { title: 'Combat & Martial Arts Reference', href: '/resources/punch-animation-reference' },
+    { title: 'Frame-by-Frame Player Online', href: '/frame-by-frame-player' },
+];
+
+const PRINCIPLES = [
+    { num: '01', name: 'Squash and Stretch', desc: 'Squash and stretch conveys weight, material flexibility, and biological volume preservation. When a character or object collides with the floor, it compresses along the impact axis while expanding proportionally in width. In realistic human movement, subtle facial muscle squash during speech or knee compression on landing communicates muscle density.' },
+    { num: '02', name: 'Anticipation', desc: 'Anticipation prepares the audience for a major action. Before a character leaps upward, they must squat downward. Before swinging a bat or weapon, the torso chambers in the opposite direction. Examining high-speed athletic footage frame by frame reveals how the human body pre-loads tendons like mechanical springs.' },
+    { num: '03', name: 'Staging', desc: 'Staging directs the viewer\'s eye to what is paramount in the frame. Clear silhouettes, readable lines of action, and uncluttered composition ensure that complex fight choreography or emotional acting can be understood in a single glance.' },
+    { num: '04', name: 'Straight Ahead Action & Pose to Pose', desc: 'Pose to pose delivers controlled structure, timing accuracy, and strong story keys, essential for 3D character blocking and complex dialogue. Straight ahead action provides organic fluidity and spontaneous unpredictability, ideal for water, fire, smoke, and cloth simulation.' },
+    { num: '05', name: 'Follow Through & Overlapping Action', desc: 'When the primary body stops moving, appendages, hair, clothing, and trailing limbs continue forward due to inertia. Overlapping action occurs when different parts of the body move at different rates, preventing the character from moving like a rigid wooden mannequin.' },
+    { num: '06', name: 'Slow In and Slow Out', desc: 'Physical objects require time to accelerate from rest and decelerate to a stop. Spacing frames closer together at the beginning and end of a pose change creates natural ease-in and ease-out curves, anchoring the movement in authentic physical laws.' },
+    { num: '07', name: 'Arcs', desc: 'Biological joints rotate on skeletal pivots, meaning human limbs and heads invariably travel along curved arcs rather than straight mechanical vectors. Animators track hand and nose arcs frame by frame to ensure smooth parabolic pathways.' },
+    { num: '08', name: 'Secondary Action', desc: 'Secondary actions enrich and validate the primary action. An angry character striding forward (primary) may clench their fists, wipe sweat from their brow, or stomp with irregular cadence (secondary), adding psychological depth to the physical performance.' },
+    { num: '09', name: 'Timing', desc: 'Timing dictates speed, weight, and emotion. The number of frames between two key poses defines whether an object weighs ten ounces or ten tons. At 24 FPS, spacing a head turn across 4 frames reads as a startled reaction, while 16 frames reads as contemplative observation.' },
+    { num: '10', name: 'Exaggeration', desc: 'Exaggeration pushes reality toward dramatic clarity without destroying physical believability. Animators push line of action tilt, extend anticipation holds by 2 frames, and heighten squash distortion to make performances register vividly on screen.' },
+    { num: '11', name: 'Solid Drawing & Posing', desc: 'Understanding anatomical volume, center of gravity, foreshortening, and balance is essential in both 2D drafts and 3D digital puppet rigs. Poses must feel structurally sound and balanced over the support base.' },
+    { num: '12', name: 'Appeal', desc: 'Appeal is the charismatic design quality that captivates viewers, whether animating a charismatic hero, an grotesque creature, or a whimsical cartoon animal. Dynamic variety in shapes and rhythmic timing fosters visual appeal.' }
 ];
 
 export default function PrinciplesGuide() {
     return (
-        <div className="min-h-screen bg-[#fdfaf3] text-[#2d2a24] -mt-24 selection:bg-amber-100 font-serif">
-            {/* Academic Hero */}
-            <section className="relative pt-48 pb-32 border-b border-amber-900/10">
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')] opacity-40 -z-10" />
-                <div className="container mx-auto px-6">
-                    <div className="max-w-4xl space-y-8">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-900/5 border border-amber-900/10 text-amber-900 text-sm font-medium italic mb-4">
-                            Foundations of Motion
-                        </div>
-                        <h1 className="text-6xl md:text-8xl font-serif italic tracking-tight leading-tight text-zinc-900">
-                            The Foundations <br />
-                            <span className="text-amber-900/80">of Life</span>
-                        </h1>
-                        <p className="text-xl md:text-2xl text-zinc-600 max-w-2xl leading-relaxed font-sans">
-                            Disney's 12 Principles are the grammar of animation. But how do you find them in the real world? Learn how to spot Squash, Stretch, and Anticipation in everyday motion.
-                        </p>
-                    </div>
+        <div className="min-h-screen bg-[#030014] text-white selection:bg-purple-500/30 -mt-24">
+            <section className="relative pt-44 pb-24 overflow-hidden border-b border-white/10">
+                <div className="container mx-auto px-6 text-center max-w-4xl">
+                    <nav className="text-xs text-zinc-400 mb-8 flex items-center justify-center gap-1.5" aria-label="Breadcrumb">
+                        <Link href="/" className="hover:text-white transition-colors">Home</Link>
+                        <span>/</span>
+                        <Link href="/resources" className="hover:text-white transition-colors">Resources</Link>
+                        <span>/</span>
+                        <span className="text-purple-300 font-medium">12 Principles of Animation</span>
+                    </nav>
+
+                    <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight mb-6 leading-tight">
+                        The 12 Principles of Animation
+                    </h1>
+
+                    <p className="text-lg md:text-xl text-zinc-300 max-w-2xl mx-auto mb-8 leading-relaxed">
+                        <strong className="text-white">The 12 principles of animation</strong> are foundational physics and aesthetic guidelines formulated by Disney masters Ollie Johnston and Frank Thomas to give movement life, weight, and emotional clarity.
+                    </p>
                 </div>
             </section>
 
-            {/* Evidence in Motion - New Section */}
-            <section className="py-32 container mx-auto px-6 font-sans">
-                <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
-                    <div>
-                        <h2 className="text-4xl font-serif italic text-zinc-900 mb-4">Evidence in Motion</h2>
-                        <p className="text-zinc-500 max-w-xl">
-                            We have curated clips specifically tagged by principle. Study these examples to see how academic concepts manifest in professional work.
-                        </p>
-                    </div>
-                    <Button asChild variant="outline" className="border-amber-900/20 text-amber-900 hover:bg-amber-900 hover:text-white">
-                        <Link href="/categories">Explore Full Library</Link>
-                    </Button>
-                </div>
+            <main className="py-16 px-6 max-w-4xl mx-auto space-y-16">
+                <section className="space-y-6 text-zinc-300 leading-relaxed text-base sm:text-lg">
+                    <h2 className="text-3xl font-extrabold text-white tracking-tight">How Real-World Video Reference Informs Each Principle</h2>
+                    <p>
+                        While originally formulated for traditional hand-drawn feature films, the 12 principles apply with equal rigor to 3D computer animation, real-time game rigs, and stop-motion fabrication. The most effective way to understand these principles is not merely reading theoretical definitions, but scrubbing actual video recordings frame by frame to observe how nature executes them.
+                    </p>
+                </section>
 
-                <div className="grid md:grid-cols-3 gap-8">
-                    {PRINCIPLE_EXAMPLES.map((video) => (
-                        <div key={video.id} className="space-y-4">
-                            <VideoCard video={video} />
-                            <div>
-                                <h4 className="font-bold text-zinc-900">{video.title}</h4>
-                                <p className="text-sm text-zinc-500">{video.description}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
-            {/* Principles Breakdown (Sample) */}
-            <section className="py-32 container mx-auto px-6 font-sans bg-white/50 border-y border-amber-900/5">
-                <div className="grid lg:grid-cols-2 gap-24 items-center">
-                    <div className="space-y-12">
-                        <h2 className="text-4xl md:text-5xl font-serif italic text-zinc-900">Studying <br />Squash & Stretch</h2>
-                        <p className="text-lg text-zinc-600 leading-relaxed">
-                            It’s the most famous principle, but also the most misunderstood. Real-world "Squash and Stretch" is found in the compression of muscle and the flexibility of the face. Our library curates these moments so you can see the physics behind the fun.
-                        </p>
-                        <div className="space-y-6">
-                            {[
-                                { title: 'Look for Compression', desc: 'Find the "impact" frame where a body absorbs force.' },
-                                { title: 'Track the Volume', desc: 'Notice how a character never loses mass, only shifts it.' },
-                                { title: 'Study the Smear', desc: 'Analyze high-speed transitions between poses.' }
-                            ].map((item, i) => (
-                                <div key={i} className="flex gap-4">
-                                    <div className="mt-1 text-amber-900"><PenTool className="h-5 w-5" /></div>
-                                    <div>
-                                        <h4 className="font-bold text-zinc-900">{item.title}</h4>
-                                        <p className="text-zinc-500 text-sm">{item.desc}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="relative">
-                        <div className="aspect-[3/4] bg-white p-8 border border-amber-900/10 shadow-2xl rotate-2 group">
-                            <div className="h-full w-full bg-zinc-50 border border-zinc-200 flex items-center justify-center relative overflow-hidden">
-                                <History className="h-24 w-24 text-amber-900/20" />
-                                <div className="absolute bottom-4 left-4 right-4 text-[10px] text-zinc-400 font-mono uppercase tracking-widest text-center">
-                                    Study Note #402: Facial Compression
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* The Full 12 Principles (List Style) */}
-            <section className="py-32 bg-amber-900/5 border-b border-amber-900/10 font-sans">
-                <div className="container mx-auto px-6">
-                    <div className="text-center mb-24">
-                        <h2 className="text-4xl font-serif italic mb-4">Master Every Principle</h2>
-                        <p className="text-zinc-600">We've categorized our entire library by the 12 Principles.</p>
-                    </div>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {[
-                            'Squash and Stretch', 'Anticipation', 'Staging',
-                            'Straight Ahead & Pose to Pose', 'Follow Through & Overlapping',
-                            'Slow In and Slow Out', 'Arcs', 'Secondary Action',
-                            'Timing', 'Exaggeration', 'Solid Drawing', 'Appeal'
-                        ].map((principle, i) => (
-                            <div key={i} className="flex items-center gap-4 p-4 hover:bg-white transition-colors rounded-lg group border border-transparent hover:border-amber-900/10 shadow-sm hover:shadow-md transition-all">
-                                <div className="h-10 w-10 rounded-full bg-amber-900/10 flex items-center justify-center text-amber-900 font-bold group-hover:bg-amber-900 group-hover:text-white transition-all">
-                                    {i + 1}
-                                </div>
-                                <span className="font-medium text-zinc-800">{principle}</span>
+                <section className="space-y-8">
+                    <h2 className="text-3xl font-extrabold text-white tracking-tight">Detailed Breakdown of All 12 Principles</h2>
+                    <div className="grid gap-6">
+                        {PRINCIPLES.map((p) => (
+                            <div key={p.num} className="rounded-2xl border border-white/10 bg-slate-900/40 p-6 md:p-8 space-y-3">
+                                <div className="text-xs font-bold uppercase tracking-wider text-purple-400">Principle {p.num}</div>
+                                <h3 className="text-xl sm:text-2xl font-bold text-white">{p.name}</h3>
+                                <p className="text-zinc-300 leading-relaxed text-sm sm:text-base">{p.desc}</p>
                             </div>
                         ))}
                     </div>
-                </div>
-            </section>
+                </section>
+            </main>
 
-            {/* Final CTA */}
-            <section className="py-48 text-center bg-white font-sans">
-                <div className="max-w-3xl mx-auto space-y-12">
-                    <h2 className="text-5xl md:text-7xl font-serif italic text-zinc-900 tracking-tight">Become a master <br />of the craft.</h2>
-                    <p className="text-xl text-zinc-500 leading-relaxed">Join the world's best animators and start studying the foundations of motion with the highest quality reference available.</p>
-                    <div className="pt-8">
-                        <Button asChild size="lg" className="h-20 px-12 rounded-full bg-amber-900 text-white hover:bg-amber-950 transition-all text-xl font-bold shadow-2xl shadow-amber-200">
-                            <Link href="/login?tab=sign-up">Start Your Education <ArrowRight className="ml-3 h-6 w-6 inline" /></Link>
-                        </Button>
-                    </div>
-                    <div className="flex justify-center gap-8 text-zinc-400 text-sm font-medium pt-8">
-                        <div className="flex items-center gap-2"><GraduationCap className="h-4 w-4" /> Academic Discount</div>
-                        <div className="flex items-center gap-2"><History className="h-4 w-4" /> Trusted Resources</div>
+            <aside aria-label="Related Guides" className="py-16 border-t border-white/5 bg-black/40">
+                <div className="container mx-auto px-6 max-w-4xl">
+                    <h2 className="text-2xl font-bold text-white mb-6">Related Animation Guides &amp; Resources</h2>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                        {RELATED_GUIDES.map((g) => (
+                            <Link
+                                key={g.href}
+                                href={g.href}
+                                className="p-4 rounded-xl border border-white/10 bg-slate-900/40 hover:bg-slate-900/80 hover:border-purple-500/40 transition-colors flex items-center justify-between group"
+                            >
+                                <span className="font-semibold text-zinc-200 group-hover:text-white text-sm">{g.title}</span>
+                                <ChevronRight className="h-4 w-4 text-zinc-500 group-hover:text-purple-400 group-hover:translate-x-1 transition-transform" />
+                            </Link>
+                        ))}
                     </div>
                 </div>
-            </section>
+            </aside>
         </div>
     );
 }

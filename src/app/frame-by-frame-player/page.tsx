@@ -23,8 +23,8 @@ import { HeroBackgroundVideo } from '@/components/landing/HeroBackgroundVideo';
 import { InteractivePlayerShowcase } from '@/components/landing/InteractivePlayerShowcase';
 
 export const metadata: Metadata = {
-  title: 'Frame by Frame Video Player Online for Animators | Animation Reference',
-  description: 'Precision frame-by-frame video player online for 2D, 3D, and game animators. Step frames at 24/30/60 FPS, set A–B loops, toggle onion skinning, and compare Maya/Blender playblasts side-by-side.',
+  title: 'Frame by Frame Video Player Online',
+  description: 'Precision frame-by-frame video player online for 2D, 3D, and game animators. Step frames at 24/30/60 FPS, set AB loops, and compare playblasts side-by-side.',
   keywords: [
     'frame by frame video player',
     'frame by frame video player online',

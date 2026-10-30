@@ -18,5 +18,5 @@ export function ReferenceThumbnail({ src, videoUrl, alt, className }: { src?: st
   }
   if (failed) return <div role="img" aria-label={alt} className={cn('bg-muted', className)} />;
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt={alt} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} className={className} />;
+  return <img src={src} alt={alt} width={480} height={270} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} className={className} />;
 }

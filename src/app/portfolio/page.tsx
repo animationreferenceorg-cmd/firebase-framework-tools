@@ -20,8 +20,8 @@ import { HeroBackgroundVideo } from '@/components/landing/HeroBackgroundVideo';
 import { InteractivePlayerShowcase } from '@/components/landing/InteractivePlayerShowcase';
 
 export const metadata: Metadata = {
-  title: 'Animation Portfolio Builder | Showcase Reels & Frame-by-Frame Breakdowns',
-  description: 'Build a stunning animation portfolio that directors and recruiters love. Host your 2D and 3D shots with frame-scrubbable video players, timing notes, and zero video compression.',
+  title: 'Animation Portfolio Builder',
+  description: 'Build an animation portfolio that recruiters love. Showcase your 2D and 3D shots with frame-scrubbable video playback, shot breakdowns, and timing notes.',
   keywords: [
     'animation portfolio builder',
     'animator portfolio',

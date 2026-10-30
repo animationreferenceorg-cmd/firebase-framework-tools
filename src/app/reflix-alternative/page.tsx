@@ -6,8 +6,8 @@ import { ACCESS_LIMITS, CONTRIBUTION_BONUS_PER_UPLOAD } from '@/lib/plans';
 const URL = 'https://animationreference.org/reflix-alternative';
 
 export const metadata: Metadata = {
-  title: 'Reflix Down? A Free Game Animation Reference Alternative',
-  description: 'Reflix.dev is offline. Keep studying game animation reference: free unlimited boards, frame-by-frame playback, a community library you can add to, and monthly reference challenges.',
+  title: 'Reflix Alternative for Animators',
+  description: 'Study game animation reference with Reflix offline. Free visual boards, frame-by-frame video playback, motion challenges, and a community library.',
   alternates: { canonical: URL },
   openGraph: { title: 'Reflix is offline. Here’s where to keep studying.', url: URL, type: 'website' },
 };
@@ -43,9 +43,7 @@ export default function ReflixAlternativePage() {
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-purple-300">For Reflix users</p>
       <h1 className="mt-3 text-4xl font-black leading-tight text-white md:text-6xl">Reflix is offline.<br />Keep studying here.</h1>
       <p className="mt-5 max-w-2xl text-lg text-zinc-400">
-        If you used Reflix for game animation reference, you lost your library overnight. Animation Reference is a free
-        place to rebuild it: a reference library with frame-by-frame study tools, unlimited boards, and a community that
-        shares the reference it films.
+        <strong className="text-white">Animation Reference</strong> is a free community motion library and frame-by-frame study tool created to rebuild your game animation boards with zero downtime.
       </p>
       <div className="mt-8 flex flex-wrap gap-3">
         <Link href="/login?redirect=/home&source=reflix" className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-6 py-3 font-bold text-white hover:bg-purple-500">

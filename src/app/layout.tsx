@@ -99,6 +99,8 @@ const organizationSchema = {
   logo: 'https://animationreference.org/icon.png',
   sameAs: [
     'https://twitter.com/animreference',
+    'https://github.com/animationreferenceorg-cmd',
+    'https://www.youtube.com/@animationreference',
   ],
 };
 

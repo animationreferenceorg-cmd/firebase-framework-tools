@@ -382,9 +382,9 @@ export default async function TopicResourcePage({ params }: { params: Promise<{ 
               <div className="flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase tracking-wider">
                 <Sparkles className="h-4 w-4" /> Professional Animator Workflow
               </div>
-              <h3 className="text-2xl font-bold text-white">
+              <h2 className="text-2xl font-bold text-white">
                 How to Study This Reference Like a Pro
-              </h3>
+              </h2>
               <p className="text-slate-300 text-sm md:text-base leading-relaxed">
                 Step frame by frame and pinpoint the exact contact and reversal frames. Trace the pelvis and spine line of action first before keying the limbs. Exaggerate the arcs and preserve volume.
               </p>

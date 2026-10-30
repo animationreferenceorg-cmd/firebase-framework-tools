@@ -179,11 +179,14 @@ export default async function SpanishTagPage({ params, searchParams }: Props) {
                     {t.tags.h1(name)}
                 </h1>
                 <p className="text-muted-foreground leading-relaxed">
-                    {t.tags.description_long(entry.tag, entry.videos.length)}{relatedTags.length > 0 && (
+                    <strong className="text-foreground">{name}</strong> es una colección de referencia de movimiento para animadores. Abre cualquier clip para estudiar el timing, espaciado y postura de {entry.tag}{relatedTags.length > 0 && (
                         <> — {t.tags.studyTogether} {relatedTags.slice(0, 3).map(t => t.tag).join(', ')}</>
                     )}.
                 </p>
             </header>
+
+            {/* H2 for semantic hierarchy */}
+            <h2 className="text-xl font-bold text-foreground mb-4">Clips de referencia de {name} ({entry.videos.length})</h2>
 
             {/* Video grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">

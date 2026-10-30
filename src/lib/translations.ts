@@ -2,9 +2,8 @@
 export const translations = {
   es: {
     tags: {
-      title: (name: string, count: number) => `${name} - Referencias de Animación | ${count} Clips`,
-      description: (tag: string, count: number) =>
-        `Explora ${count} clips de animación de referencia sobre ${tag}. Estudia el timing, espaciado y postura de movimientos reales de ${tag}. Gratis para animadores y desarrolladores.`,
+      title: (name: string, count: number) => `${name} - Referencias de Animación`,
+      description: (tag: string, count: number) => `Explora clips de animación de referencia sobre ${tag}. Estudia timing, espaciado y postura con reproducción cuadro por cuadro.`,
       breadcrumbHome: 'Inicio',
       breadcrumbTags: 'Etiquetas',
       h1: (name: string) => `${name} - Referencias de Animación`,

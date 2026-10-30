@@ -68,7 +68,7 @@ export function CreatorBadge({
           circleSize
         )}>
           {avatarUrl ? (
-            <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+            <img src={avatarUrl} alt={displayName} width={32} height={32} className="h-full w-full object-cover" />
           ) : (
             initial
           )}

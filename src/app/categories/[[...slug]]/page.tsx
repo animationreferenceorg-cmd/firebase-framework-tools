@@ -17,15 +17,15 @@ export async function generateMetadata(
 
     if (!slug || slug.length === 0) {
         return {
-            title: 'Browse Animation Categories - Animation Reference',
-            description: 'Explore animation styles, techniques, and studios.',
+            title: 'Browse Animation Categories',
+            description: 'Explore curated animation reference categories: locomotion, combat, acting, and body mechanics with frame-by-frame study tools for artists.',
         };
     }
 
     const categorySlug = slug[0];
     return {
-        title: `${categorySlug} References - Animation Reference`,
-        description: `Browse the best animation references.`,
+        title: `${categorySlug} References`,
+        description: `Browse curated ${categorySlug} animation references with precision frame-by-frame controls for 2D, 3D, and game animators.`,
         alternates: {
             canonical: `https://animationreference.org/category/${categorySlug}`,
         },

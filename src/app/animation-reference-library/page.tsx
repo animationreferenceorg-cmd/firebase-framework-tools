@@ -20,8 +20,8 @@ import { Button } from '@/components/ui/button';
 import { HeroBackgroundVideo } from '@/components/landing/HeroBackgroundVideo';
 
 export const metadata: Metadata = {
-  title: 'Animation Reference Library | Millions of Motion & 3D References',
-  description: 'The world’s most extensive animation reference library for 2D, 3D, and game animators. Search millions of references, body mechanics, combat clips, and rotatable 3D models with frame-by-frame study tools.',
+  title: 'Motion & 3D Reference Library',
+  description: 'Explore curated animation references for 2D, 3D, and game artists. Search body mechanics, combat clips, and 3D models with frame-by-frame study tools.',
   keywords: [
     'animation reference library',
     'animation reference',

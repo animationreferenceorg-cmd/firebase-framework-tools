@@ -36,3 +36,4 @@ describe('buildAnimWorksUrl', () => {
     expect(url).toBe('https://otherstore.com/item/123');
   });
 });
+

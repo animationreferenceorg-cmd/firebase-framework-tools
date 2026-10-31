@@ -170,3 +170,4 @@ function sendTelemetryBeacon(payload: Record<string, unknown>): void {
     // Non-blocking telemetry
   }
 }
+

@@ -326,71 +326,8 @@ export async function sendWelcomeEmail({ toEmail, displayName }: WelcomeEmailPay
   }
 }
 
-/** Generates clean, dark-mode, high-converting HTML for the $1 intro offer. */
-export function renderOneDollarPromoHtml(name = 'Animator', customMessage?: string): string {
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #07060b; color: #ffffff; margin: 0; padding: 24px; }
-          .container { max-width: 580px; margin: 0 auto; background-color: #12101d; border-radius: 24px; border: 1px solid rgba(168,85,247,0.35); padding: 36px 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.8); }
-          .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; background: rgba(234,179,8,0.15); border: 1px solid rgba(234,179,8,0.4); color: #fde047; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 18px; }
-          h1 { font-size: 25px; font-weight: 900; color: #ffffff; margin: 0 0 14px 0; letter-spacing: -0.5px; line-height: 1.25; }
-          .highlight { color: #c084fc; }
-          p { font-size: 14px; line-height: 1.65; color: #d4d4d8; margin: 0 0 16px 0; }
-          .offer-box { background: linear-gradient(135deg, rgba(147,51,234,0.18), rgba(236,72,153,0.12)); border: 1px solid rgba(168,85,247,0.45); border-radius: 18px; padding: 22px; margin: 22px 0; text-align: center; }
-          .price-strike { font-size: 16px; color: #71717a; text-decoration: line-through; margin-right: 8px; }
-          .price-huge { font-size: 40px; font-weight: 900; color: #4ade80; }
-          .price-sub { font-size: 12px; color: #a1a1aa; margin-top: 4px; }
-          .features { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 18px; margin: 22px 0; }
-          .feature-item { margin-bottom: 12px; font-size: 13px; color: #e4e4e7; line-height: 1.5; }
-          .feature-item:last-child { margin-bottom: 0; }
-          .btn-container { text-align: center; margin: 26px 0 14px 0; }
-          .btn { display: inline-block; background: linear-gradient(135deg, #9333ea, #ec4899); color: #ffffff !important; font-weight: 800; font-size: 15px; padding: 15px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 20px rgba(147,51,234,0.45); }
-          .terms { font-size: 11px; color: #71717a; text-align: center; margin-top: 8px; }
-          .footer { font-size: 11px; color: #71717a; margin-top: 32px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 20px; text-align: center; line-height: 1.6; }
-          .footer a { color: #a1a1aa; text-decoration: underline; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="badge">⚡ Special Animator Invite</div>
-          <h1>Unlock Full Pro for <span class="highlight">$1 for your first month</span></h1>
-          <p>Hey ${esc(name)},</p>
-          <p>${customMessage ? esc(customMessage) : "You're one of the early animators using Animation Reference. To help you elevate your shots and production workflow, we're giving you an exclusive invite to try Animation Reference Pro for just $1."}</p>
-          
-          <div class="offer-box">
-            <div>
-              <span class="price-strike">$5.00/mo</span>
-              <span class="price-huge">$1.00</span>
-            </div>
-            <div class="price-sub">For your first month · Cancel anytime in 1 click</div>
-          </div>
-
-          <div class="features">
-            <div class="feature-item">📥 <strong>Clean 24 FPS MP4 Downloads:</strong> Import reference clips directly into your Maya camera planes, Blender viewports, or SyncSketch sessions.</div>
-            <div class="feature-item">⏱️ <strong>Synchronized Playblast Compare:</strong> Scrub your 3D playblast or 2D animation pass side-by-side with reference to spot spacing and arcs instantly.</div>
-            <div class="feature-item">🍿 <strong>Zero Daily Limits:</strong> Unlimited daily references and frame-stepping (bypasses the 25-clip daily limit).</div>
-            <div class="feature-item">🔒 <strong>Unlimited Private Boards:</strong> Organize references for NDA client studio work with private encrypted moodboards.</div>
-          </div>
-
-          <div class="btn-container">
-            <a href="https://animationreference.org/pricing?deal=intro" class="btn">Claim Your $1 Pro Pass &rarr;</a>
-          </div>
-          <div class="terms">$1.00 for your first month, then $5.00/mo thereafter. Cancel anytime with 1 click in your account settings.</div>
-
-          <div class="footer">
-            Animation Reference · The motion reference library &amp; portfolio builder for animators.<br />
-            You received this email because you created an account on <a href="https://animationreference.org">animationreference.org</a>.<br />
-            <a href="https://animationreference.org/profile">Account Settings</a> · <a href="https://animationreference.org">Visit Library</a>
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
-}
+import { renderOneDollarPromoHtml } from './email-template-promo';
+export { renderOneDollarPromoHtml };
 
 export interface PromoBroadcastPayload {
   toEmail: string;

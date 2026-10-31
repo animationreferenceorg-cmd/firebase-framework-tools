@@ -22,6 +22,13 @@ export function GoogleAnalytics({ measurementId = 'G-PR79SNDBLG' }: GoogleAnalyt
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
 
+          // Default user property for visitors before authentication: guest
+          gtag('set', 'user_properties', {
+            user_type: 'guest',
+            logged_in: 'false',
+            membership_tier: 'guest'
+          });
+
           gtag('config', '${measurementId}', {
             page_path: window.location.pathname,
             send_page_view: true

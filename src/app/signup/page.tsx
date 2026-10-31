@@ -97,6 +97,16 @@ export default function SignupPage() {
       }
 
       analytics.trackEvent('signup_completed', { source: 'portfolio_signup' });
+
+      // Trigger Resend onboarding welcome email
+      if (cred.user.email) {
+        fetch('/api/email/welcome', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cred.user.email, displayName: name.trim() || undefined }),
+        }).catch(() => {});
+      }
+
       mutate?.();
 
       toast({
@@ -133,6 +143,16 @@ export default function SignupPage() {
       });
 
       analytics.trackEvent('signup_completed', { source: 'google_portfolio_signup' });
+
+      // Trigger Resend onboarding welcome email
+      if (res.user.email) {
+        fetch('/api/email/welcome', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: res.user.email, displayName: res.user.displayName || undefined }),
+        }).catch(() => {});
+      }
+
       mutate?.();
 
       toast({

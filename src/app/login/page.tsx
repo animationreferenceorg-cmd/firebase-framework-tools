@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
   createUserWithEmailAndPassword, 
@@ -72,6 +73,13 @@ export default function LoginPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         analytics.setIdentity(userCredential.user.uid, { email });
         analytics.trackEvent('signup_completed');
+        if (userCredential.user.email) {
+          fetch('/api/email/welcome', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userCredential.user.email, displayName: userCredential.user.displayName || undefined }),
+          }).catch(() => {});
+        }
         await handleAuthSuccess(userCredential.user);
         toast({ title: "Account created!", description: "Welcome to Animation Reference." });
       } else {
@@ -251,7 +259,12 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="password-signin" className="text-xs font-bold text-zinc-300">Password</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password-signin" className="text-xs font-bold text-zinc-300">Password</Label>
+                    <Link href="/forgot-password" className="text-[11px] font-semibold text-purple-400 hover:text-purple-300 hover:underline">
+                      Forgot password?
+                    </Link>
+                  </div>
                   <div className="relative">
                     <LockIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
                     <Input 

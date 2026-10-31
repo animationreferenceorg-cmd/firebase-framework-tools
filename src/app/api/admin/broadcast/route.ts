@@ -129,6 +129,16 @@ export async function POST(request: NextRequest) {
         pageToken = page.pageToken;
       } while (pageToken);
 
+      // Global 6:00 AM Wave Schedules
+      const scheduleMode = body.scheduleMode || 'staggered_6am';
+      const now = Date.now();
+      const waveTimes = [
+        undefined, // Wave 1: Europe/UK morning (Immediate)
+        new Date(now + 3 * 3600 * 1000).toISOString(), // Wave 2: US East (~6:30 AM EDT)
+        new Date(now + 6 * 3600 * 1000).toISOString(), // Wave 3: US West (~6:30 AM PDT)
+        new Date(now + 14 * 3600 * 1000).toISOString(), // Wave 4: Asia / Pacific Sunday morning
+      ];
+
       // Send in controlled batches (5 emails per batch, 300ms pause)
       let sentCount = 0;
       let failedCount = 0;
@@ -137,7 +147,9 @@ export async function POST(request: NextRequest) {
       for (let i = 0; i < recipients.length; i += batchSize) {
         const batch = recipients.slice(i, i + batchSize);
         await Promise.all(
-          batch.map(async (r) => {
+          batch.map(async (r, batchIdx) => {
+            const overallIdx = i + batchIdx;
+            const scheduledAt = scheduleMode === 'staggered_6am' ? waveTimes[overallIdx % 4] : undefined;
             try {
               let res;
               if (template === 'one_dollar_promo') {
@@ -145,6 +157,8 @@ export async function POST(request: NextRequest) {
                   toEmail: r.email,
                   recipientName: r.name,
                   customMessage,
+                  subject: subject || 'Your Animation Reference Pro pass is ready',
+                  scheduledAt,
                 });
               } else {
                 res = await sendNewsletterBroadcastEmail({

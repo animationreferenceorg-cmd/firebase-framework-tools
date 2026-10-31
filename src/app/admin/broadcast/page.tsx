@@ -34,6 +34,7 @@ export default function BroadcastAdminPage() {
   const [subject, setSubject] = useState('Your Animation Reference Pro pass is ready');
   const [customMessage, setCustomMessage] = useState('');
   const [testEmail, setTestEmail] = useState('');
+  const [scheduleMode, setScheduleMode] = useState<'staggered_6am' | 'immediate'>('staggered_6am');
 
   // Actions
   const [sendingTest, setSendingTest] = useState(false);
@@ -87,6 +88,7 @@ export default function BroadcastAdminPage() {
           template,
           subject,
           customMessage: customMessage.trim() || undefined,
+          scheduleMode,
         }),
       });
 
@@ -308,6 +310,48 @@ export default function BroadcastAdminPage() {
                     {sendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Eye className="w-3.5 h-3.5 mr-1" />}
                     Send Test
                   </Button>
+                </div>
+              </div>
+
+              {/* Schedule Mode Selector */}
+              <div className="space-y-2 pb-4 border-b border-white/10">
+                <Label className="text-xs font-bold text-zinc-300">
+                  Delivery Schedule &amp; Timezone Optimization:
+                </Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setScheduleMode('staggered_6am')}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      scheduleMode === 'staggered_6am'
+                        ? 'border-emerald-500 bg-emerald-500/15 shadow-md'
+                        : 'border-white/10 bg-white/5 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                      <span>⚡ 6:00 AM Global Wave Stagger</span>
+                    </div>
+                    <p className="text-[10px] text-zinc-400 mt-1 leading-normal">
+                      Delivers at 6:00 AM – 8:00 AM recipient local time (Europe now, US East in 3h, US West in 6h, Asia tonight).
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setScheduleMode('immediate')}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      scheduleMode === 'immediate'
+                        ? 'border-purple-500 bg-purple-500/15 shadow-md'
+                        : 'border-white/10 bg-white/5 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="text-xs font-bold text-purple-300">
+                      🚀 Send All Immediately
+                    </div>
+                    <p className="text-[10px] text-zinc-400 mt-1 leading-normal">
+                      Sends all recipients right now in batched sequences with rate-limit pauses.
+                    </p>
+                  </button>
                 </div>
               </div>
 

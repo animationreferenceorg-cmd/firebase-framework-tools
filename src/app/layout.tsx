@@ -125,7 +125,7 @@ const softwareApplicationSchema = {
       price: '0.00',
       priceCurrency: 'USD',
       name: 'Free Plan',
-      description: '35 daily references, unlimited visual boards, and 100% free frame-by-frame player.',
+      description: '25 daily references, unlimited visual boards, and 100% free frame-by-frame player.',
     },
     {
       '@type': 'Offer',

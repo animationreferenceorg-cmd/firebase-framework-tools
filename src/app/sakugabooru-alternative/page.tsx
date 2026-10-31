@@ -98,7 +98,7 @@ const FAQ = [
   },
   {
     q: 'How much does it cost?',
-    a: 'Animation Reference has a free plan providing 35 references a day (and 25 guest clips) with full frame-by-frame controls, unlimited public moodboards, and community sharing. Pro removes the daily limit and unlocks 24 FPS MP4 downloads and side-by-side comparison for $5/month ($1 for your first month).',
+    a: 'Animation Reference has a free plan providing 25 references a day (and 8 guest clips) with full frame-by-frame controls, unlimited public moodboards, and community sharing. Pro removes the daily limit and unlocks 24 FPS MP4 downloads and side-by-side comparison for $5/month ($1 for your first month).',
   },
   {
     q: 'Can I save clips to my moodboards?',

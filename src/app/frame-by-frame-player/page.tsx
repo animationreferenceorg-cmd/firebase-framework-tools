@@ -119,7 +119,7 @@ const FAQS = [
   },
   {
     q: 'Is the frame-by-frame player free to use?',
-    a: 'Yes! Free guest visitors get 25 references to study, and free registered accounts get 35 daily references with unlimited boards and frame stepping. Upgrading to Pro unlocks unlimited references, side-by-side playblast comparison, private boards, and high-res downloads starting at just $1 for your first month.',
+    a: 'Yes! Free guest visitors get 8 references to study, and free registered accounts get 25 daily references with unlimited boards and frame stepping. Upgrading to Pro unlocks unlimited references, side-by-side playblast comparison, private boards, and high-res downloads starting at just $1 for your first month.',
   },
 ];
 
@@ -351,7 +351,7 @@ export default function FrameByFramePlayerPage() {
               </Link>
             </Button>
           </div>
-          <p className="text-xs text-zinc-500 mt-4">Free plan includes 35 daily references &amp; unlimited moodboards · No card required</p>
+          <p className="text-xs text-zinc-500 mt-4">Free plan includes 25 daily references &amp; unlimited moodboards · No card required</p>
         </div>
       </section>
 

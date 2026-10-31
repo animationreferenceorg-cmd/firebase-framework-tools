@@ -32,8 +32,8 @@ export function DailyQuotaHeaderBadge() {
 
   const tooltipText = isGuest
     ? isExhausted
-      ? `Guest limit reached (0/${quota.limit} clips left). Create a free account for 35 free references every day!`
-      : `${quota.todayRemaining} of ${quota.limit} free guest reference clips left. Create an account for 35 daily clips!`
+      ? `Guest limit reached (0/${quota.limit} clips left). Create a free account for 25 free references every day!`
+      : `${quota.todayRemaining} of ${quota.limit} free guest reference clips left. Create an account for 25 daily clips!`
     : isExhausted
     ? `Daily quota reached (0/${quota.limit} left today). Resets tomorrow, or upgrade to Pro for unlimited references!`
     : `${quota.todayRemaining} of ${quota.limit} daily reference videos remaining today. Resets tomorrow. Already watched clips stay free forever!`;

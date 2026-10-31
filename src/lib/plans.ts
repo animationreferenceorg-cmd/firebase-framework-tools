@@ -179,9 +179,9 @@ const UNLIMITED: PlanLimits = { maxBoards: Infinity, maxSavedReferences: Infinit
 // every public board and upload grows the community library. What Pro buys
 // is unlimited viewing of other people's references, privacy and the study
 // and export tools. Legacy paid tiers keep their larger daily allowance.
-export const GUEST_UNLOCKED_LIMIT = 25; // Guests without an account get 25 references to watch
+export const GUEST_UNLOCKED_LIMIT = 8; // Guests without an account get 8 references to watch
 export const ACCESS_LIMITS: Record<AccessLevel, PlanLimits> = {
-  free: { maxBoards: Infinity, maxSavedReferences: Infinity, maxPortfolioPosts: Infinity, maxUnlockedReferences: 35 },
+  free: { maxBoards: Infinity, maxSavedReferences: Infinity, maxPortfolioPosts: Infinity, maxUnlockedReferences: 25 },
   tier1: { maxBoards: Infinity, maxSavedReferences: Infinity, maxPortfolioPosts: Infinity, maxUnlockedReferences: 50 },
   tier2: { maxBoards: Infinity, maxSavedReferences: Infinity, maxPortfolioPosts: Infinity, maxUnlockedReferences: 100 },
   pro: UNLIMITED,

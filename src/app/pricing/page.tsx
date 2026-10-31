@@ -22,7 +22,7 @@ const pricingFaqSchema = {
       name: 'What does the Animation Reference Free plan include?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'The Free plan includes 35 free reference clips every day (plus 25 guest views before signup), unlimited public reference boards, frame-by-frame controls, and community uploads. Any clip you have previously opened remains free to rewatch forever.',
+        text: 'The Free plan includes 25 free reference clips every day (plus 8 guest views before signup), unlimited public reference boards, frame-by-frame controls, and community uploads. Any clip you have previously opened remains free to rewatch forever.',
       },
     },
     {

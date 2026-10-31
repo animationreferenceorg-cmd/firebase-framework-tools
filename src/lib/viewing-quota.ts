@@ -1,8 +1,8 @@
 import { db } from './firebase';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 
-export const GUEST_UNLOCKED_LIMIT = 25; // Signed-out guests get 25 references all-time before needing an account
-export const FREE_DAILY_UNLOCKED_LIMIT = 35; // Signed-in free users get 35 references per day before needing Pro
+export const GUEST_UNLOCKED_LIMIT = 8; // Signed-out guests get 8 references all-time before needing an account
+export const FREE_DAILY_UNLOCKED_LIMIT = 25; // Signed-in free users get 25 references per day before needing Pro
 export const FREE_UNLOCKED_LIMIT = FREE_DAILY_UNLOCKED_LIMIT;
 
 export const ALL_TIME_UNLOCKED_STORAGE_KEY = 'animref_unlocked_references';
@@ -126,8 +126,8 @@ export function getUnlockedReferenceIds(userUnlockedList?: string[]): string[] {
 
 /**
  * Returns comprehensive quota status:
- * - For signed-out guests: 25 all-time reference limit before needing an account.
- * - For signed-in users: 35 daily reference limit before needing Pro.
+ * - For signed-out guests: 8 all-time reference limit before needing an account.
+ * - For signed-in users: 25 daily reference limit before needing Pro.
  * - For both: Any previously viewed reference remains 100% free to rewatch anytime!
  */
 export function getDailyQuotaStatus(
@@ -193,8 +193,8 @@ export function isReferenceUnlocked(
 /**
  * Records a reference unlock.
  * - If the video has already been watched before: Allowed for free without consuming quota!
- * - If guest and reached 25 guest limit: Returns success: false (must create free account).
- * - If signed-in and reached 35 daily limit: Returns success: false (blocked until tomorrow or Pro).
+ * - If guest and reached 8 guest limit: Returns success: false (must create free account).
+ * - If signed-in and reached 25 daily limit: Returns success: false (blocked until tomorrow or Pro).
  * - If within quota: Consumes 1 quota, saves, and dispatches event.
  */
 export async function unlockReference(
@@ -244,7 +244,7 @@ export async function unlockReference(
     };
   }
 
-  // 2. Check if guest limit (25 all-time) is exhausted
+  // 2. Check if guest limit (8 all-time) is exhausted
   if (guestMode && allTime.length >= GUEST_UNLOCKED_LIMIT) {
     return {
       success: false,
@@ -257,7 +257,7 @@ export async function unlockReference(
     };
   }
 
-  // 3. Check if daily quota (35 daily) is exhausted for signed-in users
+  // 3. Check if daily quota (25 daily) is exhausted for signed-in users
   if (!guestMode && daily.todayUnlockedIds.length >= limit) {
     return {
       success: false,

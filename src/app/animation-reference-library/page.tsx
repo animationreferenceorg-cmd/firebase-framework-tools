@@ -110,7 +110,7 @@ const FAQS = [
   },
   {
     q: 'Is access to the reference library free?',
-    a: 'Yes. Unauthenticated visitors get 25 references to study, and free registered accounts get 35 daily references with unlimited boards. Upgrading to Pro gives unlimited library access, side-by-side playblast comparison, and 4K downloads for only $1 for your first month ($5/mo thereafter).',
+    a: 'Yes. Unauthenticated visitors get 8 references to study, and free registered accounts get 25 daily references with unlimited boards. Upgrading to Pro gives unlimited library access, side-by-side playblast comparison, and 4K downloads for only $1 for your first month ($5/mo thereafter).',
   },
 ];
 
@@ -311,7 +311,7 @@ export default function AnimationReferenceLibraryPage() {
               </Link>
             </Button>
           </div>
-          <p className="text-xs text-zinc-500 mt-4">Free plan includes 35 daily references &amp; unlimited moodboards · No card required</p>
+          <p className="text-xs text-zinc-500 mt-4">Free plan includes 25 daily references &amp; unlimited moodboards · No card required</p>
         </div>
       </section>
 

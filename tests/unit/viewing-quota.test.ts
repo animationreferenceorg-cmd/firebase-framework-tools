@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   FREE_UNLOCKED_LIMIT,
   FREE_DAILY_UNLOCKED_LIMIT,
+  GUEST_UNLOCKED_LIMIT,
   isReferenceUnlocked,
   unlockReference,
   getUnlockedReferenceIds,
@@ -26,9 +27,10 @@ describe('viewing-quota', () => {
     clearStorageForTesting();
   });
 
-  it('has a default daily limit of 35 unlocked references', () => {
-    expect(FREE_UNLOCKED_LIMIT).toBe(35);
-    expect(FREE_DAILY_UNLOCKED_LIMIT).toBe(35);
+  it('has a default guest limit of 8 and daily limit of 25 unlocked references', () => {
+    expect(GUEST_UNLOCKED_LIMIT).toBe(8);
+    expect(FREE_UNLOCKED_LIMIT).toBe(25);
+    expect(FREE_DAILY_UNLOCKED_LIMIT).toBe(25);
   });
 
   it('pro users always have references unlocked', () => {
@@ -44,13 +46,33 @@ describe('viewing-quota', () => {
 
   const testUid = 'user-test-123';
 
+  it('enforces 8 free clip limit for guest unauthenticated visitors', async () => {
+    // Guest watches 8 clips
+    for (let i = 0; i < 8; i++) {
+      const res = await unlockReference(`guest-vid-${i}`);
+      expect(res.success).toBe(true);
+      expect(res.todayCount).toBe(i + 1);
+    }
+
+    // 9th clip is blocked requiring signup
+    const res9 = await unlockReference('guest-vid-9');
+    expect(res9.success).toBe(false);
+    expect(res9.isGuestLimit).toBe(true);
+    expect(res9.todayRemaining).toBe(0);
+
+    // Previously watched clip remains rewatchable for free
+    const rewatch = await unlockReference('guest-vid-1');
+    expect(rewatch.success).toBe(true);
+    expect(rewatch.alreadyUnlocked).toBe(true);
+  });
+
   it('unlocks references up to the limit and deduplicates', async () => {
     const res1 = await unlockReference('vid-1', testUid);
     expect(res1.success).toBe(true);
     expect(res1.alreadyUnlocked).toBe(false);
     expect(res1.count).toBe(1);
     expect(res1.todayCount).toBe(1);
-    expect(res1.todayRemaining).toBe(34);
+    expect(res1.todayRemaining).toBe(24);
 
     // Re-unlocking the same video is a free rewatch and does not increment today's quota
     const res2 = await unlockReference('vid-1', testUid);
@@ -58,18 +80,18 @@ describe('viewing-quota', () => {
     expect(res2.alreadyUnlocked).toBe(true);
     expect(res2.count).toBe(1);
     expect(res2.todayCount).toBe(1);
-    expect(res2.todayRemaining).toBe(34);
+    expect(res2.todayRemaining).toBe(24);
   });
 
-  it('blocks new unlocks once 35 daily limit is reached, while allowing previously unlocked', async () => {
-    // Fill 35 slots for today
-    for (let i = 0; i < 35; i++) {
+  it('blocks new unlocks once 25 daily limit is reached, while allowing previously unlocked', async () => {
+    // Fill 25 slots for today
+    for (let i = 0; i < 25; i++) {
       const res = await unlockReference(`vid-${i}`, testUid);
       expect(res.success).toBe(true);
     }
 
-    const status = getDailyQuotaStatus();
-    expect(status.todayCount).toBe(35);
+    const status = getDailyQuotaStatus(undefined, 25, false);
+    expect(status.todayCount).toBe(25);
     expect(status.todayRemaining).toBe(0);
     expect(status.isDailyLimitReached).toBe(true);
 
@@ -79,34 +101,34 @@ describe('viewing-quota', () => {
     expect(rewatch.success).toBe(true);
     expect(rewatch.alreadyUnlocked).toBe(true);
 
-    // A 36th new video cannot be unlocked today
-    const res36 = await unlockReference('vid-36', testUid);
-    expect(res36.success).toBe(false);
-    expect(res36.alreadyUnlocked).toBe(false);
-    expect(res36.count).toBe(35);
-    expect(res36.todayRemaining).toBe(0);
+    // A 26th new video cannot be unlocked today
+    const res26 = await unlockReference('vid-26', testUid);
+    expect(res26.success).toBe(false);
+    expect(res26.alreadyUnlocked).toBe(false);
+    expect(res26.count).toBe(25);
+    expect(res26.todayRemaining).toBe(0);
   });
 
   it('resets daily allowance on the next day while keeping all-time watched clips permanently free', async () => {
     // Watch video on "yesterday"
     saveDailyQuotaData({
       date: '2026-10-05',
-      todayUnlockedIds: Array.from({ length: 35 }, (_, i) => `yesterday-vid-${i}`),
+      todayUnlockedIds: Array.from({ length: 25 }, (_, i) => `yesterday-vid-${i}`),
     });
 
     // In today's session (2026-10-06), getDailyQuotaData should reset today's quota
     const status = getDailyQuotaStatus();
     expect(status.todayCount).toBe(0);
-    expect(status.todayRemaining).toBe(35);
+    expect(status.todayRemaining).toBe(25);
     expect(status.isDailyLimitReached).toBe(false);
 
     // Any previously unlocked video is still unlocked and playable forever
     expect(isReferenceUnlocked('yesterday-vid-5', false, ['yesterday-vid-5'])).toBe(true);
 
-    // Can unlock 35 new videos today
+    // Can unlock 25 new videos today
     const newWatch = await unlockReference('today-new-vid-1', testUid);
     expect(newWatch.success).toBe(true);
     expect(newWatch.todayCount).toBe(1);
-    expect(newWatch.todayRemaining).toBe(34);
+    expect(newWatch.todayRemaining).toBe(24);
   });
 });

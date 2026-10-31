@@ -92,7 +92,7 @@ export function ArtworkDetailModal({ item, isOpen, onClose }: ArtworkDetailModal
   const [copiedLink, setCopiedLink] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
 
-  // Viewing quota integration: permanent re-watch for unlocked images, 25 guest limit, 35 daily limit
+  // Viewing quota integration: permanent re-watch for unlocked images, 8 guest limit, 25 daily limit
   const quota = useViewingQuota();
   const refId = (item as any).id || (item as any).hashId || hashId || rawTitle;
   const alreadyUnlocked = quota.isVideoUnlocked(refId);
@@ -316,7 +316,7 @@ export function ArtworkDetailModal({ item, isOpen, onClose }: ArtworkDetailModal
               )}
               title={
                 quota.isGuest
-                  ? `Guest reference quota: ${quota.todayRemaining} of ${quota.limit} free clips left. Create an account to unlock 35 clips every day!`
+                  ? `Guest reference quota: ${quota.todayRemaining} of ${quota.limit} free clips left. Create an account to unlock 25 clips every day!`
                   : `Daily reference quota: ${quota.todayRemaining} of ${quota.limit} clips left today. Resets tomorrow. Previously opened clips stay playable anytime.`
               }
             >

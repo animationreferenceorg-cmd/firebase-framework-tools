@@ -61,8 +61,8 @@ export function VideoQuotaSlate({
   }, [user]);
 
   const signupHref = typeof window !== 'undefined'
-    ? `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`
-    : '/login';
+    ? `/signup?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`
+    : '/signup';
 
   const openPricing = () => {
     // The pricing dialog renders in a portal, which is invisible inside native fullscreen.
@@ -97,7 +97,7 @@ export function VideoQuotaSlate({
           <Lock className="w-3.5 h-3.5 text-amber-400" />
           <span>
             {isGuestMode
-              ? `Guest Limit Reached (${unlockedCount || 25}/25 Free Clips)`
+              ? `Guest Limit Reached (${unlockedCount || 8}/8 Free Clips)`
               : `Daily Quota Reached (${todayCount || limit}/${limit} Today)`}
           </span>
         </div>
@@ -113,11 +113,11 @@ export function VideoQuotaSlate({
         <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed mb-6 max-w-md">
           {isGuestMode ? (
             <>
-              You&apos;ve watched your <strong className="text-white">25 free guest reference clips</strong>. Create a free account now to get <strong className="text-emerald-300">35 free reference clips every day</strong>, save your watch history, and build moodboards!
+              You&apos;ve watched your <strong className="text-white">8 free guest reference clips</strong>. Create a free account now to get <strong className="text-emerald-300">25 free reference clips every day</strong>, save your watch history, and build moodboards!
             </>
           ) : (
             <>
-              You&apos;ve watched your <strong className="text-white">{limit} free reference clips today</strong>. Come back tomorrow for 35 more, or upgrade to Pro for unlimited instant access. Any video or image you&apos;ve already watched remains <span className="text-purple-300 font-semibold">100% free to rewatch anytime</span>!
+              You&apos;ve watched your <strong className="text-white">{limit} free reference clips today</strong>. Come back tomorrow for 25 more, or upgrade to Pro for unlimited instant access. Any video or image you&apos;ve already watched remains <span className="text-purple-300 font-semibold">100% free to rewatch anytime</span>!
             </>
           )}
         </p>
@@ -126,7 +126,7 @@ export function VideoQuotaSlate({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full text-left mb-6 bg-white/[0.03] border border-white/10 rounded-2xl p-3.5 sm:p-4 text-xs">
           <div className="flex items-center gap-2 text-zinc-200">
             <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span>{isGuestMode ? '35 free clips daily with account' : 'Unlimited reference studies with Pro'}</span>
+            <span>{isGuestMode ? '25 free clips daily with account' : 'Unlimited reference studies with Pro'}</span>
           </div>
           <div className="flex items-center gap-2 text-zinc-200">
             <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />

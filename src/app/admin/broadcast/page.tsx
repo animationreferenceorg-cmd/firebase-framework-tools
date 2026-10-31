@@ -31,7 +31,7 @@ export default function BroadcastAdminPage() {
   // Form states
   const [segment, setSegment] = useState<'free' | 'pro' | 'all'>('free');
   const [template, setTemplate] = useState<'one_dollar_promo' | 'custom'>('one_dollar_promo');
-  const [subject, setSubject] = useState('⚡ Special Animator Offer: Get Pro for $1 (Normally $5/mo)');
+  const [subject, setSubject] = useState('Your Animation Reference Pro pass is ready');
   const [customMessage, setCustomMessage] = useState('');
   const [testEmail, setTestEmail] = useState('');
 

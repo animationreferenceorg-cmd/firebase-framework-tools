@@ -333,10 +333,11 @@ export interface PromoBroadcastPayload {
   toEmail: string;
   recipientName?: string;
   customMessage?: string;
+  subject?: string;
 }
 
 /** Sends the $1 first month promo email to a single recipient. */
-export async function sendOneDollarPromoEmail({ toEmail, recipientName, customMessage }: PromoBroadcastPayload) {
+export async function sendOneDollarPromoEmail({ toEmail, recipientName, customMessage, subject }: PromoBroadcastPayload) {
   const client = getResendClient();
   if (!client) {
     return { success: false, message: "RESEND_API_KEY not configured" };
@@ -344,13 +345,18 @@ export async function sendOneDollarPromoEmail({ toEmail, recipientName, customMe
 
   const fromAddress = process.env.RESEND_FROM_EMAIL || 'Animation Reference <team@animationreference.org>';
   const htmlContent = renderOneDollarPromoHtml(recipientName, customMessage);
+  const emailSubject = subject || 'Your Animation Reference Pro pass is ready';
 
   try {
     const data = await client.emails.send({
       from: fromAddress,
       to: [toEmail],
-      subject: '⚡ Special Animator Offer: Get Pro for $1 (Normally $5/mo)',
+      replyTo: 'team@animationreference.org',
+      subject: emailSubject,
       html: htmlContent,
+      headers: {
+        'X-Entity-Ref-ID': `animref-${Date.now()}`,
+      },
     });
     if (data.error) return { success: false, error: data.error.message };
     return { success: true, data };

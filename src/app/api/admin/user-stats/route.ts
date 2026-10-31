@@ -22,13 +22,31 @@ export async function GET(request: NextRequest) {
     let newThisMonth = 0;
     let pageToken: string | undefined;
 
+    const allUsers: Array<{
+      uid: string;
+      email: string | null;
+      displayName: string | null;
+      createdAt: number;
+      lastSignInTime: number | null;
+      provider: string;
+    }> = [];
+
     do {
       const page = await auth.listUsers(1000, pageToken);
       totalAccounts += page.users.length;
       for (const u of page.users) {
-        const createdAt = Date.parse(u.metadata.creationTime);
+        const createdAt = Date.parse(u.metadata.creationTime) || 0;
         if (createdAt >= sevenDaysAgo) newThisWeek++;
         if (createdAt >= thirtyDaysAgo) newThisMonth++;
+
+        allUsers.push({
+          uid: u.uid,
+          email: u.email ?? null,
+          displayName: u.displayName ?? null,
+          createdAt,
+          lastSignInTime: u.metadata.lastSignInTime ? Date.parse(u.metadata.lastSignInTime) : null,
+          provider: u.providerData[0]?.providerId === 'google.com' ? 'google' : 'email',
+        });
       }
       pageToken = page.pageToken;
     } while (pageToken);
@@ -36,14 +54,30 @@ export async function GET(request: NextRequest) {
     // Get Pro and Free user breakdown from Firestore
     let proCount = 0;
     const usersSnap = await db.collection('users').get();
+    const proUids = new Set<string>();
+
     usersSnap.forEach((doc) => {
       const data = doc.data();
-      if (data.isPremium || data.isPro || data.plan === 'pro' || data.plan === 'pro_monthly' || data.plan === 'pro_annual') {
+      if (
+        data.isPremium ||
+        data.isPro ||
+        data.plan === 'pro' ||
+        data.plan === 'pro_monthly' ||
+        data.plan === 'pro_annual'
+      ) {
         proCount++;
+        proUids.add(doc.id);
       }
     });
 
     const freeCount = Math.max(0, totalAccounts - proCount);
+
+    // Sort newest signups first
+    allUsers.sort((a, b) => b.createdAt - a.createdAt);
+    const recentSignups = allUsers.slice(0, 8).map((u) => ({
+      ...u,
+      isPro: proUids.has(u.uid),
+    }));
 
     return Response.json(
       {
@@ -52,6 +86,7 @@ export async function GET(request: NextRequest) {
         freeCount,
         newThisWeek,
         newThisMonth,
+        recentSignups,
       },
       { headers: { 'Cache-Control': 'no-store' } }
     );

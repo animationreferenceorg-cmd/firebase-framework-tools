@@ -5,18 +5,25 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Video, LayoutGrid, BookOpen, Box, Users, Layers, Sparkles } from 'lucide-react';
+import { Video, LayoutGrid, BookOpen, Box, Users, Layers, Sparkles, UserCheck } from 'lucide-react';
 import { MoodboardService } from '@/lib/moodboard-service';
+import { collection, getCountFromServer } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function AdminPage() {
   const [boardStats, setBoardStats] = useState<{ totalBoards: number; totalItems: number; uniqueUsers: number } | null>(null);
+  const [userCount, setUserCount] = useState<number | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
     let active = true;
-    MoodboardService.getGlobalStats().then((stats) => {
+    Promise.all([
+      MoodboardService.getGlobalStats(),
+      getCountFromServer(collection(db, 'users')).catch(() => null),
+    ]).then(([stats, countSnap]) => {
       if (active) {
         setBoardStats(stats);
+        if (countSnap) setUserCount(countSnap.data().count);
         setLoadingStats(false);
       }
     });
@@ -31,11 +38,28 @@ export default function AdminPage() {
       </div>
 
       {/* Analytics Highlights */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="border-purple-500/20 bg-gradient-to-br from-purple-950/20 to-zinc-950">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-1.5 text-purple-300 font-semibold text-xs uppercase tracking-wider">
-              <Box className="w-4 h-4 text-purple-400" />
+              <UserCheck className="w-4 h-4 text-purple-400" />
+              Registered Accounts
+            </CardDescription>
+            <CardTitle className="text-3xl font-black text-white">
+              {loadingStats ? <span className="animate-pulse">...</span> : (userCount ?? 0)}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Link href="/admin/users" className="text-xs text-purple-400 hover:underline">
+              View all accounts &rarr;
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="border-indigo-500/20 bg-gradient-to-br from-indigo-950/20 to-zinc-950">
+          <CardHeader className="pb-2">
+            <CardDescription className="flex items-center gap-1.5 text-indigo-300 font-semibold text-xs uppercase tracking-wider">
+              <Box className="w-4 h-4 text-indigo-400" />
               Total Moodboards
             </CardDescription>
             <CardTitle className="text-3xl font-black text-white">
@@ -43,7 +67,7 @@ export default function AdminPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-xs text-zinc-400">Shot study & reference boards created</p>
+            <p className="text-xs text-zinc-400">Shot study &amp; reference boards</p>
           </CardContent>
         </Card>
 

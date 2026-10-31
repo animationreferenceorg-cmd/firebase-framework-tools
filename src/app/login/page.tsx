@@ -3,13 +3,13 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
   getAdditionalUserInfo,
-  type User 
+  type User
 } from 'firebase/auth';
 import { useFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -78,7 +78,7 @@ export default function LoginPage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: userCredential.user.email, displayName: userCredential.user.displayName || undefined }),
-          }).catch(() => {});
+          }).catch(() => { });
         }
         await handleAuthSuccess(userCredential.user);
         toast({ title: "Account created!", description: "Welcome to Animation Reference." });
@@ -170,12 +170,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="fixed inset-0 w-screen h-screen flex items-center justify-center bg-[#13111c] overflow-hidden select-none m-0 p-0 z-50"
     >
       {/* ──────────────── DYNAMIC MOUSE MOVEMENT GLOW SPOTLIGHT ──────────────── */}
-      <div 
+      <div
         className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-500"
         style={{
           background: `radial-gradient(650px circle at ${mousePos.x}px ${mousePos.y}px, rgba(139, 92, 246, 0.18), rgba(236, 72, 153, 0.08) 40%, transparent 80%)`,
@@ -183,7 +183,7 @@ export default function LoginPage() {
       />
 
       {/* Interactive Dot Grid Pattern Highlighted by Mouse Position */}
-      <div 
+      <div
         className="pointer-events-none fixed inset-0 z-0 opacity-25"
         style={{
           backgroundImage: `radial-gradient(rgba(255, 255, 255, 0.25) 1px, transparent 1px)`,
@@ -199,7 +199,7 @@ export default function LoginPage() {
 
       {/* ──────────────── MAIN AUTH CARD ──────────────── */}
       <div className="relative z-10 w-full max-w-md space-y-6">
-        
+
         {/* Brand Header Logo */}
         <div className="flex flex-col items-center text-center space-y-3">
           <div className="flex items-center gap-3 p-2.5 px-5 rounded-2xl bg-white/[0.04] border border-white/10 shadow-2xl backdrop-blur-xl">
@@ -221,14 +221,14 @@ export default function LoginPage() {
           {/* Auth Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
             <TabsList className="grid w-full grid-cols-2 p-1 rounded-2xl bg-white/5 border border-white/10">
-              <TabsTrigger 
-                value="sign-in" 
+              <TabsTrigger
+                value="sign-in"
                 className="rounded-xl text-xs font-bold transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg"
               >
                 Sign In
               </TabsTrigger>
-              <TabsTrigger 
-                value="sign-up" 
+              <TabsTrigger
+                value="sign-up"
                 className="rounded-xl text-xs font-bold transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg"
               >
                 Sign Up
@@ -247,12 +247,12 @@ export default function LoginPage() {
                   <Label htmlFor="email-signin" className="text-xs font-bold text-zinc-300">Email Address</Label>
                   <div className="relative">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-                    <Input 
-                      id="email-signin" 
-                      type="email" 
-                      placeholder="animator@studio.com" 
-                      value={email} 
-                      onChange={(e) => setEmail(e.target.value)} 
+                    <Input
+                      id="email-signin"
+                      type="email"
+                      placeholder="animator@studio.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       className="pl-10 h-11 rounded-xl bg-white/5 border-white/10 text-white placeholder:text-zinc-600 focus:border-purple-400 focus:ring-2 focus:ring-purple-500/30 text-xs font-medium"
                     />
                   </div>
@@ -267,21 +267,21 @@ export default function LoginPage() {
                   </div>
                   <div className="relative">
                     <LockIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-                    <Input 
-                      id="password-signin" 
-                      type="password" 
-                      placeholder="••••••••" 
-                      value={password} 
-                      onChange={(e) => setPassword(e.target.value)} 
+                    <Input
+                      id="password-signin"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       className="pl-10 h-11 rounded-xl bg-white/5 border-white/10 text-white placeholder:text-zinc-600 focus:border-purple-400 focus:ring-2 focus:ring-purple-500/30 text-xs font-medium"
                     />
                   </div>
                 </div>
               </div>
 
-              <Button 
-                onClick={() => handleAuthAction('signIn')} 
-                disabled={loading || !auth} 
+              <Button
+                onClick={() => handleAuthAction('signIn')}
+                disabled={loading || !auth}
                 className="w-full h-12 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-extrabold text-sm shadow-xl shadow-purple-900/50 cursor-pointer gap-2 mt-2"
               >
                 {loading ? 'Signing In...' : 'Sign In to Studio'}
@@ -301,12 +301,12 @@ export default function LoginPage() {
                   <Label htmlFor="email-signup" className="text-xs font-bold text-zinc-300">Email Address</Label>
                   <div className="relative">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-                    <Input 
-                      id="email-signup" 
-                      type="email" 
-                      placeholder="animator@studio.com" 
-                      value={email} 
-                      onChange={(e) => setEmail(e.target.value)} 
+                    <Input
+                      id="email-signup"
+                      type="email"
+                      placeholder="animator@studio.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       className="pl-10 h-11 rounded-xl bg-white/5 border-white/10 text-white placeholder:text-zinc-600 focus:border-purple-400 focus:ring-2 focus:ring-purple-500/30 text-xs font-medium"
                     />
                   </div>
@@ -316,21 +316,21 @@ export default function LoginPage() {
                   <Label htmlFor="password-signup" className="text-xs font-bold text-zinc-300">Password</Label>
                   <div className="relative">
                     <LockIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-                    <Input 
-                      id="password-signup" 
-                      type="password" 
-                      placeholder="••••••••" 
-                      value={password} 
-                      onChange={(e) => setPassword(e.target.value)} 
+                    <Input
+                      id="password-signup"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       className="pl-10 h-11 rounded-xl bg-white/5 border-white/10 text-white placeholder:text-zinc-600 focus:border-purple-400 focus:ring-2 focus:ring-purple-500/30 text-xs font-medium"
                     />
                   </div>
                 </div>
               </div>
 
-              <Button 
-                onClick={() => handleAuthAction('signUp')} 
-                disabled={loading || !auth} 
+              <Button
+                onClick={() => handleAuthAction('signUp')}
+                disabled={loading || !auth}
                 className="w-full h-12 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-extrabold text-sm shadow-xl shadow-purple-900/50 cursor-pointer gap-2 mt-2"
               >
                 {loading ? 'Creating Account...' : 'Create Free Account'}

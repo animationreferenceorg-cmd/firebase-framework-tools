@@ -123,8 +123,64 @@ export default function UsersAdminPage() {
     );
   }
 
+  const totalUsers = users.length;
+  const proUsers = users.filter(u => u.isPremium || u.plan?.startsWith('pro') || u.tier?.startsWith('pro')).length;
+  const freeUsers = Math.max(0, totalUsers - proUsers);
+  const adminUsers = users.filter(u => u.role === 'admin').length;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Metric Highlights */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="bg-card border-purple-500/20 bg-gradient-to-br from-purple-950/20 to-zinc-950">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-purple-300 font-semibold text-xs uppercase tracking-wider">
+              Total Accounts
+            </CardDescription>
+            <CardTitle className="text-3xl font-black text-white">{totalUsers}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-zinc-400">Registered animator accounts</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-amber-500/20 bg-gradient-to-br from-amber-950/20 to-zinc-950">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-amber-300 font-semibold text-xs uppercase tracking-wider">
+              Pro Members
+            </CardDescription>
+            <CardTitle className="text-3xl font-black text-white">{proUsers}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-zinc-400">Paid &amp; VIP subscriptions</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-emerald-500/20 bg-gradient-to-br from-emerald-950/20 to-zinc-950">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-emerald-300 font-semibold text-xs uppercase tracking-wider">
+              Free Accounts
+            </CardDescription>
+            <CardTitle className="text-3xl font-black text-white">{freeUsers}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-zinc-400">25 daily references</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-blue-500/20 bg-gradient-to-br from-blue-950/20 to-zinc-950">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-blue-300 font-semibold text-xs uppercase tracking-wider">
+              Staff / Admins
+            </CardDescription>
+            <CardTitle className="text-3xl font-black text-white">{adminUsers}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-zinc-400">Admin access</p>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle>Users & Subscriptions</CardTitle>

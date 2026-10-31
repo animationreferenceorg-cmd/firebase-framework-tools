@@ -1,5 +1,6 @@
 const admin = require('firebase-admin');
 const { Resend } = require('resend');
+const fs = require('fs');
 require('dotenv').config({ path: '.env.local' });
 require('dotenv').config({ path: '.env' });
 
@@ -24,16 +25,29 @@ const resend = new Resend(resendApiKey);
 // Import the HTML renderer
 const { renderOneDollarPromoHtml } = require('../src/lib/email-template-promo.ts');
 
+const SENT_RECORDS_FILE = 'campaign_sent_recipients.json';
+
 async function main() {
-  console.log('--- LAUNCHING GLOBAL 6:00 AM STAGGERED EMAIL CAMPAIGN ---');
+  console.log('--- GLOBAL 6:00 AM STAGGERED EMAIL BROADCAST ---');
   console.log('Sender: Animation Reference <team@animationreference.org>');
   console.log('Subject: Your Animation Reference Pro pass is ready');
+
+  // Load already sent set
+  const alreadySent = new Set();
+  if (fs.existsSync(SENT_RECORDS_FILE)) {
+    try {
+      const saved = JSON.parse(fs.readFileSync(SENT_RECORDS_FILE, 'utf8'));
+      if (Array.isArray(saved.sentEmails)) {
+        saved.sentEmails.forEach(e => alreadySent.add(e.toLowerCase()));
+      }
+    } catch (e) {}
+  }
+  console.log(`Loaded ${alreadySent.size} previously sent recipients (skipping to avoid duplicates).`);
 
   const auth = admin.auth();
   const db = admin.firestore();
 
-  // 1. Gather all pro UIDs to exclude them
-  console.log('Querying current Pro members...');
+  // 1. Gather all Pro UIDs
   const proUids = new Set();
   const snap = await db.collection('users').get();
   snap.forEach(doc => {
@@ -42,10 +56,8 @@ async function main() {
       proUids.add(doc.id);
     }
   });
-  console.log(`Found ${proUids.size} Pro accounts.`);
 
   // 2. Fetch all Free tier accounts
-  console.log('Gathering free tier user accounts from Firebase Auth...');
   const freeUsers = [];
   let pageToken;
   do {
@@ -53,6 +65,7 @@ async function main() {
     for (const u of page.users) {
       if (!u.email) continue;
       if (proUids.has(u.uid)) continue;
+      if (alreadySent.has(u.email.toLowerCase())) continue; // Skip already delivered
       freeUsers.push({
         uid: u.uid,
         email: u.email,
@@ -62,13 +75,13 @@ async function main() {
     pageToken = page.pageToken;
   } while (pageToken);
 
-  console.log(`Total Target Audience: ${freeUsers.length} Free Tier Animators`);
+  console.log(`Remaining Unsent Free Audience: ${freeUsers.length} Animators`);
+  if (freeUsers.length === 0) {
+    console.log('All free accounts have already received this campaign!');
+    return;
+  }
 
   // 3. Define 6:00 AM Local Time Global Waves
-  // Wave 1: Europe/UK (Currently 7:30 AM local time) -> Immediate
-  // Wave 2: US East (Target 6:30 AM EDT = ~3 hours from now)
-  // Wave 3: US West (Target 6:30 AM PDT = ~6 hours from now)
-  // Wave 4: Asia/Pacific (Target 7:00 AM Sunday = ~14 hours from now)
   const now = Date.now();
   const waveSchedules = [
     { name: 'Wave 1 (Europe Morning - Immediate)', scheduledAt: undefined },
@@ -77,31 +90,38 @@ async function main() {
     { name: 'Wave 4 (Asia / Pacific Sunday Morning)', scheduledAt: new Date(now + 14 * 3600 * 1000).toISOString() },
   ];
 
-  console.log('\nScheduling Plan:');
-  waveSchedules.forEach((w, idx) => {
-    console.log(`  ${idx + 1}. ${w.name}: ${w.scheduledAt || 'Immediate delivery'}`);
-  });
-
-  // Assign recipients evenly to waves
+  // Assign remaining recipients to wave buckets
   const waveBuckets = [[], [], [], []];
   freeUsers.forEach((user, idx) => {
     waveBuckets[idx % 4].push(user);
   });
 
+  console.log('\nScheduling Plan for Remaining Recipients:');
   for (let w = 0; w < 4; w++) {
-    console.log(`  -> ${waveSchedules[w].name}: ${waveBuckets[w].length} recipients`);
+    console.log(`  ${w + 1}. ${waveSchedules[w].name}: ${waveBuckets[w].length} recipients (${waveSchedules[w].scheduledAt || 'Immediate'})`);
   }
 
   // 4. Batch Dispatcher
-  let totalSent = 0;
-  let totalFailed = 0;
+  let totalScheduled = 0;
+  let totalErrors = 0;
   let quotaHit = false;
 
   console.log('\nStarting dispatch to Resend API...');
-  
+
+  function persistProgress() {
+    fs.writeFileSync(SENT_RECORDS_FILE, JSON.stringify({
+      campaign: '1_dollar_intro_promo',
+      lastRunAt: new Date().toISOString(),
+      totalSent: alreadySent.size,
+      sentEmails: Array.from(alreadySent),
+    }, null, 2));
+  }
+
   for (let w = 0; w < 4; w++) {
     const wave = waveSchedules[w];
     const recipients = waveBuckets[w];
+    if (recipients.length === 0) continue;
+
     console.log(`\n=== Processing ${wave.name} (${recipients.length} recipients) ===`);
 
     const batchSize = 5;
@@ -129,24 +149,25 @@ async function main() {
           const res = await resend.emails.send(sendPayload);
           if (res.error) {
             console.error(`[FAIL] ${recipient.email}: ${res.error.message}`);
-            totalFailed++;
+            totalErrors++;
             if (res.error.message.includes('quota') || res.error.message.includes('rate limit')) {
               quotaHit = true;
             }
           } else {
-            totalSent++;
+            totalScheduled++;
+            alreadySent.add(recipient.email.toLowerCase());
           }
         } catch (err) {
           console.error(`[ERR] ${recipient.email}:`, err.message);
-          totalFailed++;
+          totalErrors++;
           if (err.message.includes('quota')) {
             quotaHit = true;
           }
         }
       }));
 
-      // Rate limit protection: 350ms pause between batches
-      process.stdout.write(`Progress: ${totalSent} scheduled/sent, ${totalFailed} errors...\r`);
+      persistProgress();
+      process.stdout.write(`Progress: ${totalScheduled} scheduled/sent, ${totalErrors} errors...\r`);
       await new Promise(r => setTimeout(r, 350));
     }
 
@@ -156,10 +177,10 @@ async function main() {
     }
   }
 
-  console.log(`\n\n--- BROADCAST SUMMARY ---`);
-  console.log(`Total Scheduled / Delivered: ${totalSent}`);
-  console.log(`Failed / Skipped: ${totalFailed}`);
-  console.log(`Total Free Audience: ${freeUsers.length}`);
+  console.log(`\n\n--- BROADCAST PROGRESS SUMMARY ---`);
+  console.log(`New Emails Scheduled / Sent in this run: ${totalScheduled}`);
+  console.log(`Cumulative Total Sent for Campaign: ${alreadySent.size}`);
+  console.log(`Remaining to Send: ${Math.max(0, 1988 - alreadySent.size)}`);
 }
 
 main().catch(console.error);

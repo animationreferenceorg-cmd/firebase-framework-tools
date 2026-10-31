@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { useAuth } from '@/hooks/use-auth';
+import { trackAnimWorksClick } from '@/lib/partner-tracking';
 import {
   Dialog,
   DialogContent,
@@ -24,6 +26,8 @@ export function AnimWorksModal({
   videoUrl,
   videoTitle,
 }: AnimWorksModalProps) {
+  const { user } = useAuth();
+
   const handleLaunchReview = () => {
     const baseUrl = 'https://anim.works/review/new';
     const params = new URLSearchParams();
@@ -31,7 +35,14 @@ export function AnimWorksModal({
     if (videoTitle) params.set('title', videoTitle);
     params.set('source', 'animationreference.org');
 
-    const targetUrl = videoUrl ? `${baseUrl}?${params.toString()}` : 'https://anim.works';
+    const rawTarget = videoUrl ? `${baseUrl}?${params.toString()}` : 'https://anim.works';
+    const targetUrl = trackAnimWorksClick({
+      targetUrl: rawTarget,
+      source: 'animworks_modal',
+      itemTitle: videoTitle || 'Review Tool Handoff',
+      userType: user ? 'member' : 'guest',
+      userId: user?.uid,
+    });
     window.open(targetUrl, '_blank', 'noopener,noreferrer');
     onOpenChange(false);
   };
@@ -101,7 +112,7 @@ export function AnimWorksModal({
         <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
           <Button
             onClick={handleLaunchReview}
-            className="w-full sm:flex-1 h-12 bg-gradient-to-r from-purple-600 via-purple-500 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl shadow-lg shadow-purple-900/30 transition-all flex items-center justify-center gap-2"
+            className="w-full sm:flex-1 h-12 bg-gradient-to-r from-purple-600 via-purple-500 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl shadow-lg shadow-purple-900/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <Play className="w-4 h-4 fill-current" />
             {videoUrl ? 'Open Reference in Review Tool' : 'Launch Anim.works Studio'}

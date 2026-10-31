@@ -25,13 +25,37 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Trash2, Plus, ExternalLink, ShoppingCart, Box, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { TrendingUp, Users, ArrowUpRight } from 'lucide-react';
 import { getProducts, addProduct, deleteProduct, updateProduct } from '@/lib/firestore-marketplace';
 import type { Product } from '@/lib/marketplace-types';
 import Image from 'next/image';
 import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
+interface PartnerStats {
+  partner: string;
+  totalOutboundClicks: number;
+  marketplaceTabClicks: number;
+  bannerClicks: number;
+  productClicks: number;
+  memberClicks: number;
+  guestClicks: number;
+  clicksToday: number;
+  clicksThisWeek: number;
+  recentClicks: Array<{
+    id: string;
+    source: string;
+    itemTitle: string;
+    targetUrl: string;
+    userType: string;
+    timestamp: number;
+  }>;
+}
+
 export default function AdminMarketplacePage() {
+    const { user: authUser } = useAuth();
+    const [partnerStats, setPartnerStats] = useState<PartnerStats | null>(null);
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);

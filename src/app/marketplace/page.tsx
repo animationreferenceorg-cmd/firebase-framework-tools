@@ -23,6 +23,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProductCard } from '@/components/ProductCard';
 import { getProducts } from '@/lib/firestore-marketplace';
+import { useAuth } from '@/hooks/use-auth';
+import { buildAnimWorksUrl, trackAnimWorksClick } from '@/lib/partner-tracking';
 import type { Product } from '@/lib/marketplace-types';
 
 const SAMPLE_PRODUCTS: Product[] = [
@@ -95,6 +97,7 @@ const SAMPLE_PRODUCTS: Product[] = [
 ];
 
 export default function MarketplacePage() {
+  const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<'All' | 'Rigs' | 'Sets' | 'Plugins'>('All');
@@ -176,10 +179,19 @@ export default function MarketplacePage() {
           </div>
 
           <a
-            href="https://anim.works/"
+            href={buildAnimWorksUrl('https://anim.works/', { source: 'marketplace_banner' })}
             target="_blank"
             rel="noopener noreferrer"
             className="shrink-0"
+            onClick={() => {
+              trackAnimWorksClick({
+                targetUrl: 'https://anim.works/',
+                source: 'marketplace_banner',
+                itemTitle: 'Official Partner Store Banner',
+                userType: user ? 'member' : 'guest',
+                userId: user?.uid,
+              });
+            }}
           >
             <Button
               size="sm"

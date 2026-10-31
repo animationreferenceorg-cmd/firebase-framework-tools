@@ -14,9 +14,10 @@ interface SidebarLinkProps extends React.ComponentProps<typeof SidebarMenuButton
     children: React.ReactNode;
     target?: string;
     rel?: string;
+    onClick?: (e: React.MouseEvent) => void;
 }
 
-export function SidebarLink({ href, icon: Icon, children, tooltip, className, target, rel, ...props }: SidebarLinkProps) {
+export function SidebarLink({ href, icon: Icon, children, tooltip, className, target, rel, onClick, ...props }: SidebarLinkProps) {
     const { setOpenMobile, isMobile } = useSidebar();
     const pathname = usePathname();
     const isActive = pathname === href;
@@ -28,7 +29,8 @@ export function SidebarLink({ href, icon: Icon, children, tooltip, className, ta
                 href={href}
                 target={target || "_blank"}
                 rel={rel || "noopener noreferrer"}
-                onClick={() => {
+                onClick={(e) => {
+                    if (onClick) onClick(e);
                     if (isMobile) {
                         setOpenMobile(false);
                     }
@@ -51,7 +53,8 @@ export function SidebarLink({ href, icon: Icon, children, tooltip, className, ta
     return (
         <Link
             href={href}
-            onClick={() => {
+            onClick={(e) => {
+                if (onClick) onClick(e);
                 if (isMobile) {
                     setOpenMobile(false);
                 }

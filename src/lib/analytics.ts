@@ -24,6 +24,8 @@ export const ANALYTICS_EVENTS = [
   'subscription_canceled',
   'sign_up',
   'signup_prompt_clicked',
+  'partner_click',
+  'marketplace_tab_clicked',
 ] as const;
 
 export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];
@@ -39,6 +41,11 @@ export const ALLOWED_PROPERTIES = [
   'fps',
   'format',
   'status',
+  // Partner & outbound referrals
+  'partner',
+  'destination',
+  'item_title',
+  'user_type',
   // GA4 monetization: purchase value and currency.
   'value',
   'currency',

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import {
+  ShoppingBag,
   Video,
   LayoutGrid,
   BookOpen,
@@ -24,6 +25,27 @@ import {
 } from 'lucide-react';
 import { MoodboardService } from '@/lib/moodboard-service';
 import { useAuth } from '@/hooks/use-auth';
+
+interface PartnerStats {
+  partner: string;
+  totalOutboundClicks: number;
+  marketplaceTabClicks: number;
+  bannerClicks: number;
+  productClicks: number;
+  memberClicks: number;
+  guestClicks: number;
+  clicksToday: number;
+  clicksThisWeek: number;
+  recentClicks: Array<{
+    id: string;
+    source: string;
+    itemTitle: string;
+    targetUrl: string;
+    userType: string;
+    timestamp: number;
+  }>;
+  lastClickAt: number | null;
+}
 
 interface UserStats {
   totalAccounts: number;
@@ -46,6 +68,7 @@ export default function AdminPage() {
   const { user: authUser } = useAuth();
   const [boardStats, setBoardStats] = useState<{ totalBoards: number; totalItems: number; uniqueUsers: number } | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [partnerStats, setPartnerStats] = useState<PartnerStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -56,6 +79,7 @@ export default function AdminPage() {
         const boardPromise = MoodboardService.getGlobalStats();
 
         let statsPromise: Promise<UserStats | null> = Promise.resolve(null);
+        let partnerPromise: Promise<PartnerStats | null> = Promise.resolve(null);
         if (authUser) {
           const idToken = await authUser.getIdToken();
           statsPromise = fetch('/api/admin/user-stats', {
@@ -63,12 +87,19 @@ export default function AdminPage() {
           })
             .then((r) => (r.ok ? r.json() : null))
             .catch(() => null);
+
+          partnerPromise = fetch('/api/admin/partner-stats', {
+            headers: { Authorization: `Bearer ${idToken}` },
+          })
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null);
         }
 
-        const [bStats, uStats] = await Promise.all([boardPromise, statsPromise]);
+        const [bStats, uStats, pStats] = await Promise.all([boardPromise, statsPromise, partnerPromise]);
         if (active) {
           setBoardStats(bStats);
           setUserStats(uStats);
+          setPartnerStats(pStats);
           setLoading(false);
         }
       } catch (err) {
@@ -107,6 +138,92 @@ export default function AdminPage() {
               Firebase Console <ExternalLink className="w-3 h-3 ml-1.5" />
             </a>
           </Button>
+        </div>
+      </div>
+
+      {/* Partner Referral Telemetry: Anim.works */}
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-pink-300 flex items-center gap-2">
+            <ShoppingBag className="w-4 h-4 text-pink-400" />
+            Traffic Sent to Anim.works (Marketplace &amp; Partner Links)
+          </h2>
+          <Button asChild variant="outline" size="sm" className="h-7 border-white/10 text-xs text-zinc-300">
+            <Link href="/admin/marketplace">
+              Manage Marketplace Products <ArrowRight className="w-3 h-3 ml-1" />
+            </Link>
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="border-pink-500/20 bg-gradient-to-br from-pink-950/25 to-zinc-950">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-pink-300 font-bold text-xs uppercase tracking-wider">
+                Total Sent to Anim.works
+              </CardDescription>
+              <CardTitle className="text-3xl sm:text-4xl font-black text-white">
+                {loading ? <span className="animate-pulse">...</span> : (partnerStats?.totalOutboundClicks ?? 0)}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-zinc-400">Total clicks that launched Anim.works</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-purple-500/20 bg-gradient-to-br from-purple-950/25 to-zinc-950">
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-1 text-purple-300 font-bold text-xs uppercase tracking-wider">
+                <TrendingUp className="w-3.5 h-3.5" />
+                Clicks This Week
+              </CardDescription>
+              <CardTitle className="text-3xl sm:text-4xl font-black text-purple-300">
+                {loading ? <span className="animate-pulse">...</span> : `+${partnerStats?.clicksThisWeek ?? 0}`}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-zinc-400">Past 7 days traffic sent</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-violet-500/20 bg-gradient-to-br from-violet-950/25 to-zinc-950">
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-1 text-violet-300 font-bold text-xs uppercase tracking-wider">
+                <ShoppingBag className="w-3.5 h-3.5" />
+                Marketplace Tab Clicks
+              </CardDescription>
+              <CardTitle className="text-3xl sm:text-4xl font-black text-violet-300">
+                {loading ? <span className="animate-pulse">...</span> : (partnerStats?.marketplaceTabClicks ?? 0)}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-zinc-400">Navigations to /marketplace</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-cyan-500/20 bg-gradient-to-br from-cyan-950/25 to-zinc-950">
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-1 text-cyan-300 font-bold text-xs uppercase tracking-wider">
+                <Users className="w-3.5 h-3.5" />
+                Audience &amp; Source
+              </CardDescription>
+              <CardTitle className="text-xl sm:text-2xl font-black text-cyan-300 flex items-center gap-2">
+                {loading ? (
+                  <span className="animate-pulse">...</span>
+                ) : (
+                  <>
+                    <span>{partnerStats?.memberClicks ?? 0}m</span>
+                    <span className="text-zinc-600 text-sm">/</span>
+                    <span className="text-zinc-400 text-base">{partnerStats?.guestClicks ?? 0}g</span>
+                  </>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-zinc-400">
+                {partnerStats?.bannerClicks ?? 0} banner &bull; {partnerStats?.productClicks ?? 0} cards
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
 

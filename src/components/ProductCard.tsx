@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import type { Product } from '@/lib/marketplace-types';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { trackAnimWorksClick } from '@/lib/partner-tracking';
 
 interface ProductCardProps {
     product: Product;
@@ -15,14 +17,7 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
     const [isHovered, setIsHovered] = useState(false);
     const { toast } = useToast();
-
-    const handleBuy = (e: React.MouseEvent) => {
-        e.preventDefault();
-        toast({
-            title: "Coming Soon!",
-            description: "Marketplace checkout is under development.",
-        });
-    };
+    const { user } = useAuth();
 
     return (
         <div
@@ -76,7 +71,19 @@ export function ProductCard({ product }: ProductCardProps) {
                     onClick={(e) => {
                         e.preventDefault();
                         if (product.linkUrl) {
-                            window.open(product.linkUrl, '_blank', 'noopener,noreferrer');
+                            const isAnimWorks = product.linkUrl.includes('anim.works') || product.type === 'affiliate';
+                            if (isAnimWorks) {
+                                const destination = trackAnimWorksClick({
+                                    targetUrl: product.linkUrl,
+                                    source: 'marketplace_product',
+                                    itemTitle: product.title,
+                                    userType: user ? 'member' : 'guest',
+                                    userId: user?.uid,
+                                });
+                                window.open(destination, '_blank', 'noopener,noreferrer');
+                            } else {
+                                window.open(product.linkUrl, '_blank', 'noopener,noreferrer');
+                            }
                         } else {
                             toast({
                                 title: "Coming Soon!",

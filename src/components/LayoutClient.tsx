@@ -30,6 +30,7 @@ import { isAppInstalled, isMobileInstallCandidate } from '@/lib/pwa';
 
 import { WatchTrackerProvider } from '@/hooks/use-watch-tracker';
 import { AnalyticsBridge } from '@/components/AnalyticsBridge';
+import { trackMarketplaceTabClick } from '@/lib/partner-tracking';
 
 export function LayoutClient({ children }: { children: React.ReactNode }) {
     const { userProfile } = useUser();
@@ -198,7 +199,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     </SidebarLink>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <SidebarLink href="/marketplace" icon={ShoppingBag} tooltip="Marketplace">
+                                    <SidebarLink href="/marketplace" icon={ShoppingBag} tooltip="Marketplace" onClick={() => { trackMarketplaceTabClick(user ? 'member' : 'guest', user?.uid); }}>
                                         Marketplace
                                     </SidebarLink>
                                 </SidebarMenuItem>

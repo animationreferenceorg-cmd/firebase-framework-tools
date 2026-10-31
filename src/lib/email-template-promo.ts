@@ -9,7 +9,7 @@ function esc(value: unknown): string {
 }
 
 const CDN_LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/aniamtion-reference.firebasestorage.app/o/site-assets%2Femail%2Flogo-transparent.png?alt=media&token=email-public-token-2026';
-const CDN_BANNER_URL = 'https://firebasestorage.googleapis.com/v0/b/aniamtion-reference.firebasestorage.app/o/site-assets%2Femail%2Fproduction-studio.png?alt=media&token=email-public-token-2026';
+const CDN_BANNER_URL = 'https://firebasestorage.googleapis.com/v0/b/aniamtion-reference.firebasestorage.app/o/site-assets%2Femail%2Fhomepage-announcement.png?alt=media&token=email-public-token-2026';
 
 /** Generates clean, dark-mode, high-converting HTML for the $1 intro offer. */
 export function renderOneDollarPromoHtml(name = 'Animator', customMessage?: string): string {

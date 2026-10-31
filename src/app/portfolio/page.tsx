@@ -84,7 +84,7 @@ export default function PortfolioLandingPage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             <Button asChild size="lg" className="w-full sm:w-auto bg-purple-600 hover:bg-purple-500 text-white font-semibold px-8 shadow-xl shadow-purple-900/40">
-              <Link href="/profile">
+              <Link href="/signup">
                 Create Your Animator Profile
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Link>
@@ -156,7 +156,7 @@ export default function PortfolioLandingPage() {
           </p>
           <div className="pt-2">
             <Button asChild size="lg" className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-8">
-              <Link href="/profile">
+              <Link href="/signup">
                 Build Your Portfolio Now
               </Link>
             </Button>

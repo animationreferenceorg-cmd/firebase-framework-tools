@@ -33,9 +33,14 @@ describe('exclusive links entitlement resolution', () => {
   });
 
   it('rejects duplicate redemption when status is already redeemed or timesUsed > 0', () => {
-    const linkDoc = {
+    const linkDoc: {
+      code: string;
+      status: 'active' | 'redeemed' | 'revoked';
+      timesUsed: number;
+      redeemedBy: { uid: string; email: string } | null;
+    } = {
       code: 'pro_xyz98765432',
-      status: 'redeemed' as const,
+      status: 'redeemed',
       timesUsed: 1,
       redeemedBy: {
         uid: 'user_first_claimer',
@@ -78,3 +83,4 @@ describe('exclusive links entitlement resolution', () => {
     expect(isExpired).toBe(true);
   });
 });
+

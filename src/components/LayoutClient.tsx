@@ -23,6 +23,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { FeedbackModal } from '@/components/FeedbackModal';
 import { UpdatesModal } from '@/components/UpdatesModal';
 import { SidebarUpgradeCard } from '@/components/SidebarUpgradeCard';
+import { MemberIntroPromoBanner } from '@/components/MemberIntroPromoBanner';
 import { UserFeedbackPanel } from '@/components/UserFeedbackPanel';
 import { MobileInstallBanner } from '@/components/reference/MobileInstallBanner';
 import { isAppInstalled, isMobileInstallCandidate } from '@/lib/pwa';
@@ -254,6 +255,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                         "flex flex-col flex-1 relative",
                         isMoodboardPage ? "h-svh overflow-hidden" : "min-h-screen"
                     )}>
+                        <MemberIntroPromoBanner />
                         <Suspense fallback={null}>
                             <GlassHeader />
                         </Suspense>

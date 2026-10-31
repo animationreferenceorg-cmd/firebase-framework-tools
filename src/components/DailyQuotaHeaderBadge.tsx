@@ -56,7 +56,7 @@ export function DailyQuotaHeaderBadge() {
       <span className="hidden sm:inline text-zinc-400 font-medium text-[11px]">
         {isGuest
           ? (isExhausted ? 'guest · Sign up' : 'guest free')
-          : (isExhausted ? 'today · Get Pro' : 'left today')}
+          : (isExhausted ? 'today · Pro for $1' : 'left today')}
       </span>
       <span
         className={cn(

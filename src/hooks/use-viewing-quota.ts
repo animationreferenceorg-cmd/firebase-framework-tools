@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { createContext, createElement, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useUser } from './use-user';
 import { contributionBonus, getEntitlements } from '@/lib/plans';
 import { countPublicSharesToday } from '@/lib/contribution';
@@ -40,7 +40,7 @@ function useContributionBonus(uid: string | undefined, enabled: boolean): number
   return bonus;
 }
 
-export function useViewingQuota() {
+function useViewingQuotaState() {
   const { userProfile, loading } = useUser();
   const ready = !loading;
   const uid = userProfile?.uid;
@@ -126,4 +126,19 @@ export function useViewingQuota() {
     isVideoUnlocked,
     attemptUnlock,
   };
+}
+
+// One quota subscription and contribution lookup for the whole app, rather
+// than one localStorage parse and Firestore query for every card in a grid.
+const ViewingQuotaContext = createContext<ReturnType<typeof useViewingQuotaState> | null>(null);
+
+export function ViewingQuotaProvider({ children }: { children: ReactNode }) {
+  const quota = useViewingQuotaState();
+  return createElement(ViewingQuotaContext.Provider, { value: quota }, children);
+}
+
+export function useViewingQuota() {
+  const quota = useContext(ViewingQuotaContext);
+  if (!quota) throw new Error('useViewingQuota must be used within a ViewingQuotaProvider');
+  return quota;
 }

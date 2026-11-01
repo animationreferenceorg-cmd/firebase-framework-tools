@@ -3,6 +3,7 @@
 import type { Video } from '@/lib/types';
 import { VideoCard } from './VideoCard';
 import { cn } from '@/lib/utils';
+import { memo } from 'react';
 
 interface VideoGridProps {
   title: string;
@@ -10,7 +11,7 @@ interface VideoGridProps {
   columns?: number;
 }
 
-export function VideoGrid({ title, videos, columns = 4 }: VideoGridProps) {
+export const VideoGrid = memo(function VideoGrid({ title, videos, columns = 4 }: VideoGridProps) {
   if (!videos || videos.length === 0) {
     return null;
   }
@@ -50,4 +51,4 @@ export function VideoGrid({ title, videos, columns = 4 }: VideoGridProps) {
       </div>
     </section>
   );
-}
+});

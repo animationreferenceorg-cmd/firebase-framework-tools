@@ -7,6 +7,7 @@ import { Play, Info, Volume2, VolumeX } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { sanitizeVideoUrl, isVideoSourceAvailable } from '@/lib/video-availability';
+import { useElementActivity } from '@/hooks/use-element-activity';
 
 const ReactPlayer = dynamic(() => import('react-player'), { ssr: false });
 
@@ -16,6 +17,7 @@ interface BrowseHeroProps {
 }
 
 export function BrowseHero({ video, children }: BrowseHeroProps) {
+    const { ref: heroRef, isActive } = useElementActivity<HTMLDivElement>();
     const [isMounted, setIsMounted] = useState(false);
     const [isMuted, setIsMuted] = useState(true);
     const [isPlaying, setIsPlaying] = useState(true);
@@ -37,7 +39,7 @@ export function BrowseHero({ video, children }: BrowseHeroProps) {
     }, []);
 
     return (
-        <div className="relative h-[85vh] w-full overflow-hidden group/hero">
+        <div ref={heroRef} className="relative h-[85vh] w-full overflow-hidden group/hero">
             {/* Background Layer */}
             <div className="absolute inset-0 bg-[#060312]">
                 {/* Ambient dynamic glow when video is loading or idle */}
@@ -60,7 +62,7 @@ export function BrowseHero({ video, children }: BrowseHeroProps) {
                     <div className={`absolute inset-0 transition-opacity duration-1000 ${showVideo ? 'opacity-100' : 'opacity-0'}`}>
                         <ReactPlayer
                             url={cleanUrl}
-                            playing={isPlaying}
+                            playing={isPlaying && isActive}
                             loop={true}
                             muted={isMuted}
                             playsinline={true}

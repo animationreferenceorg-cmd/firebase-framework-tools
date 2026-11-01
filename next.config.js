@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // A separate output directory also avoids stale OneDrive build artifacts during profiling.
+  distDir: process.env.NEXT_BUILD_DIR || '.next',
   output: 'standalone',
   async headers() {
     return [

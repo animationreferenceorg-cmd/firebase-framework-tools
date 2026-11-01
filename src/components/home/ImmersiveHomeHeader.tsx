@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, LayoutGrid, Paintbrush, Play, Search, Sparkles, Upload, UserPlus } from 'lucide-react';
 import type { Video } from '@/lib/types';
+import { useElementActivity } from '@/hooks/use-element-activity';
 
 type ImmersiveHomeHeaderProps = {
   videos: Video[];
@@ -28,11 +29,22 @@ function playbackUrl(video?: Video) {
   return url;
 }
 
-function VideoPane({ video, className = '', priority = false }: { video?: Video; className?: string; priority?: boolean }) {
+function VideoPane({ video, className = '', active = false }: { video?: Video; className?: string; active?: boolean }) {
   const [failed, setFailed] = React.useState(false);
   const reduceMotion = useReducedMotion();
   const src = playbackUrl(video);
   const poster = video?.thumbnailUrl || video?.posterUrl;
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+
+  React.useEffect(() => {
+    const element = videoRef.current;
+    if (!element) return;
+    if (active && !reduceMotion) element.play().catch(() => {});
+    else element.pause();
+    return () => element.pause();
+  }, [active, reduceMotion, src, failed]);
+
+  React.useEffect(() => setFailed(false), [src]);
 
   return (
     <div className={`relative overflow-hidden bg-[#0a0810] ${className}`}>
@@ -44,13 +56,13 @@ function VideoPane({ video, className = '', priority = false }: { video?: Video;
       )}
       {src && !failed && !reduceMotion && (
         <video
+          ref={videoRef}
           src={src}
           poster={poster}
-          autoPlay
           loop
           muted
           playsInline
-          preload={priority ? 'auto' : 'metadata'}
+          preload="none"
           onError={() => setFailed(true)}
           className="absolute inset-0 h-full w-full object-cover"
         />
@@ -68,16 +80,17 @@ export function ImmersiveHomeHeader({
   onOpenPricing,
 }: ImmersiveHomeHeaderProps) {
   const reduceMotion = useReducedMotion();
+  const { ref: sectionRef, isActive } = useElementActivity<HTMLElement>();
   const [activeVideoIndex, setActiveVideoIndex] = React.useState(0);
   const featured = videos[activeVideoIndex] || videos[0];
 
   React.useEffect(() => {
-    if (reduceMotion || videos.length < 2) return;
+    if (!isActive || reduceMotion || videos.length < 2) return;
     const interval = window.setInterval(() => {
       setActiveVideoIndex((current) => (current + 1) % videos.length);
     }, 8000);
     return () => window.clearInterval(interval);
-  }, [reduceMotion, videos.length]);
+  }, [isActive, reduceMotion, videos.length]);
 
   React.useEffect(() => {
     if (activeVideoIndex >= videos.length) setActiveVideoIndex(0);
@@ -88,7 +101,7 @@ export function ImmersiveHomeHeader({
   };
 
   return (
-    <section className="relative -mx-4 -mt-2 min-h-[100svh] overflow-hidden bg-[#08060d] md:-mx-8">
+    <section ref={sectionRef} className="relative -mx-4 -mt-2 min-h-[100svh] overflow-hidden bg-[#08060d] md:-mx-8">
       <div className="absolute inset-0">
         <AnimatePresence initial={false} mode="sync">
           <motion.div
@@ -99,7 +112,7 @@ export function ImmersiveHomeHeader({
             exit={reduceMotion ? undefined : { opacity: 0 }}
             transition={{ duration: 1.2, ease: 'easeOut' }}
           >
-            <VideoPane video={featured} priority className="h-full w-full" />
+            <VideoPane video={featured} active={isActive} className="h-full w-full" />
           </motion.div>
         </AnimatePresence>
       </div>

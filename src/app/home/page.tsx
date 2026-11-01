@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useDeferredValue } from 'react';
 import { getInitialVideos, getSnapshotVideos } from '@/lib/videoSnapshot';
 import type { Video } from '@/lib/types';
 import { Film } from 'lucide-react';
@@ -16,10 +16,10 @@ import { searchResultToVideo, fetchLiveHubReferences } from '@/lib/reference-hub
 import { getPublicPortfolioItems, portfolioItemToVideo } from '@/lib/portfolio-service';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from '@/components/motion/SectionHeading';
-import { filterAvailableVideos } from '@/lib/video-availability';
 import { mixReferences } from '@/lib/reference-mix';
 import { parseSearchIntent, scoreVideoRelevance } from '@/lib/search-intent';
 import { Globe, Loader2, Sparkles } from 'lucide-react';
+import { useReferenceSearch } from '@/hooks/use-reference-search';
 
 const VIDEOS_PER_PAGE = 30;
 
@@ -27,6 +27,8 @@ export default function HomePage() {
   const [allVideos, setAllVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredQuery = useDeferredValue(searchQuery);
+  const searchScores = useReferenceSearch(allVideos, deferredQuery);
   const [showPricingDialog, setShowPricingDialog] = useState(false);
 
   // Live External Search State
@@ -71,18 +73,26 @@ export default function HomePage() {
       }
 
       try {
-        // 2. Concurrently stream full snapshot + live hub & community references
-        const [snapshotVids, liveHub, portfolioItems] = await Promise.all([
-          getSnapshotVideos().catch(() => [] as Video[]),
-          fetchLiveHubReferences().catch(() => [] as Video[]),
-          getPublicPortfolioItems({ limitCount: 30 }).catch(() => [] as any[]),
+        // Publish each source independently: slow external search must not
+        // hold the entire local catalog behind a Promise.all barrier.
+        let library = initial;
+        let live: Video[] = [];
+        let community: Video[] = [];
+        const publish = () => {
+          if (isCurrent) setAllVideos(mixReferences([...library, ...live, ...community]));
+        };
+        await Promise.all([
+          getSnapshotVideos().then(videos => {
+            if (videos.length) library = videos;
+            publish();
+            if (isCurrent) setLoading(false);
+          }),
+          fetchLiveHubReferences().then(videos => { live = videos; publish(); }).catch(() => {}),
+          getPublicPortfolioItems({ limitCount: 30 }).then(items => {
+            community = items.map(portfolioItemToVideo);
+            publish();
+          }).catch(() => {}),
         ]);
-        if (!isCurrent) return;
-
-        const available = filterAvailableVideos(snapshotVids);
-        const communityVids = (portfolioItems || []).map(portfolioItemToVideo);
-        const blended = [...available, ...liveHub, ...communityVids];
-        setAllVideos(mixReferences(blended));
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -98,10 +108,9 @@ export default function HomePage() {
     let result = allVideos.filter(v => activePill === 'shorts' ? v.isShort : !v.isShort);
 
     // Search Query with Animation Domain Intent & Relevance Scoring
-    if (searchQuery.trim()) {
-      const intent = parseSearchIntent(searchQuery);
+    if (deferredQuery.trim()) {
       result = result
-        .map(v => ({ video: v, score: scoreVideoRelevance(v, intent) }))
+        .map(v => ({ video: v, score: searchScores.get(v.id) || 0 }))
         .filter(x => x.score > 0)
         .sort((a, b) => b.score - a.score)
         .map(x => x.video);
@@ -223,15 +232,15 @@ export default function HomePage() {
     // Featured: keeps the natural randomized, anime-balanced order from mixReferences
 
     return result;
-  }, [allVideos, activeTab, activeType, activePill, searchQuery]);
+  }, [allVideos, activeTab, activeType, activePill, deferredQuery, searchScores]);
 
   useEffect(() => {
     setVisibleCount(VIDEOS_PER_PAGE);
-  }, [activeTab, activeType, activePill, searchQuery]);
+  }, [activeTab, activeType, activePill, deferredQuery]);
 
   // Unified Catalog: seamlessly blend local database clips and external hub results
   const unifiedVideos = useMemo(() => {
-    if (!searchQuery.trim()) {
+    if (!deferredQuery.trim()) {
       return filteredVideos;
     }
 
@@ -239,18 +248,18 @@ export default function HomePage() {
       return filteredVideos;
     }
 
-    const intent = parseSearchIntent(searchQuery);
+    const intent = parseSearchIntent(deferredQuery);
     const set = new Set(filteredVideos.map(v => v.id));
     const newExternals = externalVideos.filter(v => !set.has(v.id));
 
     // Combine local library matches with external hub results (Sketchfab, ArtStation, Pinterest, Sakuga)
     const combined = [...filteredVideos, ...newExternals];
     return combined
-      .map(v => ({ video: v, score: scoreVideoRelevance(v, intent) }))
+      .map(v => ({ video: v, score: searchScores.get(v.id) ?? scoreVideoRelevance(v, intent) }))
       .filter(x => x.score > 0)
       .sort((a, b) => b.score - a.score)
       .map(x => x.video);
-  }, [filteredVideos, externalVideos, searchQuery]);
+  }, [filteredVideos, externalVideos, deferredQuery, searchScores]);
 
   const visibleVideos = useMemo(() => unifiedVideos.slice(0, visibleCount), [unifiedVideos, visibleCount]);
   const hasMore = visibleCount < unifiedVideos.length;
@@ -273,7 +282,7 @@ export default function HomePage() {
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, unifiedVideos.length]);
+  }, [hasMore, unifiedVideos.length, visibleCount]);
 
   const heroVideos = useMemo(
     () => {
@@ -309,9 +318,10 @@ export default function HomePage() {
     }
 
     setWebSearching(true);
+    const controller = new AbortController();
     const handler = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/import/search?q=${encodeURIComponent(searchQuery.trim())}`);
+        const res = await fetch(`/api/import/search?q=${encodeURIComponent(searchQuery.trim())}`, { signal: controller.signal });
         if (res.ok) {
           const data = await res.json();
           const items: UnifiedSearchResult[] = data.results || [];
@@ -320,13 +330,16 @@ export default function HomePage() {
           setExternalVideos(converted);
         }
       } catch (err) {
-        console.error('Failed to search external web sources:', err);
+        if (!controller.signal.aborted) console.error('Failed to search external web sources:', err);
       } finally {
-        setWebSearching(false);
+        if (!controller.signal.aborted) setWebSearching(false);
       }
     }, 350);
 
-    return () => clearTimeout(handler);
+    return () => {
+      clearTimeout(handler);
+      controller.abort();
+    };
   }, [searchQuery]);
 
   return (

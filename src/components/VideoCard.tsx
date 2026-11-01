@@ -18,8 +18,10 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
-import { SaveToBoardModal } from './SaveToBoardModal';
-import { VideoFullscreenViewer } from './VideoFullscreenViewer';
+import dynamic from 'next/dynamic';
+
+const SaveToBoardModal = dynamic(() => import('./SaveToBoardModal').then(m => m.SaveToBoardModal));
+const VideoFullscreenViewer = dynamic(() => import('./VideoFullscreenViewer').then(m => m.VideoFullscreenViewer));
 import { VideoQuotaSlate } from '@/components/VideoQuotaSlate';
 import { useViewingQuota } from '@/hooks/use-viewing-quota';
 import Link from 'next/link';
@@ -60,7 +62,7 @@ interface VideoCardProps {
   priority?: boolean;
 }
 
-export function VideoCard({ video, poster, onSelect, priority = false }: VideoCardProps) {
+function VideoCardComponent({ video, poster, onSelect, priority = false }: VideoCardProps) {
   const { user: authUser } = useAuth();
   const { userProfile, mutate } = useUser();
   const { beginWatch, endWatch } = useWatchTracker();
@@ -100,6 +102,9 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [showLimitDialog, setShowLimitDialog] = useState(false);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
+  const [donateMounted, setDonateMounted] = useState(false);
+  // Keep an opened pricing dialog mounted when it hands off to checkout.
+  useEffect(() => { if (showDonateDialog) setDonateMounted(true); }, [showDonateDialog]);
   const [donateForceTimer, setDonateForceTimer] = useState(false);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -462,7 +467,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
             setIsHovered(false);
           }}
           className={cn(
-            "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lift transform-gpu transition-[transform,box-shadow] duration-500 ease-out-expo group-hover/card:-translate-y-1.5 group-hover/card:shadow-onion",
+            "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lift transition-[transform,box-shadow] duration-500 ease-out-expo group-hover/card:-translate-y-1.5 group-hover/card:shadow-onion",
             aspectRatio
           )}
         >
@@ -569,27 +574,27 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
         </div>
       </Link>
 
-      <LimitReachedDialog
+      {showLimitDialog && <LimitReachedDialog
         open={showLimitDialog}
         onOpenChange={setShowLimitDialog}
         feature="likes"
         onDonateClick={() => setShowDonateDialog(true)}
-      />
+      />}
 
-      <DonateDialog
+      {(showDonateDialog || donateMounted) && <DonateDialog
         open={showDonateDialog}
         forceTimer={donateForceTimer}
         onOpenChange={(val) => {
           setShowDonateDialog(val);
           if (!val) setDonateForceTimer(false);
         }}
-      />
+      />}
 
-      <SaveToBoardModal
+      {showSaveToBoard && <SaveToBoardModal
         video={video}
         open={showSaveToBoard}
         onOpenChange={setShowSaveToBoard}
-      />
+      />}
       </>
     )
   }
@@ -607,7 +612,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
           onMouseLeave={handleMouseLeave}
           onClick={handleCardClick}
           className={cn(
-            "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lift transform-gpu transition-[transform,box-shadow] duration-500 ease-out-expo group/card cursor-pointer touch-manipulation",
+            "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lift transition-[transform,box-shadow] duration-500 ease-out-expo group/card cursor-pointer touch-manipulation",
             isHovered && !isPlayerOpen ? "-translate-y-1.5 scale-[1.03] z-[100] shadow-onion ring-1 ring-white/15" : "z-0",
             aspectRatio
           )}
@@ -821,27 +826,27 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
         </div>
       </Dialog>
 
-      <LimitReachedDialog
+      {showLimitDialog && <LimitReachedDialog
         open={showLimitDialog}
         onOpenChange={setShowLimitDialog}
         feature="likes"
         onDonateClick={() => setShowDonateDialog(true)}
-      />
+      />}
 
-      <DonateDialog
+      {(showDonateDialog || donateMounted) && <DonateDialog
         open={showDonateDialog}
         forceTimer={donateForceTimer}
         onOpenChange={(val) => {
           setShowDonateDialog(val);
           if (!val) setDonateForceTimer(false);
         }}
-      />
+      />}
 
-      <SaveToBoardModal
+      {showSaveToBoard && <SaveToBoardModal
         video={video}
         open={showSaveToBoard}
         onOpenChange={setShowSaveToBoard}
-      />
+      />}
       </>
     );
   }
@@ -855,7 +860,7 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
         onMouseLeave={handleMouseLeave}
         onClick={handleCardClick}
         className={cn(
-          "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lift transform-gpu transition-[transform,box-shadow] duration-500 ease-out-expo group/card cursor-pointer touch-manipulation",
+          "relative w-full overflow-hidden rounded-[15px] bg-card shadow-lift transition-[transform,box-shadow] duration-500 ease-out-expo group/card cursor-pointer touch-manipulation",
           isHovered && !isPlayerOpen && !video.isShort && !poster ? "-translate-y-1.5 scale-[1.03] z-[100] shadow-onion ring-1 ring-white/15" : "z-0",
           aspectRatio
         )}>
@@ -1057,27 +1062,30 @@ export function VideoCard({ video, poster, onSelect, priority = false }: VideoCa
       </DialogContent>
     </Dialog>
 
-      <LimitReachedDialog
+      {showLimitDialog && <LimitReachedDialog
         open={showLimitDialog}
         onOpenChange={setShowLimitDialog}
         feature="likes"
         onDonateClick={() => setShowDonateDialog(true)}
-      />
+      />}
 
-      <DonateDialog
+      {(showDonateDialog || donateMounted) && <DonateDialog
         open={showDonateDialog}
         forceTimer={donateForceTimer}
         onOpenChange={(val) => {
           setShowDonateDialog(val);
           if (!val) setDonateForceTimer(false);
         }}
-      />
+      />}
 
-      <SaveToBoardModal
+      {showSaveToBoard && <SaveToBoardModal
         video={video}
         open={showSaveToBoard}
         onOpenChange={setShowSaveToBoard}
-      />
+      />}
     </>
   );
 }
+
+// Unchanged cards do not re-render when another catalog batch is appended.
+export const VideoCard = React.memo(VideoCardComponent);

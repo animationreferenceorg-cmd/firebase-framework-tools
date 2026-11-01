@@ -36,6 +36,7 @@ import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { GoogleAnalytics } from '@/components/layout/GoogleAnalytics';
 import { HeyCatchInit } from '@/components/HeyCatchInit';
+import { ViewingQuotaProvider } from '@/hooks/use-viewing-quota';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://animationreference.org'),
@@ -190,10 +191,12 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <AuthProvider>
             <UserProvider>
-              <FirebaseErrorListener />
-              <LayoutClient>
-                {children}
-              </LayoutClient>
+              <ViewingQuotaProvider>
+                <FirebaseErrorListener />
+                <LayoutClient>
+                  {children}
+                </LayoutClient>
+              </ViewingQuotaProvider>
             </UserProvider>
           </AuthProvider>
         </FirebaseClientProvider>

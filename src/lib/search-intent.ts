@@ -822,13 +822,13 @@ export function parseSearchIntent(query: string): SearchIntent {
     ])
   ).filter(Boolean);
 
-  const sketchfabQuery = primary
-    ? primary.external.sketchfab === null
-      ? tokens.length ? `${tokens.join(' ')} character` : null
-      : tokens.length
-        ? `${tokens.join(' ')} ${primary.external.sketchfab}`
+  const sketchfabQuery = tokens.length
+    ? tokens.join(' ')
+    : primary
+      ? primary.external.sketchfab === null
+        ? null
         : primary.external.sketchfab
-    : normalizedQuery || null;
+      : normalizedQuery || null;
 
   const externalQueries: SearchIntent['externalQueries'] = {
     sketchfab: sketchfabQuery,

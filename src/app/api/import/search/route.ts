@@ -68,6 +68,19 @@ export async function GET(request: NextRequest) {
       item.tags = generateRichTags({ ...item, authorName: item.authorName });
       const queryMatched = page.queryMatched !== false;
       const relevance = scoreVideoRelevance({ ...item, videoUrl: item.mediaType === 'video' ? item.mediaUrl : '' } as any, intent);
+
+      // Subject Guarantee: if user typed specific subject tokens (e.g. "cat" in "cat character designs"),
+      // require the subject in title/tags/description so fuzzy upstream matches (like "Just a girl") are excluded.
+      if (!explore && intent.tokens.length > 0) {
+        const textBlob = `${item.title} ${(item.tags || []).join(' ')} ${item.description || ''} ${item.authorName || ''}`.toLowerCase();
+        const matchesSubject = intent.tokens.some(tok => {
+          const base = tok.endsWith('s') ? tok.slice(0, -1) : tok;
+          const re = new RegExp(`\\b${base}s?\\b`, 'i');
+          return re.test(textBlob);
+        });
+        if (!matchesSubject && (options.source === 'all' || options.source === 'sketchfab' || !queryMatched)) return [];
+      }
+
       // Native/indexed search already matched the full query. Sparse titles and
       // synonyms must not erase those results. Fixed RSS feeds still need gating.
       if (!explore && !queryMatched) {
@@ -82,7 +95,7 @@ export async function GET(request: NextRequest) {
           if (!matchesQuery) return [];
         }
       }
-      const score = explore ? 1 : queryMatched ? Math.max(1, relevance) : relevance;
+      const score = explore ? 1 : queryMatched ? (relevance > 0 ? relevance : 1) : relevance;
       return score > 0 ? [{ item, score }] : [];
     });
   });

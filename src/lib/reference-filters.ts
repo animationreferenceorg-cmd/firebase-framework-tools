@@ -1,3 +1,4 @@
+import { parseSearchIntent } from './search-intent';
 import type { Video } from './types';
 import type { TabOption, TypeOption, PillOption, MediaOption } from '@/components/FilterBar';
 
@@ -60,12 +61,27 @@ export function filterReferenceCatalog(videos: Video[], { tab, type, pill, query
       const qClean = query.toLowerCase().trim();
       const qWords = qClean.split(/\s+/).filter(w => !['the', 'and', 'for', 'of', 'in', 'to', 'a', 'an'].includes(w) && w.length > 1);
 
+      const intent = parseSearchIntent(query);
       result = result
         .filter(v => {
           if (qWords.length === 0) return true;
-          // Provider results already passed native upstream search
-          if (v.source && v.source !== 'library') return true;
           const text = `${v.title} ${(v.tags || []).join(' ')} ${(v.categories || []).join(' ')} ${v.description || ''} ${v.author_name || ''}`.toLowerCase();
+
+          // Subject Guarantee: If specific subject tokens (e.g. "cat") were searched,
+          // require the subject in all items (including providers)
+          if (intent.tokens.length > 0) {
+            const matchesSubject = intent.tokens.some(tok => {
+              const base = tok.endsWith('s') ? tok.slice(0, -1) : tok;
+              const re = new RegExp(`\\b${base}s?\\b`, 'i');
+              return re.test(text);
+            });
+            if (!matchesSubject) return false;
+          }
+
+          // Provider results that matched the subject pass through
+          if (v.source && v.source !== 'library') return true;
+
+          // Library items must also match the rest of the search words
           return qWords.every(w => {
             const singular = w.endsWith('s') ? w.slice(0, -1) : w;
             const plural = w.endsWith('s') ? w : `${w}s`;

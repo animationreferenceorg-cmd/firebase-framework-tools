@@ -1,5 +1,7 @@
 'use client';
 
+import { parseSearchIntent } from '@/lib/search-intent';
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Box, 
@@ -166,9 +168,22 @@ export function LiveSearchDropdown({
     const qClean = trimmed.toLowerCase();
     const qWords = qClean.split(/\s+/).filter(w => !['the', 'and', 'for', 'of', 'in', 'to', 'a', 'an'].includes(w) && w.length > 1);
 
+    const intent = parseSearchIntent(trimmed);
     const matchesKeywords = (title: string, tags: string[] = [], desc: string = '') => {
       if (qWords.length === 0) return true;
       const text = `${title} ${tags.join(' ')} ${desc}`.toLowerCase();
+
+      // Subject Guarantee: If specific subject tokens (e.g. "cat") were searched,
+      // require the subject in all items
+      if (intent.tokens.length > 0) {
+        const matchesSubject = intent.tokens.some(tok => {
+          const base = tok.endsWith('s') ? tok.slice(0, -1) : tok;
+          const re = new RegExp(`\\b${base}s?\\b`, 'i');
+          return re.test(text);
+        });
+        if (!matchesSubject) return false;
+      }
+
       return qWords.some(w => {
         const singular = w.endsWith('s') ? w.slice(0, -1) : w;
         const plural = w.endsWith('s') ? w : `${w}s`;

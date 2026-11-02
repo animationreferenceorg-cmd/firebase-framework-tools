@@ -6,14 +6,21 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, LayoutGrid, Paintbrush, Play, Search, Sparkles, Upload, UserPlus } from 'lucide-react';
 import type { Video } from '@/lib/types';
 import { useElementActivity } from '@/hooks/use-element-activity';
+import { LiveSearchDropdown } from './LiveSearchDropdown';
+import { VideoFullscreenViewer } from '@/components/VideoFullscreenViewer';
+import { ArtworkDetailModal } from '@/components/reference/ArtworkDetailModal';
+import { searchResultToVideo } from '@/lib/reference-hub';
+import type { SourceOption } from '@/lib/reference-filters';
 
 type ImmersiveHomeHeaderProps = {
   videos: Video[];
+  allVideos?: Video[];
   totalVideos: number;
   searchQuery: string;
   onSearchChange: (value: string) => void;
   searchInputRef: React.MutableRefObject<HTMLInputElement | null>;
   onOpenPricing: () => void;
+  onSelectSource?: (source: SourceOption) => void;
 };
 
 const announcements = [
@@ -39,7 +46,7 @@ function VideoPane({ video, className = '', active = false }: { video?: Video; c
   React.useEffect(() => {
     const element = videoRef.current;
     if (!element) return;
-    if (active && !reduceMotion) element.play().catch(() => {});
+    if (active && !reduceMotion) element.play().catch(() => { });
     else element.pause();
     return () => element.pause();
   }, [active, reduceMotion, src, failed]);
@@ -73,15 +80,20 @@ function VideoPane({ video, className = '', active = false }: { video?: Video; c
 
 export function ImmersiveHomeHeader({
   videos,
+  allVideos = [],
   totalVideos,
   searchQuery,
   onSearchChange,
   searchInputRef,
   onOpenPricing,
+  onSelectSource,
 }: ImmersiveHomeHeaderProps) {
   const reduceMotion = useReducedMotion();
   const { ref: sectionRef, isActive } = useElementActivity<HTMLElement>();
   const [activeVideoIndex, setActiveVideoIndex] = React.useState(0);
+  const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+  const [selectedVideo, setSelectedVideo] = React.useState<Video | null>(null);
+  const [selectedArtwork, setSelectedArtwork] = React.useState<any | null>(null);
   const featured = videos[activeVideoIndex] || videos[0];
 
   React.useEffect(() => {
@@ -150,26 +162,44 @@ export function ImmersiveHomeHeader({
             The central animation hub drawing in live turnarounds from ArtStation, pins from Pinterest, interactive 3D models from Sketchfab, and sakuga smear cuts from Sakugabooru.
           </p>
 
-          <div className="mt-8 max-w-2xl">
-            <div className="relative overflow-hidden rounded-2xl bg-black/45 shadow-[0_24px_80px_-28px_rgba(0,0,0,0.9)] backdrop-blur-2xl focus-within:bg-black/60">
+          <div className="mt-8 max-w-2xl relative z-40">
+            <div className="relative overflow-hidden rounded-2xl bg-black/45 shadow-[0_24px_80px_-28px_rgba(0,0,0,0.9)] backdrop-blur-2xl focus-within:bg-black/60 border border-white/10 focus-within:border-violet-500/50 transition-all">
               <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-violet-200" />
               <input
                 ref={(node) => {
                   searchInputRef.current = node;
                 }}
                 value={searchQuery}
-                onChange={(event) => onSearchChange(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') scrollToLibrary();
+                onFocus={() => {
+                  if (searchQuery.trim().length >= 2) setIsDropdownOpen(true);
                 }}
-                placeholder="Search across ArtStation, Pinterest, Sketchfab & Sakuga (e.g. dragon, turnaround, smear)…"
+                onChange={(event) => {
+                  onSearchChange(event.target.value);
+                  if (event.target.value.trim().length >= 2) {
+                    setIsDropdownOpen(true);
+                  } else {
+                    setIsDropdownOpen(false);
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    setIsDropdownOpen(false);
+                    scrollToLibrary();
+                  } else if (event.key === 'Escape') {
+                    setIsDropdownOpen(false);
+                  }
+                }}
+                placeholder="Search across Pinterest, ArtStation, Sketchfab, Sakuga & Free CC0…"
                 className="h-16 w-full bg-transparent pl-14 pr-24 text-base font-medium text-white outline-none placeholder:text-white/40"
               />
               {searchQuery ? (
                 <button
                   type="button"
-                  onClick={() => onSearchChange('')}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white/80 hover:bg-white/15 hover:text-white"
+                  onClick={() => {
+                    onSearchChange('');
+                    setIsDropdownOpen(false);
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white/80 hover:bg-white/15 hover:text-white cursor-pointer"
                 >
                   Clear
                 </button>
@@ -177,6 +207,29 @@ export function ImmersiveHomeHeader({
                 <span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-xs font-bold text-white/35">Press /</span>
               )}
             </div>
+
+            {/* As-You-Type Live Search Dropdown */}
+            <LiveSearchDropdown
+              query={searchQuery}
+              isOpen={isDropdownOpen}
+              onClose={() => setIsDropdownOpen(false)}
+              allVideos={allVideos}
+              onSelectVideo={(video) => setSelectedVideo(video)}
+              onSelectExternal={(item) => {
+                if (item.mediaType === 'video' || (item.mediaUrl && (item.mediaUrl.endsWith('.mp4') || item.mediaUrl.endsWith('.webm')))) {
+                  setSelectedVideo(searchResultToVideo(item));
+                } else {
+                  setSelectedArtwork(item);
+                }
+              }}
+              onViewAllInLibrary={(source) => {
+                setIsDropdownOpen(false);
+                if (source && onSelectSource) {
+                  onSelectSource(source as SourceOption);
+                }
+                scrollToLibrary();
+              }}
+            />
 
             {/* Quick Hub Query Chips */}
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
@@ -251,9 +304,8 @@ export function ImmersiveHomeHeader({
               aria-label={`Play hero reference ${index + 1}`}
               aria-current={index === activeVideoIndex ? 'true' : undefined}
               onClick={() => setActiveVideoIndex(index)}
-              className={`h-1.5 rounded-full transition-all duration-500 ${
-                index === activeVideoIndex ? 'w-10 bg-white' : 'w-4 bg-white/35 hover:bg-white/65'
-              }`}
+              className={`h-1.5 rounded-full transition-all duration-500 ${index === activeVideoIndex ? 'w-10 bg-white' : 'w-4 bg-white/35 hover:bg-white/65'
+                }`}
             />
           ))}
         </div>
@@ -279,6 +331,24 @@ export function ImmersiveHomeHeader({
           ))}
         </div>
       </div>
+
+      {/* Direct Interactive Modals for Live Search Preview Click */}
+      {selectedVideo && (
+        <VideoFullscreenViewer
+          video={selectedVideo}
+          title={selectedVideo.title}
+          description={selectedVideo.description}
+          onClose={() => setSelectedVideo(null)}
+        />
+      )}
+
+      {selectedArtwork && (
+        <ArtworkDetailModal
+          item={selectedArtwork}
+          isOpen={Boolean(selectedArtwork)}
+          onClose={() => setSelectedArtwork(null)}
+        />
+      )}
     </section>
   );
 }

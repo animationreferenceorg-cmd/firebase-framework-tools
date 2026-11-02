@@ -262,7 +262,7 @@ export const REFERENCE_CONCEPTS: ConceptDef[] = [
   {
     id: 'creature',
     label: 'Creatures & Animals',
-    query: [/\bcreatures?\b/, /\bquadrupeds?\b/, /\banimals?\b/, /\bmonsters?\b/, /\bdragons?\b/, /\bhorses?\b/, /\bdogs?\b/, /\bcats?\b/, /\bbirds?\b/, /\bwol(f|ves)\b/, /\bbeasts?\b/],
+    query: [/\bcreatures?\b/, /\bquadrupeds?\b/, /\banimals?\b/, /\bmonsters?\b/, /\bbeasts?\b/],
     content: [/\bcreatures?\b/, /\bquadrupeds?\b/, /\banimals?\b/, /\bmonsters?\b/, /\bdragons?\b/, /\bhorses?\b/, /\bdogs?\b/, /\bcats?\b/, /\bbirds?\b/, /\bwol(f|ves)\b/, /\bbeasts?\b/],
     external: { sketchfab: 'creature animal', sketchfabAnimated: true, artstation: ['creature design', 'quadruped animation'], sakugabooru: ['animals'], wikimedia: true },
   },
@@ -809,7 +809,7 @@ export function parseSearchIntent(query: string): SearchIntent {
 
   const artstation = Array.from(
     new Set([
-      // The raw query first keeps extra words ("female", "robot") in play.
+      // The raw query first keeps extra words ("female", "robot", "dog") in play.
       ...(normalizedQuery ? [normalizedQuery] : []),
       ...(primary?.external.artstation.slice(0, 2) || [`${normalizedQuery} reference`]),
     ])

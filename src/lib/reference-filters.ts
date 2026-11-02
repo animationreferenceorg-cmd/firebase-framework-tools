@@ -1,6 +1,18 @@
 import type { Video } from './types';
 import type { TabOption, TypeOption, PillOption, MediaOption } from '@/components/FilterBar';
 
+export type SourceOption =
+  | 'all'
+  | 'pinterest'
+  | 'artstation'
+  | 'sketchfab'
+  | 'sakugabooru'
+  | 'free'
+  | 'openverse'
+  | 'wikimedia'
+  | 'archive'
+  | 'library';
+
 export interface ReferenceFilters {
   tab: TabOption;
   type: TypeOption;
@@ -8,10 +20,34 @@ export interface ReferenceFilters {
   query: string;
   scores: Map<string, number>;
   media?: MediaOption;
+  source?: SourceOption;
 }
 
-export function filterReferenceCatalog(videos: Video[], { tab, type, pill, query, scores, media = 'all' }: ReferenceFilters): Video[] {
+export function filterReferenceCatalog(videos: Video[], { tab, type, pill, query, scores, media = 'all', source = 'all' }: ReferenceFilters): Video[] {
     let result = videos.filter(v => pill === 'shorts' ? v.isShort : !v.isShort);
+
+    // Source filter (Pinterest, ArtStation, Sketchfab, Sakugabooru, Free Sources, Library)
+    if (source && source !== 'all') {
+      result = result.filter(v => {
+        const src = (v.source || '').toLowerCase();
+        const id = v.id || '';
+        if (source === 'pinterest') return src === 'pinterest' || id.startsWith('pin_');
+        if (source === 'artstation') return src === 'artstation' || id.startsWith('as_');
+        if (source === 'sketchfab') return src === 'sketchfab' || id.startsWith('sf_') || v.mediaType === 'model3d';
+        if (source === 'sakugabooru') return src === 'sakugabooru' || id.startsWith('saku_');
+        if (source === 'openverse') return src === 'openverse' || id.startsWith('openverse_');
+        if (source === 'wikimedia') return src === 'wikimedia' || id.startsWith('wiki_');
+        if (source === 'archive') return src === 'archive' || id.startsWith('archive_');
+        if (source === 'free') {
+          return ['openverse', 'wikimedia', 'archive', 'sakugabooru'].includes(src) ||
+            id.startsWith('openverse_') || id.startsWith('wiki_') || id.startsWith('archive_') || id.startsWith('saku_');
+        }
+        if (source === 'library') {
+          return !src || ['local', 'internal', 'library'].includes(src) || (!id.startsWith('pin_') && !id.startsWith('as_') && !id.startsWith('sf_') && !id.startsWith('saku_') && !id.startsWith('wiki_') && !id.startsWith('archive_') && !id.startsWith('openverse_'));
+        }
+        return true;
+      });
+    }
     if (media !== 'all') result = result.filter(video => {
       const model = video.mediaType === 'model3d' || video.source === 'sketchfab' || Boolean(video.embedUrl);
       if (media === 'model3d') return model;
@@ -21,6 +57,19 @@ export function filterReferenceCatalog(videos: Video[], { tab, type, pill, query
 
     // Search Query with Animation Domain Intent & Relevance Scoring
     if (query.trim()) {
+      const qClean = query.toLowerCase().trim();
+      const qWords = qClean.split(/\s+/).filter(w => !['the', 'and', 'for', 'of', 'in', 'to', 'a', 'an'].includes(w) && w.length > 1);
+
+      result = result
+        .filter(v => {
+          if (qWords.length === 0) return true;
+          const text = `${v.title} ${(v.tags || []).join(' ')} ${(v.categories || []).join(' ')} ${v.description || ''} ${v.author_name || ''}`.toLowerCase();
+          return qWords.some(w => {
+            const singular = w.endsWith('s') ? w.slice(0, -1) : w;
+            const plural = w.endsWith('s') ? w : `${w}s`;
+            return text.includes(w) || text.includes(singular) || text.includes(plural);
+          });
+        })
       result = result
         .map(v => ({ video: v, score: scores.get(v.id) || 0 }))
         .filter(x => x.score > 0)
@@ -105,11 +154,11 @@ export function filterReferenceCatalog(videos: Video[], { tab, type, pill, query
         const source = (v.source || '').toLowerCase();
         const isPin = source === 'pinterest' || v.id.startsWith('pin_');
         const is3D = source === 'sketchfab' || (v as any).mediaType === 'model3d' || !!(v as any).embedUrl || v.id.startsWith('sf_');
-        if (isPin || is3D) return false;
+        if (is3D) return false;
         const isArtStation = source === 'artstation' || v.id.startsWith('as_');
         const tags = (v.tags || []).map(t => t.toLowerCase());
         const cats = (v.categories || []).concat(v.categoryIds || []).map(c => c.toLowerCase());
-        return isArtStation || tags.some(t => t.includes('visdev') || t.includes('vis-dev') || t.includes('concept') || t.includes('visual development') || t.includes('matte') || t.includes('environment')) || cats.some(c => c.includes('visdev') || c.includes('concept') || c.includes('visual development'));
+        return isArtStation || isPin || ['wikimedia', 'web-images'].includes(source) && !v.videoUrl || tags.some(t => t.includes('visdev') || t.includes('vis-dev') || t.includes('concept') || t.includes('visual development') || t.includes('matte') || t.includes('environment')) || cats.some(c => c.includes('visdev') || c.includes('concept') || c.includes('visual development'));
       });
     } else if (tab === 'character-design') {
       // Character Design: Pinterest model sheets, pose references, anatomy studies
@@ -118,7 +167,7 @@ export function filterReferenceCatalog(videos: Video[], { tab, type, pill, query
         const isPin = source === 'pinterest' || v.id.startsWith('pin_');
         const tags = (v.tags || []).map(t => t.toLowerCase());
         const cats = (v.categories || []).concat(v.categoryIds || []).map(c => c.toLowerCase());
-        return isPin || tags.some(t => t.includes('character-design') || t.includes('character design') || t.includes('model-sheet') || t.includes('model sheet') || t.includes('pose') || t.includes('anatomy') || t.includes('expression')) || cats.some(c => c.includes('character design') || c.includes('model sheet'));
+        return isPin || ['wikimedia', 'web-images'].includes(source) && !v.videoUrl || tags.some(t => t.includes('character-design') || t.includes('character design') || t.includes('model-sheet') || t.includes('model sheet') || t.includes('pose') || t.includes('anatomy') || t.includes('expression')) || cats.some(c => c.includes('character design') || c.includes('model sheet'));
       });
     } else if (tab === 'community') {
       // Community: Tagged accounts and portfolio / user uploaded references

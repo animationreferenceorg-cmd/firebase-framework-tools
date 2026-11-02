@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { discoverySources, discoveryQuery, mergeReferenceVideos } from '@/lib/reference-feed';
+import { balanceSearchResults, discoverySources, discoveryQuery, mergeReferenceVideos } from '@/lib/reference-feed';
 import { filterReferenceCatalog } from '@/lib/reference-filters';
 import type { Video } from '@/lib/types';
 
@@ -8,10 +8,19 @@ const art = { id: 'as_art', title: 'Character turnaround', source: 'artstation',
 const pin = { id: 'pin_pin', title: 'Pose sheet', source: 'pinterest', tags: ['character-design'], videoUrl: '' } as Video;
 
 describe('reference feed filtering', () => {
+  it('surfaces a late Pinterest match among larger provider batches without changing within-source relevance', () => {
+    const artworks = Array.from({ length: 100 }, (_, index) => ({ ...art, id: `as_${index}` }));
+    const balanced = balanceSearchResults([...artworks, model, pin]);
+    expect(balanced.slice(0, 3).map(video => video.source)).toEqual(['artstation', 'sketchfab', 'pinterest']);
+    expect(balanced.filter(video => video.source === 'artstation')).toEqual(artworks);
+    expect(balanced).toHaveLength(102);
+    expect(balanceSearchResults([])).toEqual([]);
+  });
   it('selects providers for the active tab and builds query-aware browse seeds', () => {
-    expect(discoverySources('visdev')).toEqual(['artstation']);
+    expect(discoverySources('visdev')).toEqual(['artstation', 'pinterest', 'wikimedia', 'openverse', 'web-images']);
     expect(discoverySources('3d-models')).toContain('sketchfab');
     expect(discoverySources('character-design')).toContain('pinterest');
+    expect(discoverySources('character-design')).toContain('wikimedia');
     expect(discoverySources('community')).toEqual([]);
     expect(discoveryQuery('', 'visdev', 'all')).toBe('visual development');
     expect(discoveryQuery('dragon', 'visdev', 'all')).toBe('dragon');
@@ -21,9 +30,17 @@ describe('reference feed filtering', () => {
   it('applies tabs to external and local results together without mistaking 2D turnarounds for 3D models', () => {
     const filters = { tab: '3d-models' as const, type: 'all' as const, pill: 'all' as const, query: '', scores: new Map<string, number>() };
     expect(filterReferenceCatalog([model, art, pin], filters)).toEqual([model]);
-    expect(filterReferenceCatalog([model, art, pin], { ...filters, tab: 'visdev' })).toEqual([art]);
+    expect(filterReferenceCatalog([model, art, pin], { ...filters, tab: 'visdev' })).toEqual([art, pin]);
     expect(filterReferenceCatalog([model, art, pin], { ...filters, tab: 'character-design' })).toEqual([art, pin]);
     expect(filterReferenceCatalog([model], { ...filters, type: '3D' })).toEqual([model]);
+  });
+
+  it('shows Wikimedia images in the visual tabs without treating videos as images', () => {
+    const image = { ...art, id: 'wiki_image', source: 'wikimedia', tags: [], videoUrl: '' };
+    const video = { ...image, id: 'wiki_video', videoUrl: 'https://commons.wikimedia.org/video.webm' };
+    const filters = { tab: 'visdev' as const, type: 'all' as const, pill: 'all' as const, query: '', scores: new Map<string, number>() };
+    expect(filterReferenceCatalog([image, video], filters)).toEqual([image]);
+    expect(filterReferenceCatalog([image, video], { ...filters, tab: 'character-design' })).toEqual([image]);
   });
 
   it('appends new references without duplicating or moving existing cards', () => {

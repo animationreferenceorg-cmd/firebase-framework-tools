@@ -57,6 +57,8 @@ export async function GET(request: NextRequest) {
   const nextPositions: Partial<Record<ReferenceSource, string>> = {};
   const seen = new Set<string>();
   const intent = parseSearchIntent(options.q);
+  const qClean = options.q.toLowerCase().trim();
+  const qWords = qClean.split(/\s+/).filter(w => !['the', 'and', 'for', 'of', 'in', 'to', 'a', 'an'].includes(w) && w.length > 1);
   const ranked = pages.flatMap(({ source, page }) => {
     if (!page) return [];
     if (page.next && page.next !== positions?.[source]) nextPositions[source] = page.next;
@@ -64,7 +66,23 @@ export async function GET(request: NextRequest) {
       if (!item.id || seen.has(item.id)) return [];
       seen.add(item.id);
       item.tags = generateRichTags({ ...item, authorName: item.authorName });
-      const score = explore ? 1 : scoreVideoRelevance({ ...item, videoUrl: item.mediaType === 'video' ? item.mediaUrl : '' } as any, intent);
+      const queryMatched = page.queryMatched !== false;
+      const relevance = scoreVideoRelevance({ ...item, videoUrl: item.mediaType === 'video' ? item.mediaUrl : '' } as any, intent);
+      // Native/indexed search already matched the full query. Sparse titles and
+      // synonyms must not erase those results. Fixed RSS feeds still need gating.
+      if (!explore && !queryMatched) {
+        if (relevance === 0) return [];
+        if (qWords.length > 0) {
+          const textBlob = `${item.title} ${(item.tags || []).join(' ')} ${item.description || ''} ${item.authorName || ''}`.toLowerCase();
+          const matchesQuery = qWords.some(word => {
+            const singular = word.endsWith('s') ? word.slice(0, -1) : word;
+            const plural = word.endsWith('s') ? word : `${word}s`;
+            return textBlob.includes(word) || textBlob.includes(singular) || textBlob.includes(plural);
+          });
+          if (!matchesQuery) return [];
+        }
+      }
+      const score = explore ? 1 : queryMatched ? Math.max(1, relevance) : relevance;
       return score > 0 ? [{ item, score }] : [];
     });
   });
@@ -76,8 +94,8 @@ export async function GET(request: NextRequest) {
     query: options.q, mode: explore ? 'explore' : 'search', count: results.length,
     results, nextCursor, hasMore: Boolean(nextCursor),
     providers: pages.map(({ source, page, error }) => ({
-      source, status: error ? 'unavailable' : 'ok',
-      ...(error ? { message: error } : {}), ...(page?.limited ? { limited: true } : {}),
+      source, status: error ? 'unavailable' : page?.unconfigured ? 'unconfigured' : 'ok',
+      ...(error || page?.message ? { message: error || page?.message } : {}), ...(page?.limited ? { limited: true } : {}), ...(page?.partial ? { partial: true } : {}),
     })),
-  }, { headers: { 'Cache-Control': pages.some(page => page.error) ? 'no-store' : 'public, s-maxage=300, stale-while-revalidate=600' } });
+  }, { headers: { 'Cache-Control': pages.some(page => page.error || page.page?.partial) ? 'no-store' : 'public, s-maxage=300, stale-while-revalidate=600' } });
 }

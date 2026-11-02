@@ -1,13 +1,13 @@
 import type { Video } from './types';
 import type { TabOption, TypeOption, PillOption, MediaOption } from '@/components/FilterBar';
 
-export const REFERENCE_SOURCES = ['sketchfab', 'artstation', 'pinterest', 'sakugabooru', 'wikimedia', 'archive'] as const;
+export const REFERENCE_SOURCES = ['sketchfab', 'artstation', 'pinterest', 'sakugabooru', 'wikimedia', 'archive', 'openverse', 'web-images'] as const;
 export type ReferenceSource = typeof REFERENCE_SOURCES[number];
 
 export interface UnifiedSearchResult {
   id: string;
   title: string;
-  source: ReferenceSource | 'openverse';
+  source: ReferenceSource;
   sourceUrl: string;
   thumbnailUrl: string;
   mediaUrl: string;
@@ -28,13 +28,13 @@ export interface DiscoveryPage {
   results: UnifiedSearchResult[];
   nextCursor: string | null;
   hasMore: boolean;
-  providers: Array<{ source: ReferenceSource; status: 'ok' | 'unavailable'; message?: string; limited?: boolean }>;
+  providers: Array<{ source: ReferenceSource; status: 'ok' | 'unavailable' | 'unconfigured'; message?: string; limited?: boolean; partial?: boolean }>;
 }
 
 function tabSources(tab: TabOption, type: TypeOption): ReferenceSource[] {
   if (tab === '3d-models') return ['sketchfab', 'artstation'];
-  if (tab === 'visdev') return ['artstation'];
-  if (tab === 'character-design') return ['pinterest', 'artstation'];
+  if (tab === 'visdev') return ['artstation', 'pinterest', 'wikimedia', 'openverse', 'web-images'];
+  if (tab === 'character-design') return ['pinterest', 'artstation', 'wikimedia', 'openverse', 'web-images'];
   if (tab === 'community') return [];
   if (tab === 'animations') return type === '3D' ? ['sketchfab'] : ['sakugabooru', 'wikimedia', 'archive'];
   return type === '3D' ? ['sketchfab', 'artstation'] : [...REFERENCE_SOURCES];
@@ -43,7 +43,7 @@ function tabSources(tab: TabOption, type: TypeOption): ReferenceSource[] {
 export function discoverySources(tab: TabOption, type: TypeOption = 'all', media: MediaOption = 'all'): ReferenceSource[] {
   return tabSources(tab, type).filter(source => {
     if (media === 'video') return ['sakugabooru', 'wikimedia', 'archive'].includes(source);
-    if (media === 'image') return ['artstation', 'pinterest', 'wikimedia'].includes(source);
+    if (media === 'image') return ['artstation', 'pinterest', 'wikimedia', 'openverse', 'web-images'].includes(source);
     if (media === 'model3d') return ['sketchfab', 'artstation'].includes(source);
     return true;
   });
@@ -87,6 +87,23 @@ export function mergeReferenceVideos(...batches: Video[][]): Video[] {
     if (identity) sources.add(identity);
     return true;
   });
+}
+
+/** Keep each matching platform visible near the top, preserving its relevance order. */
+export function balanceSearchResults(videos: Video[]): Video[] {
+  const sources = new Map<string, Video[]>();
+  for (const video of videos) {
+    const source = video.source || 'library';
+    const bucket = sources.get(source);
+    if (bucket) bucket.push(video);
+    else sources.set(source, [video]);
+  }
+  const buckets = [...sources.values()];
+  const result: Video[] = [];
+  for (let index = 0; result.length < videos.length; index++) {
+    for (const bucket of buckets) if (index < bucket.length) result.push(bucket[index]);
+  }
+  return result;
 }
 
 export function isArtworkReference(video: Video): boolean {

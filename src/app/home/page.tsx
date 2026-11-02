@@ -16,8 +16,8 @@ import { SectionHeading } from '@/components/motion/SectionHeading';
 import { mixReferences } from '@/lib/reference-mix';
 import { Loader2 } from 'lucide-react';
 import { useReferenceDiscovery } from '@/hooks/use-reference-discovery';
-import { mergeReferenceVideos } from '@/lib/reference-feed';
-import { filterReferenceCatalog } from '@/lib/reference-filters';
+import { balanceSearchResults, mergeReferenceVideos } from '@/lib/reference-feed';
+import { filterReferenceCatalog, type SourceOption } from '@/lib/reference-filters';
 import { Button } from '@/components/ui/button';
 import { useReferenceSearch } from '@/hooks/use-reference-search';
 
@@ -37,9 +37,13 @@ export default function HomePage() {
   const [activePill, setActivePill] = useState<PillOption>('all');
   const [columns, setColumns] = useState<number>(4);
   const [activeMedia, setActiveMedia] = useState<MediaOption>('all');
-  const discovery = useReferenceDiscovery(searchQuery, activeTab, activeType, activePill, activeMedia);
+  const [activeSource, setActiveSource] = useState<SourceOption>('all');
+  const discovery = useReferenceDiscovery(deferredQuery, activeTab, activeType, activePill, activeMedia);
+  const { loadMore: loadMoreDiscovery, canAutoLoad: canAutoLoadDiscovery, loading: discoveryLoading } = discovery;
   const catalogVideos = useMemo(() => mergeReferenceVideos(allVideos, discovery.videos), [allVideos, discovery.videos]);
-  const searchScores = useReferenceSearch(catalogVideos, deferredQuery);
+  // Remote pages already passed the provider's keyword search. Only classify
+  // the local catalog in the worker; arrivals should not rescore the whole library.
+  const searchScores = useReferenceSearch(allVideos, deferredQuery);
   const masonry = activeTab === '3d-models' || activeTab === 'visdev' || activeTab === 'character-design' || activeMedia === 'image' || activeMedia === 'model3d';
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -100,11 +104,20 @@ export default function HomePage() {
     return () => { isCurrent = false; };
   }, []);
 
-  const unifiedVideos = useMemo(() => filterReferenceCatalog(catalogVideos, {
-    tab: activeTab, type: activeType, pill: activePill, media: activeMedia, query: deferredQuery, scores: searchScores,
-  }), [catalogVideos, activeTab, activeType, activePill, activeMedia, deferredQuery, searchScores]);
+  const unifiedVideos = useMemo(() => {
+    const scores = new Map(searchScores);
+    // Live results belong to this exact query. Rank them locally, but don't
+    // discard valid provider matches whose short metadata omits our keywords.
+    if (deferredQuery.trim() === searchQuery.trim()) {
+      for (const video of discovery.videos) scores.set(video.id, Math.max(100, scores.get(video.id) || 0));
+    }
+    const filtered = filterReferenceCatalog(catalogVideos, {
+      tab: activeTab, type: activeType, pill: activePill, media: activeMedia, source: activeSource, query: deferredQuery, scores,
+    });
+    return deferredQuery.trim() ? balanceSearchResults(filtered) : filtered;
+  }, [catalogVideos, activeTab, activeType, activePill, activeMedia, activeSource, deferredQuery, searchScores, searchQuery, discovery.videos]);
 
-  useEffect(() => { setVisibleCount(VIDEOS_PER_PAGE); }, [activeTab, activeType, activePill, activeMedia, deferredQuery]);
+  useEffect(() => { setVisibleCount(VIDEOS_PER_PAGE); }, [activeTab, activeType, activePill, activeMedia, activeSource, deferredQuery]);
   const visibleVideos = useMemo(() => unifiedVideos.slice(0, visibleCount), [unifiedVideos, visibleCount]);
   const moreLocal = visibleCount < unifiedVideos.length;
   const hasMore = moreLocal || discovery.hasMore;
@@ -115,11 +128,11 @@ export default function HomePage() {
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) return;
       if (moreLocal) setVisibleCount(previous => Math.min(previous + 24, unifiedVideos.length));
-      else if (discovery.canAutoLoad) void discovery.loadMore();
+      else if (canAutoLoadDiscovery) void loadMoreDiscovery();
     }, { rootMargin: '700px' });
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, moreLocal, unifiedVideos.length, visibleCount, discovery.loading, discovery.canAutoLoad, discovery.loadMore]);
+  }, [hasMore, moreLocal, unifiedVideos.length, visibleCount, discoveryLoading, canAutoLoadDiscovery, loadMoreDiscovery]);
 
   const heroVideos = useMemo(
     () => {
@@ -149,6 +162,8 @@ export default function HomePage() {
     <div className="min-h-screen space-y-12 pb-20 text-left text-foreground">
       <ImmersiveHomeHeader
         videos={heroVideos}
+        allVideos={allVideos}
+        onSelectSource={setActiveSource}
         totalVideos={allVideos.length}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -199,10 +214,12 @@ export default function HomePage() {
           setActivePill={setActivePill}
           activeMedia={activeMedia}
           setActiveMedia={setActiveMedia}
+          activeSource={activeSource}
+          setActiveSource={setActiveSource}
         />
 
         {/* Video Grid */}
-        {loading && allVideos.length === 0 ? (
+        {loading && allVideos.length === 0 && unifiedVideos.length === 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-8">
             {Array.from({ length: 12 }).map((_, idx) => (
               <div
@@ -228,7 +245,9 @@ export default function HomePage() {
         {/* A visible fallback also lets keyboard users continue without scrolling. */}
         <div ref={loadMoreRef} className="flex flex-col items-center gap-3 py-8" aria-live="polite">
           {discovery.loading && <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Finding more references…</p>}
-          {discovery.errors.length > 0 && <p className="max-w-xl text-center text-sm text-muted-foreground">Some sources are temporarily unavailable. Your loaded references are still here.</p>}
+          {discovery.errors.map(message => <p key={message} className="max-w-xl text-center text-sm text-muted-foreground">{message}</p>)}
+          {searchQuery.trim() && discovery.notices.map(message => <p key={message} className="max-w-xl text-center text-sm text-muted-foreground">{message}</p>)}
+          {discovery.limited && searchQuery.trim() && <p className="max-w-xl text-center text-sm text-muted-foreground">Pinterest results currently come from a limited selection of public feeds.</p>}
           {(hasMore || discovery.errors.length > 0) && <Button
             variant="outline" disabled={discovery.loading && !moreLocal && !discovery.canAutoLoad}
             onClick={() => {

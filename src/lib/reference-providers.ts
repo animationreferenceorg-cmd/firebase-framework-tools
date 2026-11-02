@@ -1,11 +1,14 @@
 import type { ReferenceSource, UnifiedSearchResult } from './reference-feed';
 import { parseSearchIntent } from './search-intent';
+import { searchWebImages } from './reference-web-images';
 
 const PAGE_SIZE = 24;
 const FEEDS = ['characterdesign', 'artreferences', 'animationart', 'posemuse', 'characterdesignreferences'];
 const NAMES: Record<ReferenceSource, string> = {
   artstation: 'ArtStation', pinterest: 'Pinterest', sketchfab: 'Sketchfab',
   sakugabooru: 'Sakugabooru', wikimedia: 'Wikimedia', archive: 'Internet Archive',
+  openverse: 'Openverse (Free CC0)',
+  'web-images': 'Web image search',
 };
 
 export interface ProviderRequest {
@@ -15,11 +18,17 @@ export interface ProviderRequest {
   explore: boolean;
   position?: string;
   signal?: AbortSignal;
+  indexSource?: 'pinterest';
 }
 export interface ProviderPage {
   items: UnifiedSearchResult[];
   next: string | null;
   limited?: boolean;
+  partial?: boolean;
+  /** RSS browsing is not a keyword search; its results still require local matching. */
+  queryMatched?: boolean;
+  unconfigured?: boolean;
+  message?: string;
 }
 
 async function get(url: string, signal?: AbortSignal, headers: Record<string, string> = {}) {
@@ -36,6 +45,40 @@ function pageNumber(position?: string) {
   if (!position) return 1;
   if (!/^\d{1,7}$/.test(position) || Number(position) < 1) throw new Error('Invalid page');
   return Number(position);
+}
+
+/** Track each expanded query independently so one failed query can be retried. */
+function batchPositions(position: string | undefined, count: number): Array<number | null> {
+  if (!position || /^\d{1,7}$/.test(position)) return Array(count).fill(pageNumber(position));
+  const parsed: unknown = JSON.parse(position);
+  if (!Array.isArray(parsed) || parsed.length !== count || !parsed.some(value => value !== null) ||
+      !parsed.every(value => value === null || Number.isInteger(value) && value >= 1 && value <= 9999999)) {
+    throw new Error('Invalid provider position');
+  }
+  return parsed;
+}
+
+async function fetchBatches(
+  position: string | undefined,
+  count: number,
+  fetchPage: (index: number, page: number) => Promise<{ items: UnifiedSearchResult[]; hasMore: boolean }>,
+): Promise<ProviderPage> {
+  if (!count) return { items: [], next: null };
+  const positions = batchPositions(position, count);
+  const batches = await Promise.allSettled(positions.map((page, index) =>
+    page === null ? Promise.resolve(null) : fetchPage(index, page)
+  ));
+  const active = batches.filter((_, index) => positions[index] !== null);
+  if (active.every(batch => batch.status === 'rejected')) throw new Error('All provider queries failed');
+  const next = positions.map((page, index) => {
+    const batch = batches[index];
+    if (page === null) return null;
+    if (batch.status === 'rejected') return page;
+    return batch.value?.hasMore ? page + 1 : null;
+  });
+  const items = batches.flatMap(batch => batch.status === 'fulfilled' && batch.value ? batch.value.items : []);
+  const partial = active.some(batch => batch.status === 'rejected');
+  return { items, next: next.some(page => page !== null) ? JSON.stringify(next) : null, ...(partial ? { partial: true } : {}) };
 }
 
 function nextSketchfabCursor(value: unknown): string | null {
@@ -70,14 +113,17 @@ async function sketchfab(options: ProviderRequest): Promise<ProviderPage> {
 }
 
 async function artstation(options: ProviderRequest): Promise<ProviderPage> {
-  const page = pageNumber(options.position);
   const intent = parseSearchIntent(options.query);
   const queries = options.explore
     ? options.tab === '3d-models' ? ['3d character model', 'creature sculpt']
       : options.tab === 'character-design' ? ['character design', 'character model sheet']
       : [options.query || 'visual development', 'environment concept art']
     : intent.externalQueries.artstation.map(query => options.tab === '3d-models' ? `${query} 3d model` : options.tab === 'character-design' ? `${query} character design` : query);
-  const pages = await Promise.all(queries.slice(0, 3).map(async query => {
+  // One exact keyword request while typing avoids multiplying ArtStation's
+  // rate limits. Explore keeps its two complementary browse seeds.
+  const selected = queries.slice(0, options.explore ? 2 : 1);
+  return fetchBatches(options.position, selected.length, async (index, page) => {
+    const query = selected[index];
     const params = new URLSearchParams({ query, page: String(page), per_page: String(PAGE_SIZE) });
     const data = await (await get(`https://www.artstation.com/api/v2/search/projects.json?${params}`, options.signal, {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
@@ -104,8 +150,7 @@ async function artstation(options: ProviderRequest): Promise<ProviderPage> {
       };
     });
     return { items, hasMore };
-  }));
-  return { items: pages.flatMap(result => result.items), next: pages.some(result => result.hasMore) ? String(page + 1) : null };
+  });
 }
 
 function decodeXml(text: string) {
@@ -114,6 +159,11 @@ function decodeXml(text: string) {
 
 async function pinterest(options: ProviderRequest): Promise<ProviderPage> {
   const token = process.env.PINTEREST_ACCESS_TOKEN;
+  // Give Pinterest a dedicated keyword query instead of hoping a general web
+  // result set contains pins. This source retains its own real index cursor.
+  if (!token && (process.env.SERPER_API_KEY || process.env.BRAVE_SEARCH_API_KEY)) {
+    return searchWebImages({ ...options, indexSource: 'pinterest' });
+  }
   if (token) {
     // Global keyword discovery is a partner API, not the user's own-pin search endpoint.
     const params = new URLSearchParams({ term: options.query || 'character design', country_code: process.env.PINTEREST_COUNTRY_CODE || 'US', limit: String(PAGE_SIZE) });
@@ -135,8 +185,10 @@ async function pinterest(options: ProviderRequest): Promise<ProviderPage> {
 
   // RSS has a finite set of pins. Move through feed batches once, then stop honestly.
   const page = pageNumber(options.position);
-  const feeds = FEEDS.slice((page - 1) * 2, page * 2);
-  const batches = await Promise.all(feeds.map(async feed => {
+  // Search every available fallback feed on a keyword request. Matching pins
+  // in later feeds should not require scrolling through empty search pages.
+  const feeds = options.explore ? FEEDS.slice((page - 1) * 2, page * 2) : FEEDS;
+  const batches = await Promise.allSettled(feeds.map(async feed => {
     const xml = await (await get(`https://www.pinterest.com/${feed}/feed.rss`, options.signal)).text();
     return [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].flatMap(match => {
       const text = decodeXml(match[1]);
@@ -153,14 +205,21 @@ async function pinterest(options: ProviderRequest): Promise<ProviderPage> {
       }];
     });
   }));
-  return { items: batches.flat(), next: page * 2 < FEEDS.length ? String(page + 1) : null, limited: true };
+  if (batches.length && batches.every(batch => batch.status === 'rejected')) throw new Error('Pinterest feeds unavailable');
+  const items = batches.flatMap(batch => batch.status === 'fulfilled' ? batch.value : []);
+  return {
+    items, next: options.explore && page * 2 < FEEDS.length ? String(page + 1) : null,
+    limited: true, queryMatched: false,
+    ...(batches.some(batch => batch.status === 'rejected') ? { partial: true } : {}),
+  };
 }
 
 async function sakugabooru(options: ProviderRequest): Promise<ProviderPage> {
-  const page = pageNumber(options.position);
   const intent = parseSearchIntent(options.query);
   const queries = options.explore ? ['order:score', 'smears', 'effects'] : intent.externalQueries.sakugabooru;
-  const batches = await Promise.all(queries.slice(0, 3).map(async tags => {
+  const selected = queries.slice(0, 3);
+  return fetchBatches(options.position, selected.length, async (index, page) => {
+    const tags = selected[index];
     const params = new URLSearchParams({ tags, limit: String(PAGE_SIZE), page: String(page) });
     const data = await (await get(`https://www.sakugabooru.com/post.json?${params}`, options.signal)).json();
     const posts = Array.isArray(data) ? data : [];
@@ -175,25 +234,26 @@ async function sakugabooru(options: ProviderRequest): Promise<ProviderPage> {
         description: `Source: ${post.source || 'Anime'}`,
       })),
     };
-  }));
-  return { items: batches.flatMap(batch => batch.items), next: batches.some(batch => batch.hasMore) ? String(page + 1) : null };
+  });
 }
 
 async function wikimedia(options: ProviderRequest): Promise<ProviderPage> {
-  if (!options.explore && !parseSearchIntent(options.query).externalQueries.wikimedia) return { items: [], next: null };
   const offset = options.position ? pageNumber(options.position) : 0;
-  const params = new URLSearchParams({ action: 'query', generator: 'search', gsrsearch: `${options.query || 'Muybridge locomotion animal human'} filetype:bitmap|video`, gsrnamespace: '6', gsrlimit: String(PAGE_SIZE), gsroffset: String(offset), prop: 'imageinfo', iiprop: 'url|mime|extmetadata|size', iiurlwidth: '800', format: 'json' });
+  const imagesOnly = options.tab === 'visdev' || options.tab === 'character-design';
+  const params = new URLSearchParams({ action: 'query', generator: 'search', gsrsearch: `${options.query || 'Muybridge locomotion animal human'} filetype:${imagesOnly ? 'bitmap' : 'bitmap|video'}`, gsrnamespace: '6', gsrlimit: String(PAGE_SIZE), gsroffset: String(offset), prop: 'imageinfo', iiprop: 'url|mime|extmetadata|size', iiurlwidth: '800', format: 'json' });
   const data = await (await get(`https://commons.wikimedia.org/w/api.php?${params}`, options.signal)).json();
   const items = Object.values(data.query?.pages || {}).flatMap((page: any): UnifiedSearchResult[] => {
     const info = page.imageinfo?.[0];
-    if (!info?.url || !/^(image|video)\//.test(info.mime || '')) return [];
+    if (!info?.url || !/^(image|video)\//.test(info.mime || '') || imagesOnly && !info.mime.startsWith('image/')) return [];
+    const description = info.extmetadata?.ImageDescription?.value?.replace(/<[^>]*>/g, '').slice(0, 300) || '';
+    const license = info.extmetadata?.LicenseShortName?.value?.replace(/<[^>]*>/g, '') || '';
     return [{
       id: `wiki_${page.pageid}`, title: (page.title || '').replace(/^File:/i, '').replace(/\.[^.]+$/, ''), source: 'wikimedia',
       sourceUrl: info.descriptionurl || info.url, thumbnailUrl: info.thumburl || info.url, mediaUrl: info.url,
       mediaType: info.mime.startsWith('video/') ? 'video' : info.mime.includes('gif') ? 'gif' : 'image',
       width: info.thumbwidth || info.width, height: info.thumbheight || info.height,
       authorName: info.extmetadata?.Artist?.value?.replace(/<[^>]*>/g, '') || 'Wikimedia', tags: ['wikimedia', 'study'],
-      description: info.extmetadata?.ImageDescription?.value?.replace(/<[^>]*>/g, '').slice(0, 300) || '',
+      description: [description, license ? `License: ${license}. See the original source for full attribution.` : 'See the original source for attribution and license details.'].filter(Boolean).join(' '),
     }];
   });
   return { items, next: typeof data.continue?.gsroffset === 'number' ? String(data.continue.gsroffset) : null };
@@ -216,7 +276,50 @@ async function archive(options: ProviderRequest): Promise<ProviderPage> {
   return { items, next: page * PAGE_SIZE < (data.response?.numFound || 0) ? String(page + 1) : null };
 }
 
-const PROVIDERS = { sketchfab, artstation, pinterest, sakugabooru, wikimedia, archive };
+async function openverse(options: ProviderRequest): Promise<ProviderPage> {
+  const page = pageNumber(options.position);
+  const query = options.query?.trim() || (options.tab === 'character-design' ? 'character turnaround' : 'animation motion reference');
+  const params = new URLSearchParams({
+    q: query,
+    page: String(page),
+    page_size: '20',
+  });
+
+  try {
+    const response = await get(`https://api.openverse.org/v1/images/?${params}`, options.signal);
+    const data = await response.json();
+    const results = Array.isArray(data.results) ? data.results : [];
+    const hasMore = page < (data.page_count || 1);
+
+    const items: UnifiedSearchResult[] = results
+      .filter((img: any) => img.url || img.thumbnail)
+      .map((img: any): UnifiedSearchResult => {
+        const title = img.title || 'Free Creative Reference';
+        const thumb = img.thumbnail || img.url;
+        const license = (img.license || 'CC').toUpperCase();
+        return {
+          id: `openverse_${img.id}`,
+          title,
+          source: 'openverse',
+          sourceUrl: img.foreign_landing_url || `https://openverse.org/image/${img.id}`,
+          thumbnailUrl: thumb,
+          mediaUrl: img.url || thumb,
+          mediaType: 'image',
+          width: img.width,
+          height: img.height,
+          authorName: img.creator || 'Openverse / CC0',
+          tags: ['openverse', 'free-reference', 'creative-commons', license.toLowerCase(), ...(img.tags || []).map((t: any) => (typeof t === 'string' ? t : t.name)).filter(Boolean)],
+          description: `License: ${license}. Free creative reference from ${img.creator || 'Openverse'}.`,
+        };
+      });
+
+    return { items, next: hasMore ? String(page + 1) : null };
+  } catch {
+    return { items: [], next: null };
+  }
+}
+
+const PROVIDERS = { sketchfab, artstation, pinterest, sakugabooru, wikimedia, archive, openverse, 'web-images': searchWebImages };
 export function fetchReferenceProvider(source: ReferenceSource, options: ProviderRequest) {
   return PROVIDERS[source](options);
 }

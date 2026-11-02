@@ -1,10 +1,11 @@
 'use client';
 
 import React from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Globe, Settings2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import type { SourceOption } from '@/lib/reference-filters';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -18,7 +19,6 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
-import { Settings2 } from 'lucide-react';
 
 export type TabOption =
     | 'featured'
@@ -44,6 +44,19 @@ export const QUICK_FILTER_PILLS: { id: PillOption; label: string; icon?: string 
     { id: 'shorts', label: '🎬 Short Films' },
 ];
 
+export const SOURCE_LABELS: Record<SourceOption, string> = {
+    all: 'All Sources',
+    pinterest: 'Pinterest',
+    artstation: 'ArtStation',
+    sketchfab: 'Sketchfab 3D',
+    sakugabooru: 'Sakuga 2D',
+    free: 'Free Sources (CC0)',
+    openverse: 'Openverse CC0',
+    wikimedia: 'Wikimedia Commons',
+    archive: 'Internet Archive',
+    library: 'Original Library',
+};
+
 interface FilterBarProps {
     activeTab: TabOption;
     setActiveTab: (tab: TabOption) => void;
@@ -55,9 +68,11 @@ interface FilterBarProps {
     setActivePill?: (pill: PillOption) => void;
     activeMedia?: MediaOption;
     setActiveMedia?: (media: MediaOption) => void;
+    activeSource?: SourceOption;
+    setActiveSource?: (source: SourceOption) => void;
 }
 
-export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, columns, setColumns, activePill = 'all', setActivePill, activeMedia = 'all', setActiveMedia }: FilterBarProps) {
+export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, columns, setColumns, activePill = 'all', setActivePill, activeMedia = 'all', setActiveMedia, activeSource = 'all', setActiveSource }: FilterBarProps) {
     return (
         <div className="min-w-0 space-y-3 py-3 sm:space-y-4 sm:py-4">
             {/* Top Row: Dribbble-style Quick Filter Pills */}
@@ -201,6 +216,30 @@ export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, 
                           <DropdownMenuRadioItem value="video">Videos</DropdownMenuRadioItem>
                           <DropdownMenuRadioItem value="image">Images</DropdownMenuRadioItem>
                           <DropdownMenuRadioItem value="model3d">3D Models</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                </DropdownMenu>}
+
+                {/* Source Filter Dropdown */}
+                {setActiveSource && <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button aria-label="Filter reference source" variant="outline" size="sm" className="h-10 shrink-0 border-white/10 bg-zinc-900/90 px-3 text-xs font-semibold text-zinc-200 hover:bg-zinc-800 hover:text-white sm:h-9 sm:px-3.5">
+                            <Globe className="mr-1.5 h-3.5 w-3.5 text-violet-400" />
+                            {SOURCE_LABELS[activeSource || 'all']} <ChevronDown className="ml-1.5 h-3 w-3 opacity-60" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56 bg-zinc-950/95 border-white/10 backdrop-blur-xl text-zinc-300">
+                        <DropdownMenuRadioGroup value={activeSource || 'all'} onValueChange={value => setActiveSource(value as SourceOption)}>
+                          <DropdownMenuRadioItem value="all" className="cursor-pointer">🌟 All Sources</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="pinterest" className="cursor-pointer">📌 Pinterest</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="artstation" className="cursor-pointer">🎨 ArtStation</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="sketchfab" className="cursor-pointer">🧊 Sketchfab 3D</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="sakugabooru" className="cursor-pointer">⚡ Sakugabooru 2D</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="free" className="cursor-pointer">🆓 Free / CC0 Sources</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="openverse" className="cursor-pointer">🌐 Openverse (Free CC0)</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="wikimedia" className="cursor-pointer">🏛️ Wikimedia Commons</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="archive" className="cursor-pointer">🎞️ Internet Archive</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="library" className="cursor-pointer">🎬 Original Library</DropdownMenuRadioItem>
                         </DropdownMenuRadioGroup>
                     </DropdownMenuContent>
                 </DropdownMenu>}

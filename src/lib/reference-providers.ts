@@ -118,7 +118,7 @@ async function artstation(options: ProviderRequest): Promise<ProviderPage> {
     ? options.tab === '3d-models' ? ['3d character model', 'creature sculpt']
       : options.tab === 'character-design' ? ['character design', 'character model sheet']
       : [options.query || 'visual development', 'environment concept art']
-    : intent.externalQueries.artstation.map(query => options.tab === '3d-models' ? `${query} 3d model` : options.tab === 'character-design' ? `${query} character design` : query);
+    : intent.externalQueries.artstation.map(query => (options.tab === '3d-models' && !query.includes('3d')) ? `${query} 3d model` : (options.tab === 'character-design' && !query.includes('character')) ? `${query} character design` : query);
   // One exact keyword request while typing avoids multiplying ArtStation's
   // rate limits. Explore keeps its two complementary browse seeds.
   const selected = queries.slice(0, options.explore ? 2 : 1);

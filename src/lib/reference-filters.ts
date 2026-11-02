@@ -63,8 +63,10 @@ export function filterReferenceCatalog(videos: Video[], { tab, type, pill, query
       result = result
         .filter(v => {
           if (qWords.length === 0) return true;
+          // Provider results already passed native upstream search
+          if (v.source && v.source !== 'library') return true;
           const text = `${v.title} ${(v.tags || []).join(' ')} ${(v.categories || []).join(' ')} ${v.description || ''} ${v.author_name || ''}`.toLowerCase();
-          return qWords.some(w => {
+          return qWords.every(w => {
             const singular = w.endsWith('s') ? w.slice(0, -1) : w;
             const plural = w.endsWith('s') ? w : `${w}s`;
             return text.includes(w) || text.includes(singular) || text.includes(plural);

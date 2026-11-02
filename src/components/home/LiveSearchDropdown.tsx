@@ -71,12 +71,23 @@ export function LiveSearchDropdown({
   const localMatches = useMemo(() => {
     if (!trimmed || trimmed.length < 2) return [];
     const qLower = trimmed.toLowerCase();
-    const words = qLower.split(/\s+/).filter(Boolean);
+    const words = qLower.split(/\s+/).filter(w => !['the', 'and', 'for', 'of', 'in', 'to', 'a', 'an'].includes(w) && w.length > 1);
+    if (words.length === 0) return [];
 
     const scored = allVideos.map((video) => {
       const titleLower = (video.title || '').toLowerCase();
       const tags = (video.tags || []).map((t) => t.toLowerCase());
       const descLower = (video.description || '').toLowerCase();
+      const text = `${titleLower} ${tags.join(' ')} ${descLower}`;
+
+      // When searching multiple keywords (e.g. "cat character designs"),
+      // require every query word to be present so unrelated library videos don't leak in
+      const matchesAll = words.every((word) => {
+        const singular = word.endsWith('s') ? word.slice(0, -1) : word;
+        const plural = word.endsWith('s') ? word : `${word}s`;
+        return text.includes(word) || text.includes(singular) || text.includes(plural);
+      });
+      if (!matchesAll) return { video, score: 0 };
 
       let score = 0;
       if (titleLower === qLower) score += 100;

@@ -381,7 +381,7 @@ export const REFERENCE_CONCEPTS: ConceptDef[] = [
     query: [/\bcharacter\s*(designs?|concepts?|art)\b/, /\bcharacterdesign\b/],
     content: [/\bcharacter\s*(designs?|concepts?)\b/, /\bcharacterdesign(references)?\b/],
     tab: 'character-design',
-    external: { sketchfab: null, artstation: ['character design'], sakugabooru: [] },
+    external: { sketchfab: 'character model', artstation: ['character design'], sakugabooru: ['character'] },
   },
   {
     id: 'visdev',
@@ -390,7 +390,7 @@ export const REFERENCE_CONCEPTS: ConceptDef[] = [
     query: [/\bvis\s*dev\b/, /\bvisual\s*development\b/, /\bconcept\s*art\b/, /\bkey\s*art\b/],
     content: [/\bvis\s*dev\b/, /\bvisual\s*development\b/, /\bconcept\s*art\b/, /\bkey\s*art\b/],
     tab: 'visdev',
-    external: { sketchfab: null, artstation: ['visual development', 'concept art'], sakugabooru: [] },
+    external: { sketchfab: 'environment', artstation: ['visual development', 'concept art'], sakugabooru: [] },
   },
   // --- STUDIOS & PRODUCTION HOUSES ---
   {
@@ -762,6 +762,12 @@ export function generateRichTags(item: {
     }
   }
 
+  // Extract key subject tokens from title (e.g. "cat", "dog", "dragon", "robot")
+  const titleTokens = title.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !STOPWORDS.has(w));
+  for (const token of titleTokens) {
+    richTags.add(token);
+  }
+
   // Preserve existing clean tags
   for (const t of ownTags) {
     const clean = t.toLowerCase().trim();
@@ -809,25 +815,36 @@ export function parseSearchIntent(query: string): SearchIntent {
 
   const artstation = Array.from(
     new Set([
-      // The raw query first keeps extra words ("female", "robot", "dog") in play.
+      // The raw query first keeps extra words ("female", "robot", "dog", "cat") in play.
       ...(normalizedQuery ? [normalizedQuery] : []),
+      ...(tokens.length && primary ? [`${tokens.join(' ')} ${primary.external.artstation[0] || 'character design'}`] : []),
       ...(primary?.external.artstation.slice(0, 2) || [`${normalizedQuery} reference`]),
     ])
   ).filter(Boolean);
 
+  const sketchfabQuery = primary
+    ? primary.external.sketchfab === null
+      ? tokens.length ? `${tokens.join(' ')} character` : null
+      : tokens.length
+        ? `${tokens.join(' ')} ${primary.external.sketchfab}`
+        : primary.external.sketchfab
+    : normalizedQuery || null;
+
   const externalQueries: SearchIntent['externalQueries'] = {
-    sketchfab: primary
-      ? primary.external.sketchfab === null
-        ? null
-        : tokens.length
-          ? `${tokens.join(' ')} ${primary.external.sketchfab}`
-          : primary.external.sketchfab
-      : normalizedQuery || null,
+    sketchfab: sketchfabQuery,
     sketchfabAnimated: primary ? primary.external.sketchfabAnimated : undefined,
     sketchfabCategory: primary?.external.sketchfabCategory,
     artstation,
-    pinterest: [normalizedQuery],
-    sakugabooru: primary ? primary.external.sakugabooru : normalizedQuery ? [normalizedQuery.replace(/\s+/g, '_')] : [],
+    pinterest: Array.from(new Set([
+      normalizedQuery,
+      ...(tokens.length && primary ? [`${tokens.join(' ')} ${primary.label.toLowerCase()}`] : []),
+      ...(tokens.length ? [`${tokens.join(' ')} reference`] : []),
+    ])).filter(Boolean),
+    sakugabooru: (primary && primary.external.sakugabooru.length > 0)
+      ? primary.external.sakugabooru
+      : tokens.length
+        ? [tokens.join('_'), tokens[0]]
+        : normalizedQuery ? [normalizedQuery.replace(/\s+/g, '_')] : [],
     wikimedia: primary ? Boolean(primary.external.wikimedia) : true,
     archive: primary ? Boolean(primary.external.archive) : true,
   };
@@ -897,6 +914,7 @@ export function scoreVideoRelevance(video: Video, intent: SearchIntent): number 
         matchedCount++;
       }
     }
+    if (matchedCount === 0) return 0;
     if (concepts.length === 0 && matchedCount < intent.tokens.length) return 0;
     if (matchedCount === intent.tokens.length) score += 25;
   }

@@ -21,6 +21,7 @@ import { UniversalVideoPlayer } from './UniversalVideoPlayer';
 import { RefVsFinalPlayer } from './RefVsFinalPlayer';
 import { PortfolioCommentsPanel } from './PortfolioCommentsPanel';
 import { SaveToBoardModal } from '@/components/SaveToBoardModal';
+import { EmbedShareButton } from '@/components/embed/EmbedShareButton';
 
 interface PortfolioItemDetailModalProps {
   item: PortfolioItem | null;
@@ -193,6 +194,7 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
 
                   {/* Top Actions */}
                   <div className="flex items-center gap-2">
+                    <EmbedShareButton kind="portfolio" id={item.id} title={item.title} mediaUrl={item.mediaUrl} />
                     <Button size="sm" variant="outline" onClick={handleShare} aria-label="Share this post" className="h-10 w-10 cursor-pointer rounded-full border-white/10 p-0 text-xs font-semibold text-zinc-300 hover:bg-white/10 sm:h-9 sm:w-auto sm:px-4">
                       <Share2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline font-bold">{sharesCount} Shares</span>
                     </Button>

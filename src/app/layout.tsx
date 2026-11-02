@@ -2,7 +2,7 @@
 import type { Metadata } from 'next';
 import { Bricolage_Grotesque, JetBrains_Mono, Inter } from 'next/font/google';
 import './globals.css';
-import { AmbientBackdrop } from '@/components/motion/AmbientBackdrop';
+import { DocumentShell } from '@/components/layout/DocumentShell';
 
 // Display face: a grotesque with enough character to carry headings without
 // shouting. Self-hosted by next/font, so no layout shift and no extra request.
@@ -28,15 +28,6 @@ const inter = Inter({
   display: 'swap',
   weight: ['400', '500', '600', '700'],
 });
-import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from '@/hooks/use-auth';
-import { UserProvider } from '@/hooks/use-user';
-import { LayoutClient } from '@/components/LayoutClient';
-import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
-import { FirebaseClientProvider } from '@/firebase/client-provider';
-import { GoogleAnalytics } from '@/components/layout/GoogleAnalytics';
-import { HeyCatchInit } from '@/components/HeyCatchInit';
-import { ViewingQuotaProvider } from '@/hooks/use-viewing-quota';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://animationreference.org'),
@@ -185,22 +176,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased" suppressHydrationWarning={true}>
-        <HeyCatchInit />
-        <GoogleAnalytics />
-        <AmbientBackdrop />
-        <FirebaseClientProvider>
-          <AuthProvider>
-            <UserProvider>
-              <ViewingQuotaProvider>
-                <FirebaseErrorListener />
-                <LayoutClient>
-                  {children}
-                </LayoutClient>
-              </ViewingQuotaProvider>
-            </UserProvider>
-          </AuthProvider>
-        </FirebaseClientProvider>
-        <Toaster />
+        <DocumentShell>{children}</DocumentShell>
       </body>
     </html>
   );

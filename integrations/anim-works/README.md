@@ -14,7 +14,13 @@ searchable by text, tag and category, with thumbnails and creator credits.
 
 **2. Receive a reference from animationreference.org.** A user watching a clip
 clicks the Anim.works button; the clip opens in your review tool, ready to draw
-on. No account linking, no file transfer, no copy-paste.
+on. This clip handoff does not require account linking or file transfer.
+
+**3. Link an artist's Animation Reference portfolio to StudioWatch.** A separate
+prototype lets an artist sign in, consent, and bring a public profile link to the
+freelance job board. See [portfolio linking](PORTFOLIO-LINKING.md) for its current
+limits, integration contract, and release checklist. It is not enabled on the
+live site.
 
 ---
 

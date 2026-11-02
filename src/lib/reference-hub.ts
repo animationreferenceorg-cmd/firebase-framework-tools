@@ -1,5 +1,5 @@
 import type { Video } from './types';
-import type { UnifiedSearchResult } from '@/app/api/import/search/route';
+import type { UnifiedSearchResult } from './reference-feed';
 
 /**
  * Transforms external multi-source search results (ArtStation, Pinterest,
@@ -55,9 +55,11 @@ export function searchResultToVideo(item: UnifiedSearchResult): Video {
     sourceUrl: item.sourceUrl,
     originalUrl: item.sourceUrl,
     status: 'published',
+    width: item.width,
+    height: item.height,
     isShort: false,
-    likeCount: Math.floor(Math.random() * 45) + 10,
-    viewCount: Math.floor(Math.random() * 300) + 50,
+    likeCount: 0,
+    viewCount: 0,
     createdAt: Date.now(),
     // Preserve custom provider metadata
     dataAiHint: `${item.source} ${item.tags.join(' ')}`,

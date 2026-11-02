@@ -60,9 +60,19 @@ interface VideoCardProps {
   poster?: boolean;
   onSelect?: (video: Video) => void;
   priority?: boolean;
+  layout?: 'video' | 'natural';
 }
 
-function VideoCardComponent({ video, poster, onSelect, priority = false }: VideoCardProps) {
+function VideoCardComponent({ video, poster, onSelect, priority = false, layout = 'video' }: VideoCardProps) {
+  const [imageRatio, setImageRatio] = useState<number | null>(null);
+  const natural = layout === 'natural';
+  const nativeRatio = video.width && video.height ? video.width / video.height : 1;
+  const naturalStyle = natural ? { aspectRatio: imageRatio || nativeRatio } : undefined;
+  const handleImageLoad = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    setIsImageLoaded(true);
+    const image = event.currentTarget;
+    if (natural && image.naturalWidth && image.naturalHeight) setImageRatio(image.naturalWidth / image.naturalHeight);
+  };
   const { user: authUser } = useAuth();
   const { userProfile, mutate } = useUser();
   const { beginWatch, endWatch } = useWatchTracker();
@@ -425,7 +435,7 @@ function VideoCardComponent({ video, poster, onSelect, priority = false }: Video
   const [proxyImgUrl, setProxyImgUrl] = useState<string | null>(null);
   const [proxyTried, setProxyTried] = useState(false);
   const effectiveImageUrl = proxyImgUrl || imageUrl;
-  const aspectRatio = (video.isShort || poster) ? "aspect-[2/3]" : "aspect-[3/4] md:aspect-video";
+  const aspectRatio = natural ? '' : (video.isShort || poster) ? "aspect-[2/3]" : "aspect-[3/4] md:aspect-video";
 
   // Bypass Next.js image optimizer for external CDNs that block server-side fetches (403)
   const isExternalCdn = !imageUrl ||
@@ -457,6 +467,7 @@ function VideoCardComponent({ video, poster, onSelect, priority = false }: Video
       <>
       <Link href={`/shorts/${video.id}`} className="w-full cursor-pointer group/card block">
         <div ref={containerRef}
+          style={naturalStyle}
           onMouseEnter={() => {
             beginWatch(hoverKey, 'hover');
             setIsHovered(true);
@@ -487,7 +498,7 @@ function VideoCardComponent({ video, poster, onSelect, priority = false }: Video
                 !isImageLoaded && "opacity-0"
               )}
               data-ai-hint={video.dataAiHint}
-              onLoad={() => setIsImageLoaded(true)}
+              onLoad={handleImageLoad}
               onError={() => {
                 if (!proxyTried && isExternalCdn && imageUrl && !imageUrl.startsWith('data:') && !imageUrl.startsWith('/api/proxy')) {
                   setProxyTried(true);
@@ -608,6 +619,7 @@ function VideoCardComponent({ video, poster, onSelect, priority = false }: Video
       <>
       <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
         <div ref={containerRef}
+          style={naturalStyle}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           onClick={handleCardClick}
@@ -622,7 +634,9 @@ function VideoCardComponent({ video, poster, onSelect, priority = false }: Video
           {/* Main Social Background / Thumbnail */}
           {effectiveImageUrl && !hasImageError ? (
             <>
-              <Image loading="lazy"
+              <Image loading={priority ? undefined : "lazy"}
+                priority={priority}
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 src={effectiveImageUrl}
                 alt={video.title}
                 fill
@@ -634,7 +648,7 @@ function VideoCardComponent({ video, poster, onSelect, priority = false }: Video
                   !isImageLoaded && "opacity-0"
                 )}
                 data-ai-hint={video.dataAiHint}
-                onLoad={() => setIsImageLoaded(true)}
+                onLoad={handleImageLoad}
                 onError={() => {
                   if (!proxyTried && isExternalCdn && imageUrl && !imageUrl.startsWith('data:') && !imageUrl.startsWith('/api/proxy')) {
                     setProxyTried(true);
@@ -856,6 +870,7 @@ function VideoCardComponent({ video, poster, onSelect, priority = false }: Video
     <Dialog open={isPlayerOpen} onOpenChange={handleOpenPlayerChange}>
       <div
         ref={containerRef}
+        style={naturalStyle}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onClick={handleCardClick}
@@ -880,7 +895,7 @@ function VideoCardComponent({ video, poster, onSelect, priority = false }: Video
               (video.isShort || poster) && isImageLoaded && "opacity-100"
             )}
             data-ai-hint={video.dataAiHint}
-            onLoad={() => setIsImageLoaded(true)}
+            onLoad={handleImageLoad}
             onError={() => {
               setHasImageError(true);
               setIsImageLoaded(true);

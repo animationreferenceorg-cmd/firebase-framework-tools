@@ -24,6 +24,7 @@ import { useUser } from '@/hooks/use-user';
 import { getEntitlements } from '@/lib/plans';
 import { useViewingQuota } from '@/hooks/use-viewing-quota';
 import { cn } from '@/lib/utils';
+import { EmbedShareButton } from '@/components/embed/EmbedShareButton';
 
 type VideoFullscreenViewerProps = {
     video: Video;
@@ -32,13 +33,16 @@ type VideoFullscreenViewerProps = {
     onClose: () => void;
 };
 
-export function VideoFullscreenViewer({ video, title, description, onClose }: VideoFullscreenViewerProps) {
+export function VideoFullscreenViewer(props: VideoFullscreenViewerProps) {
     // If reference is an artwork or project without a playable video stream,
     // open the dedicated interactive artwork & project asset viewer
-    if (!video.videoUrl && (video.posterUrl || video.thumbnailUrl)) {
-        return <ArtworkDetailModal item={video} isOpen={true} onClose={onClose} />;
+    if (!props.video.videoUrl && (props.video.posterUrl || props.video.thumbnailUrl)) {
+        return <ArtworkDetailModal item={props.video} isOpen={true} onClose={props.onClose} />;
     }
+    return <VideoStudyViewer {...props} />;
+}
 
+function VideoStudyViewer({ video, title, description, onClose }: VideoFullscreenViewerProps) {
     const originalIsInstagram = video.originalUrl?.toLowerCase().includes('instagram.com');
     const { userProfile } = useUser();
     const entitlements = getEntitlements(userProfile);
@@ -72,7 +76,7 @@ export function VideoFullscreenViewer({ video, title, description, onClose }: Vi
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
+            if (e.key === 'Escape' && !e.defaultPrevented) {
                 onClose();
             }
         };
@@ -119,6 +123,7 @@ export function VideoFullscreenViewer({ video, title, description, onClose }: Vi
 
                 {/* Studio Tools Header Actions */}
                 <div className="flex items-center gap-2 shrink-0">
+                    <EmbedShareButton kind={video.isPortfolio ? 'portfolio' : 'video'} id={video.id} title={video.title} mediaUrl={video.videoUrl} />
                     <ProDownloadButton videoId={video.id} variant="labeled" className="h-9 px-2.5 sm:px-3" />
                     <Button
                         variant="ghost"

@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuItem,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -29,6 +30,7 @@ export type TabOption =
     | 'trending'
     | 'latest';
 export type TypeOption = 'all' | '2D' | '3D';
+export type MediaOption = 'all' | 'video' | 'image' | 'model3d';
 export type PillOption = 'all' | 'locomotion' | 'combat' | 'acting' | 'creature' | 'mechanics' | 'vfx' | 'shorts';
 
 export const QUICK_FILTER_PILLS: { id: PillOption; label: string; icon?: string }[] = [
@@ -51,9 +53,11 @@ interface FilterBarProps {
     setColumns?: (cols: number) => void;
     activePill?: PillOption;
     setActivePill?: (pill: PillOption) => void;
+    activeMedia?: MediaOption;
+    setActiveMedia?: (media: MediaOption) => void;
 }
 
-export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, columns, setColumns, activePill = 'all', setActivePill }: FilterBarProps) {
+export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, columns, setColumns, activePill = 'all', setActivePill, activeMedia = 'all', setActiveMedia }: FilterBarProps) {
     return (
         <div className="min-w-0 space-y-3 py-3 sm:space-y-4 sm:py-4">
             {/* Top Row: Dribbble-style Quick Filter Pills */}
@@ -185,18 +189,21 @@ export function FilterBar({ activeTab, setActiveTab, activeType, setActiveType, 
                 </div>
 
                 {/* Media Type Dropdown */}
-                <DropdownMenu>
+                {setActiveMedia && <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-10 shrink-0 border-white/5 bg-zinc-900 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white sm:h-9 sm:px-4">
-                            All Media <ChevronDown className="ml-2 h-3 w-3" />
+                        <Button aria-label="Filter media type" variant="outline" size="sm" className="h-10 shrink-0 border-white/5 bg-zinc-900 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white sm:h-9 sm:px-4">
+                            {{ all: 'All Media', video: 'Videos', image: 'Images', model3d: '3D Models' }[activeMedia]} <ChevronDown className="ml-2 h-3 w-3" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-zinc-900 border-white/10 text-zinc-300">
-                        <DropdownMenuItem className="focus:bg-zinc-800 focus:text-white cursor-pointer">All Media</DropdownMenuItem>
-                        <DropdownMenuItem className="focus:bg-zinc-800 focus:text-white cursor-pointer">Video</DropdownMenuItem>
-                        <DropdownMenuItem className="focus:bg-zinc-800 focus:text-white cursor-pointer">Image</DropdownMenuItem>
+                        <DropdownMenuRadioGroup value={activeMedia} onValueChange={value => setActiveMedia(value as MediaOption)}>
+                          <DropdownMenuRadioItem value="all">All Media</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="video">Videos</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="image">Images</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="model3d">3D Models</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
                     </DropdownMenuContent>
-                </DropdownMenu>
+                </DropdownMenu>}
             </div>
             </div>
         </div>

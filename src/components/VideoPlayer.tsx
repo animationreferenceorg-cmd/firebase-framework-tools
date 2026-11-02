@@ -264,15 +264,16 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
     const playerIdRef = React.useRef(Symbol('video-player'));
     const isPro = getEntitlements(userProfile).isPro;
     const quota = useViewingQuota();
+    const attemptQuotaUnlock = quota.attemptUnlock;
     const isBlockedByQuota = enforceViewingQuota && quota.hasReachedLimit && !quota.isVideoUnlocked(video.id);
 
     // A reference is "unlocked" when it actually plays in the viewer.
     const recordQuotaView = React.useCallback(() => {
         if (!enforceViewingQuota || !video.id) return;
-        quota.attemptUnlock(video.id).then(({ allowed }) => {
+        attemptQuotaUnlock(video.id).then(({ allowed }) => {
             if (!allowed) setIsPlaying(false);
         });
-    }, [enforceViewingQuota, video.id, quota]);
+    }, [enforceViewingQuota, video.id, attemptQuotaUnlock]);
 
     // Count view when video plays or mounts with autoPlay/active playback
     React.useEffect(() => {

@@ -66,7 +66,13 @@ a follow-up call.
 
 ## 3. The identity question
 
-This is the one that needs a decision rather than a document.
+For the freelance job board, Animation Reference sign-in and explicit consent
+are the intended starting point. A prototype already passes a public portfolio
+link to StudioWatch; see [PORTFOLIO-LINKING.md](PORTFOLIO-LINKING.md). It does
+not yet establish a shared Anim.works account or a production job-board session.
+Please provide the final job-board origin and exact HTTPS callback URL, and tell
+us how a verified Animation Reference identity should attach to your existing
+account and persistent job application system.
 
 When a user sends a clip from our site to yours, you receive a stable pseudonym
 (`user.id`) — the same string every time that person sends you something, and
@@ -79,7 +85,8 @@ site, showing their Anim.works projects on their profile — we need real accoun
 linking, which means an OAuth flow one way or the other, and a decision about who
 hosts it.
 
-Tell us whether you want that. If yes, whose login is the anchor?
+For clip review and other Anim.works features, please also confirm whether that
+same account association is needed and which platform owns the session.
 
 ---
 

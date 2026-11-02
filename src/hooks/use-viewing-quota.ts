@@ -63,7 +63,14 @@ function useViewingQuotaState() {
   );
 
   const refresh = useCallback(() => {
-    setStatus(getDailyQuotaStatus(profileList, Number.isFinite(limit) ? limit : FREE_DAILY_UNLOCKED_LIMIT, isGuest));
+    const next = getDailyQuotaStatus(profileList, Number.isFinite(limit) ? limit : FREE_DAILY_UNLOCKED_LIMIT, isGuest);
+    setStatus(previous => {
+      const equalIds = (a: string[], b: string[]) => a.length === b.length && a.every((id, index) => id === b[index]);
+      // Replaying an already unlocked clip must not notify every card again.
+      return previous.date === next.date && previous.limit === next.limit && previous.isGuest === next.isGuest
+        && equalIds(previous.todayUnlockedIds, next.todayUnlockedIds) && equalIds(previous.allTimeUnlockedIds, next.allTimeUnlockedIds)
+        ? previous : next;
+    });
   }, [profileList, limit, isGuest]);
 
   useEffect(() => {

@@ -668,7 +668,7 @@ class AnimRefBrowserWindow(QtWidgets.QDialog):
         title.setStyleSheet("font-size: 16px; font-weight: bold; color: #ffffff;")
         layout.addWidget(title)
 
-        desc = QtWidgets.QLabel("Record your Maya 3D viewport playblast and sync it directly to Animation Reference for locked side-by-side comparison.")
+        desc = QtWidgets.QLabel("Record a local Maya playblast, then load the file in Animation Reference’s compare tool. Cloud upload is not available yet.")
         desc.setStyleSheet("color: #8b949e; font-size: 12px;")
         desc.setWordWrap(True)
         layout.addWidget(desc)
@@ -697,7 +697,7 @@ class AnimRefBrowserWindow(QtWidgets.QDialog):
         self.record_pb_btn.clicked.connect(self.run_playblast_capture)
         btn_row.addWidget(self.record_pb_btn)
 
-        self.upload_pb_btn = QtWidgets.QPushButton("☁️ Upload to AnimRef Account")
+        self.upload_pb_btn = QtWidgets.QPushButton("Cloud upload unavailable")
         self.upload_pb_btn.setObjectName("SuccessBtn")
         self.upload_pb_btn.setEnabled(False)
         self.upload_pb_btn.clicked.connect(self.run_playblast_upload)
@@ -951,8 +951,8 @@ class AnimRefBrowserWindow(QtWidgets.QDialog):
         try:
             mp4_path = animref_playblast.record_playblast(width=w, height=h)
             self.recorded_playblast_path = mp4_path
-            self.pb_status_lbl.setText("Playblast ready: " + os.path.basename(mp4_path))
-            self.upload_pb_btn.setEnabled(True)
+            self.pb_status_lbl.setText("Playblast saved locally: " + mp4_path + " — load this file in the website compare tool.")
+            self.upload_pb_btn.setEnabled(False)
             if cmds:
                 cmds.inViewMessage(amg="Playblast generated: <hl>{}</hl>".format(os.path.basename(mp4_path)), pos="midCenter", fade=True)
         except Exception as e:
@@ -978,8 +978,8 @@ class AnimRefBrowserWindow(QtWidgets.QDialog):
             except Exception as e:
                 def _err():
                     self.pb_status_lbl.setText("Upload error: " + str(e))
-                    self.upload_pb_btn.setEnabled(True)
-                    self.upload_pb_btn.setText("☁️ Upload to AnimRef Account")
+                    self.upload_pb_btn.setEnabled(False)
+                    self.upload_pb_btn.setText("Cloud upload unavailable")
                     self.pb_progress.setVisible(False)
                 QtCore.QTimer.singleShot(0, _err)
 
@@ -990,8 +990,8 @@ class AnimRefBrowserWindow(QtWidgets.QDialog):
     def on_playblast_uploaded(self, res):
         self.pb_progress.setValue(100)
         self.pb_progress.setVisible(False)
-        self.upload_pb_btn.setEnabled(True)
-        self.upload_pb_btn.setText("Uploaded!")
+        self.upload_pb_btn.setEnabled(False)
+        self.upload_pb_btn.setText("Cloud upload unavailable")
         self.compare_card.setVisible(True)
 
         pub_url = res.get("publicUrl", "")

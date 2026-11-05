@@ -5,37 +5,159 @@ const DEFAULT_ORIGIN = 'https://animationreference.org';
 const sessionStore = chrome.storage.session || chrome.storage.local;
 const credentialStore = chrome.storage.local;
 
-chrome.runtime.onInstalled.addListener(() => {
-  // The downloadable extension is intended for the live product. Its connect
-  // flow may still explicitly set a different trusted origin during development.
-  credentialStore.set({ apiOrigin: DEFAULT_ORIGIN });
+chrome.runtime.onInstalled.addListener(async () => {
+  const stored = await credentialStore.get('apiOrigin');
+  if (!stored.apiOrigin) {
+    credentialStore.set({ apiOrigin: DEFAULT_ORIGIN });
+  }
 });
+
+async function getRelevantTabs() {
+  try {
+    const allTabs = await chrome.tabs.query({});
+    return (allTabs || []).filter((t) => {
+      if (!t.url) return false;
+      try {
+        const u = new URL(t.url);
+        return (
+          u.hostname === 'localhost' ||
+          u.hostname === '127.0.0.1' ||
+          u.hostname === 'animationreference.org' ||
+          u.hostname.endsWith('.animationreference.org')
+        );
+      } catch {
+        return false;
+      }
+    });
+  } catch {
+    return [];
+  }
+}
 
 async function getOrigin() {
   const data = await credentialStore.get('apiOrigin');
-  if (data.apiOrigin) return data.apiOrigin;
-  // Migrate development users of the earlier session-only extension build.
-  const legacy = await sessionStore.get('apiOrigin');
-  if (legacy.apiOrigin) {
-    await credentialStore.set({ apiOrigin: legacy.apiOrigin });
-    return legacy.apiOrigin;
-  }
-  return data.apiOrigin || DEFAULT_ORIGIN;
+  try {
+    const tabs = await getRelevantTabs();
+    const localTab = tabs.find((t) => t.url && (t.url.startsWith('http://localhost:3001') || t.url.startsWith('http://localhost:3000') || t.url.startsWith('http://127.0.0.1:3001') || t.url.startsWith('http://127.0.0.1:3000')));
+    if (localTab?.url) {
+      const devOrigin = new URL(localTab.url).origin;
+      if (devOrigin !== data.apiOrigin) {
+        await credentialStore.set({ apiOrigin: devOrigin });
+      }
+      return devOrigin;
+    }
+    if (tabs.length > 0 && tabs[0].url) {
+      const devOrigin = new URL(tabs[0].url).origin;
+      if (devOrigin !== data.apiOrigin) {
+        await credentialStore.set({ apiOrigin: devOrigin });
+      }
+      return devOrigin;
+    }
+  } catch {}
+  return data.apiOrigin || 'http://localhost:3001';
 }
 
-async function getToken() {
+async function fetchWithOriginFallback(path, options = {}) {
+  const primary = await getOrigin();
+  const candidates = [
+    primary,
+    'http://localhost:3001',
+    'http://localhost:3000',
+    DEFAULT_ORIGIN,
+  ].filter((v, i, arr) => v && arr.indexOf(v) === i);
+
+  let lastError = null;
+  let lastResponse = null;
+
+  for (const origin of candidates) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 12000);
+      const res = await fetch(`${origin}${path}`, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (res.status !== 404 && res.status < 500) {
+        if (origin !== primary) {
+          await credentialStore.set({ apiOrigin: origin }).catch(() => {});
+        }
+        return { response: res, origin };
+      }
+      lastResponse = { response: res, origin };
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  if (lastResponse) return lastResponse;
+  throw lastError || new Error('Could not reach Animation Reference server.');
+}
+
+
+async function tryAutoSignInFromOpenTabs() {
+  try {
+    const tabs = await getRelevantTabs();
+    for (const tab of tabs) {
+      if (!tab.id) continue;
+      const [res] = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => {
+          const bridge = document.getElementById('animref-extension-auth-bridge');
+          if (bridge?.dataset?.token) {
+            return {
+              token: bridge.dataset.token,
+              refreshToken: bridge.dataset.refreshToken,
+              expiresAt: Number(bridge.dataset.expiresAt || 0),
+              origin: bridge.dataset.origin || location.origin,
+            };
+          }
+          return null;
+        },
+      }).catch(() => [null]);
+
+      if (res?.result?.token) {
+        await handleConnect(res.result, res.result.origin);
+        return res.result.token;
+      }
+    }
+  } catch {}
+
+  try {
+    if (chrome.cookies) {
+      const urlsToCheck = ['http://localhost:3001', 'http://localhost:3000', 'http://127.0.0.1:3001', 'https://animationreference.org'];
+      for (const checkUrl of urlsToCheck) {
+        const cookie = await chrome.cookies.get({ url: checkUrl, name: 'animref_auth_token' }).catch(() => null);
+        if (cookie?.value) {
+          const token = decodeURIComponent(cookie.value);
+          await handleConnect({ token }, checkUrl);
+          return token;
+        }
+      }
+    }
+  } catch {}
+
+  return null;
+}
+
+async function getToken(force = false) {
   const stored = await credentialStore.get(['firebaseIdToken', 'firebaseRefreshToken', 'firebaseApiKey', 'firebaseTokenExpiresAt']);
-  const hasValidToken = stored.firebaseIdToken && (!stored.firebaseTokenExpiresAt || stored.firebaseTokenExpiresAt > Date.now() + 60_000);
+  const hasValidToken = !force && stored.firebaseIdToken && (!stored.firebaseTokenExpiresAt || stored.firebaseTokenExpiresAt > Date.now() + 60_000);
   if (hasValidToken) return stored.firebaseIdToken;
   if (stored.firebaseRefreshToken && stored.firebaseApiKey) {
     try {
-      const response = await fetch(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(stored.firebaseApiKey)}`, {
+      const response = await fetch("https://securetoken.googleapis.com/v1/token?key=" + encodeURIComponent(stored.firebaseApiKey), {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: stored.firebaseRefreshToken }),
       });
       const refreshed = await response.json();
-      if (!response.ok || !refreshed.id_token) throw new Error(refreshed.error?.message || 'Firebase session refresh failed.');
+      if (!response.ok || !refreshed.id_token) {
+        if (refreshed.error?.message === 'TOKEN_EXPIRED' || refreshed.error?.message === 'USER_DISABLED') {
+          await credentialStore.remove(['firebaseIdToken', 'firebaseRefreshToken', 'firebaseApiKey', 'firebaseTokenExpiresAt']);
+        }
+        throw new Error(refreshed.error?.message || 'Firebase session refresh failed.');
+      }
       const next = {
         firebaseIdToken: refreshed.id_token,
         firebaseRefreshToken: refreshed.refresh_token || stored.firebaseRefreshToken,
@@ -44,13 +166,14 @@ async function getToken() {
       await credentialStore.set(next);
       return next.firebaseIdToken;
     } catch (error) {
-      console.warn('Animation Reference session refresh failed.', error);
+      // session refresh fallback
     }
   }
-  // Preserve existing sign-ins made before credentials became persistent.
   const legacy = (await sessionStore.get('firebaseIdToken')).firebaseIdToken;
   if (legacy) await credentialStore.set({ firebaseIdToken: legacy });
-  return legacy || null;
+  const autoToken = await tryAutoSignInFromOpenTabs();
+  if (autoToken) return autoToken;
+  return legacy || stored.firebaseIdToken || null;
 }
 
 const SUPPORTED_POST_URL = /^https?:\/\/(?:[^/]+\.)?(?:instagram\.com|youtube\.com|youtu\.be|tiktok\.com|vimeo\.com|x\.com|twitter\.com|facebook\.com|fb\.watch|pinterest\.com|pin\.it|artstation\.com|sakugabooru\.com|sketchfab\.com|giphy\.com|tenor\.com|unsplash\.com|pexels\.com|archive\.org)\//i;
@@ -58,17 +181,24 @@ const resolveInFlight = new Map();
 const resolvedPostCache = new Map();
 const RESOLVE_CACHE_MS = 2 * 60 * 1000;
 
-async function openWidgetForTab(tabId) {
+async function openWidgetForTab(tabId, item = null) {
   if (!tabId) return;
-  await chrome.storage.local.set({ floatingPanelOpen: true });
+  const payload = { floatingPanelOpen: true };
+  if (item) {
+    payload.pendingPickedElement = { item, at: Date.now() };
+  }
+  await chrome.storage.local.set(payload);
   try {
-    await chrome.tabs.sendMessage(tabId, { type: 'AR_WIDGET_OPEN' });
+    await chrome.tabs.sendMessage(tabId, { type: 'AR_WIDGET_OPEN', item });
+    if (item) {
+      chrome.runtime.sendMessage({ type: 'AR_ELEMENT_PICKED', item }).catch(() => {});
+    }
   } catch {
     try {
       await chrome.scripting.executeScript({ target: { tabId }, files: ['floating-widget.js'] });
-      await chrome.tabs.sendMessage(tabId, { type: 'AR_WIDGET_OPEN' });
+      await chrome.tabs.sendMessage(tabId, { type: 'AR_WIDGET_OPEN', item });
     } catch (error) {
-      console.warn('Animation Reference could not open the capture bubble on this page.', error);
+      // restricted tab
     }
   }
 }
@@ -232,47 +362,64 @@ async function resolvePostInBrowser(url) {
   return request;
 }
 
-chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
-  if (message?.type !== 'AR_CONNECT' || typeof message.token !== 'string') {
-    sendResponse({ ok: false });
-    return false;
-  }
-
-  const senderOrigin = sender.url ? new URL(sender.url).origin : DEFAULT_ORIGIN;
-  credentialStore.set({
+async function handleConnect(message, senderOrigin) {
+  if (!message || typeof message.token !== 'string') return { ok: false, error: 'Invalid token' };
+  const origin = senderOrigin || message.origin || DEFAULT_ORIGIN;
+  await credentialStore.set({
     firebaseIdToken: message.token,
     ...(typeof message.refreshToken === 'string' ? { firebaseRefreshToken: message.refreshToken } : {}),
     ...(typeof message.firebaseApiKey === 'string' ? { firebaseApiKey: message.firebaseApiKey } : {}),
     ...(Number.isFinite(message.tokenExpiresAt) ? { firebaseTokenExpiresAt: message.tokenExpiresAt } : {}),
-    apiOrigin: senderOrigin,
-  }).then(async () => {
-    await chrome.runtime.sendMessage({ type: 'AR_AUTH_CONNECTED' }).catch(() => {});
-    const pending = await sessionStore.get('pendingCaptureTabId');
-    if (pending.pendingCaptureTabId) {
-      await openWidgetForTab(pending.pendingCaptureTabId);
-      await sessionStore.remove('pendingCaptureTabId');
-    }
-    // Keep the Animation Reference sign-in tab open and take the user into the
-    // Reference Clips workflow instead of closing it immediately after sign-in.
+    apiOrigin: origin,
+  });
+  await sessionStore.remove('quickBootstrap');
+  await chrome.runtime.sendMessage({ type: 'AR_AUTH_CONNECTED' }).catch(() => {});
+  const pending = await sessionStore.get('pendingCaptureTabId');
+  if (pending.pendingCaptureTabId) {
+    await openWidgetForTab(pending.pendingCaptureTabId);
+    await sessionStore.remove('pendingCaptureTabId');
+  }
+  return { ok: true };
+}
+
+chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+  if (message?.type !== 'AR_CONNECT') {
+    sendResponse({ ok: false });
+    return false;
+  }
+  const senderOrigin = sender.url ? new URL(sender.url).origin : DEFAULT_ORIGIN;
+  handleConnect(message, senderOrigin).then(async (res) => {
     if (sender.tab?.id) {
       const origin = await getOrigin();
-      await chrome.tabs.update(sender.tab.id, { url: `${origin}/references` }).catch(() => {});
+      await chrome.tabs.update(sender.tab.id, { url: origin + "/references" }).catch(() => {});
     }
-    sendResponse({ ok: true });
+    sendResponse(res);
   });
   return true;
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === 'AR_CONNECT') {
+    handleConnect(message, message.origin || DEFAULT_ORIGIN).then(sendResponse);
+    return true;
+  }
   if (message?.type === 'AR_START_CONNECT') {
     (async () => {
       if (_sender.tab?.id) await sessionStore.set({ pendingCaptureTabId: _sender.tab.id });
-      const origin = await getOrigin();
+      let origin = null;
+      try {
+        const tabs = await getRelevantTabs();
+        if (tabs.length > 0 && tabs[0].url) {
+          origin = new URL(tabs[0].url).origin;
+          await credentialStore.set({ apiOrigin: origin });
+        }
+      } catch {}
+      if (!origin) origin = await getOrigin();
       await chrome.tabs.create({
-        url: `${origin}/extension/connect?extension_id=${encodeURIComponent(chrome.runtime.id)}`,
+        url: origin + "/extension/connect?extension_id=" + encodeURIComponent(chrome.runtime.id),
         active: true,
       });
-      return { ok: true };
+      return { ok: true, origin };
     })().then(sendResponse).catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;
   }
@@ -323,14 +470,27 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       }, 700);
     }
     try {
-      const response = await fetch(`${origin}${message.path}`, {
+      let { response } = await fetchWithOriginFallback(message.path, {
         method: message.method || 'GET',
         headers,
         body: message.body ? JSON.stringify(message.body) : undefined,
       });
-      const data = await response.json().catch(() => ({}));
+      let data = await response.json().catch(() => ({}));
       if (response.status === 401 && !isPublicEndpoint) {
-        await credentialStore.remove(['firebaseIdToken', 'firebaseRefreshToken', 'firebaseApiKey', 'firebaseTokenExpiresAt']);
+        const refreshed = await getToken(true);
+        if (refreshed && refreshed !== token) {
+          headers['Authorization'] = 'Bearer ' + refreshed;
+          const retryRes = await fetchWithOriginFallback(message.path, {
+            method: message.method || 'GET',
+            headers,
+            body: message.body ? JSON.stringify(message.body) : undefined,
+          });
+          response = retryRes.response;
+          data = await response.json().catch(() => ({}));
+        }
+      }
+      if (response.ok && message.path === '/api/extension/boards' && message.method === 'POST') {
+        await sessionStore.remove('quickBootstrap').catch(() => {});
       }
       if (isCapture) await sessionStore.set({ captureProgress: response.ok
         ? { value: 100, status: 'complete', label: 'Sent to Animation Reference', detail: 'Upload continues on the Reference Clips page.' }
@@ -366,8 +526,25 @@ function createSaveMenu() {
     });
   });
 }
-chrome.runtime.onInstalled.addListener(createSaveMenu);
-chrome.runtime.onStartup.addListener(createSaveMenu);
+async function refreshOpenTabWidgets() {
+  try {
+    const tabs = await chrome.tabs.query({});
+    for (const tab of tabs) {
+      if (!tab?.id || !tab?.url || !/^https?:\/\//i.test(tab.url)) continue;
+      chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['floating-widget.js'] }).catch(() => {});
+    }
+  } catch {}
+}
+
+chrome.runtime.onInstalled.addListener(() => {
+  createSaveMenu();
+  refreshOpenTabWidgets();
+});
+chrome.runtime.onStartup.addListener(() => {
+  createSaveMenu();
+  refreshOpenTabWidgets();
+});
+refreshOpenTabWidgets();
 
 async function sendToSaveButton(tabId, message) {
   try {
@@ -388,23 +565,29 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     srcUrl: info.srcUrl || '',
     linkUrl: mediaType ? '' : info.linkUrl || '',
     pageUrl: info.pageUrl || tab.url,
-  }).catch((error) => console.warn('Animation Reference could not open Save on this page.', error));
+  }).catch(() => {});
 });
 
 async function quickBootstrap() {
-  const token = await getToken();
+  let token = await getToken();
   if (!token) return { ok: false, status: 401, error: 'Connect your Animation Reference account.' };
   const origin = await getOrigin();
   const cached = (await sessionStore.get('quickBootstrap')).quickBootstrap;
   if (cached && cached.origin === origin && Date.now() - cached.at < BOOTSTRAP_CACHE_MS) return { ok: true, status: 200, data: cached.data };
-  const response = await fetch(`${origin}/api/extension/bootstrap`, { headers: { Authorization: `Bearer ${token}` } });
-  const data = await response.json().catch(() => ({}));
+  let { response, origin: activeOrigin } = await fetchWithOriginFallback('/api/extension/bootstrap', { headers: { Authorization: `Bearer ${token}` } });
+  let data = await response.json().catch(() => ({}));
   if (response.status === 401) {
-    await credentialStore.remove(['firebaseIdToken', 'firebaseRefreshToken', 'firebaseApiKey', 'firebaseTokenExpiresAt']);
-    return { ok: false, status: 401, error: 'Your session expired. Connect your account again.' };
+    const refreshed = await getToken(true);
+    if (refreshed && refreshed !== token) {
+      token = refreshed;
+      const retryRes = await fetchWithOriginFallback('/api/extension/bootstrap', { headers: { Authorization: `Bearer ${token}` } });
+      response = retryRes.response;
+      activeOrigin = retryRes.origin;
+      data = await response.json().catch(() => ({}));
+    }
   }
   if (!response.ok) return { ok: false, status: response.status, error: data.message || 'Your boards could not be loaded.' };
-  await sessionStore.set({ quickBootstrap: { at: Date.now(), origin, data } });
+  await sessionStore.set({ quickBootstrap: { at: Date.now(), origin: activeOrigin, data } });
   return { ok: true, status: 200, data };
 }
 
@@ -419,12 +602,10 @@ function isHttpUrl(value) {
 
 function validSavePayload(payload) {
   if (!payload || typeof payload !== 'object') return 'Nothing to save.';
-  if (payload.mode !== 'file' && payload.mode !== 'link') return 'This item can’t be saved directly.';
   if (payload.kind !== 'image' && payload.kind !== 'video') return 'Only images and videos can be saved.';
   if (typeof payload.boardId !== 'string' || !/^[A-Za-z0-9_-]{0,128}$/.test(payload.boardId)) return 'Choose a board.';
   if (!isHttpUrl(payload.sourceUrl)) return 'This page can’t be credited as a source.';
-  if (payload.mode === 'file' && !isHttpUrl(payload.mediaUrl)) return 'This file can’t be downloaded.';
-  if (payload.mode === 'link' && !RULES.SUPPORTED_POST_URL.test(payload.sourceUrl)) return 'Only supported video posts can be saved by link.';
+  if (payload.mode === 'file' && payload.mediaUrl && !isHttpUrl(payload.mediaUrl)) return 'This file can’t be downloaded.';
   return null;
 }
 
@@ -467,51 +648,37 @@ async function quickSave(payload) {
   const origin = await getOrigin();
   const title = String(payload.title || 'Saved reference').replace(/\s+/g, ' ').trim().slice(0, 120);
 
-  let response;
-  if (payload.mode === 'file') {
-    const media = await fetchMedia(payload.mediaUrl, payload.kind);
-    const form = new FormData();
-    form.set('file', media.blob, `reference.${media.ext}`);
-    form.set('title', title);
-    form.set('category', 'Acting');
-    form.set('tags', 'saved from web');
-    form.set('boardId', payload.boardId);
-    form.set('isPrivate', String(Boolean(payload.isPrivate)));
-    form.set('sourceUrl', payload.sourceUrl);
-    form.set('sourceTitle', String(payload.pageTitle || '').slice(0, 200));
-    if (payload.authorName) form.set('authorName', String(payload.authorName).slice(0, 100));
-    if (payload.authorUrl) form.set('authorUrl', String(payload.authorUrl).slice(0, 500));
-    if (payload.authorAvatar) form.set('authorAvatar', String(payload.authorAvatar).slice(0, 1000));
-    if (Number.isFinite(payload.duration) && payload.duration > 0) form.set('duration', String(payload.duration));
-    response = await fetch(`${origin}/api/clips/upload`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
-  } else {
-    const endTime = Number.isFinite(payload.duration) && payload.duration > 0 ? payload.duration : 60;
-    response = await fetch(`${origin}/api/clips`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() },
-      body: JSON.stringify({
-        sourceUrl: payload.sourceUrl,
-        startTime: 0,
-        endTime,
-        title,
-        category: 'Acting',
-        tags: ['saved from web'],
-        boardId: payload.boardId || undefined,
-        isPrivate: Boolean(payload.isPrivate),
-        thumbnailUrl: isHttpUrl(payload.thumbnailUrl) ? payload.thumbnailUrl : undefined,
-        mediaType: 'video',
-        sourceAuthorName: payload.authorName || undefined,
-        sourceAuthorUrl: payload.authorUrl || undefined,
-        sourceAuthorAvatar: payload.authorAvatar || undefined,
-        capturedMediaUrl: payload.mediaUrl || undefined,
-      }),
-    });
-  }
+  const defaultEnd = Number.isFinite(payload.duration) && payload.duration > 0 ? payload.duration : 60;
+  const startTime = Number.isFinite(payload.startTime) && payload.startTime >= 0 ? payload.startTime : 0;
+  const endTime = Number.isFinite(payload.endTime) && payload.endTime > startTime ? payload.endTime : defaultEnd;
+  const isDataThumb = typeof payload.thumbnailUrl === 'string' && payload.thumbnailUrl.startsWith('data:image/');
+  const thumbUrl = (isHttpUrl(payload.thumbnailUrl) || isDataThumb)
+    ? payload.thumbnailUrl
+    : (payload.kind === 'image' && isHttpUrl(payload.mediaUrl) ? payload.mediaUrl : undefined);
+  const { response } = await fetchWithOriginFallback('/api/clips', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() },
+    body: JSON.stringify({
+      sourceUrl: payload.sourceUrl,
+      startTime,
+      endTime,
+      title,
+      category: 'Acting',
+      tags: ['saved from web'],
+      boardId: payload.boardId || undefined,
+      isPrivate: Boolean(payload.isPrivate),
+      thumbnailUrl: thumbUrl,
+      mediaUrl: isHttpUrl(payload.mediaUrl) ? payload.mediaUrl : undefined,
+      mediaType: payload.kind === 'image' ? 'image' : (payload.kind === 'gif' ? 'gif' : 'video'),
+      sourceAuthorName: payload.authorName || undefined,
+      sourceAuthorUrl: payload.authorUrl || undefined,
+      sourceAuthorAvatar: payload.authorAvatar || undefined,
+    }),
+  });
 
   const data = await response.json().catch(() => ({}));
   if (response.status === 401) {
-    await credentialStore.remove(['firebaseIdToken', 'firebaseRefreshToken', 'firebaseApiKey', 'firebaseTokenExpiresAt']);
-    return { ok: false, status: 401, error: 'Your session expired. Connect your account again.' };
+    return { ok: false, status: 401, error: 'Your session expired. Please sign in again.' };
   }
   if (!response.ok) return { ok: false, status: response.status, error: data.message || data.error || 'The save didn’t go through.' };
   return { ok: true, status: response.status, data };
@@ -532,8 +699,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(clipId)) return false;
       return respond(getOrigin().then((origin) => chrome.tabs.create({ url: `${origin}/clip/${clipId}`, active: true })).then(() => ({ ok: true })));
     }
+    case 'AR_OPEN_BOARD': {
+      const boardId = String(message.boardId || '');
+      const path = boardId && /^[A-Za-z0-9_-]{1,128}$/.test(boardId) ? `/moodboard?board=${encodeURIComponent(boardId)}` : '/moodboard';
+      return respond(getOrigin().then((origin) => chrome.tabs.create({ url: `${origin}${path}`, active: true })).then(() => ({ ok: true })));
+    }
     case 'AR_OPEN_WIDGET':
-      return respond(openWidgetForTab(sender.tab?.id).then(() => ({ ok: true })));
+      return respond(openWidgetForTab(sender.tab?.id, message.item || null).then(() => ({ ok: true })));
     default:
       return false;
   }

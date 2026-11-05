@@ -3,6 +3,7 @@ import { ApiError, apiErrorResponse, requireAdmin } from '@/lib/api-auth';
 import { getFirebaseAuth, getFirestore } from '@/lib/firebase-admin';
 import {
   renderOneDollarPromoHtml,
+  renderInstagramInviteHtml,
   sendOneDollarPromoEmail,
   sendNewsletterBroadcastEmail,
 } from '@/lib/resend-service';
@@ -35,12 +36,14 @@ export async function GET(request: NextRequest) {
     const freeCount = Math.max(0, totalAccounts - proCount);
 
     const promoHtml = renderOneDollarPromoHtml('Fellow Animator');
+    const instagramHtml = renderInstagramInviteHtml('Fellow Animator');
 
     return Response.json({
       totalAccounts,
       freeCount,
       proCount,
       promoPreviewHtml: promoHtml,
+      instagramPreviewHtml: instagramHtml,
     });
   } catch (error) {
     return apiErrorResponse(error);
@@ -76,6 +79,13 @@ export async function POST(request: NextRequest) {
           toEmail: targetEmail,
           recipientName: 'Studio Animator',
           customMessage,
+          subject,
+        });
+      } else if (template === 'instagram_follow') {
+        res = await sendNewsletterBroadcastEmail({
+          toEmail: targetEmail,
+          subject: subject || '🎬 Follow @animationreference on Instagram for daily reels & breakdowns!',
+          htmlContent: renderInstagramInviteHtml('Studio Animator', customMessage),
         });
       } else {
         res = await sendNewsletterBroadcastEmail({
@@ -159,6 +169,12 @@ export async function POST(request: NextRequest) {
                   customMessage,
                   subject: subject || 'Your Animation Reference Pro pass is ready',
                   scheduledAt,
+                });
+              } else if (template === 'instagram_follow') {
+                res = await sendNewsletterBroadcastEmail({
+                  toEmail: r.email,
+                  subject: subject || '🎬 Follow @animationreference on Instagram for daily reels & breakdowns!',
+                  htmlContent: renderInstagramInviteHtml(r.name, customMessage),
                 });
               } else {
                 res = await sendNewsletterBroadcastEmail({

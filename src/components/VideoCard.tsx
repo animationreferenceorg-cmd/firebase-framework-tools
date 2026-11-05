@@ -13,16 +13,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from './ui/skeleton';
 import { useUser } from '@/hooks/use-user';
 import { likeVideo, unlikeVideo, saveVideo, unsaveVideo, incrementVideoViewCount } from '@/lib/firestore';
+import { triggerInstagramFollowPrompt } from '@/lib/social-links';
 import { useAuth } from '@/hooks/use-auth';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
-import dynamic from 'next/dynamic';
-
-const SaveToBoardModal = dynamic(() => import('./SaveToBoardModal').then(m => m.SaveToBoardModal));
-const VideoFullscreenViewer = dynamic(() => import('./VideoFullscreenViewer').then(m => m.VideoFullscreenViewer));
+import { SaveToBoardModal } from './SaveToBoardModal';
+import { VideoFullscreenViewer } from './VideoFullscreenViewer';
 import { VideoQuotaSlate } from '@/components/VideoQuotaSlate';
+import { SignUpPromptDialog } from '@/components/auth/SignUpPromptDialog';
+import { isHomePage, hasReachedGuestHoverLimit, recordGuestHover } from '@/lib/guest-hovers';
 import { useViewingQuota } from '@/hooks/use-viewing-quota';
 import Link from 'next/link';
 import type { Video } from '@/lib/types';
@@ -110,6 +111,8 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [hasImageError, setHasImageError] = useState(false);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+  const [showSignUpDialog, setShowSignUpDialog] = useState(false);
+  const [signUpTrigger, setSignUpTrigger] = useState<'fullscreen' | 'hover_limit'>('fullscreen');
   const [showLimitDialog, setShowLimitDialog] = useState(false);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
   const [donateMounted, setDonateMounted] = useState(false);
@@ -162,11 +165,11 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
   const [likeCountDelta, setLikeCountDelta] = useState(0);
   const [showSaveToBoard, setShowSaveToBoard] = useState(false);
   const targetVideoUrl = video.videoUrl || video.originalUrl || (video as any).sourceUrl || '';
-  const playableVideoUrl = isPlayableVideoUrl(video.videoUrl)
+  const playableVideoUrl = video.previewUrl || (isPlayableVideoUrl(video.videoUrl)
     ? video.videoUrl
     : isPlayableVideoUrl(targetVideoUrl)
       ? targetVideoUrl
-      : undefined;
+      : undefined);
   const youtubeId = useMemo(() => getYouTubeId(targetVideoUrl), [targetVideoUrl]);
   const instagramId = useMemo(() => getInstagramId(targetVideoUrl), [targetVideoUrl]);
   const vimeoId = useMemo(() => getVimeoId(targetVideoUrl), [targetVideoUrl]);
@@ -193,8 +196,14 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
     if (src === 'pinterest' || id.startsWith('pin_') || url.includes('pinimg.com') || url.includes('pinterest.com')) {
       return { name: 'Pinterest', color: 'bg-rose-950/85 border-rose-400/40 text-rose-300' };
     }
+    if (src === 'vimeo' || id.startsWith('vimeo_') || url.includes('vimeo.com')) {
+      return { name: 'Vimeo', color: 'bg-blue-950/85 border-blue-400/40 text-blue-300' };
+    }
+    if (src === 'youtube' || id.startsWith('yt_') || url.includes('youtube.com') || url.includes('youtu.be')) {
+      return { name: 'YouTube', color: 'bg-red-950/85 border-red-400/40 text-red-300' };
+    }
     if (src === 'sakugabooru' || id.startsWith('sakuga') || url.includes('sakugabooru.com')) {
-      return { name: 'Sakugabooru', color: 'bg-purple-950/85 border-purple-400/40 text-purple-300' };
+      return { name: '2D Animation', color: 'bg-purple-950/85 border-purple-400/40 text-purple-300' };
     }
     return null;
   }, [video]);
@@ -203,6 +212,14 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
     const videoElem = videoRef.current;
 
     if (isHovered && !previewBlocked) {
+      if (!authUser && isHomePage()) {
+        if (hasReachedGuestHoverLimit()) {
+          setSignUpTrigger('hover_limit');
+          setShowSignUpDialog(true);
+          return;
+        }
+      }
+
       // 6 continuous seconds of hover-preview is a watch, same as opening
       // the full player: consume a quota slot so it can't be dodged by
       // never clicking through.
@@ -235,6 +252,27 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
         videoElem.addEventListener('canplay', attemptPlay, { once: true });
         videoElem.addEventListener('loadeddata', attemptPlay, { once: true });
       }
+
+      let guestHoverTimer: NodeJS.Timeout | null = null;
+      if (!authUser && isHomePage()) {
+        guestHoverTimer = setTimeout(() => {
+          const res = recordGuestHover();
+          if (res.limitReached) {
+            if (videoElem) videoElem.pause();
+            setSignUpTrigger('hover_limit');
+            setShowSignUpDialog(true);
+          } else if (res.warn) {
+            toast({
+              title: `${8 - res.count} free previews remaining`,
+              description: 'Create a free account to unlock 25 full clips every day!',
+            });
+          }
+        }, 1500);
+      }
+
+      return () => {
+        if (guestHoverTimer) clearTimeout(guestHoverTimer);
+      };
     } else {
       clearQuotaTimer();
       if (!videoElem) return;
@@ -243,7 +281,7 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
         videoElem.currentTime = 0;
       } catch {}
     }
-  }, [isHovered, previewBlocked, alreadyUnlocked, video.id]);
+  }, [isHovered, previewBlocked, alreadyUnlocked, video.id, authUser]);
 
   // A card can unmount mid-hover (filtering a grid) with the timer still
   // pending; it must not fire against a video nobody is looking at anymore.
@@ -304,6 +342,11 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
   }, [isHovered, video.id]);
 
   const openVideoPlayer = () => {
+    if (!authUser) {
+      setSignUpTrigger('fullscreen');
+      setShowSignUpDialog(true);
+      return;
+    }
     setIsPlayerOpen(true);
     beginWatch(playKey, 'playback');
     if (!countedVideoViewRef.current && video.id) {
@@ -391,6 +434,7 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
 
         await likeVideo(authUser.uid, video.id);
         toast({ title: "Added to Likes!", description: video.status === 'draft' ? "Reference" : video.title });
+        triggerInstagramFollowPrompt('like');
       }
       mutate();
     } catch (error) {
@@ -451,8 +495,7 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
     imageUrl.includes('artstation.com') ||
     imageUrl.includes('sketchfab.com') ||
     imageUrl.includes('sakugabooru.com') ||
-    imageUrl.includes('wikimedia.org') ||
-    imageUrl.includes('archive.org');
+    imageUrl.includes('wikimedia.org');
 
   // Source for the lightweight native <video> fallback (only used when a card
   // has no thumbnail image). The grid no longer mounts hls.js players on hover —
@@ -551,31 +594,7 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
             />
           )}
 
-          {/* YouTube hover preview for shorts/posters */}
-          {youtubeId && isHovered && !isPlayerOpen && (
-            <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-[5] bg-black">
-              <iframe
-                src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeId}&modestbranding=1&playsinline=1`}
-                className="w-full h-full scale-125 object-cover pointer-events-none"
-                tabIndex={-1}
-                loading="lazy"
-                allow="autoplay"
-              />
-            </div>
-          )}
 
-          {/* Vimeo hover preview for shorts/posters */}
-          {vimeoId && isHovered && !isPlayerOpen && (
-            <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-[5] bg-black">
-              <iframe
-                src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&muted=1&loop=1&background=1&autopause=0`}
-                className="w-full h-full scale-125 object-cover pointer-events-none"
-                tabIndex={-1}
-                loading="lazy"
-                allow="autoplay"
-              />
-            </div>
-          )}
           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/card:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
             <PlayCircle className="h-12 w-12 text-white/80" />
           </div>
@@ -606,6 +625,14 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
         open={showSaveToBoard}
         onOpenChange={setShowSaveToBoard}
       />}
+      {showSignUpDialog && (
+        <SignUpPromptDialog
+          open={showSignUpDialog}
+          onOpenChange={setShowSignUpDialog}
+          trigger={signUpTrigger}
+          videoTitle={displayTitle}
+        />
+      )}
       </>
     )
   }
@@ -701,31 +728,7 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
             />
           )}
 
-          {/* YouTube hover preview for YouTube community cards */}
-          {youtubeId && !isPlayerOpen && isHovered && (
-            <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-[5] bg-black">
-              <iframe
-                src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeId}&modestbranding=1&playsinline=1`}
-                className="w-full h-full scale-125 object-cover pointer-events-none"
-                tabIndex={-1}
-                loading="lazy"
-                allow="autoplay"
-              />
-            </div>
-          )}
 
-          {/* Vimeo hover preview for Vimeo community cards */}
-          {vimeoId && !isPlayerOpen && isHovered && (
-            <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-[5] bg-black">
-              <iframe
-                src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&muted=1&loop=1&background=1&autopause=0`}
-                className="w-full h-full scale-125 object-cover pointer-events-none"
-                tabIndex={-1}
-                loading="lazy"
-                allow="autoplay"
-              />
-            </div>
-          )}
 
           {/* Dark Overlay Gradient (always visible on hover to make text readable) */}
           <div className={cn(
@@ -861,6 +864,14 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
         open={showSaveToBoard}
         onOpenChange={setShowSaveToBoard}
       />}
+      {showSignUpDialog && (
+        <SignUpPromptDialog
+          open={showSignUpDialog}
+          onOpenChange={setShowSignUpDialog}
+          trigger={signUpTrigger}
+          videoTitle={displayTitle}
+        />
+      )}
       </>
     );
   }
@@ -942,32 +953,7 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
           />
         )}
 
-        {/* YouTube hover preview for YouTube reference cards */}
-        {youtubeId && !video.isShort && !poster && isHovered && !isPlayerOpen && (
-          <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-[5]">
-            <iframe
-              src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeId}&modestbranding=1&playsinline=1`}
-              className="w-full h-full scale-125 object-cover pointer-events-none"
-              tabIndex={-1}
-              loading="lazy"
-              allow="autoplay"
-            />
-          </div>
-        )}
 
-
-        {/* Vimeo hover preview for Vimeo reference cards */}
-        {vimeoId && !video.isShort && !poster && isHovered && !isPlayerOpen && (
-          <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-[5] bg-black">
-            <iframe
-              src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&muted=1&loop=1&background=1&autopause=0`}
-              className="w-full h-full scale-125 object-cover pointer-events-none"
-              tabIndex={-1}
-              loading="lazy"
-              allow="autoplay"
-            />
-          </div>
-        )}
 
         {/* Subtle creator badge — top-left, always visible for any video with uploader/originalUrl */}
         <CreatorBadge uploader={video.uploader} originalUrl={video.originalUrl} videoUrl={video.videoUrl} avatarUrl={video.authorAvatar || (video as any).author_avatar || (video as any).creatorAvatar} />
@@ -1098,6 +1084,14 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
         open={showSaveToBoard}
         onOpenChange={setShowSaveToBoard}
       />}
+      {showSignUpDialog && (
+        <SignUpPromptDialog
+          open={showSignUpDialog}
+          onOpenChange={setShowSignUpDialog}
+          trigger={signUpTrigger}
+          videoTitle={displayTitle}
+        />
+      )}
     </>
   );
 }

@@ -1,58 +1,64 @@
-# Animation Reference (AnimRef) Studio — Animo Maya Integration
+# Animation Reference for Animo / Maya
 
-Native integration between [Animation Reference](https://animationreference.org) and the **Animo** animation toolkit for Autodesk Maya.
+**Status: partner evaluation build, not a production release.** The Animo toolbar
+version is `Animo_Data/Animo_AnimRef`. See [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md)
+for verified behavior, outstanding work, and the handoff questions for Animo.
 
----
+## What is available
 
-## What's Included
+- Search and browse the Animation Reference catalog, with thumbnails and a
+  one-hour refresh interval. The last cached catalog can be used when offline.
+- Email/password sign-in, saved references, and moodboards use existing site
+  services. These flows still require an end-to-end test with a real account.
+- Import an eligible reference into Maya as an image plane or frame sequence.
+  The server checks a signed-in Pro account before every download, including
+  reuse of a cached clip. Some sources do not offer downloadable files.
+- Record a local viewport playblast with FFmpeg. On Animation Reference, open a
+  reference and load that local file in the compare tool. Cloud upload and an
+  automatic synchronized comparison link are **not available** in this build.
 
-### 1. 🌐 Explore Library
-- Search across **8,135+** curated animation reference clips by action, mechanics, styles, and character types.
-- Instant tag filtering (*Combat, Smears, Creature Animation, Character Acting, Locomotion, Hair Motion, VFX & Effects*, etc.).
-- Sort by Newest, Oldest, or Duration.
-- Asynchronous thumbnail and video downloading with local disk caching.
+## Evaluation installation
 
-### 2. 🔖 Saved & Favorites
-- Live sync with your Animation Reference account.
-- Browse all your saved and liked references inside Maya.
-- 1-click import into your scene.
+1. Back up the recipient's Animo installation. Copy only
+   `Animo_Data/Animo_AnimRef` into their existing `Animo_Data` directory. Do not
+   overwrite their Animo launcher or toolbar files with the reference copies in
+   this repository; those files are from a particular Animo installation.
+2. In Maya's Python Script Editor, add the parent `Animo_Data` directory to
+   `sys.path` using its actual path, then launch:
 
-### 3. 📋 My Moodboards
-- Full access to your cloud moodboards and curated collections.
-- Select any moodboard to browse its clips and load them directly into Maya.
+   ```python
+   import sys
+   sys.path.insert(0, r"C:/path/to/Animo_Data")
+   from Animo_AnimRef import animref_launcher
+   animref_launcher.launch()
+   ```
 
-### 4. 🎬 Playblast Studio
-- **1-Click Maya Viewport Playblast**:
-  - Automatically captures the active viewport with clean broadcast settings (hiding viewport HUD/ornaments).
-  - Encodes cleanly with Animo's bundled FFmpeg into an optimized H.264 MP4.
-- **Direct Cloud Upload**:
-  - Uploads playblasts directly to your Animation Reference account.
-- **Side-by-Side Locked Comparison**:
-  - Automatically generates a link to scrub and compare your Maya playblast frame-for-frame against your reference clip on [animationreference.org](https://animationreference.org).
+3. Configure FFmpeg using `ANIMO_FFMPEG_PATH`, Animo's existing FFmpeg, or the
+   system PATH. Importing frame sequences and recording playblasts need it.
+4. Animo should integrate the button into their own toolbar using the launcher
+   entry point after checking their actual installed version and icon paths.
 
-### 5. 👤 Account & Authentication
-- Secure sign-in using your AnimationReference.org email & password.
-- Persistent session caching between Maya restarts.
-- Displays Pro Member status and user profile.
+The package is designed for Python 3 Maya builds. Maya 2025 and 2027 Python/Qt
+imports were checked on Windows; full interactive Maya, macOS, Linux, and other
+Maya versions remain to be tested. Do not ship credentials, cached files, or
+personal Maya scenes to the partner.
 
-### 6. 📐 Robust Maya Image Plane Setup
-- **Free 3D Card (Move Anywhere in Viewport)**:
-  - Spawns a 3D reference card in perspective space placed nicely beside your character rig.
-  - Fully movable, rotatable, and scaleable with standard Maya manipulators (`W`, `E`, `R`).
-- **Camera Attached Mode**:
-  - Seamlessly attaches to `persp` or any scene camera (`shotCam`, `front`, etc.) with `displayOnlyIfCurrent=False`, `fit=Best`, and correct depth.
-- **Dedicated Reference Camera**:
-  - Creates a dedicated camera locked straight to the reference for split-screen comparison workflows.
+## Privacy and accounts
 
----
+The prototype currently stores Firebase ID and refresh tokens, and cached
+account data, as local files. Use only a dedicated test account on a trusted
+machine until credential storage and deletion are improved. Google-only sign-in
+is not supported by this email/password form. Download access is determined by
+the site's server, not by a badge in the plugin.
 
-## Launching in Maya
+## Automated tests
 
-- **From the Animo Toolbar**: Click the AnimRef icon on the Animo shelf/dock.
-- **From Maya Script Editor (Python)**:
-  ```python
-  import importlib
-  from Animo_AnimRef import animref_window
-  importlib.reload(animref_window)
-  animref_window.show_window()
-  ```
+From the main repository root:
+
+```text
+mayapy -m unittest discover -s integrations/animo-maya/tests -v
+```
+
+These tests use mocked responses and filesystem data. They do not authenticate
+with Firebase, contact production endpoints, create Maya scene objects, or prove
+an end-to-end download or playblast capture.

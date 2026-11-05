@@ -1,7 +1,6 @@
-
 "use client";
 
-import { createContext, useContext, ReactNode, useMemo } from 'react';
+import { createContext, useContext, ReactNode, useMemo, useEffect } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import type { User, Auth } from 'firebase/auth';
@@ -28,6 +27,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const userId = user?.uid;
   // Hooks must run before the early return below.
   const value = useMemo(() => ({ user: user ?? null, loading }), [user, userId, loading]);
+
+  // Pinterest-style automatic extension sign-in bridge
+  // Whenever the user is signed into any tab of Animation Reference,
+  // stamp the bridge DOM element and cookies so the browser extension auto-connects.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!user) {
+      const el = document.getElementById('animref-extension-auth-bridge');
+      if (el) el.remove();
+      document.cookie = 'animref_auth_token=; path=/; max-age=0; SameSite=Lax';
+      document.cookie = 'animref_origin=; path=/; max-age=0; SameSite=Lax';
+      return;
+    }
+
+    user.getIdTokenResult().then((tokenResult) => {
+      const token = tokenResult.token;
+      let bridge = document.getElementById('animref-extension-auth-bridge');
+      if (!bridge) {
+        bridge = document.createElement('div');
+        bridge.id = 'animref-extension-auth-bridge';
+        bridge.style.display = 'none';
+        document.documentElement.appendChild(bridge);
+      }
+      bridge.dataset.token = token;
+      bridge.dataset.refreshToken = user.refreshToken || '';
+      bridge.dataset.expiresAt = String(new Date(tokenResult.expirationTime).getTime());
+      bridge.dataset.origin = window.location.origin;
+      bridge.dataset.uid = user.uid;
+      bridge.dataset.email = user.email || '';
+
+      // Set cookie so extension can also read via chrome.cookies without tab interaction
+      document.cookie = `animref_auth_token=${encodeURIComponent(token)}; path=/; max-age=604800; SameSite=Lax`;
+      document.cookie = `animref_origin=${encodeURIComponent(window.location.origin)}; path=/; max-age=604800; SameSite=Lax`;
+
+      // Dispatch to extension content script if active on this page
+      try {
+        window.postMessage({
+          type: 'AR_CONNECT_POST_MESSAGE',
+          token,
+          refreshToken: user.refreshToken || '',
+          tokenExpiresAt: new Date(tokenResult.expirationTime).getTime(),
+          origin: window.location.origin,
+        }, '*');
+      } catch {}
+    }).catch(() => {});
+  }, [user]);
 
   if (!firebaseConfigured) {
     return (

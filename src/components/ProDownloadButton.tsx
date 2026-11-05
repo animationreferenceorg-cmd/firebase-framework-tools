@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/hooks/use-user';
 import { track } from '@/lib/analytics';
 import { getEntitlements } from '@/lib/plans';
+import { triggerInstagramFollowPrompt } from '@/lib/social-links';
 import { cn } from '@/lib/utils';
 
 interface ProDownloadButtonProps {
@@ -78,6 +79,7 @@ export function ProDownloadButton({ videoId, variant = 'icon', className, stopPr
       a.remove();
       if (revoke) setTimeout(() => URL.revokeObjectURL(href), 10_000);
       track('export_completed', { format: 'mp4', source: 'download_button' });
+      triggerInstagramFollowPrompt('download');
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Download unavailable', description: err.message || 'Please try again.' });
     } finally {

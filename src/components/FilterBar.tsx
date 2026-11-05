@@ -53,7 +53,6 @@ export const SOURCE_LABELS: Record<SourceOption, string> = {
     free: 'Free Sources (CC0)',
     openverse: 'Openverse CC0',
     wikimedia: 'Wikimedia Commons',
-    archive: 'Internet Archive',
     library: 'Original Library',
 };
 

@@ -39,7 +39,7 @@ const CATEGORY_CONFIGS: CategoryCapsuleConfig[] = [
     colorGradient: 'from-[#4a1c0d] via-[#2a0e05] to-[#120602]',
     borderColor: 'border-orange-500/25',
     keywords: ['combat', 'fight', 'sword', 'punch', 'kick', 'action', 'martial', 'attack', 'stunt', 'duel'],
-    fallbackImage: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=600&auto=format&fit=crop&q=80',
+    fallbackImage: 'https://www.sakugabooru.com/data/preview/cd3e747e05e552550ffe5aa52655177c.jpg',
   },
   {
     id: 'cat-locomotion',
@@ -51,7 +51,7 @@ const CATEGORY_CONFIGS: CategoryCapsuleConfig[] = [
     colorGradient: 'from-[#072c44] via-[#041a2a] to-[#020b12]',
     borderColor: 'border-cyan-500/25',
     keywords: ['locomotion', 'walk', 'run', 'jump', 'parkour', 'sprint', 'crawl', 'stagger', 'dash'],
-    fallbackImage: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&auto=format&fit=crop&q=80',
+    fallbackImage: 'https://www.sakugabooru.com/data/preview/7ddac5c0b8c640d51c46cc4d6dd00bb3.jpg',
   },
   {
     id: 'cat-creature',
@@ -63,7 +63,7 @@ const CATEGORY_CONFIGS: CategoryCapsuleConfig[] = [
     colorGradient: 'from-[#063f2e] via-[#032319] to-[#010f0a]',
     borderColor: 'border-emerald-500/25',
     keywords: ['creature', 'animal', 'quadruped', 'monster', 'dragon', 'dog', 'bird', 'horse', 'feline', 'wolf'],
-    fallbackImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80',
+    fallbackImage: 'https://www.sakugabooru.com/data/preview/c9f57bf64883faa61cd1fb2377c6403c.jpg',
   },
   {
     id: 'cat-acting',
@@ -75,7 +75,7 @@ const CATEGORY_CONFIGS: CategoryCapsuleConfig[] = [
     colorGradient: 'from-[#3e145e] via-[#240a38] to-[#0e0317]',
     borderColor: 'border-purple-500/25',
     keywords: ['acting', 'facial', 'lip sync', 'dialogue', 'expression', 'gesture', 'emotion', 'talk', 'conversation'],
-    fallbackImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
+    fallbackImage: 'https://storage.googleapis.com/aniamtion-reference.firebasestorage.app/thumbnails/CeFGzb2V9bYeeXoNphp3.jpg',
   },
   {
     id: 'cat-smears',
@@ -87,7 +87,7 @@ const CATEGORY_CONFIGS: CategoryCapsuleConfig[] = [
     colorGradient: 'from-[#542a08] via-[#311603] to-[#140801]',
     borderColor: 'border-amber-500/25',
     keywords: ['vfx', 'fx', 'smear', 'speedline', 'impact', 'magic', 'explosion', 'particles', 'energy', 'fire', 'water'],
-    fallbackImage: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&auto=format&fit=crop&q=80',
+    fallbackImage: 'https://www.sakugabooru.com/data/preview/8828eeb383c0071b0e35587bff9a3f3c.jpg',
   },
   {
     id: 'cat-shorts',

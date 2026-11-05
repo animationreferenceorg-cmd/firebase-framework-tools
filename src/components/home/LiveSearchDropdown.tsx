@@ -1,5 +1,7 @@
 'use client';
 
+import { NoReferencesUploadCard } from '@/components/reference/NoReferencesUploadCard';
+
 import { parseSearchIntent } from '@/lib/search-intent';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -21,6 +23,7 @@ import {
 import type { Video } from '@/lib/types';
 import type { UnifiedSearchResult } from '@/lib/reference-feed';
 import { searchResultToVideo } from '@/lib/reference-hub';
+import { isBlockedReference } from '@/lib/blocked-references';
 
 interface LiveSearchDropdownProps {
   query: string;
@@ -32,7 +35,7 @@ interface LiveSearchDropdownProps {
   onViewAllInLibrary: (source?: string) => void;
 }
 
-type DropdownSourceFilter = 'all' | 'pinterest' | 'artstation' | 'sketchfab' | 'sakugabooru' | 'free' | 'library';
+type DropdownSourceFilter = 'all' | 'pinterest' | 'artstation' | 'vimeo' | 'sketchfab' | 'sakugabooru' | 'free' | 'library';
 
 // In-memory query cache to avoid re-fetching across backspaces
 const SEARCH_CACHE = new Map<string, UnifiedSearchResult[]>();
@@ -159,10 +162,9 @@ export function LiveSearchDropdown({
   // Merge & filter results based on active source filter
   const displayedItems = useMemo(() => {
     const isFree = (src: string, id: string) =>
-      ['openverse', 'wikimedia', 'archive', 'sakugabooru'].includes(src) ||
+      ['openverse', 'wikimedia', 'sakugabooru'].includes(src) ||
       id.startsWith('openverse_') ||
       id.startsWith('wiki_') ||
-      id.startsWith('archive_') ||
       id.startsWith('saku_');
 
     const qClean = trimmed.toLowerCase();
@@ -191,8 +193,8 @@ export function LiveSearchDropdown({
       });
     };
 
-    let localFiltered = localMatches.filter(v => matchesKeywords(v.title, v.tags, v.description));
-    let extFiltered = externalResults.filter(r => matchesKeywords(r.title, r.tags, r.description));
+    let localFiltered = localMatches.filter(v => matchesKeywords(v.title, v.tags, v.description) && !isBlockedReference(v));
+    let extFiltered = externalResults.filter(r => matchesKeywords(r.title, r.tags, r.description) && !isBlockedReference(r));
 
     if (activeFilter === 'pinterest') {
       localFiltered = localMatches.filter((v) => v.source === 'pinterest' || v.id.startsWith('pin_'));
@@ -200,6 +202,9 @@ export function LiveSearchDropdown({
     } else if (activeFilter === 'artstation') {
       localFiltered = localMatches.filter((v) => v.source === 'artstation' || v.id.startsWith('as_'));
       extFiltered = externalResults.filter((r) => r.source === 'artstation');
+    } else if (activeFilter === 'vimeo') {
+      localFiltered = localMatches.filter((v) => v.source === 'vimeo' || v.id.startsWith('vimeo_'));
+      extFiltered = externalResults.filter((r) => r.source === 'vimeo');
     } else if (activeFilter === 'sketchfab') {
       localFiltered = localMatches.filter((v) => v.source === 'sketchfab' || v.id.startsWith('sf_') || v.mediaType === 'model3d');
       extFiltered = externalResults.filter((r) => r.source === 'sketchfab' || r.mediaType === 'model3d');
@@ -229,14 +234,27 @@ export function LiveSearchDropdown({
     all: localMatches.length + externalResults.length,
     pinterest: externalResults.filter((r) => r.source === 'pinterest').length + localMatches.filter((v) => v.source === 'pinterest' || v.id.startsWith('pin_')).length,
     artstation: externalResults.filter((r) => r.source === 'artstation').length + localMatches.filter((v) => v.source === 'artstation' || v.id.startsWith('as_')).length,
+    vimeo: externalResults.filter((r) => r.source === 'vimeo').length + localMatches.filter((v) => v.source === 'vimeo' || v.id.startsWith('vimeo_')).length,
     sketchfab: externalResults.filter((r) => r.source === 'sketchfab' || r.mediaType === 'model3d').length + localMatches.filter((v) => v.source === 'sketchfab' || v.id.startsWith('sf_')).length,
     sakugabooru: externalResults.filter((r) => r.source === 'sakugabooru').length + localMatches.filter((v) => v.source === 'sakugabooru' || v.id.startsWith('saku_')).length,
-    free: externalResults.filter((r) => ['openverse', 'wikimedia', 'archive', 'sakugabooru'].includes(r.source)).length,
+    free: externalResults.filter((r) => ['openverse', 'wikimedia', 'sakugabooru'].includes(r.source)).length,
     library: localMatches.length,
   };
 
   const getSourceBadge = (source: string) => {
     switch (source) {
+      case 'vimeo':
+        return (
+          <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold bg-[#1AB7EA]/20 text-[#1AB7EA] border border-[#1AB7EA]/30">
+            <Play className="h-2.5 w-2.5 fill-current" /> Vimeo
+          </span>
+        );
+      case 'instagram':
+        return (
+          <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30">
+            <Sparkles className="h-2.5 w-2.5 text-pink-400" /> Instagram
+          </span>
+        );
       case 'sketchfab':
         return (
           <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold bg-[#1CAAD9]/20 text-[#1CAAD9] border border-[#1CAAD9]/30">
@@ -258,7 +276,7 @@ export function LiveSearchDropdown({
       case 'sakugabooru':
         return (
           <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
-            <Zap className="h-2.5 w-2.5" /> Sakuga 2D
+            <Zap className="h-2.5 w-2.5" /> 2D Animation
           </span>
         );
       case 'openverse':
@@ -268,7 +286,6 @@ export function LiveSearchDropdown({
           </span>
         );
       case 'wikimedia':
-      case 'archive':
         return (
           <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold bg-violet-500/20 text-violet-300 border border-violet-500/30">
             <Sparkles className="h-2.5 w-2.5" /> Public Domain
@@ -295,8 +312,9 @@ export function LiveSearchDropdown({
             { id: 'all', label: 'All', count: counts.all },
             { id: 'pinterest', label: '📌 Pinterest', count: counts.pinterest },
             { id: 'artstation', label: '🎨 ArtStation', count: counts.artstation },
+            { id: 'vimeo', label: '▶ Vimeo', count: counts.vimeo },
             { id: 'sketchfab', label: '🧊 3D Models', count: counts.sketchfab },
-            { id: 'sakugabooru', label: '⚡ Sakuga', count: counts.sakugabooru },
+            { id: 'sakugabooru', label: '⚡ 2D Animation', count: counts.sakugabooru },
             { id: 'free', label: '🆓 Free / CC0', count: counts.free },
             { id: 'library', label: '🎬 Library', count: counts.library },
           ].map((tab) => {
@@ -347,14 +365,7 @@ export function LiveSearchDropdown({
       {/* Results Content Area */}
       <div className="max-h-[60vh] overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-zinc-700">
         {displayedItems.totalCount === 0 && !loadingExternal ? (
-          <div className="text-center py-10 space-y-2">
-            <p className="text-sm font-semibold text-zinc-300">
-              No references found for &ldquo;{trimmed}&rdquo;
-            </p>
-            <p className="text-xs text-zinc-500 max-w-sm mx-auto">
-              Try searching broader terms like <em>combat</em>, <em>turnaround</em>, <em>walk</em>, or <em>dragon</em>.
-            </p>
-          </div>
+          <NoReferencesUploadCard query={trimmed} mediaType="video" />
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {/* Local Matches */}
@@ -441,7 +452,7 @@ export function LiveSearchDropdown({
       {/* Bottom Footer Call to Action */}
       <div className="border-t border-white/10 bg-black/60 px-4 py-2.5 flex items-center justify-between">
         <span className="text-[11px] text-zinc-400 hidden sm:inline">
-          Showing top instant matches across Pinterest, ArtStation, Sketchfab & Sakuga
+          Showing top instant matches across Pinterest, ArtStation, Sketchfab & 2D Animation
         </span>
         <button
           type="button"

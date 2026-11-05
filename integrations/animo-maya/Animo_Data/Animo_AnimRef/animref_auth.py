@@ -446,40 +446,4 @@ def get_user_moodboards(force_refresh=False):
 
 
 def upload_playblast_to_animref(mp4_file_path, title="Maya Playblast", progress_callback=None):
-    token = get_valid_token()
-    user = get_current_user()
-    if not token or not user:
-        raise RuntimeError("Please sign in to upload playblasts.")
-
-    uid = user.get("uid")
-    filename = "playblast_{}_{}.mp4".format(int(time.time()), os.path.basename(mp4_file_path).replace(" ", "_"))
-    object_name = "users/{}/playblasts/{}".format(uid, filename)
-
-    encoded_name = urllib_parse.quote(object_name, safe="")
-    upload_url = "https://firebasestorage.googleapis.com/v0/b/{}/o?uploadType=media&name={}".format(
-        STORAGE_BUCKET, encoded_name
-    )
-
-    with open(mp4_file_path, "rb") as f:
-        file_bytes = f.read()
-
-    req = urllib_request.Request(
-        upload_url,
-        data=file_bytes,
-        headers={
-            "Authorization": "Bearer " + token,
-            "Content-Type": "video/mp4",
-            "User-Agent": "AnimRef-Animo-Plugin/1.0"
-        }
-    )
-    with urllib_request.urlopen(req, timeout=60) as resp:
-        res = json.loads(resp.read().decode("utf-8"))
-        download_token = res.get("downloadTokens", "")
-        public_url = "https://firebasestorage.googleapis.com/v0/b/{}/o/{}?alt=media&token={}".format(
-            STORAGE_BUCKET, urllib_parse.quote(object_name, safe=""), download_token
-        )
-        return {
-            "publicUrl": public_url,
-            "filename": filename,
-            "objectName": object_name
-        }
+    raise RuntimeError("Cloud playblast upload is not available yet. Your playblast remains on this computer; load it in the website compare tool.")

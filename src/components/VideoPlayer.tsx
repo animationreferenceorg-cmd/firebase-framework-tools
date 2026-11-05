@@ -17,6 +17,7 @@ import { likeVideo, unlikeVideo, saveVideo, unsaveVideo } from '@/lib/firestore'
 import { SaveToBoardModal } from '@/components/SaveToBoardModal';
 import { ProDownloadButton } from '@/components/ProDownloadButton';
 import { PricingDialog } from '@/components/PricingDialog';
+import { SignUpPromptDialog } from '@/components/auth/SignUpPromptDialog';
 import { OnionSkinOverlay, type OnionSettings, type OnionSkinHandle, type OnionStatus } from '@/components/player/OnionSkinOverlay';
 import { StudyToolsPanel, VIEW_MODES, VIEW_MODE_FILTER, nextViewMode, type ViewMode } from '@/components/player/StudyToolsPanel';
 import { isForeignKeyTarget, isKeyboardTarget, registerPlayer, setHoveredPlayer } from '@/lib/player-focus';
@@ -259,6 +260,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
     const [onionExportable, setOnionExportable] = React.useState(false);
     const [exportingOnion, setExportingOnion] = React.useState(false);
     const [showPricing, setShowPricing] = React.useState(false);
+    const [showSignUpDialog, setShowSignUpDialog] = React.useState(false);
     const [containerSize, setContainerSize] = React.useState({ w: 0, h: 0 });
     const onionRef = React.useRef<OnionSkinHandle>(null);
     const playerIdRef = React.useRef(Symbol('video-player'));
@@ -342,6 +344,10 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
 
     const handleFullscreenToggle = () => {
         if (!containerRef.current) return;
+        if (!authUser) {
+            setShowSignUpDialog(true);
+            return;
+        }
         if (!document.fullscreenElement) {
             containerRef.current.requestFullscreen();
         } else {
@@ -1230,6 +1236,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                 onOpenChange={setShowSaveToBoard}
             />
             <PricingDialog open={showPricing} onOpenChange={setShowPricing} />
+            <SignUpPromptDialog open={showSignUpDialog} onOpenChange={setShowSignUpDialog} trigger="fullscreen" videoTitle={video.title} />
         </div>
     );
 });

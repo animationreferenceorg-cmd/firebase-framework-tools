@@ -105,6 +105,7 @@ def record_playblast(width=1280, height=720, camera=None, start_frame=None, end_
         ffmpeg,
         "-y",
         "-framerate", str(fps),
+        "-start_number", str(start),
         "-i", raw_pattern,
         "-c:v", "libx264",
         "-pix_fmt", "yuv420p",

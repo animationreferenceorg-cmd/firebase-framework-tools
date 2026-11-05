@@ -23,7 +23,6 @@ export function detectClipPlatform(value: string): ClipSourcePlatform {
     if (host.endsWith('giphy.com')) return 'giphy';
     if (host.endsWith('unsplash.com')) return 'unsplash';
     if (host.endsWith('pexels.com')) return 'pexels';
-    if (host.endsWith('archive.org')) return 'archive';
     return 'web';
   } catch {
     return 'web';

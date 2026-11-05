@@ -3,10 +3,13 @@
   "name": "Animation Reference — Clip & Save",
   "version": "0.4.0",
   "description": "Save videos and images from any site to your Animation Reference boards, and capture precise video moments.",
-  "permissions": ["activeTab", "contextMenus", "scripting", "storage", "tabs"],
+  "permissions": ["activeTab", "contextMenus", "scripting", "storage", "tabs", "cookies"],
   "host_permissions": [
+    "http://localhost/*",
+    "http://127.0.0.1/*",
     "https://animationreference.org/*",
     "https://securetoken.googleapis.com/*",
+    "https://identitytoolkit.googleapis.com/*",
     "http://*/*",
     "https://*/*",
     "https://*.youtube.com/*",
@@ -21,25 +24,25 @@
   ],
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
+      "matches": ["http://*/*", "https://*/*", "http://localhost/*", "http://127.0.0.1/*"],
       "js": ["floating-widget.js"],
       "run_at": "document_idle"
     },
     {
-      "matches": ["http://*/*", "https://*/*"],
+      "matches": ["http://*/*", "https://*/*", "http://localhost/*", "http://127.0.0.1/*"],
       "js": ["save-rules.js", "save-button.js"],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["popup.html", "popup.css", "popup-embedded.css", "popup.js", "site-icon.png", "icon-48.png"],
-      "matches": ["http://*/*", "https://*/*"]
+      "resources": ["popup.html", "popup.css", "popup-embedded.css", "popup.js", "brand-mark.svg", "site-icon.png", "icon-48.png"],
+      "matches": ["http://*/*", "https://*/*", "http://localhost/*", "http://127.0.0.1/*"]
     }
   ],
   "background": { "scripts": ["service-worker.js"], "type": "module" },
   "icons": { "16": "site-icon.png", "32": "site-icon.png", "48": "site-icon.png", "128": "site-icon.png" },
   "action": { "default_title": "Open Clip & Save" },
-  "externally_connectable": { "matches": ["https://animationreference.org/*"] },
+  "externally_connectable": { "matches": ["https://animationreference.org/*", "https://*.animationreference.org/*", "http://localhost/*", "http://127.0.0.1/*"] },
   "browser_specific_settings": { "gecko": { "id": "clip@animationreference.org", "strict_min_version": "121.0" } }
 }

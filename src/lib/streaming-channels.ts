@@ -34,7 +34,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: '2D, 3D & Anime Walks',
         description: 'Standard walks, casual strolls, heavy boots, and character pacing cycles.',
         href: '/tags/walk',
-        coverArt: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/7ddac5c0b8c640d51c46cc4d6dd00bb3.jpg',
         badge: 'MECHANICS',
         keywords: ['walk', 'walking', 'walk cycle', 'walk-cycle', 'ebata walk'],
       },
@@ -44,7 +44,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Live-Action Biomechanics',
         description: 'Frame-by-frame real human locomotion, heel-strike, and weight transfer.',
         href: '/resources/real-life-animation-reference',
-        coverArt: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Animal_Locomotion_I%2C_Plate_27_-_Nude_Man_Walking_and_Carrying_a_75_lb_stone_on_head%2C_hands_raised_02.gif?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original',
         badge: '24 FPS • REAL',
         keywords: ['real', 'live-action', 'human', 'reference', 'mocap'],
       },
@@ -54,7 +54,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Acceleration & High-Speed',
         description: 'Full sprint mechanics, athletic dashes, panic runs, and velocity arcs.',
         href: '/tags/running-locomotion',
-        coverArt: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/98c37987a27c84748fe99b9ec4f1b6de.jpg',
         badge: 'VELOCITY',
         keywords: ['running locomotion', 'run', 'running', 'sprint'],
       },
@@ -64,7 +64,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Physical Leverage & Strain',
         description: 'Lifting heavy crates, pushing boulders, dragging objects, and gravity strain.',
         href: '/category/body-mechanics',
-        coverArt: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://firebasestorage.googleapis.com/v0/b/aniamtion-reference.firebasestorage.app/o/migrated-thumbnails%2FPk8UebEkkd0Xob7SNffg-thumbnailUrl.jpg?alt=media&token=ebfa509c-2f48-4e8e-b7d4-c07b28ae7a68',
         badge: 'PHYSICS',
         keywords: ['body mechanics', 'weight', 'lifting', 'balance', 'heavy'],
       },
@@ -74,7 +74,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Elevation & Compression',
         description: 'Deep crouch anticipations, apex hangtime, and heavy ground impact landings.',
         href: '/resources/dance-and-parkour-animation-reference',
-        coverArt: 'https://images.unsplash.com/photo-1579758629938-03607ccdbaba?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://firebasestorage.googleapis.com/v0/b/aniamtion-reference.firebasestorage.app/o/migrated-thumbnails%2FWyu9hcLUd44uZRBYYLHe-thumbnailUrl.jpg?alt=media&token=9b375199-14e0-411d-aaf7-a35f716e18c0',
         badge: 'ELEVATION',
         keywords: ['jump', 'jumping', 'parkour', 'acrobatics', 'flips', 'landing'],
       },
@@ -84,7 +84,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Kinetic Continuous Arcs',
         description: 'Rhythmic stage choreography, full 360 pivots, twists, and dynamic arcs.',
         href: '/tags/rotation',
-        coverArt: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://firebasestorage.googleapis.com/v0/b/aniamtion-reference.firebasestorage.app/o/migrated-thumbnails%2F0cqAUp1p32SInTaWFWAW-thumbnailUrl.jpg?alt=media&token=93564af7-83a5-4cdb-af0b-9c03848a9c50',
         badge: 'KINETIC',
         keywords: ['rotation', 'dance', 'flips', 'spinning'],
       },
@@ -102,7 +102,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Silhouette & Topology',
         description: 'Full turntable rotations for studying volumes, hair, and costume design in motion.',
         href: '/resources/character-turnaround-animation-reference',
-        coverArt: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://cdnb.artstation.com/p/assets/images/images/099/837/249/large/louis-laurent-vision-interactive-image-81.webp?1781106240',
         badge: '360° TURNTABLE',
         keywords: ['turnaround', 'rotation', 'character turnaround', '3d-model', 'turntable'],
       },
@@ -112,7 +112,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Wireframes & Mesh Assets',
         description: 'Production-ready 3D character rigs, hard-surface assets, and Maya/Blender models.',
         href: '/tags/3d-model',
-        coverArt: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://media.sketchfab.com/models/17d22525b4124088a8827d9c45a2627f/thumbnails/55700a1f80d247c7ba450184f971c064/664a296cc711469dbc422492567e264c.jpeg',
         badge: 'RIGGED ASSETS',
         keywords: ['3d-model', 'sketchfab', 'rigged', 'maya', 'blender', 'substancepainter'],
       },
@@ -122,7 +122,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Visual Staging & Framing',
         description: 'Beat boards, camera choreography, dynamic lensing, and shot transitions.',
         href: '/tags/storyboard',
-        coverArt: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/564b57f4872e754aebe00368216aec29.jpg',
         badge: 'STAGING',
         keywords: ['storyboard', 'cinematography', 'camera', 'staging', 'composition'],
       },
@@ -132,7 +132,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Worldbuilding & Atmosphere',
         description: 'Atmospheric color keys, mood paintings, and master visual development studies.',
         href: '/resources/visdev-concept-art',
-        coverArt: 'https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://cdnb.artstation.com/p/assets/images/images/088/468/021/large/pavel-oleinik-03-04-25-cut-2-inst.jpg?1748368373',
         badge: 'VIS DEV',
         keywords: ['visdev', 'visual development', 'artstation', 'concept art', 'color key'],
       },
@@ -142,7 +142,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Character Proportions',
         description: 'Orthographic views, facial expression charts, and proportion construction.',
         href: '/category/model-sheet',
-        coverArt: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://firebasestorage.googleapis.com/v0/b/aniamtion-reference.firebasestorage.app/o/migrated-thumbnails%2FSvs9EjVkPSwQSjCbdDG4-thumbnailUrl.jpg?alt=media&token=650ac696-746f-42a0-a92b-d2849c26aa9f',
         badge: 'PROPORTIONS',
         keywords: ['model sheet', 'model-sheet', 'character design', 'expressions chart'],
       },
@@ -152,7 +152,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Multiplane Parallax & Space',
         description: 'Camera pans across detailed matte paintings, 3D layouts, and sci-fi environments.',
         href: '/tags/background-animation',
-        coverArt: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/f881a6e99036caefec4421a0139eae61.jpg',
         badge: 'ENVIRONMENT',
         keywords: ['background animation', '3d background', 'background art', 'layout'],
       },
@@ -170,7 +170,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Hand-to-Hand Combat',
         description: 'Strikes, high kicks, blocks, dodges, wrestling takedowns, and fight rhythm.',
         href: '/tags/combat',
-        coverArt: 'https://images.unsplash.com/photo-1549476464-37392f717541?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/cd3e747e05e552550ffe5aa52655177c.jpg',
         badge: 'CHOREOGRAPHY',
         keywords: ['combat', 'fighting', 'martial arts', 'stunt', 'punch', 'kick'],
       },
@@ -180,7 +180,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Katana, Broadsword & Staff',
         description: 'Blade clashes, fencing parries, weapon draw cuts, and lethal follow-through arcs.',
         href: '/resources/sword-swing-animation-reference',
-        coverArt: 'https://images.unsplash.com/photo-1589254065878-42c9da997008?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/638ff15589ef28caf206b44fc7716c58.jpg',
         badge: 'WEAPONS',
         keywords: ['sword', 'swordplay', 'blade', 'katana', 'weapon'],
       },
@@ -190,7 +190,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Sci-Fi Hard-Surface Robotics',
         description: 'Heavy hydraulic joints, transforming armor plating, jet thrusters, and railguns.',
         href: '/resources/transformers-mecha-animation-reference',
-        coverArt: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/6466c314329b03d33fa1a1b74149cfa6.jpg',
         badge: 'HARD-SURFACE',
         keywords: ['mecha', 'transformers', 'robot', 'gundam', 'machinery'],
       },
@@ -200,7 +200,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Pendulum Swings & Rooftops',
         description: 'Web swinging, momentum transfers, rooftop parkour, and dynamic superhero landings.',
         href: '/resources/spider-man-acrobatic-animation-reference',
-        coverArt: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/109fb100cb4a810fb44a010a1267be9d.jpg',
         badge: 'ACROBATICS',
         keywords: ['spider-man', 'acrobatics', 'parkour', 'flips', 'traversal'],
       },
@@ -210,7 +210,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Extreme Kinetic Force',
         description: 'Monochrome color inversions, screen vibrations, and explosive hit-stops.',
         href: '/tags/impact-frames',
-        coverArt: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/8828eeb383c0071b0e35587bff9a3f3c.jpg',
         badge: 'IMPACT FORCE',
         keywords: ['impact frames', 'impact', 'sparks fx', 'hit stop'],
       },
@@ -228,7 +228,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Subtle Posing & Attitude',
         description: 'Silent gestures, internal thought processes, hesitations, and body language.',
         href: '/tags/character-acting',
-        coverArt: 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/89c17598a600ae926bda0842e6a3266c.jpg',
         badge: 'PERFORMANCE',
         keywords: ['character acting', 'acting', 'performance', 'pantomime'],
       },
@@ -238,7 +238,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Eyes, Brow & Mouth',
         description: 'Subtle micro-smiles, furrowed brows, tear drops, shock, and intense rage.',
         href: '/resources/facial-acting-animation-reference',
-        coverArt: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://storage.googleapis.com/aniamtion-reference.firebasestorage.app/thumbnails/CeFGzb2V9bYeeXoNphp3.jpg',
         badge: 'EXPRESSION',
         keywords: ['facial expressions', 'facial', 'crying', 'eyes', 'smile'],
       },
@@ -248,7 +248,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Phonemes & Mouth Cadence',
         description: 'Vowel mouth shapes (A, E, I, O, U), consonant closures (M, B, P), and speech rhythm.',
         href: '/resources/speech-animation-reference',
-        coverArt: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://firebasestorage.googleapis.com/v0/b/aniamtion-reference.firebasestorage.app/o/migrated-thumbnails%2FidJgcD9KhOA8nJGpnS4C-thumbnailUrl.jpg?alt=media&token=38e65a67-094c-403e-a820-f77f6ab82f9c',
         badge: 'DIALOGUE',
         keywords: ['dialogue', 'speech', 'lip sync', 'talking'],
       },
@@ -258,7 +258,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Natural Breathing & Settles',
         description: 'Keeping poses alive with chest breathing cycles, subtle eye darts, and weight settles.',
         href: '/resources/moving-hold-animation-reference',
-        coverArt: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://firebasestorage.googleapis.com/v0/b/aniamtion-reference.firebasestorage.app/o/migrated-thumbnails%2FAFUQ51YWfXyXnKTcStqz-thumbnailUrl.jpg?alt=media&token=8be9c4cc-d6c0-4988-a0b3-6931b08ce7ce',
         badge: 'ORGANIC LIFE',
         keywords: ['moving hold', 'subtle', 'breathing', 'settle'],
       },
@@ -276,7 +276,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: '4-Legged Canine & Feline',
         description: 'Diagonal and lateral walking gaits, shoulder scapula action, and tail counter-balance.',
         href: '/resources/quadruped-animal-walk-cycle-reference',
-        coverArt: 'https://images.unsplash.com/photo-1534188753412-3e26d0d618d6?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/555ee98f4709d181d3d7d62d1a3ee44f.jpg',
         badge: 'QUADRUPED',
         keywords: ['animals', 'quadruped', 'creature animation', 'dog', 'cat', 'tiger', 'horse'],
       },
@@ -286,7 +286,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Massive Anatomical Scale',
         description: 'Heavy dinosaur footsteps, dragon tail whips, alien joints, and monstrous roars.',
         href: '/tags/creature-animation',
-        coverArt: 'https://images.unsplash.com/photo-1563089145-599997674d42?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/c9f57bf64883faa61cd1fb2377c6403c.jpg',
         badge: 'BEHEMOTHS',
         keywords: ['creature animation', 'monster', 'creature', 'beast', 'dragon'],
       },
@@ -296,7 +296,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Downstroke Power & Gliding',
         description: 'Feathered and leathery wing anatomy, air resistance, vortex banks, and landings.',
         href: '/tags/flying',
-        coverArt: 'https://images.unsplash.com/photo-1522926197415-e55c22c88c71?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://i.ytimg.com/vi/lBlZM1nre5g/maxresdefault.jpg',
         badge: 'FLIGHT',
         keywords: ['flying', 'wings', 'flight', 'bird', 'aerial'],
       },
@@ -314,7 +314,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Volume Preservation',
         description: 'Impact deformation, elastic rebound, facial compression, and kinetic weight.',
         href: '/resources/squash-and-stretch-animation-reference',
-        coverArt: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/79a1d85f6d0987a0f250b838040ebccc.jpg',
         badge: 'PRINCIPLE #1',
         keywords: ['squash and stretch', 'morphing', 'stretch', 'squash'],
       },
@@ -324,7 +324,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Frame Spacing Charts',
         description: 'Slow-in, slow-out, moving over extremes, explosive anticipation, and snap timing.',
         href: '/resources/animation-timing-and-spacing-reference',
-        coverArt: 'https://images.unsplash.com/photo-1508057198894-247b23fe5ade?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/eacf693ddb0c5cc3a8bbbef108f2f1b1.jpg',
         badge: 'CADENCE',
         keywords: ['timing', 'spacing', 'anticipation', 'ease in'],
       },
@@ -334,7 +334,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Speed Lines & Kinetic Blur',
         description: 'Multiple limbs, dry brush smears, extreme distortion, and speed lines in 24 FPS.',
         href: '/tags/smears',
-        coverArt: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/c03135ccd91452dbf553a6d3456ea4e3.jpg',
         badge: 'SPEED SMEARS',
         keywords: ['smears', 'smear', 'blur', 'motion blur'],
       },
@@ -344,7 +344,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Pyrotechnic Destruction',
         description: 'Shockwave blast fronts, billowy smoke plumes, trailing embers, and fire tongues.',
         href: '/tags/smoke-effects',
-        coverArt: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/bab13c235c00c07af54d14076ba7b7e1.jpg',
         badge: 'PYROTECHNICS',
         keywords: ['smoke effects', 'explosions', 'fire effects', 'smoke', 'fire'],
       },
@@ -354,7 +354,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'Viscosity & Surface Tension',
         description: 'Water drops, crown splashes, pouring liquids, fluid waves, and dynamic ripples.',
         href: '/tags/liquid-and-water',
-        coverArt: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/907c43002e0426fc2f0d1e27301d5dbc.jpg',
         badge: 'FLUID DYNAMICS',
         keywords: ['liquid & water', 'water', 'liquid', 'splash'],
       },
@@ -364,7 +364,7 @@ export const STREAMING_SHELVES: StreamingShelf[] = [
         subtitle: 'High-Voltage Plasma',
         description: 'Crackling electric bolts, metal grinding sparks, laser blasts, and magic aura particles.',
         href: '/tags/sparks-fx',
-        coverArt: 'https://images.unsplash.com/photo-1545670723-196ed0954986?w=800&auto=format&fit=crop&q=80',
+        coverArt: 'https://www.sakugabooru.com/data/preview/f712c0f85783b09a2b1a3235bad37d2c.jpg',
         badge: 'ENERGY FX',
         keywords: ['sparks fx', 'lightning fx', 'beams', 'particles', 'magic'],
       },
@@ -413,4 +413,71 @@ export function calculateChannelCounts(videos: Video[]): Record<string, number> 
   }
 
   return counts;
+}
+
+
+/**
+ * Resolves dynamic category cover thumbnails directly from the library video snapshot,
+ * ensuring each channel showcases an authentic, highest-relevance reference clip from platform content.
+ */
+export function calculateChannelCovers(videos: Video[]): Record<string, string> {
+  const covers: Record<string, string> = {};
+  if (!videos || videos.length === 0) return covers;
+
+  const validVideos = videos.filter((v) => {
+    const t = v.thumbnailUrl || v.posterUrl;
+    if (!t) return false;
+    const clean = t.toLowerCase();
+    return (
+      !clean.includes('assets.reflix.dev') &&
+      !clean.includes('cdninstagram.com') &&
+      !clean.includes('placehold.co') &&
+      !clean.endsWith('.mov') &&
+      !clean.endsWith('.mp4')
+    );
+  });
+
+  const used = new Set<string>();
+
+  for (const shelf of STREAMING_SHELVES) {
+    for (const channel of shelf.channels) {
+      const keys = channel.keywords.map((k) => k.toLowerCase().trim());
+      let bestVid: Video | null = null;
+      let bestScore = -1;
+
+      for (const v of validVideos) {
+        const thumb = v.thumbnailUrl || v.posterUrl || '';
+        const vTitle = (v.title || '').toLowerCase();
+        const tags = (v.tags || []).map((t) => String(t).toLowerCase());
+        const cats = ((v.categoryIds || []).concat(v.categories || [])).map((c) => String(c).toLowerCase());
+        const text = `${vTitle} ${tags.join(' ')} ${cats.join(' ')}`;
+
+        let score = 0;
+        for (const k of keys) {
+          if (tags.includes(k)) score += 10;
+          else if (cats.includes(k)) score += 6;
+          else if (vTitle.includes(k)) score += 5;
+          else if (text.includes(k)) score += 2;
+        }
+
+        if (used.has(thumb)) score -= 15;
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestVid = v;
+        }
+      }
+
+      if (bestVid && bestScore > 0) {
+        const chosen = bestVid.thumbnailUrl || bestVid.posterUrl || '';
+        used.add(chosen);
+        covers[channel.id] = chosen;
+      } else {
+        // Fallback to channel's default authentic cover
+        covers[channel.id] = channel.coverArt;
+      }
+    }
+  }
+
+  return covers;
 }

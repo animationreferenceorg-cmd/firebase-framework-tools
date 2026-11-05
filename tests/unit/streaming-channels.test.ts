@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { STREAMING_SHELVES, calculateChannelCounts } from '@/lib/streaming-channels';
+import { STREAMING_SHELVES, calculateChannelCounts, calculateChannelCovers } from '@/lib/streaming-channels';
 
 describe('Streaming Channels Catalog', () => {
   it('contains well-structured shelves with non-empty channels', () => {
@@ -62,5 +62,25 @@ describe('Streaming Channels Catalog', () => {
     expect(counts['walk-cycles']).toBeGreaterThanOrEqual(1);
     expect(counts['swordplay-and-weapons']).toBeGreaterThanOrEqual(1);
     expect(counts['quadruped-walks']).toBeGreaterThanOrEqual(1);
+  });
+  it('dynamically resolves channel covers from library video content', () => {
+    const mockVideos = [
+      {
+        id: 'v1',
+        title: 'Ninja Sword Fight Duel',
+        tags: ['sword', 'combat', 'katana'],
+        thumbnailUrl: 'https://example.com/sword-thumb.jpg',
+      },
+      {
+        id: 'v2',
+        title: 'Female Walk Cycle 24fps',
+        tags: ['walk', 'walk cycle', 'mechanics'],
+        thumbnailUrl: 'https://example.com/walk-thumb.jpg',
+      },
+    ] as any[];
+
+    const covers = calculateChannelCovers(mockVideos);
+    expect(covers['walk-cycles']).toBe('https://example.com/walk-thumb.jpg');
+    expect(covers['swordplay-and-weapons']).toBe('https://example.com/sword-thumb.jpg');
   });
 });

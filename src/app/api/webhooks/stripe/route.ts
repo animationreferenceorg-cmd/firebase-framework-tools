@@ -37,6 +37,19 @@ export async function POST(req: Request) {
         if (result.handled && result.userIds.length) {
             console.log(`[Webhook] ${event.type} synced customer ${result.customerId} -> ${result.userIds.length} user(s)`);
             if (event.type === 'checkout.session.completed' || event.type === 'customer.subscription.created') {
+                if (event.type === 'checkout.session.completed') {
+                    const sessionObj = event.data.object as Stripe.Checkout.Session;
+                    if (sessionObj?.id) {
+                        try {
+                            await getFirestore().collection('checkout_sessions').doc(sessionObj.id).set({
+                                status: 'completed',
+                                completedAt: Date.now(),
+                            }, { merge: true });
+                        } catch (e) {
+                            console.warn('[Webhook] Could not mark checkout session completed:', e);
+                        }
+                    }
+                }
                 for (const uid of result.userIds) {
                     await analytics.setIdentity(uid, { plan: 'pro' });
                     await analytics.trackEvent(

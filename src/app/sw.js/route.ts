@@ -37,8 +37,20 @@ self.addEventListener('fetch', (event) => {
 });
 `;
 
+// Development chunks change in place. Replaying HTML from an earlier compile
+// against the current chunks can produce mismatched React/Radix hydration IDs.
+// Replace existing local workers with a cleanup worker that never intercepts fetch.
+const DEVELOPMENT_WORKER = `
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil((async () => {
+  await caches.delete('aref-shell-v1');
+  await self.clients.claim();
+  await self.registration.unregister();
+})()));
+`;
+
 export function GET() {
-  return new Response(SERVICE_WORKER, {
+  return new Response(process.env.NODE_ENV === 'development' ? DEVELOPMENT_WORKER : SERVICE_WORKER, {
     headers: {
       'Content-Type': 'application/javascript; charset=utf-8',
       'Cache-Control': 'public, max-age=0, must-revalidate',

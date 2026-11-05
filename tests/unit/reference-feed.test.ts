@@ -61,4 +61,13 @@ describe('reference feed filtering', () => {
     expect(filterReferenceCatalog([model, art, video], { ...filters, media: 'model3d' })).toEqual([model]);
     expect(discoverySources('featured', 'all', 'image')).not.toContain('sketchfab');
   });
+
+  it('focuses animation discovery on high-quality craft sources and excludes low-quality embeds', () => {
+    const sources = discoverySources('animations');
+    expect(sources).not.toContain('youtube');
+    expect(sources).not.toContain('vimeo');
+    expect(sources).toContain('sakugabooru');
+    expect(sources).toContain('wikimedia');
+    expect(sources).not.toContain('archive');
+  });
 });

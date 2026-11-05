@@ -155,94 +155,19 @@ def get_saved_references():
 
 def get_user_moodboards():
     token = get_valid_token()
-    user = get_current_user()
-    if not token or not user:
+    if not token:
         return []
-
-    uid = user.get("uid")
-    # Query Firestore REST for user's moodboards
-    url = "https://firestore.googleapis.com/v1/projects/aniamtion-reference/databases/(default)/documents/users/{}/moodboards".format(uid)
     req = urllib_request.Request(
-        url,
-        headers={
-            "Authorization": "Bearer " + token,
-            "User-Agent": "AnimRef-Animo-Plugin/1.0"
-        }
+        SITE_API_BASE + "/user/moodboards",
+        headers={"Authorization": "Bearer " + token, "User-Agent": "AnimRef-Animo-Plugin/1.0"}
     )
     try:
         with urllib_request.urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-            docs = data.get("documents", [])
-            boards = []
-            for doc in docs:
-                fields = doc.get("fields", {})
-                name = fields.get("name", {}).get("stringValue", "Untitled Board")
-                thumb = fields.get("thumbnailUrl", {}).get("stringValue", "")
-                item_count = fields.get("itemCount", {}).get("integerValue", 0)
-
-                # Parse items array
-                raw_items = fields.get("items", {}).get("arrayValue", {}).get("values", [])
-                items = []
-                for val in raw_items:
-                    map_val = val.get("mapValue", {}).get("fields", {})
-                    vid_val = map_val.get("video", {}).get("mapValue", {}).get("fields", {})
-                    if vid_val:
-                        items.append({
-                            "id": vid_val.get("id", {}).get("stringValue", ""),
-                            "title": vid_val.get("title", {}).get("stringValue", "Reference Clip"),
-                            "thumbnailUrl": vid_val.get("thumbnailUrl", {}).get("stringValue", ""),
-                            "videoUrl": vid_val.get("videoUrl", {}).get("stringValue", ""),
-                            "duration": float(vid_val.get("duration", {}).get("doubleValue", 0.0) or vid_val.get("duration", {}).get("integerValue", 0)),
-                        })
-
-                doc_id = doc.get("name", "").split("/")[-1]
-                boards.append({
-                    "id": doc_id,
-                    "name": name,
-                    "thumbnailUrl": thumb,
-                    "itemCount": int(item_count) or len(items),
-                    "items": items
-                })
-            return boards
-    except Exception as e:
+            return data.get("moodboards", [])
+    except Exception:
         return []
 
 
 def upload_playblast_to_animref(mp4_file_path, title="Maya Playblast", progress_callback=None):
-    token = get_valid_token()
-    user = get_current_user()
-    if not token or not user:
-        raise RuntimeError("Please sign in to upload playblasts.")
-
-    uid = user.get("uid")
-    filename = "playblast_{}_{}.mp4".format(int(time.time()), os.path.basename(mp4_file_path).replace(" ", "_"))
-    object_name = "users/{}/playblasts/{}".format(uid, filename)
-
-    encoded_name = urllib_parse.quote(object_name, safe="")
-    upload_url = "https://firebasestorage.googleapis.com/v0/b/{}/o?uploadType=media&name={}".format(
-        STORAGE_BUCKET, encoded_name
-    )
-
-    with open(mp4_file_path, "rb") as f:
-        file_bytes = f.read()
-
-    req = urllib_request.Request(
-        upload_url,
-        data=file_bytes,
-        headers={
-            "Authorization": "Bearer " + token,
-            "Content-Type": "video/mp4",
-            "User-Agent": "AnimRef-Animo-Plugin/1.0"
-        }
-    )
-    with urllib_request.urlopen(req, timeout=60) as resp:
-        res = json.loads(resp.read().decode("utf-8"))
-        download_token = res.get("downloadTokens", "")
-        public_url = "https://firebasestorage.googleapis.com/v0/b/{}/o/{}?alt=media&token={}".format(
-            STORAGE_BUCKET, urllib_parse.quote(object_name, safe=""), download_token
-        )
-        return {
-            "publicUrl": public_url,
-            "filename": filename,
-            "objectName": object_name
-        }
+    raise RuntimeError("Cloud playblast upload is not available yet. Your playblast remains on this computer; load it in the website compare tool.")

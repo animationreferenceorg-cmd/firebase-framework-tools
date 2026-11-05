@@ -14,15 +14,9 @@ const nextConfig = {
           },
         ],
       },
-      {
-        source: '/_next/static/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
+      // Next owns caching for its chunks: development URLs are mutable, while
+      // production chunks have content hashes. An immutable override here kept
+      // old development layouts in existing browsers and broke hydration.
       {
         source: '/api/video/:path*',
         headers: [

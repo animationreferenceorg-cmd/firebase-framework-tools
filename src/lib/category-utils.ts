@@ -1,5 +1,18 @@
 import type { Video, Category } from '@/lib/types';
 
+function isUsableVideoThumbnail(v: Video): boolean {
+    const u = v.thumbnailUrl || v.posterUrl;
+    if (!u) return false;
+    const clean = u.toLowerCase();
+    return (
+        !clean.includes('placehold.co') &&
+        !clean.includes('assets.reflix.dev') &&
+        !clean.includes('cdninstagram.com') &&
+        !clean.endsWith('.mov') &&
+        !clean.endsWith('.mp4')
+    );
+}
+
 /**
  * Finds a matching video for a category to use as a thumbnail source.
  * Uses robust matching logic including ID checks, title matching, and loose tag matching.
@@ -7,9 +20,9 @@ import type { Video, Category } from '@/lib/types';
 export function findCategoryThumbnailMatch(category: Category, videos: Video[]): Video | undefined {
     if (!videos || videos.length === 0) return undefined;
 
-    // 1. Explicit Featured Video (if provided by caller, but we usually just have the list)
+    // 1. Explicit Featured Video (if provided by caller and has usable image)
     if (category.featuredVideoId) {
-        const featured = videos.find(v => v.id === category.featuredVideoId);
+        const featured = videos.find(v => v.id === category.featuredVideoId && isUsableVideoThumbnail(v));
         if (featured) return featured;
     }
 
@@ -26,7 +39,6 @@ export function findCategoryThumbnailMatch(category: Category, videos: Video[]):
         // C. Tag Matching (Looser)
         const inTagsByTitle = (v.tags || []).some(t => {
             const tLower = t.toLowerCase();
-            // Exact match OR One starts with the other (if length > 1 to avoid single letter matches)
             if (tLower.length < 2 || catTitleLower.length < 2) return tLower === catTitleLower;
             return tLower === catTitleLower || catTitleLower.startsWith(tLower) || tLower.startsWith(catTitleLower);
         });
@@ -38,11 +50,8 @@ export function findCategoryThumbnailMatch(category: Category, videos: Video[]):
     });
 
     if (matches.length > 0) {
-        // If multiple matches, we could randomize or pick the first.
-        // To ensure consistency across renders if the list order is stable, picking the first is safest.
-        // However, the admin page was picking a random one in 'auto-populate'. 
-        // For *display* purposes (Browse/Beta), stable is better.
-        return matches[0];
+        const withThumb = matches.find(isUsableVideoThumbnail);
+        return withThumb || matches[0];
     }
 
     return undefined;

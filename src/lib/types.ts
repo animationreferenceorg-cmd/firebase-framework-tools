@@ -28,6 +28,7 @@ export interface Video {
   thumbnailUrl: string; // For landscape hero/background images
   posterUrl: string; // For vertical card posters
   videoUrl: string;
+  previewUrl?: string;
   dataAiHint?: string;
   tags: string[];
   categoryIds?: string[]; // For main videos
@@ -165,7 +166,6 @@ export type ClipSourcePlatform =
   | 'giphy'
   | 'unsplash'
   | 'pexels'
-  | 'archive'
   | 'web'
   | 'upload'
   | 'library';

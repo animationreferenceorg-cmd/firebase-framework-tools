@@ -1,5 +1,7 @@
 'use client';
 
+import { NoReferencesUploadCard } from '@/components/reference/NoReferencesUploadCard';
+
 import { useEffect, useMemo, useState } from 'react';
 import { BookmarkPlus, Check, Chrome, Download, ExternalLink, Globe, Loader2, Search, Smartphone, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -40,7 +42,7 @@ export function ReferencesExplorer() {
   const [searchTab, setSearchTab] = useState<'library' | 'web'>('library');
   const [webResults, setWebResults] = useState<any[]>([]);
   const [webLoading, setWebLoading] = useState(false);
-  const [webSource, setWebSource] = useState<'all' | 'sakugabooru' | 'wikimedia' | 'archive' | 'openverse'>('all');
+  const [webSource, setWebSource] = useState<'all' | 'sakugabooru' | 'wikimedia' | 'openverse'>('all');
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
 
@@ -293,7 +295,7 @@ export function ReferencesExplorer() {
             </div>
             {/* Filter by provider pills */}
             <div className="flex flex-wrap items-center gap-1.5 text-xs">
-              {(['all', 'sakugabooru', 'wikimedia', 'archive', 'openverse'] as const).map((src) => (
+              {(['all', 'sakugabooru', 'wikimedia', 'openverse'] as const).map((src) => (
                 <button
                   key={src}
                   onClick={() => setWebSource(src)}
@@ -386,10 +388,7 @@ export function ReferencesExplorer() {
               })}
             </div>
           ) : (
-            <div className="grid place-items-center rounded-3xl border border-dashed border-white/10 py-16 text-center text-zinc-500">
-              <p className="text-sm">No live web results found for &ldquo;{search}&rdquo;.</p>
-              <p className="mt-1 text-xs text-zinc-600">Try broader terms like &ldquo;run&rdquo;, &ldquo;jump&rdquo;, &ldquo;fight&rdquo;, or &ldquo;smear&rdquo;.</p>
-            </div>
+            <NoReferencesUploadCard query={search} onUploaded={loadClips} mediaType="video" />
           )}
         </div>
       ) : (

@@ -1,4 +1,5 @@
 import { getFirestore } from './firebase-admin';
+import { isBlockedReference } from './blocked-references';
 
 /**
  * Library videos removed after a report. Video pages read from the static
@@ -23,5 +24,6 @@ export async function getTakenDownVideoIds(): Promise<Set<string>> {
 }
 
 export async function isVideoTakenDown(id: string): Promise<boolean> {
+  if (isBlockedReference({ id })) return true;
   return (await getTakenDownVideoIds()).has(id);
 }

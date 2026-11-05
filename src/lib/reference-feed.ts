@@ -1,7 +1,7 @@
 import type { Video } from './types';
 import type { TabOption, TypeOption, PillOption, MediaOption } from '@/components/FilterBar';
 
-export const REFERENCE_SOURCES = ['sketchfab', 'artstation', 'pinterest', 'sakugabooru', 'wikimedia', 'archive', 'openverse', 'web-images'] as const;
+export const REFERENCE_SOURCES = ['sketchfab', 'artstation', 'pinterest', 'vimeo', 'youtube', 'instagram', 'sakugabooru', 'wikimedia', 'openverse', 'web-images'] as const;
 export type ReferenceSource = typeof REFERENCE_SOURCES[number];
 
 export interface UnifiedSearchResult {
@@ -12,6 +12,7 @@ export interface UnifiedSearchResult {
   thumbnailUrl: string;
   mediaUrl: string;
   mediaType: 'video' | 'image' | 'gif' | 'model3d';
+  motionUrl?: string;
   authorName?: string;
   authorAvatar?: string;
   authorUsername?: string;
@@ -36,14 +37,14 @@ function tabSources(tab: TabOption, type: TypeOption): ReferenceSource[] {
   if (tab === 'visdev') return ['artstation', 'pinterest', 'wikimedia', 'openverse', 'web-images'];
   if (tab === 'character-design') return ['pinterest', 'artstation', 'wikimedia', 'openverse', 'web-images'];
   if (tab === 'community') return [];
-  if (tab === 'animations') return type === '3D' ? ['sketchfab'] : ['sakugabooru', 'wikimedia', 'archive'];
-  return type === '3D' ? ['sketchfab', 'artstation'] : [...REFERENCE_SOURCES];
+  if (tab === 'animations') return type === '3D' ? ['sketchfab'] : ['sakugabooru', 'instagram', 'wikimedia'];
+  return type === '3D' ? ['sketchfab', 'artstation'] : ['sketchfab', 'artstation', 'pinterest', 'instagram', 'sakugabooru', 'wikimedia', 'openverse', 'web-images'];
 }
 
 export function discoverySources(tab: TabOption, type: TypeOption = 'all', media: MediaOption = 'all'): ReferenceSource[] {
   return tabSources(tab, type).filter(source => {
-    if (media === 'video') return ['sakugabooru', 'wikimedia', 'archive'].includes(source);
-    if (media === 'image') return ['artstation', 'pinterest', 'wikimedia', 'openverse', 'web-images'].includes(source);
+    if (media === 'video') return ['sakugabooru', 'instagram', 'wikimedia'].includes(source);
+    if (media === 'image') return ['artstation', 'pinterest', 'instagram', 'wikimedia', 'openverse', 'web-images'].includes(source);
     if (media === 'model3d') return ['sketchfab', 'artstation'].includes(source);
     return true;
   });

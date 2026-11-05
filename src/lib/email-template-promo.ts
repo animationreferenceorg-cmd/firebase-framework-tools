@@ -279,6 +279,7 @@ export function renderOneDollarPromoHtml(name = 'Animator', customMessage?: stri
                 You received this exclusive invite because you have an account on <a href="https://animationreference.org" target="_blank" style="color: #a1a1aa; text-decoration: underline;">animationreference.org</a>.
               </p>
               <p style="margin: 0;">
+                <a href="https://www.instagram.com/animationreference/" target="_blank" style="color: #f472b6; font-weight: 700; text-decoration: underline;">Follow @animationreference on Instagram</a> &bull;
                 <a href="https://animationreference.org/profile" target="_blank" style="color: #71717a; text-decoration: underline;">Account Settings</a> &bull;
                 <a href="https://animationreference.org/pricing" target="_blank" style="color: #71717a; text-decoration: underline;">View All Plans</a> &bull;
                 <a href="https://animationreference.org" target="_blank" style="color: #71717a; text-decoration: underline;">Browse Library</a>
@@ -287,6 +288,128 @@ export function renderOneDollarPromoHtml(name = 'Animator', customMessage?: stri
           </tr>
         </table>
 
+      </div>
+    </center>
+  </body>
+</html>`;
+}
+
+/** Generates a high-converting Instagram community invite email for the 12,000+ animators. */
+export function renderInstagramInviteHtml(name = 'Animator', customMessage?: string): string {
+  const recipient = esc(name || 'Animator');
+  const note = customMessage
+    ? esc(customMessage)
+    : "We are now posting daily curated 2D & 3D animation references, sakuga breakdowns, acting takes, and locomotion reels on our official Instagram — @animationreference.";
+
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Follow @animationreference on Instagram</title>
+    <style type="text/css">
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #07060b;
+        color: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      }
+      table { border-collapse: separate; }
+      a { text-decoration: none; }
+    </style>
+  </head>
+  <body style="margin: 0; padding: 0; background-color: #07060b; color: #ffffff;">
+    <div style="display: none; max-height: 0px; overflow: hidden; font-size: 1px; line-height: 1px; color: #fff; opacity: 0; mso-hide: all;">
+      Follow @animationreference on Instagram for daily curated sakuga, 3D acting takes, and frame-by-frame motion breakdowns!
+    </div>
+
+    <center style="width: 100%; table-layout: fixed; background-color: #07060b; padding: 28px 10px 48px 10px;">
+      <div style="max-width: 600px; margin: 0 auto;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 18px;">
+          <tr>
+            <td align="center" style="padding: 10px 0;">
+              <a href="https://animationreference.org" target="_blank">
+                <img src="${CDN_LOGO_URL}" alt="Animation Reference" width="180" style="display: block; border: 0; max-width: 180px; height: auto;" />
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #110d1b; border: 1px solid rgba(236, 72, 153, 0.35); border-radius: 24px; overflow: hidden;">
+          <tr>
+            <td style="background: linear-gradient(180deg, rgba(236, 72, 153, 0.22) 0%, rgba(17, 13, 27, 0) 100%); padding: 36px 32px 20px 32px; text-align: center;">
+              <table align="center" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 16px auto;">
+                <tr>
+                  <td style="background: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.45); border-radius: 9999px; padding: 5px 16px;">
+                    <span style="font-size: 11px; font-weight: 800; color: #f472b6; text-transform: uppercase; letter-spacing: 0.8px;">
+                      🎬 Official Instagram Community
+                    </span>
+                  </td>
+                </tr>
+              </table>
+
+              <h1 style="margin: 0 0 14px 0; font-size: 28px; font-weight: 900; line-height: 1.25; color: #ffffff; letter-spacing: -0.5px;">
+                Get Daily Animation Reels on <span style="color: #f472b6;">@animationreference</span>
+              </h1>
+
+              <p style="margin: 0 auto; max-width: 480px; font-size: 14px; line-height: 1.6; color: #d4d4d8;">
+                Hey ${recipient}, ${note}
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding: 12px 28px 24px 28px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: linear-gradient(135deg, rgba(131, 24, 67, 0.35) 0%, rgba(88, 28, 135, 0.35) 100%); border: 1px solid rgba(244, 114, 182, 0.35); border-radius: 18px; padding: 22px;">
+                <tr>
+                  <td>
+                    <div style="font-size: 14px; font-weight: 800; color: #ffffff; margin-bottom: 12px;">
+                      What we share every day on <span style="color: #f472b6;">@animationreference</span>:
+                    </div>
+                    <div style="font-size: 13px; color: #e4e4e7; line-height: 1.7; margin-bottom: 8px;">
+                      🔥 <strong>Daily Sakuga &amp; 3D Shot Breakdowns:</strong> Hand-picked combat choreography, creature mechanics, and subtle facial acting clips.
+                    </div>
+                    <div style="font-size: 13px; color: #e4e4e7; line-height: 1.7; margin-bottom: 8px;">
+                      🎨 <strong>Artist Spotlights &amp; Credits:</strong> Tag your own work with <strong>#animationreference</strong> for a chance to be featured to 12,000+ animators.
+                    </div>
+                    <div style="font-size: 13px; color: #e4e4e7; line-height: 1.7;">
+                      ⏱️ <strong>Direct Study Links:</strong> Every reel links directly to the 24 FPS frame-by-frame player on AnimationReference.org.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td align="center" style="padding: 4px 28px 28px 28px;">
+              <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+                <tr>
+                  <td align="center" style="border-radius: 14px; background: linear-gradient(135deg, #f59e0b 0%, #ec4899 50%, #9333ea 100%); box-shadow: 0 8px 30px rgba(236, 72, 153, 0.45);">
+                    <a href="https://www.instagram.com/animationreference/" target="_blank" style="display: inline-block; padding: 18px 42px; font-size: 16px; font-weight: 900; color: #ffffff; text-decoration: none; border-radius: 14px;">
+                      Follow @animationreference on Instagram &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 12px 0 0 0; font-size: 12px; color: #a1a1aa;">
+                Or visit <a href="https://www.instagram.com/animationreference/" target="_blank" style="color: #f472b6; text-decoration: underline;">instagram.com/animationreference</a>
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding: 18px 28px; background: rgba(255, 255, 255, 0.02); border-top: 1px solid rgba(255, 255, 255, 0.06); text-align: left;">
+              <p style="margin: 0 0 8px 0; font-size: 13px; line-height: 1.6; color: #a1a1aa;">
+                Have a shot or reel you want us to feature on our Instagram? Tag <strong>@animationreference</strong> on Instagram or upload it to the Community Feed!
+              </p>
+              <p style="margin: 0; font-size: 13px; font-weight: 700; color: #ffffff;">
+                Michael &amp; the Animation Reference Team
+              </p>
+            </td>
+          </tr>
+        </table>
       </div>
     </center>
   </body>

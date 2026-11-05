@@ -1,12 +1,15 @@
 import type { ReferenceSource, UnifiedSearchResult } from './reference-feed';
 import { parseSearchIntent } from './search-intent';
 import { searchWebImages } from './reference-web-images';
+import { searchAnimationVideos } from './reference-animation-videos';
+import { isBlockedReference, filterBlockedReferences } from './blocked-references';
 
 const PAGE_SIZE = 24;
 const FEEDS = ['characterdesign', 'artreferences', 'animationart', 'posemuse', 'characterdesignreferences'];
 const NAMES: Record<ReferenceSource, string> = {
   artstation: 'ArtStation', pinterest: 'Pinterest', sketchfab: 'Sketchfab',
-  sakugabooru: 'Sakugabooru', wikimedia: 'Wikimedia', archive: 'Internet Archive',
+  vimeo: 'Vimeo', youtube: 'YouTube', instagram: 'Instagram',
+  sakugabooru: '2D Animation', wikimedia: 'Wikimedia',
   openverse: 'Openverse (Free CC0)',
   'web-images': 'Web image search',
 };
@@ -18,7 +21,7 @@ export interface ProviderRequest {
   explore: boolean;
   position?: string;
   signal?: AbortSignal;
-  indexSource?: 'pinterest';
+  indexSource?: 'pinterest' | 'vimeo' | 'instagram';
 }
 export interface ProviderPage {
   items: UnifiedSearchResult[];
@@ -34,7 +37,7 @@ export interface ProviderPage {
 async function get(url: string, signal?: AbortSignal, headers: Record<string, string> = {}) {
   const response = await fetch(url, {
     headers: { 'User-Agent': 'AnimationReference/1.0 (+https://animationreference.org)', Accept: 'application/json', ...headers },
-    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(8000)]) : AbortSignal.timeout(8000),
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(3500)]) : AbortSignal.timeout(3500),
     next: { revalidate: 1800 },
   });
   if (!response.ok) throw new Error(`Provider returned ${response.status}`);
@@ -161,7 +164,7 @@ async function pinterest(options: ProviderRequest): Promise<ProviderPage> {
   const token = process.env.PINTEREST_ACCESS_TOKEN;
   // Give Pinterest a dedicated keyword query instead of hoping a general web
   // result set contains pins. This source retains its own real index cursor.
-  if (!token && (process.env.SERPER_API_KEY || process.env.BRAVE_SEARCH_API_KEY)) {
+  if (!token && (process.env.SERPER_API_KEY || process.env.BRAVE_SEARCH_API_KEY || process.env.OPEN_IMAGE_SEARCH === 'true')) {
     return searchWebImages({ ...options, indexSource: 'pinterest' });
   }
   if (token) {
@@ -245,6 +248,7 @@ async function wikimedia(options: ProviderRequest): Promise<ProviderPage> {
   const items = Object.values(data.query?.pages || {}).flatMap((page: any): UnifiedSearchResult[] => {
     const info = page.imageinfo?.[0];
     if (!info?.url || !/^(image|video)\//.test(info.mime || '') || imagesOnly && !info.mime.startsWith('image/')) return [];
+    if (isBlockedReference({ id: `wiki_${page.pageid}`, title: page.title, sourceUrl: info.descriptionurl, mediaUrl: info.url })) return [];
     const description = info.extmetadata?.ImageDescription?.value?.replace(/<[^>]*>/g, '').slice(0, 300) || '';
     const license = info.extmetadata?.LicenseShortName?.value?.replace(/<[^>]*>/g, '') || '';
     return [{
@@ -259,23 +263,6 @@ async function wikimedia(options: ProviderRequest): Promise<ProviderPage> {
   return { items, next: typeof data.continue?.gsroffset === 'number' ? String(data.continue.gsroffset) : null };
 }
 
-async function archive(options: ProviderRequest): Promise<ProviderPage> {
-  if (!options.explore && !parseSearchIntent(options.query).externalQueries.archive) return { items: [], next: null };
-  const page = pageNumber(options.position);
-  const params = new URLSearchParams({ q: `${options.query || 'slapstick stunts comedy acrobatics'} AND mediatype:(movies)`, rows: String(PAGE_SIZE), page: String(page), output: 'json' });
-  for (const field of ['identifier', 'title', 'description', 'creator']) params.append('fl[]', field);
-  const data = await (await get(`https://archive.org/advancedsearch.php?${params}`, options.signal)).json();
-  const items = (data.response?.docs || []).filter((doc: any) => doc.identifier).map((doc: any): UnifiedSearchResult => ({
-    id: `archive_${doc.identifier}`, title: doc.title || 'Archive Reference', source: 'archive',
-    sourceUrl: `https://archive.org/details/${encodeURIComponent(doc.identifier)}`,
-    thumbnailUrl: `https://archive.org/services/img/${encodeURIComponent(doc.identifier)}`,
-    mediaUrl: `https://archive.org/download/${encodeURIComponent(doc.identifier)}/${encodeURIComponent(doc.identifier)}.mp4`, mediaType: 'video',
-    authorName: Array.isArray(doc.creator) ? doc.creator.join(', ') : doc.creator || 'Internet Archive',
-    tags: ['archive', 'vintage'], description: String(doc.description || '').slice(0, 300),
-  }));
-  return { items, next: page * PAGE_SIZE < (data.response?.numFound || 0) ? String(page + 1) : null };
-}
-
 async function openverse(options: ProviderRequest): Promise<ProviderPage> {
   const page = pageNumber(options.position);
   const query = options.query?.trim() || (options.tab === 'character-design' ? 'character turnaround' : 'animation motion reference');
@@ -286,7 +273,8 @@ async function openverse(options: ProviderRequest): Promise<ProviderPage> {
   });
 
   try {
-    const response = await get(`https://api.openverse.org/v1/images/?${params}`, options.signal);
+    const signal = options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(2500)]) : AbortSignal.timeout(2500);
+    const response = await get(`https://api.openverse.org/v1/images/?${params}`, signal);
     const data = await response.json();
     const results = Array.isArray(data.results) ? data.results : [];
     const hasMore = page < (data.page_count || 1);
@@ -319,9 +307,22 @@ async function openverse(options: ProviderRequest): Promise<ProviderPage> {
   }
 }
 
-const PROVIDERS = { sketchfab, artstation, pinterest, sakugabooru, wikimedia, archive, openverse, 'web-images': searchWebImages };
-export function fetchReferenceProvider(source: ReferenceSource, options: ProviderRequest) {
-  return PROVIDERS[source](options);
+async function vimeo(_options: ProviderRequest): Promise<ProviderPage> {
+  return { items: [], next: null };
+}
+
+async function youtube(_options: ProviderRequest): Promise<ProviderPage> {
+  return { items: [], next: null };
+}
+
+async function instagram(options: ProviderRequest): Promise<ProviderPage> {
+  return searchWebImages({ ...options, indexSource: 'instagram' });
+}
+
+const PROVIDERS = { sketchfab, artstation, pinterest, vimeo, youtube, instagram, sakugabooru, wikimedia, openverse, 'web-images': searchWebImages };
+export async function fetchReferenceProvider(source: ReferenceSource, options: ProviderRequest) {
+  const page = await PROVIDERS[source](options);
+  return { ...page, items: filterBlockedReferences(page.items) };
 }
 export function providerUnavailableMessage(source: ReferenceSource) {
   return `${NAMES[source]} is temporarily unavailable. You can keep browsing other sources or try again.`;

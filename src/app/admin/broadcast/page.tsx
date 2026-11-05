@@ -26,11 +26,11 @@ export default function BroadcastAdminPage() {
   const { toast } = useToast();
 
   const [loadingStats, setLoadingStats] = useState(true);
-  const [stats, setStats] = useState<{ totalAccounts: number; freeCount: number; proCount: number; promoPreviewHtml: string } | null>(null);
+  const [stats, setStats] = useState<{ totalAccounts: number; freeCount: number; proCount: number; promoPreviewHtml: string; instagramPreviewHtml?: string } | null>(null);
 
   // Form states
   const [segment, setSegment] = useState<'free' | 'pro' | 'all'>('free');
-  const [template, setTemplate] = useState<'one_dollar_promo' | 'custom'>('one_dollar_promo');
+  const [template, setTemplate] = useState<'one_dollar_promo' | 'instagram_follow' | 'custom'>('one_dollar_promo');
   const [subject, setSubject] = useState('Your Animation Reference Pro pass is ready');
   const [customMessage, setCustomMessage] = useState('');
   const [testEmail, setTestEmail] = useState('');
@@ -246,12 +246,47 @@ export default function BroadcastAdminPage() {
 
           <Card className="border-white/10 bg-zinc-950/70">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-bold text-white">2. Campaign Content</CardTitle>
+              <CardTitle className="text-base font-bold text-white">2. Campaign Content &amp; Template</CardTitle>
               <CardDescription className="text-xs text-zinc-400">
-                Configure the subject line and promotional pitch.
+                Choose a campaign template and customize the subject line or personal note.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTemplate('one_dollar_promo');
+                    setSubject('Your Animation Reference Pro pass is ready');
+                  }}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    template === 'one_dollar_promo'
+                      ? 'border-purple-500 bg-purple-500/15 shadow-md'
+                      : 'border-white/10 bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="text-xs font-bold text-purple-300">💎 $1 Pro Founder Pass</div>
+                  <div className="text-[11px] text-zinc-400 mt-1">High-converting $1 first month upgrade invite.</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTemplate('instagram_follow');
+                    setSegment('all');
+                    setSubject('🎬 Follow @animationreference on Instagram for daily reels & breakdowns!');
+                  }}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    template === 'instagram_follow'
+                      ? 'border-pink-500 bg-pink-500/15 shadow-md'
+                      : 'border-white/10 bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="text-xs font-bold text-pink-300">📸 Follow @animationreference on IG</div>
+                  <div className="text-[11px] text-zinc-400 mt-1">Invite all members to follow our official Instagram.</div>
+                </button>
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="subject" className="text-xs font-bold text-zinc-300">
                   Email Subject Line
@@ -411,7 +446,11 @@ export default function BroadcastAdminPage() {
                 </div>
                 <iframe
                   title="Email Preview"
-                  srcDoc={stats?.promoPreviewHtml || '<p style="color:white;padding:20px;">Loading preview...</p>'}
+                  srcDoc={
+                    template === 'instagram_follow'
+                      ? (stats?.instagramPreviewHtml || '<p style="color:white;padding:20px;">Loading Instagram template preview...</p>')
+                      : (stats?.promoPreviewHtml || '<p style="color:white;padding:20px;">Loading preview...</p>')
+                  }
                   className="w-full h-[520px] border-0"
                   sandbox="allow-same-origin"
                 />

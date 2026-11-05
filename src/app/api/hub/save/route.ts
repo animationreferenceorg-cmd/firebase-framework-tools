@@ -1,3 +1,4 @@
+import { persistExternalMediaToStorage, isExternalExpiringUrl } from '@/lib/server-media-persist';
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -42,14 +43,38 @@ export async function POST(request: NextRequest) {
     if (action === 'save') {
       if (!snap.exists) {
         // Auto-ingest external reference into global site catalog
-        const cleanThumbnail = video.thumbnailUrl || video.posterUrl || '';
+        let cleanThumbnail = video.thumbnailUrl || video.posterUrl || '';
+        let cleanVideoUrl = video.videoUrl || '';
+
+        // If from Instagram or has expiring tokens, persist to OUR storage
+        if (
+          (video as any).source === 'instagram' ||
+          video.sourcePlatform === 'instagram' ||
+          isExternalExpiringUrl(cleanThumbnail) ||
+          isExternalExpiringUrl(cleanVideoUrl)
+        ) {
+          const target = cleanThumbnail || cleanVideoUrl;
+          if (target) {
+            const persisted = await persistExternalMediaToStorage(target, 'hub_saved', video.id, {
+              uploader: video.uploader || (video as any).authorName || (video as any).sourceAuthorName,
+              title: video.title,
+            });
+            if (persisted?.publicUrl) {
+              cleanThumbnail = persisted.publicUrl;
+              if (!cleanVideoUrl || isExternalExpiringUrl(cleanVideoUrl)) {
+                cleanVideoUrl = persisted.publicUrl;
+              }
+            }
+          }
+        }
+
         await videoRef.set({
           id: video.id,
           title: video.title || 'Curated Reference',
           description: video.description || '',
           thumbnailUrl: cleanThumbnail,
           posterUrl: video.posterUrl || cleanThumbnail,
-          videoUrl: video.videoUrl || '',
+          videoUrl: cleanVideoUrl,
           embedUrl: video.embedUrl || '',
           sourcePlatform: video.sourcePlatform || (video.id.startsWith('sketchfab-') ? 'sketchfab' : video.id.startsWith('artstation-') ? 'artstation' : video.id.startsWith('pin-') ? 'pinterest' : 'web'),
           sourceUrl: video.sourceUrl || '',

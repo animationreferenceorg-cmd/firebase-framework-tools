@@ -23,6 +23,7 @@ import {
   Palette,
   ExternalLink as LinkIcon,
   Box,
+  Play,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SaveToBoardModal } from '@/components/SaveToBoardModal';
@@ -53,7 +54,9 @@ export function ArtworkDetailModal({ item, isOpen, onClose }: ArtworkDetailModal
   const sourceUrl = (item as any).sourceUrl || (item as any).originalUrl || '';
   const source = (item as any).source || 'artstation';
   const hashId = (item as any).hashId || '';
-  const isSketchfab = source === 'sketchfab' || (item as any).mediaType === 'model3d' || !!(item as any).embedUrl;
+  const isVimeo = source === 'vimeo' || sourceUrl.includes('vimeo.com');
+  const isInstagram = source === 'instagram' || sourceUrl.includes('instagram.com');
+  const isSketchfab = (source === 'sketchfab' || (item as any).mediaType === 'model3d') && !isVimeo;
   const isPinterest = source === 'pinterest';
   const embedUrl = (item as any).embedUrl || '';
 
@@ -289,7 +292,17 @@ export function ArtworkDetailModal({ item, isOpen, onClose }: ArtworkDetailModal
           </Button>
 
           {/* Provider Pill */}
-          {isSketchfab ? (
+          {isVimeo ? (
+            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-[#1AB7EA]/15 px-2.5 py-1 text-xs font-bold text-[#1AB7EA] border border-[#1AB7EA]/30 shadow-[0_0_12px_rgba(26,183,234,0.2)] shrink-0">
+              <Play className="h-3.5 w-3.5 fill-current" />
+              Vimeo Animation
+            </span>
+          ) : isInstagram ? (
+            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-pink-500/15 px-2.5 py-1 text-xs font-bold text-pink-300 border border-pink-500/30 shadow-[0_0_12px_rgba(236,72,153,0.2)] shrink-0">
+              <Sparkles className="h-3.5 w-3.5 text-pink-400" />
+              Instagram Reference
+            </span>
+          ) : isSketchfab ? (
             <span className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-[#1caad9]/15 px-2.5 py-1 text-xs font-bold text-[#1caad9] border border-[#1caad9]/30 shadow-[0_0_12px_rgba(28,170,217,0.2)] shrink-0">
               <Box className="h-3.5 w-3.5" />
               Sketchfab 3D Model
@@ -404,16 +417,20 @@ export function ArtworkDetailModal({ item, isOpen, onClose }: ArtworkDetailModal
               rel="noopener noreferrer"
               className={cn(
                 "flex h-9 items-center gap-1.5 rounded-xl border px-2.5 sm:px-3 text-xs font-bold transition-all",
-                isSketchfab
-                  ? "border-[#1caad9]/30 bg-[#1caad9]/10 text-[#1caad9] hover:bg-[#1caad9]/20 hover:text-white"
-                  : isPinterest
-                    ? "border-[#E60023]/30 bg-[#E60023]/10 text-[#ff4d6d] hover:bg-[#E60023]/20 hover:text-white"
-                    : "border-[#13AFF0]/30 bg-[#13AFF0]/10 text-[#13AFF0] hover:bg-[#13AFF0]/20 hover:text-white"
+                isVimeo
+                  ? "border-[#1AB7EA]/30 bg-[#1AB7EA]/10 text-[#1AB7EA] hover:bg-[#1AB7EA]/20 hover:text-white"
+                  : isInstagram
+                    ? "border-pink-500/30 bg-pink-500/10 text-pink-300 hover:bg-pink-500/20 hover:text-white"
+                    : isSketchfab
+                      ? "border-[#1caad9]/30 bg-[#1caad9]/10 text-[#1caad9] hover:bg-[#1caad9]/20 hover:text-white"
+                      : isPinterest
+                        ? "border-[#E60023]/30 bg-[#E60023]/10 text-[#ff4d6d] hover:bg-[#E60023]/20 hover:text-white"
+                        : "border-[#13AFF0]/30 bg-[#13AFF0]/10 text-[#13AFF0] hover:bg-[#13AFF0]/20 hover:text-white"
               )}
-              title={`Open original on ${isSketchfab ? 'Sketchfab' : isPinterest ? 'Pinterest' : 'ArtStation'}`}
+              title={`Open original on ${isVimeo ? 'Vimeo' : isInstagram ? 'Instagram' : isSketchfab ? 'Sketchfab' : isPinterest ? 'Pinterest' : 'ArtStation'}`}
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{isSketchfab ? 'Sketchfab' : isPinterest ? 'Pinterest' : 'ArtStation'}</span>
+              <span className="hidden sm:inline">{isVimeo ? 'Vimeo' : isInstagram ? 'Instagram' : isSketchfab ? 'Sketchfab' : isPinterest ? 'Pinterest' : 'ArtStation'}</span>
             </a>
           )}
 

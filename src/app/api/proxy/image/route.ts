@@ -13,9 +13,10 @@ const ALLOWED_HOSTS = [
   'www.sakugabooru.com',
   'wikimedia.org',
   'upload.wikimedia.org',
-  'archive.org',
   'sketchfab.com',
   'cdninstagram.com',
+  'fbcdn.net',
+  'instagram.com',
 ];
 
 export async function GET(request: NextRequest) {

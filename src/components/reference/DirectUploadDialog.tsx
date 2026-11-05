@@ -24,11 +24,41 @@ import type { Challenge } from '@/lib/challenges';
 
 const ACCEPTED_MEDIA = 'video/mp4,video/webm,video/quicktime,image/jpeg,image/png,image/webp,image/gif';
 
-export function DirectUploadDialog({ onCreated, challenge, triggerLabel, triggerClassName }: { onCreated?(): void; challenge?: Challenge | null; triggerLabel?: string; triggerClassName?: string }) {
+export interface DirectUploadDialogProps {
+  onCreated?(): void;
+  challenge?: Challenge | null;
+  triggerLabel?: string;
+  triggerClassName?: string;
+  initialTitle?: string;
+  initialTags?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  trigger?: React.ReactNode;
+}
+
+export function DirectUploadDialog({
+  onCreated,
+  challenge,
+  triggerLabel,
+  triggerClassName,
+  initialTitle,
+  initialTags,
+  open: controlledOpen,
+  onOpenChange,
+  trigger,
+}: DirectUploadDialogProps) {
   const { user } = useAuth();
   const { userProfile } = useUser();
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const handleOpenChange = (next: boolean) => {
+    if (!saving) {
+      if (onOpenChange) onOpenChange(next);
+      if (!isControlled) setInternalOpen(next);
+    }
+  };
   const [saving, setSaving] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStage, setUploadStage] = useState('Preparing upload…');
@@ -39,6 +69,18 @@ export function DirectUploadDialog({ onCreated, challenge, triggerLabel, trigger
   const [form, setForm] = useState({ title: '', category: 'Acting', tags: '', boardId: '', isPrivate: false, duration: 10 });
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const canPrivate = getEntitlements(userProfile).canUploadPrivateMedia;
+
+  useEffect(() => {
+    if (open) {
+      if (initialTitle || initialTags) {
+        setForm((current) => ({
+          ...current,
+          title: current.title || initialTitle || '',
+          tags: current.tags || initialTags || '',
+        }));
+      }
+    }
+  }, [open, initialTitle, initialTags]);
 
   useEffect(() => {
     if (open && user) getUserReferenceBoards(user.uid, true).then(setBoards).catch(() => setBoards([]));
@@ -219,7 +261,7 @@ export function DirectUploadDialog({ onCreated, challenge, triggerLabel, trigger
         setUploadStage('Reference ready');
         toast({ title: 'Reference uploaded', description: `${file.name} is ready to view.` });
         await new Promise((resolve) => window.setTimeout(resolve, 650));
-        setOpen(false);
+        handleOpenChange(false);
         setUploadProgress(0);
         setFile(null);
         setPreviewUrl('');
@@ -239,8 +281,8 @@ export function DirectUploadDialog({ onCreated, challenge, triggerLabel, trigger
   };
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!saving) setOpen(next); }}>
-      <DialogTrigger asChild><Button variant="outline" className={triggerClassName}><Upload className="mr-2 h-4 w-4" />{triggerLabel ?? 'Upload media'}</Button></DialogTrigger>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>{trigger ? trigger : <Button variant="outline" className={triggerClassName}><Upload className="mr-2 h-4 w-4" />{triggerLabel ?? 'Upload media'}</Button>}</DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-zinc-950 text-white sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{challenge ? `Enter: ${challenge.title}` : 'Add your own reference'}</DialogTitle>

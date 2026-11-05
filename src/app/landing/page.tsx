@@ -25,6 +25,8 @@ import { VideoCard } from '@/components/VideoCard';
 import { VideoGrid } from '@/components/VideoGrid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BrowseHero } from '@/components/BrowseHero';
+import { InstagramCommunitySpotlight } from '@/components/InstagramFollowFunnel';
+import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from '@/lib/social-links';
 import { mixReferences } from '@/lib/reference-mix';
 import { DEFAULT_HERO_VIDEO, DEFAULT_LANDING_VIDEOS, DEFAULT_LANDING_CATEGORIES } from '@/lib/landing-data';
 
@@ -408,6 +410,11 @@ export default function LandingPage() {
                 </div>
             </section>
 
+            {/* 5.5. Instagram Community Spotlight */}
+            <section className="py-10 container mx-auto px-6">
+                <InstagramCommunitySpotlight />
+            </section>
+
             {/* 6. Call to Action Banner */}
             <section className="py-28 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-b from-purple-950/20 via-[#0a0812] to-[#0a0812] pointer-events-none" />
@@ -448,6 +455,15 @@ export default function LandingPage() {
                             <p className="text-xs text-zinc-400 leading-relaxed">
                                 The dedicated reference vault and study platform for 2D, 3D, and stop-motion artists worldwide.
                             </p>
+                            <a
+                                href={INSTAGRAM_URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 rounded-full border border-pink-500/30 bg-pink-500/10 px-3 py-1 text-xs font-bold text-pink-300 hover:bg-pink-500/20 hover:text-white transition-colors"
+                            >
+                                <span>Follow @{INSTAGRAM_HANDLE}</span>
+                                <ExternalLink className="h-3 w-3" />
+                            </a>
                         </div>
 
                         {/* Column 2: Explore */}

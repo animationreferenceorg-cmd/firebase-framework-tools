@@ -136,7 +136,25 @@ function toMillis(val) {
   console.log(`Exported ${videos.length} published videos to ${path.relative(process.cwd(), OUT_FILE)} (${mb} MB)`);
 
   const INITIAL_FILE = path.join(path.dirname(OUT_FILE), 'initial-videos.json');
-  const initialVideos = videos.slice(0, 60);
+  // Balanced mix for initial render so home page is not dominated by any single source
+  const isSpecial = v => v.source === 'sketchfab' || (v.id && v.id.startsWith('sf_')) || v.source === 'artstation' || (v.id && v.id.startsWith('as_')) || v.source === 'pinterest' || (v.id && v.id.startsWith('pin_'));
+  const isAnime = v => v.source === 'sakugabooru' || (v.id && (v.id.startsWith('sakuga') || v.id.startsWith('saku_'))) || (v.videoUrl && v.videoUrl.includes('sakugabooru'));
+  const specialList = videos.filter(isSpecial);
+  const animeList = videos.filter(isAnime);
+  const regularList = videos.filter(v => !isAnime(v) && !isSpecial(v));
+  const initialVideos = [];
+  let r = 0, a = 0, s = 0;
+  while (initialVideos.length < 60 && (r < regularList.length || a < animeList.length || s < specialList.length)) {
+    if (s < specialList.length && initialVideos.length % 5 === 0) {
+      initialVideos.push(specialList[s++]);
+    } else if (r < regularList.length && initialVideos.length % 3 !== 0) {
+      initialVideos.push(regularList[r++]);
+    } else if (a < animeList.length) {
+      initialVideos.push(animeList[a++]);
+    } else if (r < regularList.length) {
+      initialVideos.push(regularList[r++]);
+    }
+  }
   fs.writeFileSync(INITIAL_FILE, JSON.stringify(initialVideos));
   const initialKb = (fs.statSync(INITIAL_FILE).size / 1024).toFixed(1);
   console.log(`Exported ${initialVideos.length} initial videos to ${path.relative(process.cwd(), INITIAL_FILE)} (${initialKb} KB)`);

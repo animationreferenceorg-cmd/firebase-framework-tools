@@ -138,7 +138,11 @@ export class MoodboardService {
 
             const mediaCount = items.filter(item => item.type === 'video' || item.type === 'image').length;
             const v = video as any;
-            const thumb = video.thumbnailUrl || video.posterUrl || '';
+            const rawThumb = video.thumbnailUrl || video.posterUrl || '';
+            const isInstagram = v.source === 'instagram' || v.sourcePlatform === 'instagram' || rawThumb.includes('cdninstagram.com') || rawThumb.includes('fbcdn.net');
+            const thumb = isInstagram && !rawThumb.startsWith('/api/proxy') && !rawThumb.includes('storage.googleapis.com')
+                ? `/api/proxy/image?url=${encodeURIComponent(rawThumb)}`
+                : rawThumb;
 
             const normalizedVideo: Record<string, any> = {
                 id: video.id,

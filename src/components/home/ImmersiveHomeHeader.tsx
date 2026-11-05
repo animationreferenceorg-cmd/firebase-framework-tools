@@ -159,7 +159,7 @@ export function ImmersiveHomeHeader({
           </h1>
 
           <p className="mt-6 max-w-xl text-base font-medium leading-relaxed text-white/70 sm:text-lg">
-            The central animation hub drawing in live turnarounds from ArtStation, pins from Pinterest, interactive 3D models from Sketchfab, and sakuga smear cuts from Sakugabooru.
+            The central animation hub drawing in live turnarounds from ArtStation, pins from Pinterest, interactive 3D models from Sketchfab, and hand-drawn 2D animation cuts.
           </p>
 
           <div className="mt-8 max-w-2xl relative z-40">
@@ -189,7 +189,7 @@ export function ImmersiveHomeHeader({
                     setIsDropdownOpen(false);
                   }
                 }}
-                placeholder="Search across Pinterest, ArtStation, Sketchfab, Sakuga & Free CC0…"
+                placeholder="Search across Pinterest, ArtStation, Sketchfab, 2D Animation & Free CC0…"
                 className="h-16 w-full bg-transparent pl-14 pr-24 text-base font-medium text-white outline-none placeholder:text-white/40"
               />
               {searchQuery ? (

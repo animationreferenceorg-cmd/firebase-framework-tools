@@ -289,6 +289,7 @@ export async function sendWelcomeEmail({ toEmail, displayName }: WelcomeEmailPay
             <div class="perk-item">⌨️ <strong>Frame-by-Frame Scrubbing:</strong> Press <code style="background: #27272a; padding: 2px 6px; border-radius: 4px; color: #e4e4e7;">,</code> and <code style="background: #27272a; padding: 2px 6px; border-radius: 4px; color: #e4e4e7;">.</code> to step frame by frame and break down arcs, anticipation, and spacing.</div>
             <div class="perk-item">📦 <strong>Maya &amp; Blender Viewport Plugins:</strong> Import references directly into your Maya camera planes or Blender 3D viewport.</div>
             <div class="perk-item">🌟 <strong>Animator Portfolio:</strong> Share your work at <span style="color: #c084fc;">animationreference.org/u/yourname</span> with zero ads and frame-scrubbing for recruiters.</div>
+            <div class="perk-item">📸 <strong>Daily Reels on Instagram:</strong> Follow <a href="https://www.instagram.com/animationreference/" style="color: #f472b6; font-weight: 700;">@animationreference</a> on Instagram for daily sakuga &amp; 3D acting breakdowns!</div>
           </div>
 
           <div class="btn-container">
@@ -326,8 +327,8 @@ export async function sendWelcomeEmail({ toEmail, displayName }: WelcomeEmailPay
   }
 }
 
-import { renderOneDollarPromoHtml } from './email-template-promo';
-export { renderOneDollarPromoHtml };
+import { renderOneDollarPromoHtml, renderInstagramInviteHtml } from './email-template-promo';
+export { renderOneDollarPromoHtml, renderInstagramInviteHtml };
 
 export interface PromoBroadcastPayload {
   toEmail: string;
@@ -393,6 +394,89 @@ export async function sendNewsletterBroadcastEmail({ toEmail, subject, htmlConte
     return { success: true, data };
   } catch (error: any) {
     console.error("Resend newsletter email failed:", error);
+    return { success: false, error: error.message || error };
+  }
+}
+
+export interface AbandonedCheckoutEmailPayload {
+  toEmail: string;
+  displayName?: string;
+  checkoutUrl?: string;
+  plan?: string;
+}
+
+/** Sends a helpful follow-up email to animators who started checkout but did not finish within 2 hours. */
+export async function sendAbandonedCheckoutEmail({ toEmail, displayName, checkoutUrl }: AbandonedCheckoutEmailPayload) {
+  const client = getResendClient();
+  if (!client) {
+    console.warn("RESEND_API_KEY missing. Email simulation mode.");
+    return { success: false, message: "RESEND_API_KEY not configured" };
+  }
+
+  const name = displayName ? esc(displayName) : 'Animator';
+  const url = checkoutUrl || 'https://animationreference.org/profile?openUpgrade=true';
+  const fromAddress = process.env.RESEND_FROM_EMAIL || 'Animation Reference <team@animationreference.org>';
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #07060b; color: #ffffff; margin: 0; padding: 24px; }
+          .container { max-width: 580px; margin: 0 auto; background-color: #12101b; border-radius: 20px; border: 1px solid rgba(168,85,247,0.3); padding: 36px 32px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+          .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.3); color: #c084fc; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 16px; }
+          h1 { font-size: 24px; font-weight: 900; color: #ffffff; margin: 0 0 14px 0; letter-spacing: -0.5px; }
+          p { font-size: 14px; line-height: 1.6; color: #d4d4d8; margin: 0 0 18px 0; }
+          .highlight-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 18px 20px; margin: 24px 0; }
+          .item { margin-bottom: 12px; font-size: 13px; color: #e4e4e7; line-height: 1.5; }
+          .btn-container { text-align: center; margin: 28px 0; }
+          .btn { display: inline-block; background: linear-gradient(135deg, #9333ea, #ec4899); color: #ffffff !important; font-weight: 800; font-size: 15px; padding: 14px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 20px rgba(147,51,234,0.4); }
+          .footer { font-size: 12px; color: #71717a; margin-top: 32px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 20px; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="badge">Animation Reference Pro</div>
+          <h1>Need help completing your upgrade, ${name}?</h1>
+          <p>We noticed you started upgrading to <strong>Animation Reference Pro</strong> earlier, but didn't get to finish.</p>
+          <p>Whether your connection dropped, payment didn't go through, or you just stepped away from your desk, your $1 introductory pass is still waiting for you.</p>
+
+          <div class="highlight-card">
+            <div class="item">🎬 <strong>Unlimited Maya &amp; Blender Viewport Imports:</strong> Send references straight to your camera planes without manual converting.</div>
+            <div class="item">⚡ <strong>4K &amp; 60fps Full Library:</strong> Unlimited frame-by-frame scrubbing with zero daily limits.</div>
+            <div class="item">📁 <strong>Unlimited Private Boards:</strong> Organize references for confidential client &amp; studio shots.</div>
+          </div>
+
+          <div class="btn-container">
+            <a href="${url}" class="btn">Complete Your Upgrade ($1 First Month) →</a>
+          </div>
+
+          <p style="font-size: 13px; color: #a1a1aa; text-align: center;">
+            Ran into an issue with checkout or have a question? Just reply directly to this email—we're here to help!
+          </p>
+
+          <div class="footer">
+            Animation Reference · <a href="https://animationreference.org" style="color: #a1a1aa;">animationreference.org</a><br />
+            Built by animators, for animators.
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  try {
+    const data = await client.emails.send({
+      from: fromAddress,
+      to: [toEmail],
+      replyTo: 'team@animationreference.org',
+      subject: `Need help completing your upgrade, ${name}? ($1 Pro pass reserved)`,
+      html: htmlContent,
+    });
+    if (data.error) return { success: false, error: data.error.message };
+    return { success: true, data };
+  } catch (error: any) {
+    console.error("Resend abandoned checkout email failed:", error);
     return { success: false, error: error.message || error };
   }
 }

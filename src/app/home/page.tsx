@@ -1,5 +1,7 @@
 'use client';
 
+import { NoReferencesUploadCard } from '@/components/reference/NoReferencesUploadCard';
+
 import React, { useState, useEffect, useMemo, useRef, useDeferredValue } from 'react';
 import { getInitialVideos, getSnapshotVideos } from '@/lib/videoSnapshot';
 import type { Video } from '@/lib/types';
@@ -10,6 +12,7 @@ import { PricingDialog } from '@/components/PricingDialog';
 import { ImmersiveHomeHeader } from '@/components/home/ImmersiveHomeHeader';
 import { CommunityFeedShelf } from '@/components/home/CommunityFeedShelf';
 import { RecentlyViewedShelf } from '@/components/home/RecentlyViewedShelf';
+import { InstagramCommunitySpotlight } from '@/components/InstagramFollowFunnel';
 import { getPublicPortfolioItems, portfolioItemToVideo } from '@/lib/portfolio-service';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from '@/components/motion/SectionHeading';
@@ -40,7 +43,7 @@ export default function HomePage() {
   const [activeSource, setActiveSource] = useState<SourceOption>('all');
   const discovery = useReferenceDiscovery(deferredQuery, activeTab, activeType, activePill, activeMedia);
   const { loadMore: loadMoreDiscovery, canAutoLoad: canAutoLoadDiscovery, loading: discoveryLoading } = discovery;
-  const catalogVideos = useMemo(() => mergeReferenceVideos(allVideos, discovery.videos), [allVideos, discovery.videos]);
+  const catalogVideos = useMemo(() => mergeReferenceVideos(discovery.videos, allVideos), [allVideos, discovery.videos]);
   // Remote pages already passed the provider's keyword search. Only classify
   // the local catalog in the worker; arrivals should not rescore the whole library.
   const searchScores = useReferenceSearch(allVideos, deferredQuery);
@@ -114,7 +117,7 @@ export default function HomePage() {
     const filtered = filterReferenceCatalog(catalogVideos, {
       tab: activeTab, type: activeType, pill: activePill, media: activeMedia, source: activeSource, query: deferredQuery, scores,
     });
-    return deferredQuery.trim() ? balanceSearchResults(filtered) : filtered;
+    return deferredQuery.trim() ? balanceSearchResults(filtered) : mixReferences(filtered);
   }, [catalogVideos, activeTab, activeType, activePill, activeMedia, activeSource, deferredQuery, searchScores, searchQuery, discovery.videos]);
 
   useEffect(() => { setVisibleCount(VIDEOS_PER_PAGE); }, [activeTab, activeType, activePill, activeMedia, activeSource, deferredQuery]);
@@ -185,6 +188,13 @@ export default function HomePage() {
         </Reveal>
       )}
 
+      {/* 5.5. INSTAGRAM COMMUNITY SPOTLIGHT */}
+      {!searchQuery && (
+        <Reveal>
+          <InstagramCommunitySpotlight />
+        </Reveal>
+      )}
+
       {/* 6. CATALOG / SEARCH RESULTS */}
       <section id="reference-library" className="scroll-mt-28 space-y-5 pt-4">
         <SectionHeading
@@ -230,31 +240,36 @@ export default function HomePage() {
             ))}
           </div>
         ) : unifiedVideos.length === 0 && !discovery.loading ? (
-          <div className="rounded-2xl border border-white/10 bg-zinc-900/40 p-10 text-center space-y-3">
-            <p className="text-sm font-semibold text-zinc-300">
-              {hasMore ? 'No matches in the references loaded so far.' : searchQuery ? <>No references found for &quot;{searchQuery}&quot;</> : 'No references found for these filters yet.'}
-            </p>
-            <p className="text-xs text-zinc-500 max-w-md mx-auto">
-              Try broader search terms like &quot;turnaround&quot;, &quot;walk&quot;, &quot;combat&quot;, or &quot;smear&quot;.
-            </p>
-          </div>
+          <NoReferencesUploadCard
+            query={searchQuery}
+            mediaType={activeMedia === 'video' || activeTab === 'animations' ? 'video' : 'all'}
+          />
         ) : (
-          <VideoGrid title="" videos={visibleVideos} columns={columns} layout={masonry ? 'masonry' : 'grid'} />
+          <>
+            {searchQuery && (activeMedia === 'video' || activeTab === 'animations' || searchQuery.toLowerCase().includes('animation')) && !unifiedVideos.some(v => v.mediaType === 'video' || (v.videoUrl && !v.videoUrl.endsWith('.jpg') && !v.videoUrl.endsWith('.png'))) && (
+              <NoReferencesUploadCard
+                query={searchQuery}
+                mediaType="video"
+                className="mb-6"
+              />
+            )}
+            <VideoGrid title="" videos={visibleVideos} columns={columns} layout={masonry ? 'masonry' : 'grid'} />
+          </>
         )}
 
         {/* A visible fallback also lets keyboard users continue without scrolling. */}
         <div ref={loadMoreRef} className="flex flex-col items-center gap-3 py-8" aria-live="polite">
           {discovery.loading && <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Finding more references…</p>}
-          {discovery.errors.map(message => <p key={message} className="max-w-xl text-center text-sm text-muted-foreground">{message}</p>)}
+          {discovery.errors.length > 0 && unifiedVideos.length === 0 && discovery.errors.map(message => <p key={message} className="max-w-xl text-center text-sm text-muted-foreground">{message}</p>)}
           {searchQuery.trim() && discovery.notices.map(message => <p key={message} className="max-w-xl text-center text-sm text-muted-foreground">{message}</p>)}
           {discovery.limited && searchQuery.trim() && <p className="max-w-xl text-center text-sm text-muted-foreground">Pinterest results currently come from a limited selection of public feeds.</p>}
-          {(hasMore || discovery.errors.length > 0) && <Button
+          {(hasMore || (discovery.errors.length > 0 && unifiedVideos.length === 0)) && <Button
             variant="outline" disabled={discovery.loading && !moreLocal && !discovery.canAutoLoad}
             onClick={() => {
               if (moreLocal) setVisibleCount(previous => Math.min(previous + 24, unifiedVideos.length));
               else void discovery.loadMore(true);
             }}
-          >{discovery.loading ? 'Loading…' : discovery.errors.length > 0 && !hasMore ? 'Retry unavailable sources' : 'Load more references'}</Button>}
+          >{discovery.loading ? 'Loading…' : discovery.errors.length > 0 && !hasMore && unifiedVideos.length === 0 ? 'Retry unavailable sources' : 'Load more references'}</Button>}
           {!hasMore && !discovery.loading && discovery.errors.length === 0 && unifiedVideos.length > 0 && <p className="text-sm text-muted-foreground">You’re caught up with these results. Try another search or filter to explore more.</p>}
         </div>
       </section>

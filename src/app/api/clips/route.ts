@@ -1,3 +1,4 @@
+import { persistExternalMediaToStorage, isExternalExpiringUrl } from '@/lib/server-media-persist';
 import { after, NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { z } from 'zod';
@@ -19,12 +20,12 @@ const clipSchema = z.object({
   tags: z.array(z.string().trim()).max(50).default([]),
   boardId: z.string().trim().max(128).optional().nullable().or(z.literal('')),
   isPrivate: z.boolean().default(false),
-  thumbnailUrl: z.string().optional().nullable().or(z.literal('')),
+  thumbnailUrl: z.string().max(500000).optional().nullable().or(z.literal('')),
   sourceDescription: z.string().trim().max(5000).optional().nullable(),
   sourceAuthorName: z.string().trim().max(200).optional().nullable(),
   sourceAuthorUrl: z.string().max(2000).optional().nullable(),
   sourceAuthorAvatar: z.string().max(2000).optional().nullable(),
-  mediaUrl: z.string().max(4000).optional().nullable(),
+  mediaUrl: z.string().max(500000).optional().nullable(),
   mediaType: z.enum(['video', 'image', 'gif', 'model3d']).optional(),
 });
 
@@ -50,7 +51,6 @@ const CAPTURE_MEDIA_HOSTS = [
   'images.unsplash.com',
   'pexels.com',
   'images.pexels.com',
-  'archive.org',
 ];
 
 function trustedCapturedMediaUrl(value?: string | null): string | undefined {
@@ -90,10 +90,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const headers = extensionCors(request);
   try {
-    const identity = await requireFirebaseUser(request);
-    const profile = await getTrustedProfile(identity.uid);
-    
-    const body = await request.json().catch(() => ({}));
+    const [identity, body] = await Promise.all([
+      requireFirebaseUser(request),
+      request.json().catch(() => ({})),
+    ]);
     const parsed = clipSchema.safeParse(body);
     if (!parsed.success) {
       const issue = parsed.error.issues[0]?.message || 'Invalid clip parameters.';
@@ -101,40 +101,45 @@ export async function POST(request: NextRequest) {
     }
 
     const input = parsed.data;
-    // Free saves are public and feed the community library; private clips are Pro.
-    if (input.isPrivate && !profileHasPro(profile)) {
-      throw new ApiError(403, 'PRIVATE_REQUIRES_PRO', 'Private clips are a Pro feature. Free saves are shared with the community.');
-    }
     const cleanBoardId = input.boardId && input.boardId.trim() !== '' ? input.boardId.trim() : null;
-    const cleanThumbnail = input.thumbnailUrl && input.thumbnailUrl.trim() !== '' && input.thumbnailUrl.startsWith('http') ? input.thumbnailUrl.trim() : null;
+    const cleanThumbnail = input.thumbnailUrl && input.thumbnailUrl.trim() !== '' && (input.thumbnailUrl.startsWith('http') || input.thumbnailUrl.startsWith('data:image/')) ? input.thumbnailUrl.trim() : null;
     const cleanTags = [...new Set(input.tags.map((t) => t.trim().toLowerCase()).filter((t) => t.length > 0 && t.length < 50))];
     const cleanTitle = (input.title || 'Video Reference').trim().slice(0, 140);
-
-
 
     const sourceUrl = normalizeHttpUrl(input.sourceUrl);
     const db = getFirestore();
     const clipRef = db.collection('reference_clips').doc();
     const idempotencyKey = request.headers.get('idempotency-key')?.trim();
     const idempotencyRef = idempotencyKey ? db.collection('clip_idempotency').doc(`${identity.uid}_${idempotencyKey}`) : null;
+    const boardRef = cleanBoardId ? db.collection('reference_boards').doc(cleanBoardId) : null;
+    const mbRef = cleanBoardId ? db.collection('users').doc(identity.uid).collection('moodboards').doc(cleanBoardId) : null;
 
-    let board: { ref: FirebaseFirestore.DocumentReference; data: FirebaseFirestore.DocumentData; isMoodboard: boolean } | null = null;
+    // Single parallel read batch for profile + board(s) + idempotency
+    const [profile, boardSnap, mbSnap, priorIdem] = await Promise.all([
+      getTrustedProfile(identity.uid),
+      boardRef ? boardRef.get() : Promise.resolve(null),
+      mbRef ? mbRef.get() : Promise.resolve(null),
+      idempotencyRef ? idempotencyRef.get() : Promise.resolve(null),
+    ]);
+
+    if (priorIdem?.exists) {
+      throw new ApiError(409, 'IDEMPOTENCY_CONFLICT', 'This clip was already saved.');
+    }
+    if (input.isPrivate && !profileHasPro(profile)) {
+      throw new ApiError(403, 'PRIVATE_REQUIRES_PRO', 'Private clips are a Pro feature. Free saves are shared with the community.');
+    }
+
+    let refBoardDoc: { ref: FirebaseFirestore.DocumentReference; data: FirebaseFirestore.DocumentData } | null = null;
+    let moodboardDoc: { ref: FirebaseFirestore.DocumentReference; data: FirebaseFirestore.DocumentData } | null = null;
     if (cleanBoardId) {
-      const boardRef = db.collection('reference_boards').doc(cleanBoardId);
-      const boardSnap = await boardRef.get();
-      if (boardSnap.exists && boardSnap.data()?.ownerId === identity.uid) {
-        board = { ref: boardRef, data: boardSnap.data()!, isMoodboard: false };
-        if (input.isPrivate !== Boolean(board.data.isPrivate)) {
-          throw new ApiError(422, 'PRIVACY_MISMATCH', 'The clip privacy must match the destination board.');
-        }
-      } else {
-        const mbRef = db.collection('users').doc(identity.uid).collection('moodboards').doc(cleanBoardId);
-        const mbSnap = await mbRef.get();
-        if (mbSnap.exists) {
-          board = { ref: mbRef, data: mbSnap.data()!, isMoodboard: true };
-        } else {
-          throw new ApiError(403, 'BOARD_FORBIDDEN', 'Choose one of your own boards.');
-        }
+      if (boardSnap?.exists && boardSnap.data()?.ownerId === identity.uid) {
+        refBoardDoc = { ref: boardRef!, data: boardSnap.data()! };
+      }
+      if (mbSnap?.exists) {
+        moodboardDoc = { ref: mbRef!, data: mbSnap.data()! };
+      }
+      if (!refBoardDoc && !moodboardDoc) {
+        throw new ApiError(403, 'BOARD_FORBIDDEN', 'Choose one of your own boards.');
       }
     }
 
@@ -143,6 +148,9 @@ export async function POST(request: NextRequest) {
       (['pinterest', 'artstation', 'unsplash'].includes(platform) ? 'image' : 
        platform === 'giphy' ? 'gif' : 
        platform === 'sketchfab' ? 'model3d' : 'video');
+
+    const immediateThumb = cleanThumbnail || (inferredMediaType !== 'video' && input.mediaUrl ? input.mediaUrl : null);
+    const immediateMedia = input.mediaUrl || cleanThumbnail || sourceUrl;
 
     const now = FieldValue.serverTimestamp();
     const clip = {
@@ -153,6 +161,7 @@ export async function POST(request: NextRequest) {
       sourceUrl,
       sourcePlatform: platform,
       mediaType: inferredMediaType,
+      uploadedMediaUrl: immediateMedia,
       sourceDescription: input.sourceDescription || null,
       sourceAuthorName: input.sourceAuthorName || null,
       sourceAuthorUrl: input.sourceAuthorUrl || null,
@@ -165,86 +174,122 @@ export async function POST(request: NextRequest) {
       visualTags: deriveReferenceTags({ title: cleanTitle, description: input.sourceDescription, tags: cleanTags, sourcePlatform: platform }),
       palette: [],
       paletteBuckets: [],
-      thumbnailUrl: cleanThumbnail,
+      thumbnailUrl: immediateThumb,
       isPrivate: input.isPrivate,
-      // Captures remain personal until an explicit Community publishing flow exists.
       communityVisible: false,
       removedFromCreatorAt: null,
       primaryBoardId: cleanBoardId,
       saveCount: cleanBoardId ? 1 : 0,
       createdAt: now,
       updatedAt: now,
-      bunnySyncStatus: 'pending',
+      bunnySyncStatus: inferredMediaType === 'video' ? 'pending' : 'ready',
       captureStatus: inferredMediaType === 'video' ? 'queued' : 'ready',
       captureStage: inferredMediaType === 'video' ? 'Queued for capture' : 'Reference ready',
       captureProgress: inferredMediaType === 'video' ? 5 : 100,
     };
 
-    await db.runTransaction(async (transaction) => {
-      if (idempotencyRef) {
-        const prior = await transaction.get(idempotencyRef);
-        if (prior.exists) throw new ApiError(409, 'IDEMPOTENCY_CONFLICT', 'This clip was already saved.');
-      }
-      transaction.create(clipRef, clip);
-      if (board) {
-        if (board.isMoodboard) {
-          const mbData = board.data || {};
-          const currentItems = (mbData.items || []) as any[];
-          const thumb = cleanThumbnail || input.mediaUrl || '';
-          const newItem = {
-            id: `reference-${clipRef.id}-${Date.now()}`,
-            type: inferredMediaType === 'video' ? 'video' : 'image',
-            videoId: clipRef.id,
-            videoData: {
-              id: clipRef.id,
-              title: cleanTitle,
-              videoUrl: input.mediaUrl || sourceUrl,
-              thumbnailUrl: thumb,
-              posterUrl: thumb,
-              categories: [input.category || 'Reference'],
-              tags: cleanTags,
-              sourceUrl,
-              sourceAuthorName: input.sourceAuthorName || '',
-            },
-            imageUrl: thumb,
-            x: 120 + (currentItems.length % 4) * 300,
-            y: 120 + Math.floor(currentItems.length / 4) * 200,
-            width: 280,
-            height: 160,
-            zIndex: currentItems.length + 1,
-          };
-          const nextItems = [...currentItems, newItem];
-          const mbUpdates: any = {
-            items: nextItems,
-            itemCount: nextItems.length,
-            updatedAt: now,
-          };
-          if (thumb && !mbData.thumbnailUrl) mbUpdates.thumbnailUrl = thumb;
-          transaction.set(board.ref, mbUpdates, { merge: true });
-        } else {
-          const saveRef = db.collection('reference_board_saves').doc(`${board.ref.id}_${clipRef.id}`);
-          transaction.create(saveRef, { boardId: board.ref.id, clipId: clipRef.id, ownerId: identity.uid, createdAt: now });
-          transaction.update(board.ref, { clipCount: FieldValue.increment(1), updatedAt: now });
-        }
-      }
-      if (idempotencyRef) transaction.create(idempotencyRef, { uid: identity.uid, clipId: clipRef.id, createdAt: now });
-    });
+    // Single fast WriteBatch (no multi-roundtrip transaction lock)
+    const batch = db.batch();
+    batch.create(clipRef, clip);
+
+    // Also add to users/{uid}/moodboard_references so "All Saves" on /moodboard shows it immediately
+    const mbRefDoc = db.collection('users').doc(identity.uid).collection('moodboard_references').doc(clipRef.id);
+    batch.set(mbRefDoc, {
+      id: clipRef.id,
+      title: cleanTitle,
+      videoUrl: immediateMedia,
+      thumbnailUrl: immediateThumb || immediateMedia,
+      posterUrl: immediateThumb || immediateMedia,
+      categories: [input.category || 'Reference'],
+      category: input.category || 'Reference',
+      tags: cleanTags,
+      sourceUrl,
+      sourcePlatform: platform,
+      sourceAuthorName: input.sourceAuthorName || '',
+      mediaType: inferredMediaType,
+      createdAt: new Date(),
+    }, { merge: true });
+
+    if (moodboardDoc) {
+      const mbData = moodboardDoc.data || {};
+      const currentItems = (mbData.items || []) as any[];
+      const thumb = immediateThumb || immediateMedia || '';
+      const newItem = {
+        id: `reference-${clipRef.id}-${Date.now()}`,
+        type: inferredMediaType === 'video' ? 'video' : 'image',
+        videoId: clipRef.id,
+        videoData: {
+          id: clipRef.id,
+          title: cleanTitle,
+          videoUrl: immediateMedia,
+          thumbnailUrl: thumb,
+          posterUrl: thumb,
+          categories: [input.category || 'Reference'],
+          tags: cleanTags,
+          sourceUrl,
+          sourceAuthorName: input.sourceAuthorName || '',
+        },
+        imageUrl: thumb,
+        x: 120 + (currentItems.length % 4) * 300,
+        y: 120 + Math.floor(currentItems.length / 4) * 200,
+        width: 280,
+        height: 160,
+        zIndex: currentItems.length + 1,
+      };
+      const nextItems = [...currentItems, newItem];
+      const mbUpdates: any = {
+        items: nextItems,
+        itemCount: nextItems.length,
+        updatedAt: now,
+      };
+      if (thumb && !mbData.thumbnailUrl) mbUpdates.thumbnailUrl = thumb;
+      batch.set(moodboardDoc.ref, mbUpdates, { merge: true });
+    }
+    if (refBoardDoc) {
+      const saveRef = db.collection('reference_board_saves').doc(`${refBoardDoc.ref.id}_${clipRef.id}`);
+      batch.set(saveRef, { boardId: refBoardDoc.ref.id, clipId: clipRef.id, ownerId: identity.uid, createdAt: now });
+      const rbUpdates: Record<string, unknown> = { clipCount: FieldValue.increment(1), updatedAt: now };
+      const thumb = immediateThumb || immediateMedia || '';
+      if (thumb && !refBoardDoc.data?.coverUrl) rbUpdates.coverUrl = thumb;
+      batch.update(refBoardDoc.ref, rbUpdates);
+    }
+    if (idempotencyRef) {
+      batch.set(idempotencyRef, { uid: identity.uid, clipId: clipRef.id, createdAt: now });
+    }
+    await batch.commit();
 
     after(async () => {
       try {
         if (inferredMediaType !== 'video') {
           const trustedUrl = trustedCapturedMediaUrl(input.mediaUrl);
-          const mediaUrl = trustedUrl || input.mediaUrl || cleanThumbnail || '';
+          let mediaUrl = trustedUrl || input.mediaUrl || cleanThumbnail || '';
+          let thumbUrl = cleanThumbnail || mediaUrl;
+
+          // If from Instagram or has expiring tokens, persist to OUR storage
+          if (platform === 'instagram' || isExternalExpiringUrl(mediaUrl) || isExternalExpiringUrl(thumbUrl)) {
+            const target = mediaUrl || thumbUrl;
+            if (target) {
+              const persisted = await persistExternalMediaToStorage(target, 'clips', clipRef.id, {
+                uploader: input.sourceAuthorName || undefined,
+                title: cleanTitle,
+              });
+              if (persisted?.publicUrl) {
+                mediaUrl = persisted.publicUrl;
+                thumbUrl = persisted.publicUrl;
+              }
+            }
+          }
+
           const discovery = await analyzeReferenceVisuals({
             title: cleanTitle,
             description: input.sourceDescription,
             tags: cleanTags,
             sourcePlatform: platform,
-            imageUrl: cleanThumbnail || mediaUrl || undefined,
+            imageUrl: thumbUrl || undefined,
           });
           await clipRef.update({
             uploadedMediaUrl: mediaUrl,
-            thumbnailUrl: cleanThumbnail || mediaUrl,
+            thumbnailUrl: thumbUrl,
             mediaType: inferredMediaType,
             mimeType: inferredMediaType === 'gif' ? 'image/gif' : inferredMediaType === 'image' ? 'image/jpeg' : 'model3d/gltf',
             bunnySyncStatus: 'ready',
@@ -271,6 +316,8 @@ export async function POST(request: NextRequest) {
             title: cleanTitle,
             description: input.sourceDescription || undefined,
             tags: cleanTags,
+            startTime: input.startTime > 0 ? input.startTime : undefined,
+            endTime: input.endTime > 0 ? input.endTime : undefined,
           }
         );
         const media = downloaded.success ? downloaded.video : null;

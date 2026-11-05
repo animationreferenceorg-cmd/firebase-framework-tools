@@ -1,99 +1,334 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Clip & Save</title>
+  <title>Save to Animation Reference</title>
   <link rel="stylesheet" href="popup.css" />
   <link rel="stylesheet" href="popup-embedded.css" />
 </head>
+
 <body>
-  <main>
-    <header>
-      <span class="mark">AR</span>
-      <div>
-        <strong>Clip & Save</strong>
-        <small>Animation Reference · v0.3.23</small>
+  <div id="app" class="app-container">
+    <!-- Top Header -->
+    <header class="top-nav">
+      <div class="user-pill" id="userPill" title="Open My Boards on Website">
+        <span class="brand-animref-mark" title="Animation Reference">
+          <img src="brand-mark.svg" alt="Animation Reference" class="brand-animref-logo" />
+        </span>
+        <div class="avatar-wrap">
+          <img id="userAvatar" alt="User Avatar" class="user-avatar" hidden />
+          <div id="defaultAvatar" class="default-avatar">
+            <svg viewBox="0 0 24 24" fill="currentColor" class="user-svg">
+              <path
+                d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+            </svg>
+          </div>
+        </div>
+        <span id="userName" class="user-name">Michael</span>
       </div>
-      <span id="statusDot"></span>
+
+      <div class="header-actions">
+        <button id="openWebsiteBoardsBtn" class="header-boards-link-btn" type="button" title="View all boards on website">
+          <span>My Boards</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="ext-link-svg">
+            <path d="M7 17L17 7M7 7h10v10" />
+          </svg>
+        </button>
+        <button id="settingsBtn" class="icon-btn" type="button" title="Open My Boards on Website">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="action-svg">
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
+        <button id="closeBtn" class="icon-btn" type="button" title="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="action-svg">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
     </header>
 
-    <section id="connect" hidden>
-      <h1>Save any public reference.</h1>
-      <p>Sign in to your account to save references to Animation Reference.</p>
-      <button id="connectButton" class="primary">Sign in to account</button>
-      <p id="connectMessage" role="status"></p>
+    <!-- Sign In Required Screen -->
+    <section id="connect" class="connect-screen" hidden>
+      <div class="connect-icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="connect-icon">
+          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      </div>
+      <h2>Sign in to save references</h2>
+      <p>Save any animation, acting take, or motion reference directly to your boards.</p>
+
+      <!-- Direct In-Popup Login Form -->
+      <form id="directLoginForm" class="direct-login-form">
+        <input type="email" id="loginEmailInput" class="popup-auth-input" placeholder="Email address" required autocomplete="email" />
+        <input type="password" id="loginPasswordInput" class="popup-auth-input" placeholder="Password" required autocomplete="current-password" />
+        <button id="directLoginSubmitBtn" class="animref-primary-btn" type="submit" style="margin-top: 4px;">Sign In</button>
+      </form>
+
+      <div class="auth-divider-row">
+        <span>or</span>
+      </div>
+
+      <button id="connectButton" class="auth-browser-btn" type="button">Sign in via Browser Tab</button>
+
+      <!-- Token paste fallback (toggleable) -->
+      <div class="paste-token-wrap">
+        <button id="togglePasteTokenBtn" type="button" class="text-link-btn">Have a connection code?</button>
+        <div id="pasteTokenDrawer" hidden class="paste-token-drawer">
+          <input type="text" id="manualTokenInput" class="popup-auth-input" placeholder="Paste code from browser here…" />
+          <button id="applyTokenBtn" type="button" class="animref-primary-btn" style="height: 38px; width: 80px; flex-shrink: 0; font-size: 12px;">Connect</button>
+        </div>
+      </div>
+
+      <p id="connectMessage" role="status" class="connect-status"></p>
     </section>
 
-    <form id="clipForm" hidden>
-      <!-- Step 1: Paste URL & Fetch Button -->
-      <label>
-        1. Paste a public post URL
-        <div class="url-input-group">
-          <input id="sourceUrlInput" type="url" placeholder="Paste YouTube, Instagram, TikTok link..." required />
-          <button id="fetchMetaBtn" type="button" class="secondary-btn">Check post</button>
+    <!-- Main Content Area -->
+    <main id="mainContent" class="main-body" hidden>
+      <!-- View 1: Multi-Select Media Grid (Pinterest Style Page Grabber) -->
+      <section id="viewMediaGrid" class="media-grid-view">
+        <div class="grid-header-meta">
+          <h1 class="grid-title">Save references to boards</h1>
+          <p class="grid-subtitle">Select up to twenty references</p>
         </div>
-      </label>
 
-      <!-- Step 2: Auto-captured Preview Card -->
-      <div class="source" id="metaPreviewCard">
-        <div class="meta-row">
-          <img id="metaThumbnail" src="" alt="Video thumbnail" hidden class="thumb" />
-          <div class="meta-info">
-            <span id="sourceHost">Source URL</span>
-            <strong id="sourceTitle">Paste a link to capture its details</strong>
-            <div class="creator-badge-row">
-              <img id="creatorAvatar" src="" alt="Creator profile picture" referrerpolicy="no-referrer" hidden class="creator-avatar" />
-              <small id="creatorLabel" class="creator-badge" hidden></small>
+        <div class="grid-tools-bar">
+          <span id="selectionCountBadge" class="selection-count-pill">0 selected</span>
+          <div class="grid-tools-actions">
+            <button id="pickElementGridBtn" class="pick-element-pill-btn" type="button" title="Click any video or element on the page to capture it">
+              🎯 Pick Element
+            </button>
+            <button id="toggleSelectAllBtn" class="select-all-btn" type="button">Select all</button>
+          </div>
+        </div>
+
+        <div class="page-media-scroll">
+          <div id="pageMediaGrid" class="page-media-grid">
+            <!-- Dynamically populated 3-column media cards -->
+          </div>
+          <div id="noMediaFoundNotice" class="no-boards-notice" hidden>
+            <p>No media found on this page.</p>
+          </div>
+        </div>
+
+        <div class="next-sticky-bar">
+          <button id="browseBoardsFromGridBtn" class="secondary-boards-pill-btn" type="button">My Boards</button>
+          <button id="nextToBoardsBtn" class="next-pill-btn" type="button" disabled>Next</button>
+        </div>
+      </section>
+
+      <!-- View 2: Choose a Board to Bulk Save References -->
+      <section id="viewBoardPicker" class="board-picker-view" hidden>
+        <div class="back-header-row">
+          <button id="backToGridBtn" class="back-to-grid-btn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            <span>Back to references</span>
+          </button>
+          <span id="boardPickerSelectedCount" class="selection-count-pill">1 selected</span>
+        </div>
+
+        <h1 class="choose-board-title">Choose a board</h1>
+
+        <!-- Captured Item Summary Banner (Draggable Pin) -->
+        <div class="item-summary-card" id="itemSummaryCard" draggable="true"
+          title="Grab this pin and drag it into any board below">
+          <div class="summary-thumb-wrap" id="pinDragHandle">
+            <img id="metaThumbnail" src="brand-mark.svg" alt="" class="summary-thumb" />
+            <div id="mediaTypeBadge" class="media-type-badge" hidden>VIDEO</div>
+            <div class="drag-pin-hint" title="Grab pin">⠿</div>
+          </div>
+          <div class="summary-details">
+            <div class="summary-title" id="sourceTitle">Capturing reference…</div>
+            <div class="summary-sub" id="sourceHost">Grab &amp; drop into any board below</div>
+          </div>
+          <div class="summary-actions-col">
+            <button id="pickElementBoardBtn" class="crop-pill-btn pick-btn" type="button" title="Click any video or element on the webpage to capture">
+              <span>🎯 Pick</span>
+            </button>
+            <button id="toggleCropBtn" class="crop-pill-btn" type="button" title="Edit element, trim video, or capture frame">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="crop-svg">
+                <circle cx="6" cy="6" r="3" />
+                <circle cx="6" cy="18" r="3" />
+                <line x1="20" y1="4" x2="8.12" y2="15.88" />
+                <line x1="14.47" y1="14.48" x2="20" y2="20" />
+                <line x1="8.12" y1="8.12" x2="12" y2="12" />
+              </svg>
+              <span id="cropBtnLabel">Edit / Trim</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Simplified Video Trim Box -->
+        <div id="videoCropStudio" class="crop-studio-drawer" hidden>
+          <div class="crop-studio-header">
+            <span class="crop-title">✂️ Trim Clip</span>
+            <span id="cropDurationBadge" class="crop-duration-badge">0:00.0 – 0:10.0</span>
+            <button id="applyCropBtn" type="button" class="crop-close-x-btn" title="Close trim">×</button>
+          </div>
+
+          <video id="cropVideoPlayer" playsinline muted controls class="crop-video-el" hidden></video>
+          <img id="liveVideoFramePreview" alt="" class="crop-video-el" hidden />
+
+          <div class="crop-controls" id="videoRangeControls">
+            <div class="range-row">
+              <div class="range-col">
+                <label>Start: <span id="cropStartLabel" class="time-label">0:00.0</span></label>
+                <input type="range" id="cropStartRange" min="0" max="60" step="0.1" value="0" />
+              </div>
+              <button id="setStartBtn" type="button" class="set-marker-btn" title="Use current player time">Set In</button>
+              <button id="previewCropBtn" type="button" class="set-marker-btn" title="Loop trimmed clip">▶ Loop</button>
+            </div>
+
+            <div class="range-row">
+              <div class="range-col">
+                <label>End: <span id="cropEndLabel" class="time-label">0:10.0</span></label>
+                <input type="range" id="cropEndRange" min="0" max="60" step="0.1" value="10" />
+              </div>
+              <button id="setEndBtn" type="button" class="set-marker-btn" title="Use current player time">Set Out</button>
+            </div>
+
+            <!-- Direct Save to Board Row inside Trim Panel -->
+            <div class="trim-save-bar">
+              <select id="trimBoardSelect" class="studio-select" title="Choose board to save to"></select>
+              <button id="trimSaveToBoardBtn" type="button" class="trim-save-board-btn">Save to Board</button>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Step 3: Filled Details & Save -->
-      <label>
-        2. Title (Auto-captured)
-        <input id="title" maxlength="120" required placeholder="Video Title" readonly />
-      </label>
-
-      <div>
-        <label>
-          Board
-          <select id="board">
-            <option value="">Save without a board</option>
-          </select>
-        </label>
-      </div>
-
-      <label>
-        Description & Notes
-        <textarea id="descriptionInput" rows="2" placeholder="Video description or animator notes..." readonly></textarea>
-      </label>
-
-      <label>
-        Tags
-        <input id="tags" placeholder="acting, combat, weight shift" />
-      </label>
-
-      <label class="private-row">
-        <span>
-          <strong>Private clip</strong>
-          <small>Pro · Keep this out of public search</small>
-        </span>
-        <input id="isPrivate" type="checkbox" disabled />
-      </label>
-
-      <div id="uploadProgress" class="upload-progress" hidden aria-live="polite">
-        <div class="progress-copy"><strong id="progressLabel">Preparing reference…</strong><span id="progressPercent">0%</span></div>
-        <div class="progress-track" role="progressbar" aria-label="Reference upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-          <span id="progressBar"></span>
+        <!-- Search Bar -->
+        <div class="search-input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="search-icon">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input id="boardSearchInput" type="text" placeholder="Search by name" autocomplete="off" />
+          <button id="clearSearchBtn" type="button" class="clear-search-btn" hidden>×</button>
         </div>
-        <small id="progressDetail">Keep this window open while the video is copied.</small>
+
+        <!-- Board Lists Container -->
+        <div id="boardScrollContainer" class="board-scroll-area">
+          <!-- Top choices section -->
+          <section id="topChoicesSection" class="board-section">
+            <div class="section-title">Top choices</div>
+            <div id="topChoicesList" class="board-list">
+              <!-- Dynamically injected Animation Reference board rows -->
+            </div>
+          </section>
+
+          <!-- All boards section -->
+          <section id="allBoardsSection" class="board-section">
+            <div class="section-title">All boards</div>
+            <div id="allBoardsList" class="board-list">
+              <!-- Dynamically injected Animation Reference board rows -->
+            </div>
+          </section>
+
+          <!-- Empty search results notice -->
+          <div id="noBoardsFound" class="no-boards-notice" hidden>
+            <p>No boards matching your search.</p>
+          </div>
+        </div>
+
+        <!-- Sticky Bottom Bar: Create Board -->
+        <div class="bottom-sticky-bar" style="margin: 0 -16px -8px; border-radius: 0;">
+          <button id="openCreateBoardBtn" class="create-board-trigger" type="button">
+            <span class="animref-plus-circle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="plus-svg">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </span>
+            <span class="create-board-label">Create board</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- View 3: Inside a Board (Board Contents Inspector) -->
+      <section id="viewBoardContents" class="board-contents-view" hidden>
+        <div class="back-header-row">
+          <button id="backToBoardsBtn" class="back-to-grid-btn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            <span>All boards</span>
+          </button>
+          <button id="openActiveBoardSiteBtn" class="open-board-site-pill" type="button" title="Open this board on Animation Reference">
+            <span>Open on Website</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="ext-link-svg">
+              <path d="M7 17L17 7M7 7h10v10" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="board-contents-header">
+          <div class="board-contents-title-wrap">
+            <h1 id="activeBoardTitle" class="board-contents-title">Board</h1>
+            <span id="activeBoardCountBadge" class="selection-count-pill">0 items</span>
+          </div>
+          <button id="saveCurrentToActiveBoardBtn" class="save-to-active-board-btn" type="button">
+            + Save selected here
+          </button>
+        </div>
+
+        <div class="page-media-scroll">
+          <div id="boardContentsGrid" class="page-media-grid">
+            <!-- Dynamically populated saved items inside this board -->
+          </div>
+          <div id="emptyBoardNotice" class="no-boards-notice" hidden>
+            <p>This board has no saved references yet.</p>
+            <button id="emptyBoardOpenSiteBtn" class="auth-browser-btn" type="button" style="margin-top:10px;height:36px;font-size:12px;">
+              Open Board on Website ↗
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Feedback / Saving Progress -->
+      <div id="saveFeedback" class="save-feedback" hidden>
+        <div class="feedback-spinner" id="feedbackSpinner" hidden></div>
+        <span id="feedbackText"></span>
       </div>
-      <p id="message" role="status"></p>
-      <button class="primary" id="saveButton" type="submit">Save to Animation Reference</button>
-    </form>
-  </main>
+    </main>
+
+    <!-- Inline Create Board Drawer / Modal -->
+    <div id="createBoardDrawer" class="create-board-drawer" hidden>
+      <div class="drawer-header">
+        <h3>Create board</h3>
+        <button id="closeDrawerBtn" class="icon-btn" type="button">×</button>
+      </div>
+
+      <form id="createBoardForm" class="drawer-form">
+        <label for="newBoardNameInput">Name</label>
+        <input id="newBoardNameInput" type="text" placeholder="Like &quot;Diving Reference&quot; or &quot;Combat&quot;"
+          required autofocus />
+
+        <div class="secret-board-row">
+          <div class="secret-text">
+            <strong>Keep this board secret</strong>
+            <small>Only you can see this board.</small>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="newBoardPrivateInput" />
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <div class="drawer-buttons">
+          <button id="cancelCreateBtn" type="button" class="drawer-cancel-btn">Cancel</button>
+          <button id="submitCreateBtn" type="submit" class="drawer-create-btn">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="popup.js"></script>
 </body>
+
 </html>

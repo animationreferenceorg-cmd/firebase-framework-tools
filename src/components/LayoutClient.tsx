@@ -26,6 +26,8 @@ import { SidebarUpgradeCard } from '@/components/SidebarUpgradeCard';
 import { MemberIntroPromoBanner } from '@/components/MemberIntroPromoBanner';
 import { UserFeedbackPanel } from '@/components/UserFeedbackPanel';
 import { MobileInstallBanner } from '@/components/reference/MobileInstallBanner';
+import { InstagramHeaderPill, InstagramSmartFollowPrompt } from '@/components/InstagramFollowFunnel';
+import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from '@/lib/social-links';
 import { isAppInstalled, isMobileInstallCandidate } from '@/lib/pwa';
 
 import { WatchTrackerProvider } from '@/hooks/use-watch-tracker';
@@ -63,6 +65,8 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     const isComingSoon = pathname === '/';
     const isPaintPage = pathname.startsWith('/paint');
     const isSjsuPage = pathname.startsWith('/sjsu');
+
+    if (pathname.startsWith('/embed/')) return <>{children}</>;
 
     if (isAdminPage || isComingSoon || isPaintPage || isSjsuPage) {
         return (
@@ -246,7 +250,8 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                             </>
                         )}
                     </SidebarContent>
-                    <SidebarFooter className="p-4 border-t border-white/5 space-y-1">
+                    <SidebarFooter className="p-4 border-t border-white/5 space-y-2">
+                        <InstagramHeaderPill variant="sidebar" />
                         <SidebarUpgradeCard />
                         <UpdatesModal />
                     </SidebarFooter>
@@ -299,6 +304,9 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                     <Link href="/terms" className="hover:text-white/70 transition-colors">Terms</Link>
                                     <Link href="/privacy" className="hover:text-white/70 transition-colors">Privacy</Link>
                                     <Link href="/dmca" className="hover:text-white/70 transition-colors">DMCA</Link>
+                                    <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="text-pink-400 hover:text-pink-300 font-bold transition-colors">
+                                        Follow @{INSTAGRAM_HANDLE} on Instagram
+                                    </a>
                                 </nav>
                                 <p className="text-[10px] text-white/20 mt-4">© 2026 Animation Reference. 100% human motion for 2D &amp; 3D animators.</p>
                             </footer>
@@ -307,6 +315,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                     <UploadProgressManager />
                     <LocalUploadRecovery />
                     <MobileInstallAfterLogin />
+                    <InstagramSmartFollowPrompt />
                 </SidebarInset>
             </SidebarProvider>
             </UploadProvider>

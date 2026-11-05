@@ -26,6 +26,8 @@ export const ANALYTICS_EVENTS = [
   'signup_prompt_clicked',
   'partner_click',
   'marketplace_tab_clicked',
+  'instagram_prompt_shown',
+  'instagram_follow_clicked',
 ] as const;
 
 export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];

@@ -235,7 +235,7 @@ function detectPlatform(url: string): string | null {
         if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) return 'youtube';
         if (hostname.includes('vimeo.com')) return 'vimeo';
         if (hostname.includes('sakugabooru.com')) return 'sakugabooru';
-        if (hostname.includes('archive.org')) return 'archive';
+        if (hostname.includes('archive.org')) return null;
         if (hostname.includes('pexels.com')) return 'pexels';
         return null;
     } catch {
@@ -277,6 +277,8 @@ export interface DownloadSocialOptions {
     title?: string;
     description?: string;
     tags?: string[];
+    startTime?: number;
+    endTime?: number;
 }
 
 export async function downloadSocialVideo(
@@ -293,7 +295,7 @@ export async function downloadSocialVideo(
 
     const tempDir = os.tmpdir();
     const uniqueId = uuidv4();
-    const tempFilePath = path.join(tempDir, `${uniqueId}.mp4`);
+    let tempFilePath = path.join(tempDir, `${uniqueId}.mp4`);
     console.log(`[Downloader] Starting download for: ${url}`);
     console.log(`[Downloader] Temp file: ${tempFilePath}`);
 
@@ -549,6 +551,33 @@ export async function downloadSocialVideo(
             throw new Error('The source returned a webpage or error response instead of a playable video.');
         }
         await onProgress?.(48, 'Preparing upload');
+
+        // If user specified a crop range (startTime & endTime), trim with ffmpeg
+        if (typeof options?.startTime === 'number' && typeof options?.endTime === 'number' && options.endTime > options.startTime) {
+            const hasFfmpeg = await isFfmpegAvailable();
+            if (hasFfmpeg) {
+                const croppedPath = path.join(tempDir, `cropped_${uniqueId}.mp4`);
+                const duration = options.endTime - options.startTime;
+                try {
+                    await onProgress?.(50, 'Cropping video range');
+                    console.log(`[Downloader] Cropping video from ${options.startTime}s to ${options.endTime}s (duration: ${duration}s)`);
+                    await runCommand('ffmpeg', [
+                        '-ss', String(options.startTime),
+                        '-i', tempFilePath,
+                        '-t', String(duration),
+                        '-c', 'copy',
+                        croppedPath
+                    ]);
+                    if (fs.existsSync(croppedPath) && fs.statSync(croppedPath).size > 1024) {
+                        try { fs.unlinkSync(tempFilePath); } catch {}
+                        tempFilePath = croppedPath;
+                        console.log(`[Downloader] Video successfully cropped: ${croppedPath}`);
+                    }
+                } catch (cropErr: any) {
+                    console.warn('[Downloader] Cropping failed, proceeding with original video:', cropErr?.message);
+                }
+            }
+        }
 
         // 7. Copy the bytes into storage controlled by Animation Reference.
         // Bunny is preferred for streaming, with Firebase as the fallback.

@@ -3,10 +3,13 @@ import type { Video } from './types';
 // While non-anime references remain, anime may fill only every Nth slot.
 const ANIME_EVERY_NTH = 3;
 
-// Sakugabooru imports are ~93% of the catalog and are all anime, so they are
+// Sakugabooru / 2D cut imports are ~93% of the catalog, so they are
 // the signal used to keep browse surfaces from being swamped by them.
 export function isAnimeReference(video: Video): boolean {
-  return /sakugabooru\.com/i.test(`${video.videoUrl || ''} ${video.originalUrl || ''}`);
+  const src = (video.source || '').toLowerCase();
+  const id = video.id || '';
+  const url = `${video.videoUrl || ''} ${video.originalUrl || ''}`.toLowerCase();
+  return src === 'sakugabooru' || id.startsWith('sakuga') || id.startsWith('saku_') || url.includes('sakugabooru');
 }
 
 export function isSpecialReference(video: Video): boolean {

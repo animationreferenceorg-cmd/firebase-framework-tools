@@ -29,11 +29,13 @@
     }
   },
   "include": [
-    "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
+    ".next.discovery-preview/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    "next-env.d.ts",
+    ".next-studiowatch-local/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

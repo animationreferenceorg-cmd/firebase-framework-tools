@@ -37,6 +37,8 @@ LOCAL_SNAPSHOT_FALLBACK = os.path.normpath(
 )
 
 _cached_catalog = None
+_cached_catalog_at = 0
+CATALOG_CACHE_SECONDS = 3600
 _cached_tags = None
 _lock = threading.Lock()
 
@@ -74,53 +76,54 @@ def get_cached_snapshot_path():
 
 
 def load_catalog(force_refresh=False):
-    global _cached_catalog, _cached_tags
+    global _cached_catalog, _cached_catalog_at, _cached_tags
 
     with _lock:
-        if _cached_catalog is not None and not force_refresh:
+        now = time.time()
+        if _cached_catalog is not None and not force_refresh and now - _cached_catalog_at < CATALOG_CACHE_SECONDS:
             return _cached_catalog
 
         cache_path = get_cached_snapshot_path()
-        catalog_data = None
-
-        # Check local cache first
-        if not force_refresh and os.path.isfile(cache_path) and os.path.getsize(cache_path) > 1000:
+        fallback = _cached_catalog
+        cache_fresh = False
+        if os.path.isfile(cache_path):
             try:
                 with open(cache_path, "r", encoding="utf-8") as f:
-                    catalog_data = json.load(f)
-            except Exception:
-                catalog_data = None
+                    data = json.load(f)
+                if isinstance(data, list):
+                    fallback = data
+                    cache_fresh = now - os.path.getmtime(cache_path) < CATALOG_CACHE_SECONDS
+            except (OSError, ValueError):
+                pass
+        if cache_fresh and not force_refresh:
+            _cached_catalog = fallback
+            _cached_catalog_at = now
+            _cached_tags = None
+            return _cached_catalog
 
-        # Fallback to local repo public data if available
-        if catalog_data is None and os.path.isfile(LOCAL_SNAPSHOT_FALLBACK):
-            try:
-                with open(LOCAL_SNAPSHOT_FALLBACK, "r", encoding="utf-8") as f:
-                    catalog_data = json.load(f)
+        try:
+            req = urllib_request.Request(SNAPSHOT_URL, headers={"User-Agent": "AnimRef-Animo-Plugin/1.0 (Maya; Autodesk)"})
+            with urllib_request.urlopen(req, timeout=15) as resp:
+                raw_data = resp.read().decode("utf-8")
+            data = json.loads(raw_data)
+            if not isinstance(data, list):
+                raise ValueError("Invalid catalogue response")
+            with open(cache_path, "w", encoding="utf-8") as f:
+                f.write(raw_data)
+            fallback = data
+        except (OSError, ValueError, urllib_error.URLError):
+            if fallback is None and os.path.isfile(LOCAL_SNAPSHOT_FALLBACK):
                 try:
-                    shutil.copy2(LOCAL_SNAPSHOT_FALLBACK, cache_path)
-                except Exception:
+                    with open(LOCAL_SNAPSHOT_FALLBACK, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    if isinstance(data, list):
+                        fallback = data
+                except (OSError, ValueError):
                     pass
-            except Exception:
-                catalog_data = None
 
-        # If still None or forced refresh, fetch from remote
-        if catalog_data is None or force_refresh:
-            try:
-                req = urllib_request.Request(
-                    SNAPSHOT_URL,
-                    headers={"User-Agent": "AnimRef-Animo-Plugin/1.0 (Maya; Autodesk)"}
-                )
-                with urllib_request.urlopen(req, timeout=15) as resp:
-                    raw_data = resp.read().decode("utf-8")
-                    catalog_data = json.loads(raw_data)
-                    with open(cache_path, "w", encoding="utf-8") as f:
-                        f.write(raw_data)
-            except Exception as e:
-                if catalog_data is None:
-                    # Return empty if totally unreachable
-                    catalog_data = []
-
-        _cached_catalog = catalog_data or []
+        _cached_catalog = fallback or []
+        # A failed initial fetch must be retried next time rather than cached forever.
+        _cached_catalog_at = now if fallback is not None else 0
         _cached_tags = None
         return _cached_catalog
 
@@ -322,7 +325,29 @@ def resolve_media_url(video):
 
 def download_video_file(video, progress_callback=None):
     video_id = video.get("id")
-    resolved_url = resolve_media_url(video)
+    if not video_id:
+        raise ValueError("This reference has no ID. Open it on Animation Reference instead.")
+    try:
+        from . import animref_auth
+    except (ImportError, ValueError):
+        import animref_auth
+    token = animref_auth.get_valid_token()
+    if not token:
+        raise RuntimeError("Sign in to your Animation Reference Pro account to import references.")
+    url = animref_auth.SITE_API_BASE + "/videos/" + urllib_parse.quote(str(video_id), safe="") + "/download"
+    request = urllib_request.Request(url, data=b"{}", headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"})
+    try:
+        with urllib_request.urlopen(request, timeout=30) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except urllib_error.HTTPError as error:
+        try:
+            message = json.loads(error.read().decode("utf-8")).get("message")
+        except (ValueError, UnicodeError):
+            message = None
+        raise RuntimeError(message or "Unable to authorize this download. Check your account and try again.")
+    resolved_url = result.get("url")
+    if not isinstance(resolved_url, str) or urllib_parse.urlparse(resolved_url).scheme != "https":
+        raise RuntimeError("This reference does not have an authorized downloadable file.")
 
     clean_id = re.sub(r"[^A-Za-z0-9_-]", "_", str(video_id))
     local_path = os.path.join(get_cache_dir(), "videos", clean_id + ".mp4")

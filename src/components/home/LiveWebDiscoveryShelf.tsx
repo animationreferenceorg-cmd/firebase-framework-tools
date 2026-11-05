@@ -228,7 +228,7 @@ export function LiveWebDiscoveryShelf({ className = '' }: LiveWebDiscoveryShelfP
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[11px] font-bold text-amber-400 border border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.25)] backdrop-blur-md">
             <Zap className="h-3 w-3" />
-            Sakuga 2D
+            2D Animation
           </span>
         );
       case 'wikimedia':
@@ -236,13 +236,6 @@ export function LiveWebDiscoveryShelf({ className = '' }: LiveWebDiscoveryShelfP
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-400 border border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.25)] backdrop-blur-md">
             <Sparkles className="h-3 w-3" />
             Locomotion
-          </span>
-        );
-      case 'archive':
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/20 px-2.5 py-0.5 text-[11px] font-bold text-violet-300 border border-violet-500/40 shadow-[0_0_10px_rgba(167,139,250,0.25)] backdrop-blur-md">
-            <Film className="h-3 w-3" />
-            Stunts
           </span>
         );
       default:

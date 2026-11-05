@@ -1,5 +1,7 @@
 'use client';
 
+import { NoReferencesUploadCard } from '@/components/reference/NoReferencesUploadCard';
+
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -26,6 +28,7 @@ import { useWatchTracker } from '@/hooks/use-watch-tracker';
 import { 
   STREAMING_SHELVES, 
   calculateChannelCounts, 
+  calculateChannelCovers,
   type StreamingShelf, 
   type StreamingChannelItem 
 } from '@/lib/streaming-channels';
@@ -89,6 +92,7 @@ export function BrowseDirectory({
 
     // Live counts computed across snapshot for all streaming channels
     const channelCounts = useMemo(() => calculateChannelCounts(videos), [videos]);
+    const channelCovers = useMemo(() => calculateChannelCovers(videos), [videos]);
 
     // Browse index for tags and Firestore categories
     const { categoryCounts, categoryCovers, tags: rawTags } = useMemo(
@@ -166,14 +170,15 @@ export function BrowseDirectory({
 
                 if (maxScore > 0.2) {
                     const cnt = channelCounts[ch.id] || 0;
-                    usedCovers.add(ch.coverArt);
+                    const cover = channelCovers[ch.id] || ch.coverArt;
+                    usedCovers.add(cover);
                     results.push({
                         id: `channel-${ch.id}`,
                         title: ch.title,
                         subtitle: ch.subtitle,
                         description: ch.description,
                         href: ch.href,
-                        coverUrl: ch.coverArt,
+                        coverUrl: cover,
                         badge: ch.badge,
                         count: cnt,
                         score: maxScore * 1.5, // prioritize curated channels
@@ -332,17 +337,17 @@ export function BrowseDirectory({
                             ))}
                         </div>
                     ) : (
-                        <div className="py-20 text-center bg-zinc-900/40 rounded-3xl border border-white/10 p-8 space-y-3">
-                            <p className="text-lg font-bold text-white">No channels found matching &ldquo;{query}&rdquo;</p>
-                            <p className="text-xs text-zinc-400 max-w-md mx-auto">
-                                Try searching for <em>Walk Cycle</em>, <em>Turnaround</em>, <em>Storyboards</em>, <em>VisDev</em>, <em>Mecha</em>, or <em>Combat</em>.
-                            </p>
-                            <Button
-                                onClick={() => setQuery('')}
-                                className="mt-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs"
-                            >
-                                Reset Search & Browse All
-                            </Button>
+                        <div className="space-y-4">
+                            <NoReferencesUploadCard query={query} mediaType="video" />
+                            <div className="text-center pt-2">
+                                <Button
+                                    onClick={() => setQuery('')}
+                                    variant="outline"
+                                    className="rounded-xl border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white text-xs"
+                                >
+                                    Reset Search & Browse All Channels
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -424,7 +429,7 @@ export function BrowseDirectory({
                                         className="group relative shrink-0 w-[290px] sm:w-[340px] md:w-[380px] aspect-[16/9] rounded-2xl overflow-hidden border border-white/10 bg-black shadow-2xl transition-all duration-300 hover:scale-[1.02] hover:border-purple-500/80 hover:shadow-[0_0_35px_-5px_rgba(168,85,247,0.5)] cursor-pointer flex flex-col justify-end p-5"
                                     >
                                         <Image
-                                            src={item.coverArt}
+                                            src={channelCovers[item.id] || item.coverArt}
                                             alt={item.title}
                                             fill
                                             unoptimized={needsUnoptimized(item.coverArt)}
@@ -518,7 +523,7 @@ export function BrowseDirectory({
                                                 subtitle={channel.subtitle}
                                                 description={channel.description}
                                                 href={channel.href}
-                                                coverArt={channel.coverArt}
+                                                coverArt={channelCovers[channel.id] || channel.coverArt}
                                                 badge={channel.badge}
                                                 count={channelCounts[channel.id] || 0}
                                             />

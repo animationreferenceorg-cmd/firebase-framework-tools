@@ -875,6 +875,44 @@ const CONCEPT_EVIDENCE_SCORE: Record<EvidenceLocation, number> = {
 /**
  * Relevance of a reference to a parsed query. 0 means "not a match — exclude".
  */
+export function matchWordPattern(word: string): RegExp {
+  const base = word.toLowerCase().trim();
+  const forms = new Set<string>([base]);
+
+  if (base.endsWith('s')) forms.add(base.slice(0, -1));
+  else forms.add(`${base}s`);
+  if (base.endsWith('es')) forms.add(base.slice(0, -2));
+  else forms.add(`${base}es`);
+
+  if (base.endsWith('ing')) {
+    forms.add(base.slice(0, -3));
+    forms.add(`${base.slice(0, -3)}e`);
+  } else {
+    forms.add(`${base}ing`);
+    if (base.endsWith('e')) forms.add(`${base.slice(0, -1)}ing`);
+  }
+
+  if (base.endsWith('ed')) {
+    forms.add(base.slice(0, -2));
+    forms.add(base.slice(0, -1));
+  } else {
+    forms.add(`${base}ed`);
+    if (base.endsWith('e')) forms.add(`${base.slice(0, -1)}d`);
+  }
+
+  const escaped = Array.from(forms).filter(f => f.length > 1).map(f => f.replace(/[.*+?^${}()|[\]\\]/g, '\\export function scoreVideoRelevance(video: Video, intent: SearchIntent): number {'));
+  return new RegExp(`\\b(?:${escaped.join('|')})\\b`, 'i');
+}
+
+export function matchesAllKeywords(text: string, words: string[]): boolean {
+  if (words.length === 0) return true;
+  if (words.length <= 2) {
+    return words.every(w => matchWordPattern(w).test(text));
+  }
+  const matched = words.filter(w => matchWordPattern(w).test(text)).length;
+  return matched >= Math.max(2, Math.ceil(words.length * 0.7));
+}
+
 export function scoreVideoRelevance(video: Video, intent: SearchIntent): number {
   if (!intent.normalizedQuery) return 100;
 

@@ -1,4 +1,5 @@
-import { parseSearchIntent } from './search-intent';
+import { parseSearchIntent, matchesAllKeywords } from './search-intent';
+import { isBlockedReference } from './blocked-references';
 import type { Video } from './types';
 import type { TabOption, TypeOption, PillOption, MediaOption } from '@/components/FilterBar';
 
@@ -11,7 +12,6 @@ export type SourceOption =
   | 'free'
   | 'openverse'
   | 'wikimedia'
-  | 'archive'
   | 'library';
 
 export interface ReferenceFilters {
@@ -25,7 +25,7 @@ export interface ReferenceFilters {
 }
 
 export function filterReferenceCatalog(videos: Video[], { tab, type, pill, query, scores, media = 'all', source = 'all' }: ReferenceFilters): Video[] {
-    let result = videos.filter(v => pill === 'shorts' ? v.isShort : !v.isShort);
+    let result = videos.filter(v => (pill === 'shorts' ? v.isShort : !v.isShort) && !isBlockedReference(v));
 
     // Source filter (Pinterest, ArtStation, Sketchfab, Sakugabooru, Free Sources, Library)
     if (source && source !== 'all') {
@@ -38,13 +38,12 @@ export function filterReferenceCatalog(videos: Video[], { tab, type, pill, query
         if (source === 'sakugabooru') return src === 'sakugabooru' || id.startsWith('saku_');
         if (source === 'openverse') return src === 'openverse' || id.startsWith('openverse_');
         if (source === 'wikimedia') return src === 'wikimedia' || id.startsWith('wiki_');
-        if (source === 'archive') return src === 'archive' || id.startsWith('archive_');
         if (source === 'free') {
-          return ['openverse', 'wikimedia', 'archive', 'sakugabooru'].includes(src) ||
-            id.startsWith('openverse_') || id.startsWith('wiki_') || id.startsWith('archive_') || id.startsWith('saku_');
+          return ['openverse', 'wikimedia', 'sakugabooru'].includes(src) ||
+            id.startsWith('openverse_') || id.startsWith('wiki_') || id.startsWith('saku_');
         }
         if (source === 'library') {
-          return !src || ['local', 'internal', 'library'].includes(src) || (!id.startsWith('pin_') && !id.startsWith('as_') && !id.startsWith('sf_') && !id.startsWith('saku_') && !id.startsWith('wiki_') && !id.startsWith('archive_') && !id.startsWith('openverse_'));
+          return !src || ['local', 'internal', 'library'].includes(src) || (!id.startsWith('pin_') && !id.startsWith('as_') && !id.startsWith('sf_') && !id.startsWith('saku_') && !id.startsWith('wiki_') && !id.startsWith('openverse_'));
         }
         return true;
       });
@@ -69,30 +68,29 @@ export function filterReferenceCatalog(videos: Video[], { tab, type, pill, query
 
           // Subject Guarantee: If specific subject tokens (e.g. "cat") were searched,
           // require the subject in all items (including providers)
-          if (intent.tokens.length > 0) {
-            const matchesSubject = intent.tokens.some(tok => {
-              const base = tok.endsWith('s') ? tok.slice(0, -1) : tok;
-              const re = new RegExp(`\\b${base}s?\\b`, 'i');
-              return re.test(text);
-            });
-            if (!matchesSubject) return false;
-          }
+          // Subject Guarantee: match user query words or stemmed tokens
+          const matchesSubject = qWords.some(w => text.includes(w)) || intent.tokens.some(tok => {
+            const re = new RegExp(`\\b${tok}`, 'i');
+            return re.test(text);
+          });
+          if (!matchesSubject) return false;
 
           // Provider results that matched the subject pass through
           if (v.source && v.source !== 'library') return true;
 
-          // Library items must also match the rest of the search words
-          return qWords.every(w => {
+          // Library items: match any query word
+          return qWords.some(w => {
             const singular = w.endsWith('s') ? w.slice(0, -1) : w;
             const plural = w.endsWith('s') ? w : `${w}s`;
             return text.includes(w) || text.includes(singular) || text.includes(plural);
           });
         })
       result = result
-        .map(v => ({ video: v, score: scores.get(v.id) || 0 }))
-        .filter(x => x.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .map(x => x.video);
+        .sort((a, b) => {
+          const scoreA = scores.get(a.id) ?? (a.source && a.source !== 'library' ? 10 : 1);
+          const scoreB = scores.get(b.id) ?? (b.source && b.source !== 'library' ? 10 : 1);
+          return scoreB - scoreA;
+        });
     }
 
     // Helper to get numeric timestamp for sorting (newest first)

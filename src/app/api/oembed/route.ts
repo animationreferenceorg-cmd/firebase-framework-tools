@@ -239,38 +239,9 @@ export async function GET(request: Request) {
       }
     }
 
-    // 9. Internet Archive (archive.org)
+    // 9. Internet Archive (archive.org) - Blocked
     if (host.endsWith('archive.org')) {
-      const match = targetUrl.match(/details\/([a-zA-Z0-9._-]+)/);
-      if (match) {
-        const id = match[1];
-        const res = await fetch(`https://archive.org/metadata/${encodeURIComponent(id)}`, {
-          headers: { 'User-Agent': 'Mozilla/5.0' },
-          next: { revalidate: 3600 },
-        }).catch(() => null);
-
-        if (res && res.ok) {
-          const meta = await res.json().catch(() => null);
-          if (meta?.metadata) {
-            const title = meta.metadata.title || `Internet Archive #${id}`;
-            const cleanDesc = (meta.metadata.description || '').replace(/<[^>]*>/g, '').trim();
-            const subject = Array.isArray(meta.metadata.subject) ? meta.metadata.subject : (meta.metadata.subject || '').split(';').map((s: string) => s.trim());
-            return NextResponse.json({
-              url: targetUrl,
-              title,
-              description: cleanDesc.slice(0, 300) || title,
-              authorName: meta.metadata.creator || 'Internet Archive',
-              authorUrl: targetUrl,
-              authorAvatar: '',
-              providerName: 'Internet Archive',
-              thumbnailUrl: `https://archive.org/services/img/${encodeURIComponent(id)}`,
-              mediaUrl: '',
-              mediaType: 'video',
-              tags: [...new Set(['archive', 'public-domain', 'reference', ...subject])].filter(Boolean).slice(0, 15),
-            });
-          }
-        }
-      }
+      return NextResponse.json({ error: 'Internet Archive links are not supported.' }, { status: 400 });
     }
 
     // 10. Facebook Video / Reel Fallback

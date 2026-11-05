@@ -273,16 +273,14 @@ describe('paginated provider discovery', () => {
     expect(new URL(fetcher.mock.calls[0][0]).searchParams.get('gsrsearch')).toContain('dragon');
   });
 
-  it('pages through Archive and Sakugabooru rather than requesting their first batch again', async () => {
+  it('pages through Sakugabooru rather than requesting its first batch again', async () => {
     const fetcher = vi.fn(async (url: string) => {
       const params = new URL(url).searchParams;
       const page = Number(params.get('page'));
-      return url.includes('archive.org')
-        ? Response.json({ response: { numFound: 48, docs: [{ identifier: `film-${page}`, title: 'Film' }] } })
-        : Response.json(Array.from({ length: page === 1 ? 24 : 1 }, (_, index) => ({ id: page * 100 + index, file_url: `https://www.sakugabooru.com/data/${page}-${index}.mp4` })));
+      return Response.json(Array.from({ length: page === 1 ? 24 : 1 }, (_, index) => ({ id: page * 100 + index, file_url: `https://www.sakugabooru.com/data/${page}-${index}.mp4` })));
     });
     vi.stubGlobal('fetch', fetcher);
-    for (const source of ['archive', 'sakugabooru']) {
+    for (const source of ['sakugabooru']) {
       const first = await search({ source });
       const second = await search({ source, cursor: first.body.nextCursor });
       expect(first.body.hasMore).toBe(true);

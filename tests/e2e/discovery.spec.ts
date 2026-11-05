@@ -21,6 +21,70 @@ async function fixtures(page: Page) {
   });
 }
 
+async function openHome(page: Page) {
+  // Discovery starts in an effect, so its first request confirms the rendered
+  // filter buttons have hydrated before the test clicks them.
+  const ready = page.waitForResponse(response => response.url().includes('/api/import/search'));
+  await page.goto('/home', { waitUntil: 'domcontentloaded' });
+  await ready;
+}
+
+test('indexed artwork appears before a slow native API and survives local relevance scoring', async ({ page }) => {
+  await fixtures(page);
+  let releaseNative!: () => void;
+  const gate = new Promise<void>(resolve => { releaseNative = resolve; });
+  await page.route('**/api/import/search**', async route => {
+    const params = new URL(route.request().url()).searchParams;
+    if (params.get('q') === 'female robot turnaround' && params.get('source') === 'artstation') await gate;
+    const results = params.get('q') === 'female robot turnaround' && params.get('source') === 'web-images'
+      ? ['artstation', 'pinterest'].map((source, index) => ({
+        ...item(index, `Study ${index + 1}`), id: `web_${source}`, source, mediaType: 'image', tags: [],
+        sourceUrl: source === 'artstation' ? 'https://www.artstation.com/artwork/study' : 'https://www.pinterest.com/pin/123/',
+      })) : [];
+    await route.fulfill({ json: { results, nextCursor: null } });
+  });
+  try {
+    await openHome(page);
+    await page.getByRole('button', { name: 'VisDev', exact: true }).click();
+    await page.locator('input[placeholder]').first().fill('female robot turnaround');
+    await expect(page.locator('[data-reference-id="web_artstation"]')).toBeVisible();
+    await expect(page.locator('[data-reference-id="web_pinterest"]')).toBeVisible();
+    await expect(page.getByText('Finding more references…')).toBeVisible();
+    releaseNative();
+    await expect(page.getByText('Finding more references…')).toHaveCount(0);
+    await expect(page.locator('[data-reference-id="web_artstation"]')).toHaveCount(1);
+  } finally { releaseNative(); }
+});
+
+test('search mixes Pinterest into the first page and reuses recent provider results', async ({ page }) => {
+  await fixtures(page);
+  let dragonPinRequests = 0;
+  await page.route('**/api/import/search**', async route => {
+    const params = new URL(route.request().url()).searchParams;
+    const source = params.get('source');
+    const query = params.get('q');
+    if (query === 'dragon' && source === 'pinterest') dragonPinRequests++;
+    const results = !query ? [] : source === 'artstation'
+      ? Array.from({ length: 60 }, (_, index) => ({ ...item(index, `${query} study`), source: 'artstation', mediaType: 'image' }))
+      : source === 'pinterest' ? [{
+        ...item(99, `${query} pose`), id: `pin_${query}`, source: 'pinterest', mediaType: 'image',
+        sourceUrl: `https://www.pinterest.com/pin/${query === 'dragon' ? 1 : 2}/`,
+      }] : [];
+    await route.fulfill({ json: { results, nextCursor: null, providers: [{ source, status: 'ok' }] } });
+  });
+  await openHome(page);
+  const search = page.locator('input[placeholder]').first();
+  await search.fill('dragon');
+  await expect(page.locator('[data-reference-id="pin_dragon"]')).toBeVisible();
+  const firstIds = await page.locator('#reference-library [data-reference-id]').evaluateAll(elements => elements.slice(0, 30).map(element => element.getAttribute('data-reference-id')));
+  expect(firstIds).toContain('pin_dragon');
+  await search.fill('horse');
+  await expect(page.locator('[data-reference-id="pin_horse"]')).toBeVisible();
+  await search.fill('dragon');
+  await expect(page.locator('[data-reference-id="pin_dragon"]')).toBeVisible();
+  expect(dragonPinRequests).toBe(1);
+});
+
 test('3D discovery keeps paging, deduplicates and preserves image proportions @mobile', async ({ page }) => {
   await fixtures(page);
   const requestedPages: string[] = [];
@@ -34,7 +98,7 @@ test('3D discovery keeps paging, deduplicates and preserves image proportions @m
     if (start === 24) results.unshift(item(0));
     return route.fulfill({ json: { results, nextCursor: start === 48 ? null : start === 0 ? 'page-2' : 'page-3' } });
   });
-  await page.goto('/home', { waitUntil: 'domcontentloaded' });
+  await openHome(page);
   await page.getByRole('button', { name: '3D Models', exact: true }).click();
   const library = page.locator('#reference-library');
   await expect(library.locator('[data-reference-id="sf_test_0"]')).toBeVisible();
@@ -74,7 +138,7 @@ test('a failed provider can retry without discarding existing cards', async ({ p
     }
     return route.fulfill({ json: { results: [], nextCursor: null } });
   });
-  await page.goto('/home', { waitUntil: 'domcontentloaded' });
+  await openHome(page);
   await page.getByRole('button', { name: '3D Models', exact: true }).click();
   await expect(page.locator('[data-reference-id="sf_test_0"]')).toBeVisible();
   await page.getByRole('button', { name: 'Retry unavailable sources' }).click();
@@ -97,7 +161,7 @@ test('changing the search cancels old requests and prevents stale results', asyn
     await route.fulfill({ json: { results: [item(query === 'dragon' ? 99 : 100, `${query} model`)], nextCursor: null } });
   });
   try {
-    await page.goto('/home', { waitUntil: 'domcontentloaded' });
+    await openHome(page);
     await page.getByRole('button', { name: '3D Models', exact: true }).click();
     const search = page.locator('input[placeholder]').first();
     await search.fill('dragon');
@@ -119,7 +183,7 @@ test('the media dropdown filters results and requests matching providers', async
       ? [{ ...item(1), id: 'as_painting', source: 'artstation', mediaType: 'image', tags: ['visdev'] }] : [];
     return route.fulfill({ json: { results, nextCursor: null } });
   });
-  await page.goto('/home', { waitUntil: 'domcontentloaded' });
+  await openHome(page);
   await expect(page.locator('[data-reference-id="sf_test_0"]')).toBeVisible();
   await page.getByRole('button', { name: 'Filter media type' }).click();
   await page.getByRole('menuitemradio', { name: 'Images', exact: true }).click();

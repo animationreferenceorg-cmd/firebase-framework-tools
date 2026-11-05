@@ -54,17 +54,13 @@ export const VideoGrid = memo(function VideoGrid({ title, videos, columns = 4, l
         getGridClass()
       )}>
         {videos.map((video, index) => (
-          // Staggered entrance. A CSS animation rather than a motion component:
-          // this grid can hold hundreds of cards, and each one mounting its own
-          // JS animation would cost far more than a keyframe the browser runs
-          // on the compositor. Delay cycles every 12 cards so each batch loaded
-          // by infinite scroll gets its own short cascade instead of waiting
-          // behind the previous one.
+          // Keep the first screen immediate when filters replace the grid.
+          // Only cards beyond that screen get a short stagger on arrival.
           <div
             key={video.id}
             data-reference-id={video.id}
-            className="animate-card-in"
-            style={{ animationDelay: `${(index % 12) * 35}ms` }}
+            className={index < 12 ? undefined : 'animate-card-in'}
+            style={index < 12 ? undefined : { animationDelay: `${(index % 6) * 15}ms` }}
           >
             <div data-masonry-content={layout === 'masonry' ? '' : undefined}>
               <VideoCard video={video} priority={index < 4} layout={layout === 'masonry' && isArtworkReference(video) ? 'natural' : 'video'} />

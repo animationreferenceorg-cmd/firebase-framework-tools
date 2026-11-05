@@ -56,9 +56,9 @@ export function apiErrorResponse(error: unknown) {
 
 export function extensionCors(request: NextRequest): Record<string, string> {
   const origin = request.headers.get('origin') || '';
-  const allowed = origin === 'https://animationreference.org' || origin.startsWith('chrome-extension://') || origin.startsWith('moz-extension://');
+  const allowed = origin === 'https://animationreference.org' || origin.startsWith('chrome-extension://') || origin.startsWith('moz-extension://') || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:');
   return {
-    'Access-Control-Allow-Origin': allowed ? origin : 'https://animationreference.org',
+    'Access-Control-Allow-Origin': allowed ? origin : '*',
     'Access-Control-Allow-Headers': 'Authorization, Content-Type, Idempotency-Key',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Vary': 'Origin',

@@ -3,7 +3,8 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { REFERENCE_SOURCES, discoverySources, discoveryQuery, type ReferenceSource } from '@/lib/reference-feed';
 import { fetchReferenceProvider, providerUnavailableMessage } from '@/lib/reference-providers';
-import { generateRichTags, parseSearchIntent, scoreVideoRelevance } from '@/lib/search-intent';
+import { generateRichTags, parseSearchIntent, scoreVideoRelevance, matchWordPattern, matchesAllKeywords } from '@/lib/search-intent';
+import { isBlockedReference } from '@/lib/blocked-references';
 
 export type { UnifiedSearchResult } from '@/lib/reference-feed';
 export const runtime = 'nodejs';
@@ -63,22 +64,22 @@ export async function GET(request: NextRequest) {
     if (!page) return [];
     if (page.next && page.next !== positions?.[source]) nextPositions[source] = page.next;
     return page.items.flatMap(item => {
-      if (!item.id || seen.has(item.id)) return [];
+      if (!item.id || seen.has(item.id) || isBlockedReference(item)) return [];
       seen.add(item.id);
       item.tags = generateRichTags({ ...item, authorName: item.authorName });
       const queryMatched = page.queryMatched !== false;
       const relevance = scoreVideoRelevance({ ...item, videoUrl: item.mediaType === 'video' ? item.mediaUrl : '' } as any, intent);
 
-      // Subject Guarantee: if user typed specific subject tokens (e.g. "cat" in "cat character designs"),
-      // require the subject in title/tags/description so fuzzy upstream matches (like "Just a girl") are excluded.
-      if (!explore && intent.tokens.length > 0) {
-        const textBlob = `${item.title} ${(item.tags || []).join(' ')} ${item.description || ''} ${item.authorName || ''}`.toLowerCase();
-        const matchesSubject = intent.tokens.some(tok => {
-          const base = tok.endsWith('s') ? tok.slice(0, -1) : tok;
-          const re = new RegExp(`\\b${base}s?\\b`, 'i');
-          return re.test(textBlob);
-        });
-        if (!matchesSubject && (options.source === 'all' || options.source === 'sketchfab' || !queryMatched)) return [];
+      // All keywords required: e.g. "car crash" must contain both "car" and "crash" (whole-word/inflections)
+      const textBlob = `${item.title} ${(item.tags || []).join(' ')} ${item.description || ''} ${item.authorName || ''}`.toLowerCase();
+      if (!explore && qWords.length > 0) {
+        if (!queryMatched) {
+          if (!matchesAllKeywords(textBlob, qWords)) return [];
+        } else if (!matchesAllKeywords(textBlob, qWords)) {
+          // Provider already queried upstream. Allow sparse titles (e.g. "Study 07"), but reject items that conflict
+          const isSparse = item.title.trim().split(/\s+/).length <= 2 && (!item.description || item.description.length < 30);
+          if (!isSparse) return [];
+        }
       }
 
       // Native/indexed search already matched the full query. Sparse titles and
@@ -95,7 +96,9 @@ export async function GET(request: NextRequest) {
           if (!matchesQuery) return [];
         }
       }
-      const score = explore ? 1 : queryMatched ? (relevance > 0 ? relevance : 1) : relevance;
+      let score = explore ? 1 : queryMatched ? (relevance > 0 ? relevance : 1) : relevance;
+      if (qClean && textBlob.includes(qClean)) score += 200;
+      if (qWords.length > 1 && qWords.every(w => matchWordPattern(w).test(textBlob))) score += 100;
       return score > 0 ? [{ item, score }] : [];
     });
   });

@@ -58,6 +58,24 @@ export async function POST(req: NextRequest) {
             })
         );
 
+        // Record the open checkout attempt for abandoned-cart recovery.
+        try {
+            const origin = publicOrigin(req.headers);
+            await db.collection('checkout_sessions').doc(session.id).set({
+                sessionId: session.id,
+                userId: identity.uid,
+                email: identity.email ?? (profile as any).email ?? null,
+                displayName: (profile as any).displayName ?? identity.displayName ?? null,
+                plan: plan || 'pro_monthly',
+                status: 'open',
+                checkoutUrl: session.url || `${origin}/profile?openUpgrade=true`,
+                createdAt: Date.now(),
+                followUpSent: false,
+            }, { merge: true });
+        } catch (dbErr) {
+            console.warn('[Checkout] Could not record checkout session in Firestore:', dbErr);
+        }
+
         const responseData: Record<string, any> = { url: session.url };
         if (session.client_secret) {
             responseData.clientSecret = session.client_secret;

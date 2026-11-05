@@ -1,5 +1,7 @@
 'use client';
 
+import { NoReferencesUploadCard } from '@/components/reference/NoReferencesUploadCard';
+
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Bookmark, 
@@ -25,6 +27,7 @@ import type { Video } from '@/lib/types';
 import { searchResultToVideo } from '@/lib/reference-hub';
 import { VideoFullscreenViewer } from '@/components/VideoFullscreenViewer';
 import { ArtworkDetailModal } from '@/components/reference/ArtworkDetailModal';
+import { SignUpPromptDialog } from '@/components/auth/SignUpPromptDialog';
 
 interface LiveWebSearchResultsProps {
   query: string;
@@ -118,6 +121,8 @@ export function LiveWebSearchResults({ query, results, loading, className = '' }
   const [selectedArtwork, setSelectedArtwork] = useState<UnifiedSearchResult | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [active3DModel, setActive3DModel] = useState<UnifiedSearchResult | null>(null);
+  const [showSignUpModal, setShowSignUpModal] = useState(false);
+  const [signUpVideoTitle, setSignUpVideoTitle] = useState('');
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -132,6 +137,11 @@ export function LiveWebSearchResults({ query, results, loading, className = '' }
   }, [active3DModel, selectedArtwork, selectedVideo]);
 
   const handleCardClick = (item: UnifiedSearchResult) => {
+    if (!user) {
+      setSignUpVideoTitle(item.title);
+      setShowSignUpModal(true);
+      return;
+    }
     if (item.embedUrl || item.source === 'sketchfab' || item.mediaType === 'model3d') {
       setActive3DModel(item);
     } else if (
@@ -197,6 +207,20 @@ export function LiveWebSearchResults({ query, results, loading, className = '' }
 
   const getSourceBadge = (source: string) => {
     switch (source) {
+      case 'vimeo':
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#1AB7EA]/20 px-2.5 py-0.5 text-[11px] font-bold text-[#1AB7EA] border border-[#1AB7EA]/30 shadow-[0_0_10px_rgba(26,183,234,0.2)]">
+            <Play className="h-3 w-3 fill-current" />
+            Vimeo Animation
+          </span>
+        );
+      case 'instagram':
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-pink-500/20 px-2.5 py-0.5 text-[11px] font-bold text-pink-300 border border-pink-500/30 shadow-[0_0_10px_rgba(236,72,153,0.2)]">
+            <Sparkles className="h-3 w-3 text-pink-400" />
+            Instagram
+          </span>
+        );
       case 'sketchfab':
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-[#1CAAD9]/20 px-2.5 py-0.5 text-[11px] font-bold text-[#1CAAD9] border border-[#1CAAD9]/30 shadow-[0_0_10px_rgba(28,170,217,0.2)]">
@@ -218,11 +242,18 @@ export function LiveWebSearchResults({ query, results, loading, className = '' }
             Pinterest
           </span>
         );
+      case 'youtube':
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-2.5 py-0.5 text-[11px] font-bold text-red-400 border border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.2)]">
+            <Film className="h-3 w-3" />
+            YouTube
+          </span>
+        );
       case 'sakugabooru':
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[11px] font-bold text-amber-400 border border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
             <Zap className="h-3 w-3" />
-            Sakuga 2D
+            2D Animation
           </span>
         );
       case 'wikimedia':
@@ -230,13 +261,6 @@ export function LiveWebSearchResults({ query, results, loading, className = '' }
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
             <Sparkles className="h-3 w-3" />
             Muybridge / Commons
-          </span>
-        );
-      case 'archive':
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/20 px-2.5 py-0.5 text-[11px] font-bold text-violet-300 border border-violet-500/30 shadow-[0_0_10px_rgba(167,139,250,0.2)]">
-            <Film className="h-3 w-3" />
-            Archive
           </span>
         );
       default:
@@ -311,15 +335,7 @@ export function LiveWebSearchResults({ query, results, loading, className = '' }
           ))}
         </div>
       ) : filteredResults.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/40 p-12 text-center">
-          <Globe className="mx-auto h-8 w-8 text-zinc-600 mb-2" />
-          <p className="text-sm font-semibold text-zinc-300">
-            No live external results for &quot;{query}&quot;
-          </p>
-          <p className="text-xs text-zinc-500 mt-1">
-            Try another search keyword such as &quot;walk cycle&quot;, &quot;character turnaround&quot;, or &quot;smear frame&quot;.
-          </p>
-        </div>
+        <NoReferencesUploadCard query={query} mediaType="video" />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredResults.map((item) => {
@@ -464,6 +480,15 @@ export function LiveWebSearchResults({ query, results, loading, className = '' }
             onClose={() => setSelectedVideo(null)}
           />
         </div>
+      )}
+
+      {showSignUpModal && (
+        <SignUpPromptDialog
+          open={showSignUpModal}
+          onOpenChange={setShowSignUpModal}
+          trigger="fullscreen"
+          videoTitle={signUpVideoTitle}
+        />
       )}
 
       {/* 3D Model Inspector Modal */}

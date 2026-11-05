@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { MoodboardService } from '@/lib/moodboard-service';
 import { saveVideo, unsaveVideo } from '@/lib/firestore';
 import { trackHubSave } from '@/lib/hub-sync';
+import { triggerInstagramFollowPrompt } from '@/lib/social-links';
 import type { Video, MoodboardItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -123,6 +124,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                 await saveVideo(user.uid, video.id);
                 trackHubSave(user.uid, undefined, video, 'save');
                 toast({ title: 'Saved to All Saves! 📌', description: video.title });
+                triggerInstagramFollowPrompt('save');
             }
             await mutate();
         } catch (err) {
@@ -159,6 +161,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                     }
 
                     toast({ title: 'Saved to Board & Canvas! ✨', description: `Added to "${boardName}"` });
+                    triggerInstagramFollowPrompt('save');
 
                     // Auto-close after successful save
                     setTimeout(() => {
@@ -185,6 +188,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
                     toast({ title: 'Removed from board', description: `Removed from "${boardName}"` });
                 } else {
                     toast({ title: 'Saved to Board! ✨', description: `Added to "${boardName}"` });
+                    triggerInstagramFollowPrompt('save');
                     setTimeout(() => {
                         onOpenChange(false);
                     }, 650);
@@ -264,6 +268,7 @@ export function SaveToBoardModal({ open, onOpenChange, video }: SaveToBoardModal
             }
 
             toast({ title: 'Board Created & Saved! ✨', description: `Created "${trimmed}" and saved clip.` });
+            triggerInstagramFollowPrompt('save');
             setNewBoardName('');
             setShowCreateInput(false);
 

@@ -146,6 +146,7 @@ export async function GET(request: NextRequest) {
       for (const bSnap of refBoardSnaps.docs) {
         const bData = bSnap.data();
         const boardId = bSnap.id;
+        if (moodboards.some((m) => m.id === boardId)) continue;
 
         // Fetch saved clips for this reference board
         const savesSnap = await db

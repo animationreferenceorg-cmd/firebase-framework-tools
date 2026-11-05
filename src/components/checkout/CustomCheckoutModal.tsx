@@ -57,6 +57,18 @@ export function CustomCheckoutModal({
     const [error, setError] = useState<string | null>(null);
     const [stripeAvailable, setStripeAvailable] = useState<boolean | null>(null);
     const [retryToken, setRetryToken] = useState(0);
+    const [showExitIntent, setShowExitIntent] = useState(false);
+    const [hasShownExitIntent, setHasShownExitIntent] = useState(false);
+
+    const handleOpenChange = (newOpen: boolean) => {
+        if (!newOpen && !hasShownExitIntent && showIntro) {
+            setShowExitIntent(true);
+            setHasShownExitIntent(true);
+            return;
+        }
+        setShowExitIntent(false);
+        onOpenChange(newOpen);
+    };
     // A built-in publishable key exists (public-config.ts), so this is always configured now.
     const keyConfigured = true;
 
@@ -163,7 +175,7 @@ export function CustomCheckoutModal({
     const stripePromise = getStripeClient();
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="max-w-4xl w-[96vw] max-h-[92vh] p-0 bg-[#08070e] border border-purple-500/30 text-white flex flex-col z-[9999] shadow-[0_30px_100px_rgba(0,0,0,0.95)] rounded-3xl overflow-hidden backdrop-blur-2xl">
                 <DialogTitle className="sr-only">AnimationReference Pro Checkout</DialogTitle>
 
@@ -316,6 +328,43 @@ export function CustomCheckoutModal({
                                     <RefreshCcw className="h-3.5 w-3.5 mr-1.5" />
                                     Try Again
                                 </Button>
+                            </div>
+                        )}
+
+                        {/* Exit Intent Retention Overlay */}
+                        {showExitIntent && (
+                            <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-purple-950/90 via-zinc-950 to-black border-2 border-purple-500/50 shadow-2xl space-y-5 text-center animate-in fade-in zoom-in-95 duration-200">
+                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold uppercase tracking-wider">
+                                    <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                                    Special Animator Offer
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-xl sm:text-2xl font-black text-white">
+                                        Wait! Don't leave your $1 Pro pass behind
+                                    </h3>
+                                    <p className="text-xs sm:text-sm text-zinc-300 max-w-sm mx-auto leading-relaxed">
+                                        Get instant access to Maya &amp; Blender viewport imports, unlimited 4K reference scrubbing, and private boards for just <strong className="text-emerald-400">$1.00 today</strong>.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-3 pt-2">
+                                    <Button
+                                        onClick={() => setShowExitIntent(false)}
+                                        className="w-full h-12 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-500 hover:to-pink-500 text-white font-black text-sm shadow-xl shadow-purple-900/50 cursor-pointer"
+                                    >
+                                        Claim My $1 First Month &amp; Continue →
+                                    </Button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowExitIntent(false);
+                                            onOpenChange(false);
+                                        }}
+                                        className="text-xs text-zinc-500 hover:text-zinc-400 underline underline-offset-4 cursor-pointer"
+                                    >
+                                        No thanks, I'll pay full price later
+                                    </button>
+                                </div>
                             </div>
                         )}
 

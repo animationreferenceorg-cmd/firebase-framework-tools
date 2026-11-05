@@ -6,12 +6,15 @@ import { discoverySources, mergeReferenceVideos, type DiscoveryPage, type Refere
 import { searchResultToVideo } from '@/lib/reference-hub';
 import { filterReferenceCatalog } from '@/lib/reference-filters';
 import type { Video } from '@/lib/types';
+import { cachedDiscoveryPage, cacheDiscoveryPage } from '@/lib/reference-discovery-cache';
 
 interface SourceState {
   cursor: string | null;
   hasMore: boolean;
   phase: 'idle' | 'loading' | 'error';
   error?: string;
+  warning?: string;
+  notice?: string;
   limited?: boolean;
   emptyPages: number;
 }
@@ -28,14 +31,16 @@ interface DiscoveryState {
   hasMore: boolean;
   canAutoLoad: boolean;
   errors: string[];
+  notices: string[];
   limited: boolean;
 }
-const EMPTY: DiscoveryState = { key: '', videos: [], loading: false, hasMore: false, canAutoLoad: false, errors: [], limited: false };
+const EMPTY: DiscoveryState = { key: '', videos: [], loading: false, hasMore: false, canAutoLoad: false, errors: [], notices: [], limited: false };
 
 /** Each source has its own cursor and request so a slow/failed provider cannot stall the feed. */
 export function useReferenceDiscovery(query: string, tab: TabOption, type: TypeOption, pill: PillOption, media: MediaOption = 'all') {
   const key = JSON.stringify([query.trim(), tab, type, pill, media]);
   const sessionRef = useRef<Session | null>(null);
+  const resultsRef = useRef<{ query: string; videos: Video[] }>({ query: '', videos: [] });
   const [state, setState] = useState<DiscoveryState>(EMPTY);
 
   const loadMore = useCallback(async (manual = false) => {
@@ -43,13 +48,18 @@ export function useReferenceDiscovery(query: string, tab: TabOption, type: TypeO
     if (!session || session.key !== key) return;
     const publish = (incoming: Video[] = []) => {
       if (sessionRef.current !== session) return;
+      if (incoming.length) {
+        const previous = resultsRef.current.query === query.trim() ? resultsRef.current.videos : [];
+        resultsRef.current = { query: query.trim(), videos: mergeReferenceVideos(previous, incoming).slice(-600) };
+      }
       const sources = Object.values(session.sources);
       setState(previous => ({
         key, videos: previous.key === key && incoming.length === 0 ? previous.videos : mergeReferenceVideos(previous.key === key ? previous.videos : [], incoming),
         loading: sources.some(source => source.phase === 'loading'),
         hasMore: sources.some(source => source.hasMore && source.phase !== 'error'),
         canAutoLoad: sources.some(source => source.hasMore && source.phase === 'idle' && source.emptyPages < 3),
-        errors: sources.flatMap(source => source.error ? [source.error] : []),
+        errors: sources.flatMap(source => source.error || source.warning ? [source.error || source.warning!] : []),
+        notices: sources.flatMap(source => source.notice ? [source.notice] : []),
         limited: sources.some(source => source.limited),
       }));
     };
@@ -59,6 +69,8 @@ export function useReferenceDiscovery(query: string, tab: TabOption, type: TypeO
       const sourceId = sourceName as ReferenceSource;
       source.phase = 'loading';
       source.error = undefined;
+      source.warning = undefined;
+      source.notice = undefined;
       if (manual) source.emptyPages = 0;
       const controller = new AbortController();
       session.controllers.add(controller);
@@ -66,12 +78,31 @@ export function useReferenceDiscovery(query: string, tab: TabOption, type: TypeO
       const params = new URLSearchParams({ q: query.trim(), tab, type, pill, media, source: sourceId, mode: query.trim() ? 'search' : 'explore' });
       if (source.cursor) params.set('cursor', source.cursor);
       try {
-        const response = await fetch(`/api/import/search?${params}`, { signal: controller.signal });
-        if (!response.ok) throw new Error('Search is temporarily unavailable. Please try again.');
-        const data: DiscoveryPage = await response.json();
+        const pageKey = params.toString();
+        let data: DiscoveryPage | undefined = manual ? undefined : cachedDiscoveryPage(pageKey);
+        if (!data) {
+          const response = await fetch(`/api/import/search?${params}`, {
+            signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]),
+          });
+          if (!response.ok) throw new Error('Search is temporarily unavailable. Please try again.');
+          data = await response.json() as DiscoveryPage;
+          cacheDiscoveryPage(pageKey, data);
+        }
         if (sessionRef.current !== session || controller.signal.aborted) return;
         const provider = data.providers?.find(provider => provider.source === sourceId);
-        if (provider?.status === 'unavailable') throw new Error(provider.message || 'This source is temporarily unavailable.');
+        if (provider?.status === 'unavailable') {
+          source.phase = 'idle';
+          source.hasMore = false;
+          publish();
+          return;
+        }
+        if (provider?.status === 'unconfigured') {
+          source.phase = 'idle';
+          source.hasMore = false;
+          source.notice = provider.message;
+          publish();
+          return;
+        }
         const matching = filterReferenceCatalog((data.results || []).map(searchResultToVideo), { tab, type, pill, media, query: '', scores: new Map() });
         const incoming = matching.filter(item => {
           if (session.seen.has(item.id)) return false;
@@ -83,6 +114,7 @@ export function useReferenceDiscovery(query: string, tab: TabOption, type: TypeO
         source.cursor = next;
         source.emptyPages = incoming.length ? 0 : source.emptyPages + 1;
         source.limited = provider?.limited;
+        source.warning = provider?.partial ? 'Some results from this source are temporarily unavailable. Load more to retry.' : undefined;
         source.phase = 'idle';
         publish(incoming);
       } catch (error) {
@@ -103,8 +135,10 @@ export function useReferenceDiscovery(query: string, tab: TabOption, type: TypeO
       session.sources[source] = { cursor: null, hasMore: true, phase: 'idle', emptyPages: 0 };
     }
     sessionRef.current = session;
-    setState({ ...EMPTY, key, loading: Object.keys(session.sources).length > 0 });
-    const timer = setTimeout(() => void loadMore(), query.trim() ? 350 : 0);
+    const reusable = resultsRef.current.query === query.trim() ? resultsRef.current.videos : [];
+    const videos = filterReferenceCatalog(reusable, { tab, type, pill, media, query: '', scores: new Map() });
+    setState({ ...EMPTY, key, videos, loading: Object.keys(session.sources).length > 0 });
+    const timer = setTimeout(() => void loadMore(), query.trim() ? 40 : 0);
     return () => {
       clearTimeout(timer);
       session.controllers.forEach(controller => controller.abort());
@@ -112,5 +146,13 @@ export function useReferenceDiscovery(query: string, tab: TabOption, type: TypeO
     };
   }, [key, loadMore, query, tab, type, media, pill]);
 
-  return { ...(state.key === key ? state : { ...EMPTY, loading: true }), loadMore };
+  // Filter the already loaded pool immediately instead of flashing an empty
+  // grid while a new tab/media request is pending. Never reuse a different query.
+  const pending = state.key === key ? state : {
+    ...EMPTY, loading: true,
+    videos: filterReferenceCatalog(resultsRef.current.query === query.trim() ? resultsRef.current.videos : [], {
+      tab, type, pill, media, query: '', scores: new Map(),
+    }),
+  };
+  return { ...pending, loadMore };
 }

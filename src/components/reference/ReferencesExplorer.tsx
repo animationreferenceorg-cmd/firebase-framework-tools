@@ -198,12 +198,7 @@ export function ReferencesExplorer() {
               </Button>
             </MobileInstallDialog>
 
-            <ExtensionInfoDialog>
-              <Button variant="outline" className="border-white/10 bg-black/40 hover:bg-purple-950/40 text-purple-300">
-                <Chrome className="mr-2 h-4 w-4" />
-                Extension
-              </Button>
-            </ExtensionInfoDialog>
+
           </div>
         </div>
       </div>

@@ -343,7 +343,7 @@ export function CustomCheckoutModal({
                                         Wait! Don't leave your $1 Pro pass behind
                                     </h3>
                                     <p className="text-xs sm:text-sm text-zinc-300 max-w-sm mx-auto leading-relaxed">
-                                        Get instant access to Maya &amp; Blender viewport imports, unlimited 4K reference scrubbing, and private boards for just <strong className="text-emerald-400">$1.00 today</strong>.
+                                        Get instant access to unlimited 4K reference scrubbing, side-by-side comparison, and private boards for just <strong className="text-emerald-400">$1.00 today</strong>.
                                     </p>
                                 </div>
 

@@ -442,51 +442,7 @@ export function CaptureClipDialog({ onCreated, initialUrl, defaultOpen = false }
             </div>
           )}
 
-          {/* TAB 3: DESKTOP EXTENSION */}
-          {activeTab === 'extension' && (
-            <div className="space-y-5 text-zinc-300 text-center py-2">
-              <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-purple-500/30 bg-purple-950/40 text-purple-300">
-                <Chrome className="h-8 w-8" />
-              </div>
 
-              <div>
-                <h3 className="font-bold text-white text-lg">Clip & Save Browser Extension</h3>
-                <p className="mt-1 text-xs text-zinc-400 max-w-md mx-auto">
-                  Save reference moments directly while browsing YouTube, Instagram, Vimeo, and Twitter with a single click.
-                </p>
-              </div>
-
-               <div className="rounded-2xl border border-white/10 bg-black/40 p-4 text-left space-y-2 text-xs">
-                <div className="flex items-center gap-2 text-white font-medium">
-                  <Sparkles className="h-4 w-4 text-amber-400" />
-                  Features included:
-                </div>
-                <ul className="space-y-1.5 text-zinc-400 pl-6 list-disc">
-                  <li>Instant timestamp clipping over any web video player</li>
-                  <li>Automatic creator attribution & credit</li>
-                  <li>Direct sync with your Vault & project boards</li>
-                </ul>
-               </div>
-
-               <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-100">
-                 Chrome Web Store listing coming soon. Download the plugin below for manual installation now.
-               </div>
-
-               <Button asChild variant="outline" className="w-full border-white/10 bg-white/5 text-white hover:bg-white/10">
-                 <a href="/downloads/animation-reference-clip-save.zip" download>
-                   <Chrome className="mr-2 h-4 w-4" />
-                   Download Chrome Plugin
-                 </a>
-               </Button>
-
-               <Button asChild size="lg" className="w-full bg-purple-600 hover:bg-purple-500 font-bold">
-                <Link href="/extension/connect">
-                  <Chrome className="mr-2 h-4 w-4" />
-                  Connect Extension to Vault
-                </Link>
-              </Button>
-            </div>
-          )}
         </div>
       </DialogContent>
     </Dialog>

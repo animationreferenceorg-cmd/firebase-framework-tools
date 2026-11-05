@@ -287,7 +287,7 @@ export async function sendWelcomeEmail({ toEmail, displayName }: WelcomeEmailPay
           <div class="perks">
             <div class="perk-item">🍿 <strong>25 Free Clips Every Day:</strong> Study 25 new clips every 24 hours. Rewatching previously opened references never costs quota.</div>
             <div class="perk-item">⌨️ <strong>Frame-by-Frame Scrubbing:</strong> Press <code style="background: #27272a; padding: 2px 6px; border-radius: 4px; color: #e4e4e7;">,</code> and <code style="background: #27272a; padding: 2px 6px; border-radius: 4px; color: #e4e4e7;">.</code> to step frame by frame and break down arcs, anticipation, and spacing.</div>
-            <div class="perk-item">📦 <strong>Maya &amp; Blender Viewport Plugins:</strong> Import references directly into your Maya camera planes or Blender 3D viewport.</div>
+            <div class="perk-item">🎬 <strong>Side-by-Side Comparison:</strong> Compare your animation shots right alongside reference videos frame-by-frame.</div>
             <div class="perk-item">🌟 <strong>Animator Portfolio:</strong> Share your work at <span style="color: #c084fc;">animationreference.org/u/yourname</span> with zero ads and frame-scrubbing for recruiters.</div>
             <div class="perk-item">📸 <strong>Daily Reels on Instagram:</strong> Follow <a href="https://www.instagram.com/animationreference/" style="color: #f472b6; font-weight: 700;">@animationreference</a> on Instagram for daily sakuga &amp; 3D acting breakdowns!</div>
           </div>
@@ -443,7 +443,7 @@ export async function sendAbandonedCheckoutEmail({ toEmail, displayName, checkou
           <p>Whether your connection dropped, payment didn't go through, or you just stepped away from your desk, your $1 introductory pass is still waiting for you.</p>
 
           <div class="highlight-card">
-            <div class="item">🎬 <strong>Unlimited Maya &amp; Blender Viewport Imports:</strong> Send references straight to your camera planes without manual converting.</div>
+            <div class="item">🎬 <strong>Side-by-Side Reference Comparison:</strong> Compare shots frame-for-frame in real time to refine weight, contact poses, and timing arcs.</div>
             <div class="item">⚡ <strong>4K &amp; 60fps Full Library:</strong> Unlimited frame-by-frame scrubbing with zero daily limits.</div>
             <div class="item">📁 <strong>Unlimited Private Boards:</strong> Organize references for confidential client &amp; studio shots.</div>
           </div>

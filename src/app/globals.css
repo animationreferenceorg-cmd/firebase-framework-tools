@@ -4,6 +4,9 @@
 
 @layer base {
   :root {
+    --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
     --background: 250 30% 4%; /* Ink ground #08070d — matches the ambient backdrop */
     --foreground: 0 0% 100%;
     --card: 248 30% 13%; /* Console Card #1a182e */

@@ -1,33 +1,7 @@
 
 import type { Metadata } from 'next';
-import { Bricolage_Grotesque, JetBrains_Mono, Inter } from 'next/font/google';
 import './globals.css';
 import { DocumentShell } from '@/components/layout/DocumentShell';
-
-// Display face: a grotesque with enough character to carry headings without
-// shouting. Self-hosted by next/font, so no layout shift and no extra request.
-const display = Bricolage_Grotesque({
-  subsets: ['latin'],
-  variable: '--font-display',
-  display: 'swap',
-  weight: ['500', '600', '700', '800'],
-});
-
-// Timecodes, frame counts and counters — the vocabulary of animation tools.
-const mono = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-mono',
-  display: 'swap',
-  weight: ['400', '500', '700'],
-});
-
-// Clean body font, self-hosted at build time to prevent render-blocking CSS requests.
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-sans',
-  display: 'swap',
-  weight: ['400', '500', '600', '700'],
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://animationreference.org'),
@@ -157,8 +131,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${display.variable} ${mono.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        />
         <link rel="preconnect" href="https://commondatastorage.googleapis.com" />
         <link rel="preconnect" href="https://storage.googleapis.com" />
         <link rel="preconnect" href="https://firebasestorage.googleapis.com" />

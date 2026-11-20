@@ -328,20 +328,12 @@ export default function ShortFilmsStreamingPage() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
 
                   {/* Real engagement numbers only — no invented ratings. */}
-                  {(item.viewCount || item.likeCount) ? (
+                  {item.viewCount ? (
                     <div className="absolute left-2.5 top-2.5 flex items-center gap-2 rounded-md border border-white/10 bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-md">
-                      {item.viewCount ? (
-                        <span className="flex items-center gap-1">
-                          <Eye className="h-3 w-3" />
-                          {item.viewCount}
-                        </span>
-                      ) : null}
-                      {item.likeCount ? (
-                        <span className="flex items-center gap-1">
-                          <Heart className="h-3 w-3 fill-current text-pink-400" />
-                          {item.likeCount}
-                        </span>
-                      ) : null}
+                      <span className="flex items-center gap-1">
+                        <Eye className="h-3 w-3" />
+                        {item.viewCount}
+                      </span>
                     </div>
                   ) : null}
                 </div>

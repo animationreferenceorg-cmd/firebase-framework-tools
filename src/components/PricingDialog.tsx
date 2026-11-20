@@ -106,11 +106,9 @@ export function PricingDialog({ children, open: openProp, onOpenChange: onOpenCh
             return;
         }
         if (!user) {
-            toast({
-                variant: 'destructive',
-                title: 'Sign in first',
-                description: 'Sign in to your account to upgrade to Pro.',
-            });
+            onOpenChange?.(false);
+            const target = `/pricing?checkout=${selected.id}`;
+            window.location.assign(`/login?redirect=${encodeURIComponent(target)}`);
             return;
         }
         onOpenChange?.(false);

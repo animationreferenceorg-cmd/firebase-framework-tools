@@ -93,7 +93,7 @@ const COMPARISON_ROWS = [
   {
     feature: 'Pricing',
     pureref: 'Desktop pay-what-you-want (local only)',
-    animref: 'Free plan with 25 daily references & unlimited boards; Pro from $1 intro',
+    animref: 'Free plan with 15 daily references & unlimited boards; Pro from $1 intro',
     winner: true,
   },
 ];

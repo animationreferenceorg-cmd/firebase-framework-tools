@@ -36,13 +36,12 @@ export function MemberIntroPromoBanner() {
     }
   }, []);
 
-  // Only display for returning signed-in free users when the intro offer is active
-  if (loading || !user || !userProfile || !intro || dismissed) {
+  // Display for guests and signed-in free users when the intro offer is active
+  if (loading || !intro || dismissed) {
     return null;
   }
 
-  const isFree = getEntitlements(userProfile).access === 'free';
-  if (!isFree) {
+  if (user && userProfile && getEntitlements(userProfile).access !== 'free') {
     return null;
   }
 

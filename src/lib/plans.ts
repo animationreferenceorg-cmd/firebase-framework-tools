@@ -181,7 +181,7 @@ const UNLIMITED: PlanLimits = { maxBoards: Infinity, maxSavedReferences: Infinit
 // and export tools. Legacy paid tiers keep their larger daily allowance.
 export const GUEST_UNLOCKED_LIMIT = 8; // Guests without an account get 8 references to watch
 export const ACCESS_LIMITS: Record<AccessLevel, PlanLimits> = {
-  free: { maxBoards: Infinity, maxSavedReferences: Infinity, maxPortfolioPosts: Infinity, maxUnlockedReferences: 25 },
+  free: { maxBoards: Infinity, maxSavedReferences: Infinity, maxPortfolioPosts: Infinity, maxUnlockedReferences: 15 },
   tier1: { maxBoards: Infinity, maxSavedReferences: Infinity, maxPortfolioPosts: Infinity, maxUnlockedReferences: 50 },
   tier2: { maxBoards: Infinity, maxSavedReferences: Infinity, maxPortfolioPosts: Infinity, maxUnlockedReferences: 100 },
   pro: UNLIMITED,

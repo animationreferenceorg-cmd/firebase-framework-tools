@@ -112,19 +112,6 @@ export function VideoActionsBar({ video, userProfile }: VideoActionsBarProps) {
   return (
     <>
       <div className="absolute right-4 bottom-28 z-[160] flex flex-col items-center gap-4 pointer-events-auto">
-        {/* Like Button */}
-        <div className="flex flex-col items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleLikeToggle}
-            className="h-12 w-12 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-white backdrop-blur-sm transition-all cursor-pointer"
-          >
-            <Heart className={cn("h-7 w-7 transition-transform", isLiked && "fill-red-500 text-red-500 scale-110")} />
-          </Button>
-          <span className="text-white text-xs font-semibold drop-shadow-md">{video.likeCount ?? 0}</span>
-        </div>
-
         {/* Save Button */}
         <div className="flex flex-col items-center gap-1">
           <Button

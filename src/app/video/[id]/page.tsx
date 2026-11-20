@@ -18,7 +18,7 @@ import {
     toIsoDuration,
 } from '@/lib/videoSnapshot.server';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 const BASE_URL = 'https://animationreference.org';
 
@@ -85,7 +85,7 @@ export async function generateMetadata(
 
     const previousImages = (await parent).openGraph?.images || [];
     const pageUrl = `${BASE_URL}/video/${id}`;
-    const cleanTitle = video.title.length > 28 ? video.title.slice(0, 25) + '...' : video.title;
+    const cleanTitle = video.title.length > 48 ? video.title.slice(0, 45) + '...' : video.title;
     const primaryTag = video.tags?.[0];
     const tagWord = primaryTag ? primaryTag.replace(/\b\w/g, c => c.toUpperCase()).slice(0, 14) : 'Motion';
     const title = `${cleanTitle} | ${tagWord} Reference`;

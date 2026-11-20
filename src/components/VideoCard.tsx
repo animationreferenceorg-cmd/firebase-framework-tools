@@ -776,16 +776,6 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={handleLikeToggle}
-                  className="h-8 px-2 squash rounded-full bg-black/35 hover:bg-white/25 ring-1 ring-white/15 backdrop-blur-md gap-1 w-auto"
-                  title="Like Video"
-                >
-                  <Heart className={cn("text-white h-4 w-4", isLiked && "fill-red-500 text-red-500")} />
-                  <span className="text-white text-xs font-semibold">{displayLikeCount}</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
                   onClick={handleBookmarkToggle}
                   className="h-8 w-8 squash rounded-full bg-black/35 hover:bg-white/25 ring-1 ring-white/15 backdrop-blur-md"
                   title="Save Video"
@@ -1018,10 +1008,6 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
             isHovered ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none h-0 sm:h-auto"
           )}>
             <div className="flex items-center gap-1.5">
-              <Button variant="ghost" size="icon" onClick={handleLikeToggle} className="h-7 px-2 squash rounded-full bg-black/35 hover:bg-white/25 ring-1 ring-white/15 backdrop-blur-md gap-1 w-auto" title="Like Video">
-                <Heart className={cn("text-white h-3.5 w-3.5", isLiked && "fill-red-500 text-red-500")} />
-                <span className="text-white text-[11px] font-semibold">{displayLikeCount}</span>
-              </Button>
               <Button variant="ghost" size="icon" onClick={handleBookmarkToggle} className="h-7 px-2 squash rounded-full bg-black/35 hover:bg-white/25 ring-1 ring-white/15 backdrop-blur-md gap-1 w-auto" title="Save Video to Board">
                 <Bookmark className={cn("h-3.5 w-3.5", isSaved ? "fill-purple-400 text-purple-400" : "text-purple-300 fill-purple-400/30 hover:fill-purple-400")} />
                 {video.saveCount && video.saveCount > 0 ? (

@@ -23,7 +23,7 @@ import { StudyToolsPanel, VIEW_MODES, VIEW_MODE_FILTER, nextViewMode, type ViewM
 import { isForeignKeyTarget, isKeyboardTarget, registerPlayer, setHoveredPlayer } from '@/lib/player-focus';
 import { getEntitlements } from '@/lib/plans';
 import { resolveLoop, shouldWrapLoop } from '@/lib/loop-range';
-import { isVideoSourceAvailable, sanitizeVideoUrl } from '@/lib/video-availability';
+import { canProxyExternalVideo, isCorsEnabledVideoUrl, isVideoSourceAvailable, sanitizeVideoUrl, toVideoProxyUrl } from '@/lib/video-availability';
 import { getInstagramId, isDirectPlayableVideoUrl } from '@/lib/reference-utils';
 import { track } from '@/lib/analytics';
 import { useViewingQuota } from '@/hooks/use-viewing-quota';
@@ -107,7 +107,6 @@ function Player({ playerRef, video, url, config, ...props }: any) {
                     attributes: {
                         preload: 'auto',
                         playsInline: true,
-                        crossOrigin: 'anonymous',
                         poster,
                         ...fileConfig.attributes,
                     }
@@ -180,6 +179,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
     const [showControls, setShowControls] = React.useState(true);
     const [playbackRate, setPlaybackRate] = React.useState(1);
     const [videoError, setVideoError] = React.useState(false);
+    const [usedVideoProxy, setUsedVideoProxy] = React.useState(false);
     const [playerReloadToken, setPlayerReloadToken] = React.useState(0);
     // Retries that failed again, so the overlay can say so instead of looking unchanged.
     const [failedRetries, setFailedRetries] = React.useState(0);
@@ -189,11 +189,30 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
 
     const effectiveUrl = pulledVideoUrl || video.videoUrl;
     const cleanVideoUrl = React.useMemo(() => sanitizeVideoUrl(effectiveUrl), [effectiveUrl]);
+    React.useEffect(() => {
+        setUsedVideoProxy(false);
+        setVideoError(false);
+        setFailedRetries(0);
+    }, [video.id, cleanVideoUrl]);
+    const isPlayableFile = React.useMemo(() => isDirectPlayableVideoUrl(cleanVideoUrl), [cleanVideoUrl]);
+    const playableVideoUrl = React.useMemo(() => {
+        if (!cleanVideoUrl) return '';
+        const shouldProxyForCapture = showCaptureButton && isPlayableFile && !isCorsEnabledVideoUrl(cleanVideoUrl) && canProxyExternalVideo(cleanVideoUrl);
+        if ((usedVideoProxy || shouldProxyForCapture) && canProxyExternalVideo(cleanVideoUrl)) {
+            return toVideoProxyUrl(cleanVideoUrl);
+        }
+        return cleanVideoUrl;
+    }, [cleanVideoUrl, usedVideoProxy, showCaptureButton, isPlayableFile]);
+    const onionVideoUrl = React.useMemo(() => {
+        if (!cleanVideoUrl) return '';
+        if (isCorsEnabledVideoUrl(cleanVideoUrl)) return cleanVideoUrl;
+        if (canProxyExternalVideo(cleanVideoUrl)) return toVideoProxyUrl(cleanVideoUrl);
+        return cleanVideoUrl;
+    }, [cleanVideoUrl]);
     const instagramId = React.useMemo(() => {
         const raw = cleanVideoUrl || video.originalUrl || (video as any).sourceUrl || '';
         return getInstagramId(raw);
     }, [cleanVideoUrl, video.originalUrl, (video as any).sourceUrl]);
-    const isPlayableFile = React.useMemo(() => isDirectPlayableVideoUrl(cleanVideoUrl), [cleanVideoUrl]);
     // Hosted on a library that went offline: no retry can ever succeed.
     const sourceGone = !isVideoSourceAvailable(cleanVideoUrl) && !instagramId;
     const [fps, setFps] = React.useState<number>(video.fps || 24);
@@ -791,9 +810,9 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                     </div>
                 ) : !sourceGone && (
                     <Player
-                    key={`${video.id}-${playerReloadToken}`}
+                    key={`${video.id}-${playerReloadToken}-${usedVideoProxy ? 'proxy' : 'direct'}`}
                     playerRef={playerRef}
-                    url={cleanVideoUrl}
+                    url={playableVideoUrl}
                     video={video}
                     playing={isPlaying}
                     volume={volume}
@@ -824,6 +843,11 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                     }}
                     onError={(e: any) => {
                         console.warn("Video Player Error:", e);
+                        if (!usedVideoProxy && isPlayableFile && canProxyExternalVideo(cleanVideoUrl)) {
+                            setUsedVideoProxy(true);
+                            setVideoError(false);
+                            return;
+                        }
                         setIsPlaying(false);
                         setVideoError(true);
                         if (playerReloadToken > 0) setFailedRetries(playerReloadToken);
@@ -831,7 +855,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                     loop={loop}
                     config={{
                         file: {
-                            attributes: (showCaptureButton || (typeof cleanVideoUrl === 'string' && (cleanVideoUrl.includes('b-cdn.net') || cleanVideoUrl.includes('storage.googleapis.com')))) ? {
+                            attributes: isCorsEnabledVideoUrl(playableVideoUrl) ? {
                                 crossOrigin: 'anonymous'
                             } : {}
                         }
@@ -840,7 +864,7 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                 {onionSupported && (
                     <OnionSkinOverlay
                         ref={onionRef}
-                        src={cleanVideoUrl}
+                        src={onionVideoUrl}
                         mediaEl={mediaEl}
                         fps={fps}
                         settings={onionSettings}
@@ -1135,21 +1159,8 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
                         </Button>
                     </div>
 
-                    {/* Right: Like, Save, Share, Timeline Toggle & Fullscreen */}
+                    {/* Right: Save, Share, Timeline Toggle & Fullscreen */}
                     <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-                        {/* Reference clips use their own Save to Board action outside the player. */}
-                        {!hideLibraryActions && <Button
-                            type="button"
-                            onClick={handleLikeToggle}
-                            variant="ghost"
-                            size="icon"
-                            title="Like Video"
-                            className="hover:bg-white/20 text-white rounded-full h-8 px-2 w-auto gap-1 transition-colors cursor-pointer bg-white/10 sm:bg-transparent"
-                        >
-                            <Heart className={cn("h-4 w-4 transition-colors", isLiked ? "fill-red-500 text-red-500" : "text-white")} />
-                            <span className="text-xs font-semibold">{video.likeCount ?? 0}</span>
-                        </Button>}
-
                         {/* Save Button */}
                         {!hideLibraryActions && <Button
                             type="button"

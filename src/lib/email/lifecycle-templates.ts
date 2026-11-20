@@ -73,7 +73,7 @@ export function renderLifecycleEmail(template: LifecycleTemplate, ctx: TemplateC
         `Welcome, ${name}!`,
         [
           'Animation Reference is a library of motion to study frame by frame: combat, locomotion, acting, creatures and more.',
-          'You can open 25 new references every day for free, and anything you’ve watched stays playable. Save the good ones to a board so they’re there when you need them for a shot.',
+          'You can open 15 new references every day for free, and anything you’ve watched stays playable. Save the good ones to a board so they’re there when you need them for a shot.',
         ],
         { label: 'Start browsing', url: utm('/categories', 'welcome') },
       );
@@ -100,10 +100,10 @@ export function renderLifecycleEmail(template: LifecycleTemplate, ctx: TemplateC
       );
     case 'quota_reset':
       return make(
-        'Your 25 new references are ready',
+        'Your 15 new references are ready',
         `Your daily references reset, ${name}`,
         [
-          'You hit your daily limit yesterday. 25 new references are ready to open today, and everything you’ve already watched is still there.',
+          'You hit your daily limit yesterday. 15 new references are ready to open today, and everything you’ve already watched is still there.',
           proLine,
         ],
         { label: 'Keep studying', url: utm('/categories', 'quota_reset') },

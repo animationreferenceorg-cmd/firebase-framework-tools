@@ -164,7 +164,7 @@ export default function UsersAdminPage() {
             <CardTitle className="text-3xl font-black text-white">{freeUsers}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-xs text-zinc-400">25 daily references</p>
+            <p className="text-xs text-zinc-400">15 daily references</p>
           </CardContent>
         </Card>
 

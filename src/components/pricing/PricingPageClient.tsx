@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Check, Lock, Minus, RefreshCcw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -151,11 +151,27 @@ export function PricingPageClient() {
     }
   };
 
+  useEffect(() => {
+    if (!user || isPro || hasStripePlan || typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const checkoutParam = params.get('checkout');
+    if (checkoutParam === 'pro_monthly' || checkoutParam === 'pro_annual') {
+      if (offers[checkoutParam].available) {
+        setBillingCycle(checkoutParam);
+      }
+      setShowCheckoutModal(true);
+      params.delete('checkout');
+      const nextUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+      window.history.replaceState({}, '', nextUrl);
+    }
+  }, [user, isPro, hasStripePlan]);
+
   const handleProAction = () => {
     if (hasStripePlan) return openPortal();
     if (isPro) return;
     if (!user) {
-      window.location.assign('/login?redirect=/pricing');
+      const target = `/pricing?checkout=${selected.id}`;
+      window.location.assign(`/login?redirect=${encodeURIComponent(target)}`);
       return;
     }
     setShowCheckoutModal(true);

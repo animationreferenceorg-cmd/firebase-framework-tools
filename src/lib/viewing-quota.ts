@@ -2,7 +2,7 @@ import { db } from './firebase';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 
 export const GUEST_UNLOCKED_LIMIT = 8; // Signed-out guests get 8 references all-time before needing an account
-export const FREE_DAILY_UNLOCKED_LIMIT = 25; // Signed-in free users get 25 references per day before needing Pro
+export const FREE_DAILY_UNLOCKED_LIMIT = 15; // Signed-in free users get 15 references per day before needing Pro
 export const FREE_UNLOCKED_LIMIT = FREE_DAILY_UNLOCKED_LIMIT;
 
 export const ALL_TIME_UNLOCKED_STORAGE_KEY = 'animref_unlocked_references';

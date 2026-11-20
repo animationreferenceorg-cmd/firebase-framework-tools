@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { checkLimit } from '@/lib/limits';
 import { LimitReachedDialog } from '@/components/LimitReachedDialog';
 import { DonateDialog } from '@/components/DonateDialog';
+import { canProxyExternalVideo, isCorsEnabledVideoUrl, sanitizeVideoUrl, toVideoProxyUrl } from '@/lib/video-availability';
 
 interface ShortsPlayerProps {
     video: Video;
@@ -46,6 +47,54 @@ function Player({ playerRef, video, ...props }: any) {
             style={{ position: 'absolute', top: 0, left: 0, ...(props.style || {}) }}
         />
     )
+}
+
+function ShortsVideoPlayerInner({ playerRef, video, isPlaying, isMuted, playbackRate, handleProgress, setDuration }: any) {
+    const [usedProxy, setUsedProxy] = React.useState(false);
+    const cleanUrl = React.useMemo(() => sanitizeVideoUrl(video.videoUrl), [video.videoUrl]);
+    React.useEffect(() => {
+        setUsedProxy(false);
+    }, [video.id, cleanUrl]);
+
+    const playableUrl = usedProxy && canProxyExternalVideo(cleanUrl) ? toVideoProxyUrl(cleanUrl) : cleanUrl;
+    const attributes: Record<string, any> = {
+        style: {
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            backgroundColor: 'transparent',
+        },
+    };
+    if (isCorsEnabledVideoUrl(playableUrl)) {
+        attributes.crossOrigin = 'anonymous';
+    }
+
+    return (
+        <Player
+            key={`${video.id}-${usedProxy ? 'proxy' : 'direct'}`}
+            playerRef={playerRef}
+            video={video}
+            url={playableUrl}
+            playing={isPlaying}
+            volume={1}
+            muted={isMuted}
+            playbackRate={playbackRate}
+            onProgress={handleProgress}
+            onDuration={setDuration}
+            onError={() => {
+                if (!usedProxy && canProxyExternalVideo(cleanUrl)) {
+                    setUsedProxy(true);
+                }
+            }}
+            loop
+            config={{
+                file: {
+                    attributes,
+                },
+            }}
+            style={{ backgroundColor: 'transparent', position: 'absolute', top: 0, left: 0 }}
+        />
+    );
 }
 
 import { useWatchTracker } from '@/hooks/use-watch-tracker';
@@ -216,31 +265,14 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
                         <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-2xl blur-xl opacity-50 animate-pulse" />
 
                         <div className="relative w-full h-full rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-2xl bg-black">
-                            <Player
+                            <ShortsVideoPlayerInner
                                 playerRef={playerRef}
                                 video={video}
-                                url={video.videoUrl}
-                                playing={isPlaying}
-                                volume={1}
-                                muted={isMuted}
+                                isPlaying={isPlaying}
+                                isMuted={isMuted}
                                 playbackRate={playbackRate}
-                                onProgress={handleProgress}
-                                onDuration={setDuration}
-                                loop
-                                config={{
-                                    file: {
-                                        attributes: {
-                                            crossOrigin: 'anonymous',
-                                            style: {
-                                                width: '100%',
-                                                height: '100%',
-                                                objectFit: 'contain',
-                                                backgroundColor: 'transparent'
-                                            }
-                                        }
-                                    }
-                                }}
-                                style={{ backgroundColor: 'transparent', position: 'absolute', top: 0, left: 0 }}
+                                handleProgress={handleProgress}
+                                setDuration={setDuration}
                             />
                         </div>
                     </div>
@@ -295,20 +327,8 @@ export const ShortsPlayer = React.forwardRef<any, ShortsPlayerProps>(({ video, s
                     </div>
                 )}
 
-                {/* Side Actions (Like & Share) */}
+                {/* Side Actions (Share) */}
                 <div className="absolute bottom-20 right-4 z-30 flex flex-col gap-4 sm:gap-6 items-center">
-                    <div className="flex flex-col items-center gap-1">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleLikeToggle}
-                            className="bg-black/20 backdrop-blur-md hover:bg-black/40 text-white rounded-full h-14 w-14 sm:h-20 sm:w-20 transition-all active:scale-95"
-                        >
-                            <Heart className={cn("w-7 h-7 sm:w-10 sm:h-10", isLiked ? "fill-red-500 text-red-500" : "")} />
-                        </Button>
-                        <span className="text-[10px] sm:text-sm font-bold text-white drop-shadow-md">Like</span>
-                    </div>
-
                     <div className="flex flex-col items-center gap-1">
                         <Button
                             variant="ghost"

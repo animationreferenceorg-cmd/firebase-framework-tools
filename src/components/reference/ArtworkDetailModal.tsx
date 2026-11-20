@@ -56,9 +56,19 @@ export function ArtworkDetailModal({ item, isOpen, onClose }: ArtworkDetailModal
   const hashId = (item as any).hashId || '';
   const isVimeo = source === 'vimeo' || sourceUrl.includes('vimeo.com');
   const isInstagram = source === 'instagram' || sourceUrl.includes('instagram.com');
-  const isSketchfab = (source === 'sketchfab' || (item as any).mediaType === 'model3d') && !isVimeo;
+  const isSketchfab = (source === 'sketchfab' || (item as any).mediaType === 'model3d' || sourceUrl.includes('sketchfab.com')) && !isVimeo;
   const isPinterest = source === 'pinterest';
-  const embedUrl = (item as any).embedUrl || '';
+  const rawEmbedUrl = (item as any).embedUrl || '';
+  const embedUrl = React.useMemo(() => {
+    if (rawEmbedUrl) return rawEmbedUrl;
+    if (isSketchfab && sourceUrl) {
+      const uidMatch = sourceUrl.match(/sketchfab\.com\/(?:3d-models|models)\/(?:[^/]*-)?([a-f0-9]{32})/i);
+      if (uidMatch?.[1]) {
+        return `https://sketchfab.com/models/${uidMatch[1]}/embed?autostart=1&ui_theme=dark`;
+      }
+    }
+    return '';
+  }, [rawEmbedUrl, isSketchfab, sourceUrl]);
 
   // Active displayed asset
   const [activeImage, setActiveImage] = useState<string>(initialImage);
@@ -174,8 +184,8 @@ export function ArtworkDetailModal({ item, isOpen, onClose }: ArtworkDetailModal
             const projectSheets = data.assets || [];
             const otherPosts = data.moreFromArtist || [];
             // Merge all artist posts so user can browse all creator works directly
-            const combined = data.allArtistPosts && data.allArtistPosts.length > 0 
-              ? data.allArtistPosts 
+            const combined = data.allArtistPosts && data.allArtistPosts.length > 0
+              ? data.allArtistPosts
               : [...projectSheets, ...otherPosts];
 
             if (combined.length > 0) {
@@ -329,7 +339,7 @@ export function ArtworkDetailModal({ item, isOpen, onClose }: ArtworkDetailModal
               )}
               title={
                 quota.isGuest
-                  ? `Guest reference quota: ${quota.todayRemaining} of ${quota.limit} free clips left. Create an account to unlock 25 clips every day!`
+                  ? `Guest reference quota: ${quota.todayRemaining} of ${quota.limit} free clips left. Create an account to unlock 15 clips every day!`
                   : `Daily reference quota: ${quota.todayRemaining} of ${quota.limit} clips left today. Resets tomorrow. Previously opened clips stay playable anytime.`
               }
             >
@@ -398,11 +408,10 @@ export function ArtworkDetailModal({ item, isOpen, onClose }: ArtworkDetailModal
             variant="ghost"
             size="sm"
             onClick={() => setShowSidebar(!showSidebar)}
-            className={`h-9 px-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
-              showSidebar
+            className={`h-9 px-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${showSidebar
                 ? 'border-violet-500/40 bg-violet-500/15 text-violet-200'
                 : 'border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white'
-            }`}
+              }`}
             title="Toggle Post Details"
           >
             <Info className="h-4 w-4" />
@@ -720,11 +729,10 @@ export function ArtworkDetailModal({ item, isOpen, onClose }: ArtworkDetailModal
               <button
                 key={`${asset.id}_${index}`}
                 onClick={() => handleSelectAsset(asset, index)}
-                className={`group relative aspect-[4/3] h-16 sm:h-20 shrink-0 overflow-hidden rounded-xl border transition-all cursor-pointer ${
-                  isSelected
+                className={`group relative aspect-[4/3] h-16 sm:h-20 shrink-0 overflow-hidden rounded-xl border transition-all cursor-pointer ${isSelected
                     ? 'border-violet-500 ring-2 ring-violet-500/50 scale-105 shadow-[0_0_15px_rgba(139,92,246,0.5)]'
                     : 'border-white/10 opacity-70 hover:opacity-100 hover:border-white/30'
-                }`}
+                  }`}
               >
                 <img
                   src={asset.imageUrl}

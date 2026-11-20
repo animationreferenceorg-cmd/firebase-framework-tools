@@ -89,6 +89,14 @@ const websiteSchema = {
   '@type': 'WebSite',
   name: 'Animation Reference',
   url: 'https://animationreference.org',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: 'https://animationreference.org/categories?q={search_term_string}',
+    },
+    'query-input': 'required name=search_term_string',
+  },
 };
 
 const organizationSchema = {
@@ -117,7 +125,7 @@ const softwareApplicationSchema = {
       price: '0.00',
       priceCurrency: 'USD',
       name: 'Free Plan',
-      description: '25 daily references, unlimited visual boards, and 100% free frame-by-frame player.',
+      description: '15 daily references, unlimited visual boards, and 100% free frame-by-frame player.',
     },
     {
       '@type': 'Offer',

@@ -285,7 +285,7 @@ export async function sendWelcomeEmail({ toEmail, displayName }: WelcomeEmailPay
           <p>You're now part of the reference library built by animators, for animators. Your free account is loaded with everything you need to study motion and elevate your shots.</p>
           
           <div class="perks">
-            <div class="perk-item">🍿 <strong>25 Free Clips Every Day:</strong> Study 25 new clips every 24 hours. Rewatching previously opened references never costs quota.</div>
+            <div class="perk-item">🍿 <strong>15 Free Clips Every Day:</strong> Study 15 new clips every 24 hours. Rewatching previously opened references never costs quota.</div>
             <div class="perk-item">⌨️ <strong>Frame-by-Frame Scrubbing:</strong> Press <code style="background: #27272a; padding: 2px 6px; border-radius: 4px; color: #e4e4e7;">,</code> and <code style="background: #27272a; padding: 2px 6px; border-radius: 4px; color: #e4e4e7;">.</code> to step frame by frame and break down arcs, anticipation, and spacing.</div>
             <div class="perk-item">🎬 <strong>Side-by-Side Comparison:</strong> Compare your animation shots right alongside reference videos frame-by-frame.</div>
             <div class="perk-item">🌟 <strong>Animator Portfolio:</strong> Share your work at <span style="color: #c084fc;">animationreference.org/u/yourname</span> with zero ads and frame-scrubbing for recruiters.</div>

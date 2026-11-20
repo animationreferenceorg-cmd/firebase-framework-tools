@@ -145,16 +145,6 @@ export function CategoryCard({ title, description, tags, href, imageUrl, videoUr
           </div>
         </div>
       </Link>
-      {authUser && !hideLikeButton && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleLikeToggle}
-          className="absolute top-2 right-2 z-20 h-9 w-9 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-white opacity-0 group-hover/card:opacity-100 transition-opacity duration-300"
-        >
-          <Heart className={cn("h-5 w-5", isLiked && "fill-red-500 text-red-500")} />
-        </Button>
-      )}
     </div>
   );
 }

@@ -592,10 +592,6 @@ export default async function Page({ params }: Props) {
                                                 playsInline
                                                 className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500"
                                             />
-                                            {/* Heart Overlay */}
-                                            <div className="absolute top-2 right-2 p-2 rounded-full bg-black/40 backdrop-blur-md hover:bg-black/60 cursor-pointer transition-colors z-10">
-                                                <Heart className={`h-4 w-4 ${i === 1 || i === 2 ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-                                            </div>
                                         </div>
                                         <div className="space-y-2">
                                             <h3 className="text-sm font-medium text-white/80 truncate">{video.title}</h3>

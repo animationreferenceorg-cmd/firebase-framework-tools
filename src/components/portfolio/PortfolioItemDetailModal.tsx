@@ -81,7 +81,10 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
 
   if (!item) return null;
 
-  const isOwner = currentUserId && currentUserId === item.userId;
+  const effectiveUserId = currentUserId || userProfile?.uid;
+  const isOwner = Boolean(effectiveUserId && effectiveUserId === item.userId);
+  const isAdmin = userProfile?.role === 'admin';
+  const canDelete = isOwner || isAdmin;
   const stageInfo = item.wipStage ? STAGE_CONFIG[item.wipStage] : null;
 
   const isVideoEmbed = Boolean(
@@ -130,12 +133,12 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
   };
 
   const handleDelete = async () => {
-    if (!isOwner) return;
+    if (!canDelete || !effectiveUserId) return;
     if (!window.confirm('Are you sure you want to delete this portfolio item?')) return;
 
     setIsDeleting(true);
     try {
-      await deletePortfolioItem(item.id, currentUserId);
+      await deletePortfolioItem(item.id, effectiveUserId);
       toast({ title: 'Deleted', description: 'Portfolio item deleted successfully.' });
       onItemDeleted?.(item.id);
       onOpenChange(false);
@@ -180,7 +183,7 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
           <div className="min-h-screen w-full relative">
             <main className="container mx-auto px-3 pb-12 pt-16 sm:px-4 sm:pb-16 sm:pt-10">
               <div className="max-w-6xl mx-auto space-y-6">
-                
+
                 {/* Top Back Navigation Bar */}
                 <div className="flex items-center justify-between gap-2">
                   <Button
@@ -198,7 +201,7 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
                     <Button size="sm" variant="outline" onClick={handleShare} aria-label="Share this post" className="h-10 w-10 cursor-pointer rounded-full border-white/10 p-0 text-xs font-semibold text-zinc-300 hover:bg-white/10 sm:h-9 sm:w-auto sm:px-4">
                       <Share2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline font-bold">{sharesCount} Shares</span>
                     </Button>
-                    {isOwner && (
+                    {canDelete && (
                       <Button size="sm" variant="destructive" onClick={handleDelete} disabled={isDeleting} aria-label="Delete this post" className="h-10 w-10 cursor-pointer rounded-full p-0 text-xs font-semibold sm:h-9 sm:w-auto sm:px-4">
                         <Trash2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Delete Piece</span>
                       </Button>
@@ -276,11 +279,11 @@ export const PortfolioItemDetailModal: React.FC<PortfolioItemDetailModalProps> =
                     </div>
 
                     {/* Likes & Views Buttons */}
-                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-zinc-300 font-semibold">
-                          <Eye className="h-4 w-4 text-zinc-400" />
-                          <span>{viewsCount} views</span>
-                        </div>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-zinc-300 font-semibold">
+                        <Eye className="h-4 w-4 text-zinc-400" />
+                        <span>{viewsCount} views</span>
+                      </div>
 
                       <Button
                         size="default"

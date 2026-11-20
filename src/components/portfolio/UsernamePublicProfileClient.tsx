@@ -17,6 +17,7 @@ import { PortfolioHeroBanner } from '@/components/portfolio/PortfolioHeroBanner'
 import { PortfolioItemDetailModal } from '@/components/portfolio/PortfolioItemDetailModal';
 import { EditPortfolioItemModal } from '@/components/portfolio/EditPortfolioItemModal';
 import { PublicBoardsRail } from '@/components/reference/PublicBoardsRail';
+import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Globe, 
@@ -71,6 +72,9 @@ export function UsernamePublicProfileClient({
   const params = useParams();
   const rawUsername = initialRawUsername || (params?.username as string);
   const { toast } = useToast();
+  const { userProfile } = useUser();
+  const isAdmin = userProfile?.role === 'admin';
+  const effectiveUserId = auth.currentUser?.uid || userProfile?.uid;
 
   const [profile, setProfile] = useState<UserProfile | null>(initialProfile || null);
   const [items, setItems] = useState<PortfolioItem[]>(initialItems);
@@ -476,7 +480,7 @@ export function UsernamePublicProfileClient({
                     setEditingItem(item);
                     setIsEditOpen(true);
                   } : undefined}
-                  onDelete={auth.currentUser && (auth.currentUser.uid === item.userId || auth.currentUser.uid === profile?.uid) ? (e) => handleDeleteItem(item.id, e) : undefined}
+                  onDelete={effectiveUserId && (effectiveUserId === item.userId || effectiveUserId === profile?.uid || isAdmin) ? (e) => handleDeleteItem(item.id, e) : undefined}
                 />
               ))}
             </div>

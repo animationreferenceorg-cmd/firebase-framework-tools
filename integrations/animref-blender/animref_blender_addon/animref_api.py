@@ -239,6 +239,12 @@ def upload_playblast_to_site(file_path: str, title: str, description: str = "") 
 
     add_field("title", title or "Blender Playblast")
     add_field("description", description or "Uploaded directly from AnimationReference.org Blender Studio Add-on")
+    add_field("category", "Acting")
+    add_field("tags", "blender,playblast")
+    add_field("software", "Blender")
+    add_field("isPrivate", "false")
+    add_field("publishToPortfolio", "true")
+    add_field("wipStage", "blocking")
     add_field("source", "blender_plugin")
 
     with open(file_path, "rb") as f:

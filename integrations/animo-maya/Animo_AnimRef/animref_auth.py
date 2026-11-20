@@ -897,6 +897,9 @@ def upload_playblast_to_animref(
     tags="maya,playblast",
     board_id="",
     is_private=False,
+    publish_to_portfolio=True,
+    software="Maya",
+    description="",
     progress_callback=None,
 ):
     """Uploads a recorded Maya playblast (.mp4 or .avi) directly to AnimationReference.org."""
@@ -937,7 +940,12 @@ def upload_playblast_to_animref(
             "category": (category or "Acting").strip()[:60],
             "tags": (tags or "maya,playblast").strip(),
             "isPrivate": "true" if is_private else "false",
+            "publishToPortfolio": "true" if (publish_to_portfolio and not is_private) else "false",
+            "software": (software or "Maya").strip(),
+            "wipStage": "blocking",
         }
+        if description:
+            fields["description"] = str(description).strip()[:1000]
         if board_id:
             fields["boardId"] = str(board_id).strip()
 

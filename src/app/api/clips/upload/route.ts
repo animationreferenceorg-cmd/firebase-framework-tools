@@ -49,8 +49,14 @@ export async function POST(request: NextRequest) {
     const mediaType = isVideo ? 'video' : file.type === 'image/gif' ? 'gif' : 'image';
     const fileBuffer = Buffer.from(await file.arrayBuffer());
     const title = String(form.get('title') || file.name).trim().slice(0, 120);
+    const description = String(form.get('description') || '').trim().slice(0, 1000);
     const category = String(form.get('category') || 'Acting').trim().slice(0, 60);
     const tags = String(form.get('tags') || '').split(',').map((tag) => tag.trim().toLowerCase()).filter(Boolean).slice(0, 20);
+    const software = String(form.get('software') || '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 10);
+    const publishToPortfolio = String(form.get('publishToPortfolio')) === 'true';
+    const rawWipStage = String(form.get('wipStage') || 'blocking').trim().toLowerCase();
+    const validWipStages = new Set(['concept', 'blocking', 'splining', 'polish', 'cleanup', 'completed']);
+    const wipStage = validWipStages.has(rawWipStage) ? rawWipStage : 'blocking';
     const boardId = String(form.get('boardId') || '').trim();
     // Saves from the browser extension carry the page they came from, so the
     // clip credits and links back to its source.
@@ -153,6 +159,10 @@ export async function POST(request: NextRequest) {
       sourcePlatform: 'upload',
       imageBuffer: isImage ? fileBuffer : null,
     });
+    const portfolioRef = publishToPortfolio && !isPrivate && uploadedMediaUrl
+      ? db.collection('portfolio_items').doc()
+      : null;
+
     await db.runTransaction(async (transaction) => {
       transaction.create(clipRef, {
         creatorId: identity.uid,
@@ -266,9 +276,40 @@ export async function POST(request: NextRequest) {
           transaction.update(boardDoc.ref, { clipCount: FieldValue.increment(1), updatedAt: now });
         }
       }
+      if (portfolioRef) {
+        transaction.create(portfolioRef, {
+          userId: identity.uid,
+          authorName: profile.displayName || profile.username || identity.name || 'Animator',
+          authorUsername: profile.username || null,
+          authorAvatar: profile.photoURL || null,
+          title,
+          description: description || `Playblast uploaded from ${software[0] || 'Animation Reference'}`,
+          type: 'wip',
+          category,
+          wipStage,
+          mediaType: isVideo ? 'video_file' : mediaType,
+          mediaUrl: uploadedMediaUrl,
+          thumbnailUrl: thumbnailUrl || (isImage ? uploadedMediaUrl : ''),
+          tags,
+          software: software.length > 0 ? software : ['Maya'],
+          likesCount: 0,
+          viewsCount: 0,
+          commentsCount: 0,
+          sharesCount: 0,
+          likedBy: [],
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
     });
 
-    return NextResponse.json({ id: clipRef.id, url: `/clip/${clipRef.id}`, uploadedMediaUrl }, { status: 201 });
+    return NextResponse.json({
+      id: clipRef.id,
+      url: `/clip/${clipRef.id}`,
+      portfolioItemId: portfolioRef?.id ?? null,
+      portfolioUrl: portfolioRef ? `/feed?item=${portfolioRef.id}` : null,
+      uploadedMediaUrl,
+    }, { status: 201 });
   } catch (error) {
     return apiErrorResponse(error);
   }

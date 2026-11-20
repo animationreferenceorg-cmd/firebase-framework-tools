@@ -1174,73 +1174,76 @@ class VideoPlayerWidget(QtWidgets.QFrame):
 
         self.setStyleSheet("""
             VideoPlayerWidget {
-                background-color: #0b0e14;
-                border: 1px solid #1a202c;
-                border-radius: 8px;
+                background-color: #0e0e13;
+                border: 1px solid #242430;
+                border-radius: 14px;
             }
             QSlider#YouTubeSlider {
                 height: 18px;
                 background: transparent;
-                margin: 0px 2px;
+                margin: 2px 4px;
             }
             QSlider#YouTubeSlider::groove:horizontal {
                 height: 4px;
-                background: rgba(255, 255, 255, 0.22);
+                background: rgba(255, 255, 255, 0.14);
                 border-radius: 2px;
             }
             QSlider#YouTubeSlider::sub-page:horizontal {
-                background: #ff0033;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #7c3aed, stop:1 #a78bfa);
                 border-radius: 2px;
             }
             QSlider#YouTubeSlider::handle:horizontal {
-                background: #ff0033;
-                border: 2px solid #ffffff;
+                background: #ffffff;
+                border: 2px solid #8b5cf6;
                 width: 12px;
                 height: 12px;
-                margin-top: -4px;
-                margin-bottom: -4px;
-                border-radius: 6px;
-            }
-            QSlider#YouTubeSlider::handle:horizontal:hover {
-                background: #ff2244;
-                width: 14px;
-                height: 14px;
                 margin-top: -5px;
                 margin-bottom: -5px;
                 border-radius: 7px;
             }
+            QSlider#YouTubeSlider::handle:horizontal:hover {
+                background: #ffffff;
+                border: 2px solid #c4b5fd;
+                width: 14px;
+                height: 14px;
+                margin-top: -6px;
+                margin-bottom: -6px;
+                border-radius: 8px;
+            }
             QPushButton.YTBtn {
-                background-color: transparent;
-                color: #e2e8f0;
-                border: none;
-                border-radius: 4px;
-                padding: 4px 7px;
+                background-color: rgba(255, 255, 255, 0.06);
+                color: #e4e4e7;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 8px;
+                padding: 4px 8px;
                 font-size: 11px;
                 font-weight: 600;
             }
             QPushButton.YTBtn:hover {
                 background-color: rgba(255, 255, 255, 0.14);
+                border-color: rgba(255, 255, 255, 0.18);
                 color: #ffffff;
             }
             QPushButton.YTBtn:pressed {
-                background-color: rgba(255, 255, 255, 0.24);
+                background-color: rgba(139, 92, 246, 0.30);
             }
             QPushButton.YTBtn[active="true"] {
-                color: #00E5FF;
-                background-color: rgba(0, 229, 255, 0.14);
+                color: #c4b5fd;
+                background-color: rgba(124, 58, 237, 0.25);
+                border: 1px solid rgba(167, 139, 250, 0.45);
             }
         """)
         self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(4)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(8)
 
-        # Video Display Surface - large and cinematic
+        # Video Display Surface - clean rounded cinema viewport
         self.display_container = QtWidgets.QStackedWidget()
-        self.display_container.setMinimumHeight(160)
+        self.display_container.setMinimumHeight(200)
         self.display_container.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        self.display_container.setStyleSheet("background-color: #000000; border-radius: 6px;")
+        self.display_container.setStyleSheet("background-color: #050508; border-radius: 10px;")
         self.display_container.setCursor(QtCore.Qt.PointingHandCursor)
         self.display_container.mousePressEvent = self._on_display_clicked
 
@@ -1289,29 +1292,43 @@ class VideoPlayerWidget(QtWidgets.QFrame):
         self.slider.sliderReleased.connect(self._on_slider_released)
         layout.addWidget(self.slider)
 
-        # YouTube-Style Bottom Control Bar (Single Streamlined Row)
+        # Modern Minimalist Transport Control Bar
         ctrl_bar = QtWidgets.QHBoxLayout()
-        ctrl_bar.setContentsMargins(2, 0, 2, 2)
-        ctrl_bar.setSpacing(4)
+        ctrl_bar.setContentsMargins(2, 0, 2, 0)
+        ctrl_bar.setSpacing(5)
 
-        # Play / Pause button
+        # Primary Play / Pause pill
         self.play_btn = QtWidgets.QPushButton("▶")
-        self.play_btn.setProperty("class", "YTBtn")
-        self.play_btn.setStyleSheet("font-size: 13px; font-weight: bold; min-width: 30px;")
+        self.play_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        self.play_btn.setFixedSize(32, 28)
+        self.play_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #7c3aed;
+                color: #ffffff;
+                border: none;
+                border-radius: 14px;
+                font-size: 12px;
+                font-weight: 800;
+            }
+            QPushButton:hover {
+                background-color: #8b5cf6;
+            }
+        """)
         self.play_btn.setToolTip("Play / Pause (Spacebar)")
         self.play_btn.clicked.connect(self.toggle_play)
         ctrl_bar.addWidget(self.play_btn)
 
-        # Step Back
-        self.prev_frame_btn = QtWidgets.QPushButton("⏮")
+        # Step Back / Forward
+        self.prev_frame_btn = QtWidgets.QPushButton("‹")
         self.prev_frame_btn.setProperty("class", "YTBtn")
+        self.prev_frame_btn.setFixedSize(26, 26)
         self.prev_frame_btn.setToolTip("Step backward 1 frame (Left Arrow)")
         self.prev_frame_btn.clicked.connect(lambda: self.step_frame(-1))
         ctrl_bar.addWidget(self.prev_frame_btn)
 
-        # Step Forward
-        self.next_frame_btn = QtWidgets.QPushButton("⏭")
+        self.next_frame_btn = QtWidgets.QPushButton("›")
         self.next_frame_btn.setProperty("class", "YTBtn")
+        self.next_frame_btn.setFixedSize(26, 26)
         self.next_frame_btn.setToolTip("Step forward 1 frame (Right Arrow)")
         self.next_frame_btn.clicked.connect(lambda: self.step_frame(1))
         ctrl_bar.addWidget(self.next_frame_btn)
@@ -1319,24 +1336,24 @@ class VideoPlayerWidget(QtWidgets.QFrame):
         # Mute / Volume
         self.mute_btn = QtWidgets.QPushButton("🔊")
         self.mute_btn.setProperty("class", "YTBtn")
+        self.mute_btn.setFixedSize(28, 26)
         self.mute_btn.setToolTip("Mute / Unmute (M)")
         self.mute_btn.clicked.connect(self.toggle_mute)
         ctrl_bar.addWidget(self.mute_btn)
 
-        # Time counter
+        # Clean time & frame readout
         self.time_label = QtWidgets.QLabel("00:00 / 00:00")
-        self.time_label.setStyleSheet("color: #e2e8f0; font-size: 11px; font-weight: bold; margin-left: 4px;")
+        self.time_label.setStyleSheet("color: #a1a1aa; font-size: 10px; font-weight: 600; margin-left: 2px; background: transparent;")
         ctrl_bar.addWidget(self.time_label)
 
-        # Frame counter
-        self.frame_label = QtWidgets.QLabel("• 0f (24fps)")
-        self.frame_label.setStyleSheet("color: #00E5FF; font-size: 11px; font-weight: bold;")
+        self.frame_label = QtWidgets.QLabel("0f")
+        self.frame_label.setStyleSheet("color: #c4b5fd; background-color: rgba(124, 58, 237, 0.18); border-radius: 6px; padding: 2px 6px; font-size: 10px; font-weight: 700;")
         ctrl_bar.addWidget(self.frame_label)
 
         ctrl_bar.addStretch()
 
         # Sync Maya timeline
-        self.sync_btn = QtWidgets.QPushButton("⏱ Sync Maya" if self.sync_timeline else "⏱ Sync")
+        self.sync_btn = QtWidgets.QPushButton("Sync")
         self.sync_btn.setProperty("class", "YTBtn")
         self.sync_btn.setCheckable(True)
         self.sync_btn.setChecked(self.sync_timeline)
@@ -1346,8 +1363,9 @@ class VideoPlayerWidget(QtWidgets.QFrame):
         ctrl_bar.addWidget(self.sync_btn)
 
         # Loop
-        self.loop_btn = QtWidgets.QPushButton("🔁 Loop")
+        self.loop_btn = QtWidgets.QPushButton("↻")
         self.loop_btn.setProperty("class", "YTBtn")
+        self.loop_btn.setFixedSize(28, 26)
         self.loop_btn.setProperty("active", "true" if self.is_looping else "false")
         self.loop_btn.setToolTip("Toggle seamless loop (L)")
         self.loop_btn.clicked.connect(self.toggle_loop)
@@ -1356,39 +1374,42 @@ class VideoPlayerWidget(QtWidgets.QFrame):
         # Speed
         self.speed_btn = QtWidgets.QPushButton("1.0x")
         self.speed_btn.setProperty("class", "YTBtn")
-        self.speed_btn.setToolTip("Playback Speed (Click to cycle, or use Settings)")
+        self.speed_btn.setToolTip("Playback Speed (Click to cycle)")
         self.speed_btn.clicked.connect(self.cycle_speed)
         ctrl_bar.addWidget(self.speed_btn)
 
-        # Settings Gear (Website style popup menu)
+        # Collapsible Animator Tools toggle (keeps player sleek & uncluttered!)
+        self.tools_toggle_btn = QtWidgets.QPushButton("Tools")
+        self.tools_toggle_btn.setProperty("class", "YTBtn")
+        self.tools_toggle_btn.setCheckable(True)
+        self.tools_toggle_btn.setChecked(False)
+        self.tools_toggle_btn.setToolTip("Show/Hide A-B Loop, Magic Align & Pose Bookmarks")
+        ctrl_bar.addWidget(self.tools_toggle_btn)
+
+        # Settings Gear
         self.settings_btn = QtWidgets.QPushButton("⚙")
         self.settings_btn.setProperty("class", "YTBtn")
-        self.settings_btn.setStyleSheet("font-size: 13px;")
-        self.settings_btn.setToolTip("Settings (Speed, FPS, Loop, Offset, Quality)")
+        self.settings_btn.setFixedSize(28, 26)
+        self.settings_btn.setToolTip("Settings (Speed, FPS, Loop, Offset)")
         self.settings_btn.clicked.connect(self.show_settings_menu)
         ctrl_bar.addWidget(self.settings_btn)
 
-        # Theater mode
-        self.theater_btn = QtWidgets.QPushButton("⛶ Theater")
-        self.theater_btn.setProperty("class", "YTBtn")
-        self.theater_btn.setToolTip("Toggle Theater Mode (Expand video player across panel)")
-        self.theater_btn.clicked.connect(self.toggle_theater_mode)
-        ctrl_bar.addWidget(self.theater_btn)
-
-        # Pop out
-        self.popout_btn = QtWidgets.QPushButton("🗗 Pop Out")
-        self.popout_btn.setProperty("class", "YTBtn")
-        self.popout_btn.setToolTip("Pop out into floating resizable reference window")
-        self.popout_btn.clicked.connect(self.open_popout)
-        ctrl_bar.addWidget(self.popout_btn)
+        # Hidden legacy attributes
+        self.theater_btn = QtWidgets.QPushButton("⛶")
+        self.theater_btn.setVisible(False)
+        self.popout_btn = QtWidgets.QPushButton("🗗")
+        self.popout_btn.setVisible(False)
 
         layout.addLayout(ctrl_bar)
 
-        # Animator Studio Toolbar: A-B Sub-Clip Looper, Magic Align, and Maya Pose Bookmarks
-        self.animator_bar_widget = QtWidgets.QWidget()
+        # Collapsible Animator Tools Drawer (hidden by default for clean player UX)
+        self.animator_bar_widget = QtWidgets.QFrame()
+        self.animator_bar_widget.setVisible(False)
+        self.animator_bar_widget.setStyleSheet("QFrame { background-color: #15151d; border: 1px solid #262634; border-radius: 10px; }")
+        self.tools_toggle_btn.toggled.connect(self.animator_bar_widget.setVisible)
         anim_vbox = QtWidgets.QVBoxLayout(self.animator_bar_widget)
-        anim_vbox.setContentsMargins(2, 2, 2, 0)
-        anim_vbox.setSpacing(3)
+        anim_vbox.setContentsMargins(8, 6, 8, 6)
+        anim_vbox.setSpacing(6)
 
         ab_row = QtWidgets.QHBoxLayout()
         ab_row.setContentsMargins(0, 0, 0, 0)
@@ -2152,6 +2173,127 @@ class HoverOverlayFrame(QtWidgets.QFrame):
         super(HoverOverlayFrame, self).mouseDoubleClickEvent(event)
 
 
+class _CardHoverPreviewEngine(QtCore.QObject):
+    """Single shared muted QMediaPlayer so hovering a card plays video inline without overhead."""
+    _instance = None
+
+    @classmethod
+    def get(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    def __init__(self):
+        super(_CardHoverPreviewEngine, self).__init__()
+        self._active_card = None
+        self._pending_card = None
+        self._timer = QtCore.QTimer(self)
+        self._timer.setSingleShot(True)
+        self._timer.timeout.connect(self._begin_preview)
+        self._player = None
+        self._audio = None
+        self._video_widget = None
+
+    def _ensure_player(self):
+        if self._player is not None or QT_MULTIMEDIA_AVAILABLE <= 0 or QVideoWidget is None:
+            return
+        try:
+            self._player = QMediaPlayer(self)
+            if QT_MULTIMEDIA_AVAILABLE == 6 and QAudioOutput is not None:
+                self._audio = QAudioOutput(self)
+                self._audio.setMuted(True)
+                self._audio.setVolume(0.0)
+                self._player.setAudioOutput(self._audio)
+            elif hasattr(self._player, "setMuted"):
+                self._player.setMuted(True)
+            if hasattr(self._player, "setLoops"):
+                self._player.setLoops(QMediaPlayer.Infinite)
+            self._video_widget = QVideoWidget()
+            self._video_widget.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, True)
+            self._video_widget.setStyleSheet("background-color: #000000; border-radius: 11px;")
+            self._player.setVideoOutput(self._video_widget)
+        except Exception:
+            self._player = None
+            self._video_widget = None
+
+    def request_play(self, card):
+        self._pending_card = card
+        self._timer.start(220)
+
+    def stop_for_card(self, card):
+        if self._pending_card is card:
+            self._pending_card = None
+            self._timer.stop()
+        if self._active_card is card:
+            self.stop_all()
+
+    def stop_all(self):
+        self._pending_card = None
+        self._timer.stop()
+        self._active_card = None
+        if self._player is not None:
+            try:
+                self._player.stop()
+            except Exception:
+                pass
+        if self._video_widget is not None:
+            try:
+                self._video_widget.hide()
+                self._video_widget.setParent(None)
+            except Exception:
+                pass
+
+    def _begin_preview(self):
+        card = self._pending_card
+        if card is None:
+            return
+        try:
+            if not card.isVisible():
+                return
+            local_pos = card.mapFromGlobal(QtGui.QCursor.pos())
+            if not card.rect().contains(local_pos):
+                return
+        except RuntimeError:
+            return
+
+        vdata = getattr(card, "video_data", None) or {}
+        if str(vdata.get("mediaType") or "").lower() in ("image", "model3d"):
+            return
+
+        media_source, is_local = animref_api.get_playable_media_source(vdata)
+        if not media_source:
+            return
+        lower_u = str(media_source).lower()
+        if any(lower_u.endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".webp", ".gif")):
+            return
+
+        self._ensure_player()
+        if self._player is None or self._video_widget is None:
+            return
+
+        try:
+            self._player.stop()
+            self._video_widget.setParent(card)
+            self._video_widget.setGeometry(0, 0, card.width(), card.height())
+            if hasattr(self._video_widget, "setAspectRatioMode"):
+                try:
+                    self._video_widget.setAspectRatioMode(QtCore.Qt.KeepAspectRatioByExpanding)
+                except Exception:
+                    pass
+            self._video_widget.show()
+            if hasattr(card, "hover_overlay") and card.hover_overlay:
+                card.hover_overlay.raise_()
+            qurl = QtCore.QUrl.fromLocalFile(media_source) if is_local else QtCore.QUrl(media_source)
+            if QT_MULTIMEDIA_AVAILABLE == 6:
+                self._player.setSource(qurl)
+            elif QMediaContent is not None:
+                self._player.setMedia(QMediaContent(qurl))
+            self._player.play()
+            self._active_card = card
+        except Exception:
+            self.stop_all()
+
+
 class PinterestClipCardWidget(QtWidgets.QFrame):
     """
     Pure Rounded Image Card matching AnimationReference.org/moodboard (`ReferenceMasonry` in screenshot):
@@ -2298,13 +2440,42 @@ class PinterestClipCardWidget(QtWidgets.QFrame):
 
         ov_layout.addStretch()
 
-        # Bottom Title inside overlay
+        # Bottom row inside overlay: Title + Fullscreen Studio button
+        bottom_row = QtWidgets.QHBoxLayout()
+        bottom_row.setContentsMargins(0, 0, 0, 0)
+        bottom_row.setSpacing(4)
+
         title_text = video_data.get("title") or "Reference"
         self.title_label = QtWidgets.QLabel(title_text)
         self.title_label.setWordWrap(True)
         self.title_label.setStyleSheet("color: #ffffff; font-size: 10px; font-weight: 600; background: transparent;")
         self.title_label.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, True)
-        ov_layout.addWidget(self.title_label)
+        bottom_row.addWidget(self.title_label, stretch=1)
+
+        self.fullscreen_btn = QtWidgets.QPushButton("⛶")
+        self.fullscreen_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        self.fullscreen_btn.setFixedSize(24, 24)
+        self.fullscreen_btn.setToolTip("Open Studio Video Player")
+        self.fullscreen_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(12, 10, 9, 210);
+                color: #ffffff;
+                border: 1px solid rgba(255, 255, 255, 80);
+                border-radius: 12px;
+                font-size: 12px;
+                font-weight: 700;
+                padding: 0px;
+            }
+            QPushButton:hover {
+                background-color: #7c3aed;
+                border-color: #a78bfa;
+                color: #ffffff;
+            }
+        """)
+        self.fullscreen_btn.clicked.connect(lambda checked=False: self.preview_requested.emit(self.video_data))
+        bottom_row.addWidget(self.fullscreen_btn, alignment=QtCore.Qt.AlignBottom)
+
+        ov_layout.addLayout(bottom_row)
 
     def _on_quick_import_clicked(self):
         try:
@@ -2390,11 +2561,33 @@ class PinterestClipCardWidget(QtWidgets.QFrame):
 
     def enterEvent(self, event):
         self.hover_overlay.setVisible(True)
+        self.hover_overlay.raise_()
+        try:
+            _CardHoverPreviewEngine.get().request_play(self)
+        except Exception:
+            pass
         super(PinterestClipCardWidget, self).enterEvent(event)
 
     def leaveEvent(self, event):
+        try:
+            local_pos = self.mapFromGlobal(QtGui.QCursor.pos())
+            if self.rect().contains(local_pos):
+                return
+        except Exception:
+            pass
         self.hover_overlay.setVisible(False)
+        try:
+            _CardHoverPreviewEngine.get().stop_for_card(self)
+        except Exception:
+            pass
         super(PinterestClipCardWidget, self).leaveEvent(event)
+
+    def hideEvent(self, event):
+        try:
+            _CardHoverPreviewEngine.get().stop_for_card(self)
+        except Exception:
+            pass
+        super(PinterestClipCardWidget, self).hideEvent(event)
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton:
@@ -3539,15 +3732,12 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.build_explore_tab(self.explore_tab)
         self.view_stack.addWidget(self.explore_tab)
 
-        self.splitter.addWidget(self.view_stack)
-
-        # Slide-Over Maya Studio Drawer (HIDDEN by default so the canvas looks identical to the screenshot!)
+        # Page 5: Full-Panel Studio Video Player (replaces cramped side drawer / pop-out window)
+        self._previous_view_index = 0
         self.inspector_panel = self.create_inspector_panel()
-        self.inspector_panel.setVisible(False)
-        self.splitter.addWidget(self.inspector_panel)
-        self.splitter.setStretchFactor(0, 4)
-        self.splitter.setStretchFactor(1, 1)
+        self.view_stack.addWidget(self.inspector_panel)
 
+        self.splitter.addWidget(self.view_stack)
         body_layout.addWidget(self.splitter, stretch=1)
         main_layout.addWidget(self.body_container, stretch=1)
 
@@ -3632,10 +3822,33 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
                 self.splitter.setSizes([main_w, drawer_w])
 
     def toggle_inspector_drawer(self):
-        is_vis = self.inspector_panel.isVisible()
-        self.inspector_panel.setVisible(not is_vis)
-        if not is_vis:
-            self._apply_responsive_splitter_sizes()
+        if not hasattr(self, "view_stack") or not hasattr(self, "inspector_panel"):
+            return
+        studio_idx = self.view_stack.indexOf(self.inspector_panel)
+        if studio_idx < 0:
+            return
+        if self.view_stack.currentIndex() == studio_idx:
+            self.close_studio_screen()
+        else:
+            self._previous_view_index = self.view_stack.currentIndex()
+            try:
+                _CardHoverPreviewEngine.get().stop_all()
+            except Exception:
+                pass
+            self.view_stack.setCurrentIndex(studio_idx)
+
+    def close_studio_screen(self):
+        if hasattr(self, "player_widget") and self.player_widget and getattr(self.player_widget, "player", None):
+            try:
+                self.player_widget.player.pause()
+            except Exception:
+                pass
+        target = getattr(self, "_previous_view_index", 0)
+        if hasattr(self, "view_stack"):
+            studio_idx = self.view_stack.indexOf(self.inspector_panel)
+            if target == studio_idx or target < 0 or target >= self.view_stack.count():
+                target = 0
+            self.view_stack.setCurrentIndex(target)
         self._reflow_timer.start(40)
 
     def on_sidebar_all_saves_selected(self):
@@ -3871,27 +4084,23 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         panel_layout.setContentsMargins(0, 0, 0, 0)
         panel_layout.setSpacing(0)
 
-        # Drawer Top Header with Close Button (Fixed at top)
+        # Studio Screen Top Header with Back Button
         drawer_hdr_frame = QtWidgets.QFrame()
         drawer_hdr_frame.setStyleSheet("background-color: #ffffff; border-bottom: 1px solid #f0eee8;")
         drawer_hdr = QtWidgets.QHBoxLayout(drawer_hdr_frame)
-        drawer_hdr.setContentsMargins(14, 10, 14, 10)
+        drawer_hdr.setContentsMargins(12, 8, 12, 8)
+        drawer_hdr.setSpacing(8)
 
-        drawer_lbl = QtWidgets.QLabel("MAYA REFERENCE INSPECTOR")
-        drawer_lbl.setStyleSheet("color: #78716c; font-size: 10px; font-weight: 800; letter-spacing: 1.5px; background: transparent;")
-        drawer_hdr.addWidget(drawer_lbl)
-        drawer_hdr.addStretch()
-
-        close_drawer_btn = QtWidgets.QPushButton("✕ Close")
+        close_drawer_btn = QtWidgets.QPushButton("← Back")
         close_drawer_btn.setCursor(QtCore.Qt.PointingHandCursor)
         close_drawer_btn.setStyleSheet("""
             QPushButton {
                 background-color: #f5f5f0;
-                color: #44403c;
+                color: #1c1917;
                 border: 1px solid #e5e5e0;
                 border-radius: 10px;
-                padding: 3px 10px;
-                font-size: 10px;
+                padding: 4px 12px;
+                font-size: 11px;
                 font-weight: 700;
             }
             QPushButton:hover {
@@ -3899,8 +4108,13 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
                 color: #ffffff;
             }
         """)
-        close_drawer_btn.clicked.connect(lambda: self.inspector_panel.setVisible(False))
+        close_drawer_btn.clicked.connect(self.close_studio_screen)
         drawer_hdr.addWidget(close_drawer_btn)
+
+        drawer_lbl = QtWidgets.QLabel("STUDIO PLAYER")
+        drawer_lbl.setStyleSheet("color: #78716c; font-size: 10px; font-weight: 800; letter-spacing: 1.5px; background: transparent;")
+        drawer_hdr.addWidget(drawer_lbl)
+        drawer_hdr.addStretch()
         panel_layout.addWidget(drawer_hdr_frame)
 
         # Scrollable content for the rest of the inspector
@@ -5788,11 +6002,17 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.import_btn.setEnabled(True)
 
     def select_video_and_show(self, video_data):
-        # Clicking a card slides open the right-hand Maya Studio drawer so you can preview or adjust settings!
-        if hasattr(self, "inspector_panel") and not self.inspector_panel.isVisible():
-            self.inspector_panel.setVisible(True)
-            self._apply_responsive_splitter_sizes()
-            self._reflow_timer.start(40)
+        # Opens the clean full-panel Studio Screen inside the main panel (no extra pop-out window)
+        try:
+            _CardHoverPreviewEngine.get().stop_all()
+        except Exception:
+            pass
+        if hasattr(self, "view_stack") and hasattr(self, "inspector_panel"):
+            studio_idx = self.view_stack.indexOf(self.inspector_panel)
+            if studio_idx >= 0:
+                if self.view_stack.currentIndex() != studio_idx:
+                    self._previous_view_index = self.view_stack.currentIndex()
+                self.view_stack.setCurrentIndex(studio_idx)
         self.select_video(video_data)
 
     def filter_by_tag(self, tag_val):

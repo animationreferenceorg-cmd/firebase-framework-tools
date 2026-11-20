@@ -137,7 +137,10 @@ if bpy is not None:
         if hasattr(bpy.types.Scene, "animref_settings"):
             del bpy.types.Scene.animref_settings
         for cls in reversed(CORE_CLASSES):
-            bpy.utils.unregister_class(cls)
+            try:
+                bpy.utils.unregister_class(cls)
+            except RuntimeError:
+                pass
 else:
     def register():
         pass

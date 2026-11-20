@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { ApiError, apiErrorResponse, requireAdmin } from '@/lib/api-auth';
 import { getFirebaseAuth, getFirestore } from '@/lib/firebase-admin';
 import {
+  getActiveEmailProvider,
   renderOneDollarPromoHtml,
   renderInstagramInviteHtml,
   sendOneDollarPromoEmail,
@@ -39,6 +40,7 @@ export async function GET(request: NextRequest) {
     const instagramHtml = renderInstagramInviteHtml('Fellow Animator');
 
     return Response.json({
+      activeProvider: getActiveEmailProvider(),
       totalAccounts,
       freeCount,
       proCount,

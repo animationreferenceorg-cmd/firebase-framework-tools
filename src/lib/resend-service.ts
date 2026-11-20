@@ -1,10 +1,67 @@
 import { Resend } from 'resend';
+import { isSesConfigured, sendEmailViaSes } from './ses-client';
 
 const resendApiKey = process.env.RESEND_API_KEY || '';
 
 export function getResendClient(): Resend | null {
   const key = process.env.RESEND_API_KEY || '';
   return key ? new Resend(key) : null;
+}
+
+export function getActiveEmailProvider(): 'amazon_ses' | 'resend' | 'none' {
+  if (isSesConfigured()) return 'amazon_ses';
+  if (process.env.RESEND_API_KEY) return 'resend';
+  return 'none';
+}
+
+/**
+ * Sends an email via Amazon SES when AWS_SES_ACCESS_KEY_ID + AWS_SES_SECRET_ACCESS_KEY
+ * are configured (~$0.10/1,000 emails), falling back seamlessly to Resend.
+ */
+async function sendWithProvider(opts: {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+  replyTo?: string;
+  scheduledAt?: string;
+  headers?: Record<string, string>;
+}): Promise<{ success: boolean; data?: any; error?: string; message?: string; provider?: string }> {
+  if (isSesConfigured()) {
+    const sesRes = await sendEmailViaSes({
+      from: process.env.SES_FROM_EMAIL || opts.from,
+      to: opts.to,
+      subject: opts.subject,
+      html: opts.html,
+      replyTo: opts.replyTo,
+    });
+    if (sesRes.success) {
+      return { success: true, data: { id: sesRes.messageId }, provider: 'amazon_ses' };
+    }
+    return { success: false, error: sesRes.error, provider: 'amazon_ses' };
+  }
+
+  const client = getResendClient();
+  if (!client) {
+    console.warn('Neither AWS SES nor RESEND_API_KEY is configured. Email simulation mode.');
+    return { success: false, message: 'Email provider not configured (set AWS_SES_* or RESEND_API_KEY)' };
+  }
+
+  try {
+    const data = await client.emails.send({
+      from: opts.from,
+      to: [opts.to],
+      replyTo: opts.replyTo,
+      subject: opts.subject,
+      html: opts.html,
+      scheduledAt: opts.scheduledAt,
+      headers: opts.headers,
+    });
+    if (data.error) return { success: false, error: data.error.message, provider: 'resend' };
+    return { success: true, data, provider: 'resend' };
+  } catch (error: any) {
+    return { success: false, error: error?.message || String(error), provider: 'resend' };
+  }
 }
 
 export const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -305,26 +362,13 @@ export async function sendWelcomeEmail({ toEmail, displayName }: WelcomeEmailPay
     </html>
   `;
 
-  const fromAddress = process.env.RESEND_FROM_EMAIL || 'AnimationReference <welcome@animationreference.org>';
-  const client = getResendClient();
-  if (!client) {
-    console.warn("RESEND_API_KEY missing. Email simulation mode.");
-    return { success: false, message: "RESEND_API_KEY not configured" };
-  }
-
-  try {
-    const data = await client.emails.send({
-      from: fromAddress,
-      to: [toEmail],
-      subject: 'Welcome to Animation Reference! 🎬 Here is how to get started',
-      html: htmlContent,
-    });
-    if (data.error) return { success: false, error: data.error.message };
-    return { success: true, data };
-  } catch (error: any) {
-    console.error("Resend welcome email failed:", error);
-    return { success: false, error: error.message || error };
-  }
+  const fromAddress = process.env.SES_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || 'AnimationReference <welcome@animationreference.org>';
+  return sendWithProvider({
+    from: fromAddress,
+    to: toEmail,
+    subject: 'Welcome to Animation Reference! 🎬 Here is how to get started',
+    html: htmlContent,
+  });
 }
 
 import { renderOneDollarPromoHtml, renderInstagramInviteHtml } from './email-template-promo';
@@ -340,33 +384,21 @@ export interface PromoBroadcastPayload {
 
 /** Sends the $1 first month promo email to a single recipient. */
 export async function sendOneDollarPromoEmail({ toEmail, recipientName, customMessage, subject, scheduledAt }: PromoBroadcastPayload) {
-  const client = getResendClient();
-  if (!client) {
-    return { success: false, message: "RESEND_API_KEY not configured" };
-  }
-
-  const fromAddress = process.env.RESEND_FROM_EMAIL || 'Animation Reference <team@animationreference.org>';
+  const fromAddress = process.env.SES_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || 'Animation Reference <team@animationreference.org>';
   const htmlContent = renderOneDollarPromoHtml(recipientName, customMessage);
   const emailSubject = subject || 'Your Animation Reference Pro pass is ready';
 
-  try {
-    const data = await client.emails.send({
-      from: fromAddress,
-      to: [toEmail],
-      replyTo: 'team@animationreference.org',
-      subject: emailSubject,
-      html: htmlContent,
-      scheduledAt,
-      headers: {
-        'X-Entity-Ref-ID': `animref-${Date.now()}`,
-      },
-    });
-    if (data.error) return { success: false, error: data.error.message };
-    return { success: true, data };
-  } catch (error: any) {
-    console.error("Resend promo email failed:", error);
-    return { success: false, error: error.message || error };
-  }
+  return sendWithProvider({
+    from: fromAddress,
+    to: toEmail,
+    replyTo: 'team@animationreference.org',
+    subject: emailSubject,
+    html: htmlContent,
+    scheduledAt,
+    headers: {
+      'X-Entity-Ref-ID': `animref-${Date.now()}`,
+    },
+  });
 }
 
 export interface NewsletterBroadcastPayload {
@@ -377,25 +409,14 @@ export interface NewsletterBroadcastPayload {
 
 /** Sends a custom newsletter broadcast email. */
 export async function sendNewsletterBroadcastEmail({ toEmail, subject, htmlContent }: NewsletterBroadcastPayload) {
-  const client = getResendClient();
-  if (!client) {
-    return { success: false, message: "RESEND_API_KEY not configured" };
-  }
-
-  const fromAddress = process.env.RESEND_FROM_EMAIL || 'Animation Reference <team@animationreference.org>';
-  try {
-    const data = await client.emails.send({
-      from: fromAddress,
-      to: [toEmail],
-      subject,
-      html: htmlContent,
-    });
-    if (data.error) return { success: false, error: data.error.message };
-    return { success: true, data };
-  } catch (error: any) {
-    console.error("Resend newsletter email failed:", error);
-    return { success: false, error: error.message || error };
-  }
+  const fromAddress = process.env.SES_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || 'Animation Reference <team@animationreference.org>';
+  return sendWithProvider({
+    from: fromAddress,
+    to: toEmail,
+    replyTo: 'team@animationreference.org',
+    subject,
+    html: htmlContent,
+  });
 }
 
 export interface AbandonedCheckoutEmailPayload {
@@ -407,15 +428,9 @@ export interface AbandonedCheckoutEmailPayload {
 
 /** Sends a helpful follow-up email to animators who started checkout but did not finish within 2 hours. */
 export async function sendAbandonedCheckoutEmail({ toEmail, displayName, checkoutUrl }: AbandonedCheckoutEmailPayload) {
-  const client = getResendClient();
-  if (!client) {
-    console.warn("RESEND_API_KEY missing. Email simulation mode.");
-    return { success: false, message: "RESEND_API_KEY not configured" };
-  }
-
   const name = displayName ? esc(displayName) : 'Animator';
   const url = checkoutUrl || 'https://animationreference.org/profile?openUpgrade=true';
-  const fromAddress = process.env.RESEND_FROM_EMAIL || 'Animation Reference <team@animationreference.org>';
+  const fromAddress = process.env.SES_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || 'Animation Reference <team@animationreference.org>';
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -465,18 +480,11 @@ export async function sendAbandonedCheckoutEmail({ toEmail, displayName, checkou
     </html>
   `;
 
-  try {
-    const data = await client.emails.send({
-      from: fromAddress,
-      to: [toEmail],
-      replyTo: 'team@animationreference.org',
-      subject: `Need help completing your upgrade, ${name}? ($1 Pro pass reserved)`,
-      html: htmlContent,
-    });
-    if (data.error) return { success: false, error: data.error.message };
-    return { success: true, data };
-  } catch (error: any) {
-    console.error("Resend abandoned checkout email failed:", error);
-    return { success: false, error: error.message || error };
-  }
+  return sendWithProvider({
+    from: fromAddress,
+    to: toEmail,
+    replyTo: 'team@animationreference.org',
+    subject: `Need help completing your upgrade, ${name}? ($1 Pro pass reserved)`,
+    html: htmlContent,
+  });
 }

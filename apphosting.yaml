@@ -32,6 +32,15 @@ runConfig:
     - variable: STRIPE_WEBHOOK_SECRET
     - variable: RESEND_API_KEY
     - variable: RESEND_FROM_EMAIL
+    # Amazon SES (~$0.10/1,000 emails) — takes priority automatically once keys are set
+    - variable: AWS_SES_REGION
+      value: us-east-1
+      availability: [RUNTIME]
+    - variable: SES_FROM_EMAIL
+      value: Animation Reference <team@animationreference.org>
+      availability: [RUNTIME]
+    - variable: AWS_SES_ACCESS_KEY_ID
+    - variable: AWS_SES_SECRET_ACCESS_KEY
     # Social auto-poster (see /admin/social) — set these via Secret Manager
     # once you have credentials for each platform. Missing ones just show
     # "Needs Env Setup" in the admin UI and are skipped by the daily bot.

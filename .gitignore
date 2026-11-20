@@ -23,9 +23,10 @@ private_key.txt
 tsconfig.tsbuildinfo
 *.tsbuildinfo
 
-# Python bytecode
+# Python bytecode & local plugin caches
 __pycache__/
 *.pyc
+Animo_Prefs/
 
 # Test output
 test-results/

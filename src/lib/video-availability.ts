@@ -57,3 +57,58 @@ export function sanitizeVideoUrl(url?: string | null): string {
   return target;
 }
 
+const CORS_VIDEO_HOSTS = [
+  'b-cdn.net',
+  'storage.googleapis.com',
+  'firebasestorage.googleapis.com',
+];
+
+const PROXYABLE_VIDEO_HOSTS = [
+  'sakugabooru.com',
+  'cdninstagram.com',
+  'fbcdn.net',
+  'instagram.com',
+  'pinimg.com',
+  'artstation.com',
+  'vimeocdn.com',
+  'cloudfront.net',
+  'amazonaws.com',
+  'giphy.com',
+  'tenor.com',
+  'imgur.com',
+  'tumblr.com',
+  'wikimedia.org',
+];
+
+/**
+ * Returns true if the URL is same-origin or served from a CDN configured with
+ * Access-Control-Allow-Origin, so setting crossOrigin="anonymous" will not
+ * cause the browser to block playback.
+ */
+export function isCorsEnabledVideoUrl(url?: string | null): boolean {
+  if (!url) return false;
+  const trimmed = url.trim();
+  if (trimmed.startsWith('/') || trimmed.startsWith('blob:') || trimmed.startsWith('data:')) {
+    return true;
+  }
+  const host = hostOf(trimmed);
+  if (!host) return false;
+  return CORS_VIDEO_HOSTS.some((allowed) => host === allowed || host.endsWith(`.${allowed}`));
+}
+
+export function canProxyExternalVideo(url?: string | null): boolean {
+  if (!url) return false;
+  const trimmed = url.trim();
+  if (!/^https?:\/\//i.test(trimmed)) return false;
+  if (trimmed.startsWith('/api/proxy/')) return false;
+  const host = hostOf(trimmed);
+  if (!host) return false;
+  if (host.includes('youtube.com') || host.includes('youtu.be')) return false;
+  return PROXYABLE_VIDEO_HOSTS.some((allowed) => host === allowed || host.endsWith(`.${allowed}`));
+}
+
+export function toVideoProxyUrl(url: string): string {
+  if (!url || url.startsWith('/api/proxy/')) return url;
+  return `/api/proxy/video?url=${encodeURIComponent(url)}`;
+}
+

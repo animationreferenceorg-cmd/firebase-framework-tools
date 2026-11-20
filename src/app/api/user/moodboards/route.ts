@@ -95,8 +95,13 @@ export async function GET(request: NextRequest) {
 
           const videoUrl =
             vData?.videoUrl ||
+            vData?.uploadedMediaUrl ||
+            vData?.mediaUrl ||
+            vData?.streamUrl ||
             fetchedData?.videoUrl ||
             item.videoUrl ||
+            item.uploadedMediaUrl ||
+            item.url ||
             '';
 
           const thumb =
@@ -106,6 +111,7 @@ export async function GET(request: NextRequest) {
             fetchedData?.previewUrl ||
             item.imageUrl ||
             item.thumbnailUrl ||
+            item.uploadedMediaUrl ||
             '';
 
           const duration = Number(vData?.duration || fetchedData?.duration || item.duration || 0);
@@ -172,8 +178,11 @@ export async function GET(request: NextRequest) {
                 boardItems.push({
                   id: cs.id,
                   title: cd?.title || cd?.name || 'Reference Clip',
-                  videoUrl: cd?.videoUrl || cd?.mediaUrl || '',
-                  thumbnailUrl: cd?.thumbnailUrl || cd?.posterUrl || '',
+                  videoUrl: cd?.videoUrl || cd?.uploadedMediaUrl || cd?.mediaUrl || cd?.sourceUrl || '',
+                  uploadedMediaUrl: cd?.uploadedMediaUrl || '',
+                  sourceUrl: cd?.sourceUrl || '',
+                  mediaType: cd?.mediaType || (cd?.uploadedMediaUrl ? 'video' : 'image'),
+                  thumbnailUrl: cd?.thumbnailUrl || cd?.posterUrl || cd?.uploadedMediaUrl || '',
                   duration: Number(cd?.duration || 0),
                   category: cd?.category || 'General',
                 });

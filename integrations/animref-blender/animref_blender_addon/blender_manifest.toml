@@ -1,0 +1,13 @@
+schema_version = "1.0.0"
+
+id = "animref_blender_addon"
+version = "2.0.0"
+name = "AnimationReference.org Studio"
+tagline = "Stream, sync, and manage animation references directly inside Blender"
+maintainer = "AnimationReference.org <team@animationreference.org>"
+type = "add-on"
+website = "https://animationreference.org/plugins"
+tags = ["Animation", "3D View", "Import-Export"]
+blender_version_min = "3.6.0"
+license = ["SPDX:GPL-3.0-or-later"]
+permissions = { network = "Search the AnimationReference.org catalog, sign in, download authorized references, and upload playblasts." }

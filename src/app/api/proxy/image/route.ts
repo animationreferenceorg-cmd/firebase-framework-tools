@@ -17,6 +17,23 @@ const ALLOWED_HOSTS = [
   'cdninstagram.com',
   'fbcdn.net',
   'instagram.com',
+  'ytimg.com',
+  'i.ytimg.com',
+  'vimeocdn.com',
+  'i.vimeocdn.com',
+  'giphy.com',
+  'tenor.com',
+  'imgur.com',
+  'i.imgur.com',
+  'cloudfront.net',
+  'amazonaws.com',
+  'deviantart.com',
+  'wixmp.com',
+  'behance.net',
+  'tumblr.com',
+  'b-cdn.net',
+  'storage.googleapis.com',
+  'firebasestorage.googleapis.com',
 ];
 
 export async function GET(request: NextRequest) {

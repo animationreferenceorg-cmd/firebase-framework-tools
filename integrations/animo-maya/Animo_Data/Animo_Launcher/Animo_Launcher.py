@@ -1604,17 +1604,26 @@ import os
 import importlib
 import maya.cmds as cmds
 
-animo_data_path = os.path.normpath(os.path.join(cmds.internalVar(userScriptDir=True), '..', '..', 'scripts', 'Animo_Data'))
+vscripts = cmds.internalVar(userScriptDir=True)
+cands = [
+    os.path.normpath(os.path.join(vscripts, '..', '..', 'scripts', 'Animo_Data')),
+    os.path.normpath(os.path.join(vscripts, 'Animo_Data')),
+    os.path.normpath(os.path.join(os.path.expanduser('~'), 'OneDrive', 'Documents', 'maya', 'scripts', 'Animo_Data')),
+    os.path.normpath(os.path.join(os.path.expanduser('~'), 'Documents', 'maya', 'scripts', 'Animo_Data')),
+]
+animo_data_path = next((c for c in cands if os.path.isdir(c)), cands[0])
 tool_path = os.path.normpath(os.path.join(animo_data_path, 'Animo_AnimRef'))
+if animo_data_path not in sys.path:
+    sys.path.insert(0, animo_data_path)
 if tool_path not in sys.path:
     sys.path.insert(0, tool_path)
 
 for mod in list(sys.modules.keys()):
-    if 'animref_launcher' in mod:
+    if 'animref_launcher' in mod or 'animref_window' in mod:
         del sys.modules[mod]
 
 import animref_launcher
-animref_launcher.launch()
+animref_launcher.launch(force_new=True)
 '''
 
 def add_animref_to_shelf(icon_path=None):

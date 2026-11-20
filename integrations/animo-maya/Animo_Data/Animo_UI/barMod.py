@@ -272,17 +272,23 @@ def run_launcher(animo_data_path, icons_path, maya_version, launcher_name, tool_
 
             py_path = os.path.normpath(os.path.join(tool_path, launcher_name + ".py"))
             if os.path.exists(py_path):
-                _load_module_from_file(launcher_name, py_path)
+                mod = _load_module_from_file(launcher_name, py_path)
+                if launcher_name == "animref_launcher" and hasattr(mod, "launch"):
+                    mod.launch()
                 return
 
             pyc_versioned = os.path.normpath(os.path.join(tool_path, "{}_py{}.pyc".format(launcher_name, maya_version)))
             if os.path.exists(pyc_versioned):
-                _load_module_from_file(launcher_name, pyc_versioned)
+                mod = _load_module_from_file(launcher_name, pyc_versioned)
+                if launcher_name == "animref_launcher" and hasattr(mod, "launch"):
+                    mod.launch()
                 return
 
             pyc_path = os.path.normpath(os.path.join(tool_path, launcher_name + ".pyc"))
             if os.path.exists(pyc_path):
-                _load_module_from_file(launcher_name, pyc_path)
+                mod = _load_module_from_file(launcher_name, pyc_path)
+                if launcher_name == "animref_launcher" and hasattr(mod, "launch"):
+                    mod.launch()
                 return
             
             cmds.warning("Could not find {} in {}. Looked for: {}.py, {}_py{}.pyc, {}.pyc".format(

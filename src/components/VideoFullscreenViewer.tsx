@@ -34,9 +34,10 @@ type VideoFullscreenViewerProps = {
 };
 
 export function VideoFullscreenViewer(props: VideoFullscreenViewerProps) {
-    // If reference is an artwork or project without a playable video stream,
-    // open the dedicated interactive artwork & project asset viewer
-    if (!props.video.videoUrl && (props.video.posterUrl || props.video.thumbnailUrl)) {
+    // If reference is an artwork, 3D model, or project without a playable video stream,
+    // open the dedicated interactive artwork & 3D model viewer
+    const isModelOrEmbed = (props.video as any).mediaType === 'model3d' || Boolean((props.video as any).embedUrl);
+    if (isModelOrEmbed || (!props.video.videoUrl && (props.video.posterUrl || props.video.thumbnailUrl))) {
         return <ArtworkDetailModal item={props.video} isOpen={true} onClose={props.onClose} />;
     }
     return <VideoStudyViewer {...props} />;

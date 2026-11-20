@@ -24,6 +24,9 @@ function ExtensionConnectContent() {
   const [tokenPayload, setTokenPayload] = useState<string>('');
   const [rawToken, setRawToken] = useState<{ token: string; refreshToken: string; expiresAt: number; apiKey: string } | null>(null);
   const extensionId = params.get('extension_id') || '';
+  const clientType = params.get('client') || (extensionId === 'animo_maya' ? 'maya' : '');
+  const callbackPort = params.get('port') || '';
+  const callbackState = params.get('state') || '';
 
   const attemptConnect = useCallback(async () => {
     if (!user) return;
@@ -46,14 +49,41 @@ function ExtensionConnectContent() {
       // Encode base64 token payload for 1-click manual paste fallback
       const payloadObj = {
         token,
+        idToken: token,
         refreshToken: user.refreshToken,
+        uid: user.uid,
+        email: user.email || '',
+        displayName: user.displayName || '',
         tokenExpiresAt: expiresAt,
         firebaseApiKey: apiKey,
+        state: callbackState,
         origin: window.location.origin,
       };
+      let encodedPayload = '';
       try {
-        setTokenPayload(btoa(JSON.stringify(payloadObj)));
+        encodedPayload = btoa(JSON.stringify(payloadObj));
+        setTokenPayload(encodedPayload);
       } catch {}
+
+      // Method 0: Automatic localhost loopback callback for Desktop Plugins (Autodesk Maya / Animo)
+      const portNum = parseInt(callbackPort, 10);
+      if (portNum >= 1024 && portNum <= 65535) {
+        try {
+          await fetch(`http://127.0.0.1:${portNum}/callback`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payloadObj),
+            mode: 'cors',
+          });
+        } catch {
+          try {
+            await fetch(
+              `http://127.0.0.1:${portNum}/callback?payload=${encodeURIComponent(encodedPayload)}&state=${encodeURIComponent(callbackState)}`,
+              { mode: 'no-cors' }
+            );
+          } catch {}
+        }
+      }
 
       // Method 1: Bridge via window.postMessage
       window.postMessage({
@@ -63,7 +93,7 @@ function ExtensionConnectContent() {
 
       // Method 2: Direct chrome.runtime.sendMessage if extensionId is available
       const runtime = (window as any).chrome?.runtime;
-      if (runtime?.sendMessage && extensionId) {
+      if (runtime?.sendMessage && extensionId && extensionId !== 'animo_maya') {
         runtime.sendMessage(extensionId, {
           type: 'AR_CONNECT',
           ...payloadObj,
@@ -76,7 +106,7 @@ function ExtensionConnectContent() {
       setErrorMessage(err.message || 'Connection failed.');
       setStatus('error');
     }
-  }, [extensionId, user]);
+  }, [extensionId, callbackPort, callbackState, user]);
 
   useEffect(() => {
     if (user && status === 'idle') {
@@ -85,11 +115,12 @@ function ExtensionConnectContent() {
   }, [user, status, attemptConnect]);
 
   useEffect(() => {
-    if (!loading && !user && extensionId) {
-      const returnTo = `/extension/connect?extension_id=${encodeURIComponent(extensionId)}`;
+    if (!loading && !user) {
+      const qs = params.toString();
+      const returnTo = qs ? `/extension/connect?${qs}` : '/extension/connect';
       window.location.replace(`/login?redirect=${encodeURIComponent(returnTo)}`);
     }
-  }, [loading, user, extensionId]);
+  }, [loading, user, params]);
 
   const handleCopyCode = () => {
     if (!tokenPayload) return;
@@ -135,21 +166,29 @@ function ExtensionConnectContent() {
       {status === 'connected' ? (
         <>
           <CheckCircle2 className="h-12 w-12 text-emerald-400" />
-          <h1 className="text-3xl font-black">Extension Connected!</h1>
+          <h1 className="text-3xl font-black">
+            {clientType === 'maya' ? 'Maya Plugin Connected!' : 'Extension Connected!'}
+          </h1>
           <p className="max-w-md text-zinc-400">
-            Your Animation Reference extension is linked to your account. You can now save references from any page.
+            {clientType === 'maya'
+              ? 'Your Autodesk Maya AnimRef plugin is linked to your account. You can return to Maya or copy the 1-click code below.'
+              : 'Your Animation Reference extension is linked to your account. You can now save references from any page.'}
           </p>
 
           {tokenPayload && (
             <div className="w-full max-w-md p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col items-center gap-2">
-              <span className="text-xs text-zinc-400">Extension still asking to sign in?</span>
+              <span className="text-xs text-zinc-400">
+                {clientType === 'maya' ? 'Click below and Maya will auto-detect the code from your clipboard:' : 'Extension still asking to sign in?'}
+              </span>
               <Button
                 onClick={handleCopyCode}
                 variant="outline"
                 className="w-full border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
               >
                 {copied ? <Check className="mr-2 h-4 w-4 text-emerald-400" /> : <Copy className="mr-2 h-4 w-4" />}
-                {copied ? 'Code Copied! Paste into Extension' : 'Copy 1-Click Connect Code'}
+                {copied
+                  ? (clientType === 'maya' ? 'Code Copied! Maya is signing you in automatically…' : 'Code Copied! Paste into Extension')
+                  : 'Copy 1-Click Connect Code'}
               </Button>
             </div>
           )}

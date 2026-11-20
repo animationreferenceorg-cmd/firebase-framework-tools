@@ -75,6 +75,25 @@ def get_cached_snapshot_path():
     return os.path.join(get_cache_dir(), "videos-snapshot.json")
 
 
+def peek_cached_catalog():
+    """Fast non-blocking catalog lookup from RAM or local disk snapshot (never makes HTTP requests)."""
+    global _cached_catalog, _cached_catalog_at
+    if _cached_catalog is not None:
+        return _cached_catalog
+    for candidate in (get_cached_snapshot_path(), LOCAL_SNAPSHOT_FALLBACK):
+        if candidate and os.path.isfile(candidate):
+            try:
+                with open(candidate, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, list) and data:
+                    _cached_catalog = data
+                    _cached_catalog_at = os.path.getmtime(candidate)
+                    return _cached_catalog
+            except Exception:
+                pass
+    return []
+
+
 def load_catalog(force_refresh=False):
     global _cached_catalog, _cached_catalog_at, _cached_tags
 
@@ -205,6 +224,8 @@ def get_thumbnail_local_path(video_id):
 _THUMB_QUEUE = queue.Queue()
 _THUMB_WORKERS_STARTED = False
 _WORKER_LOCK = threading.Lock()
+_THUMB_VERIFIED_PATHS = {}
+_THUMB_IN_FLIGHT = {}
 
 
 def _thumb_worker_loop():
@@ -212,25 +233,37 @@ def _thumb_worker_loop():
         task = _THUMB_QUEUE.get()
         if task is None:
             break
-        video_id, url, local_path, callback = task
+        video_id, url, local_path = task
+        result_path = None
         try:
             if not (os.path.isfile(local_path) and os.path.getsize(local_path) > 0):
                 req = urllib_request.Request(url, headers=BROWSER_HEADERS)
                 with urllib_request.urlopen(req, timeout=10) as resp:
                     data = resp.read()
                     if len(data) > 0:
-                        with open(local_path, "wb") as out_f:
+                        temp_thumb = local_path + ".tmp"
+                        with open(temp_thumb, "wb") as out_f:
                             out_f.write(data)
+                        if os.path.isfile(local_path):
+                            try:
+                                os.remove(local_path)
+                            except Exception:
+                                pass
+                        os.rename(temp_thumb, local_path)
             if os.path.isfile(local_path) and os.path.getsize(local_path) > 0:
-                callback(video_id, local_path)
-            else:
-                callback(video_id, None)
+                _THUMB_VERIFIED_PATHS[video_id] = local_path
+                result_path = local_path
         except Exception:
-            try:
-                callback(video_id, None)
-            except Exception:
-                pass
+            result_path = None
         finally:
+            with _WORKER_LOCK:
+                callbacks = _THUMB_IN_FLIGHT.pop(video_id, [])
+            for cb in callbacks:
+                if cb:
+                    try:
+                        cb(video_id, result_path)
+                    except Exception:
+                        pass
             _THUMB_QUEUE.task_done()
 
 
@@ -239,7 +272,7 @@ def _ensure_thumb_workers():
     with _WORKER_LOCK:
         if not _THUMB_WORKERS_STARTED:
             _THUMB_WORKERS_STARTED = True
-            for _ in range(4):
+            for _ in range(8):
                 t = threading.Thread(target=_thumb_worker_loop)
                 t.daemon = True
                 t.start()
@@ -252,11 +285,16 @@ def get_thumbnail(video, callback=None):
             callback(None, None)
         return None
 
+    cached_mem = _THUMB_VERIFIED_PATHS.get(video_id)
+    if cached_mem and os.path.isfile(cached_mem):
+        return cached_mem
+
     local_path = get_thumbnail_local_path(video_id)
     if os.path.isfile(local_path) and os.path.getsize(local_path) > 0:
+        _THUMB_VERIFIED_PATHS[video_id] = local_path
         return local_path
 
-    url = video.get("thumbnailUrl") or video.get("posterUrl")
+    url = video.get("thumbnailUrl") or video.get("posterUrl") or video.get("imageUrl")
     if not url:
         if callback:
             callback(video_id, None)
@@ -264,7 +302,12 @@ def get_thumbnail(video, callback=None):
 
     if callback:
         _ensure_thumb_workers()
-        _THUMB_QUEUE.put((video_id, url, local_path, callback))
+        with _WORKER_LOCK:
+            if video_id in _THUMB_IN_FLIGHT:
+                _THUMB_IN_FLIGHT[video_id].append(callback)
+                return None
+            _THUMB_IN_FLIGHT[video_id] = [callback]
+        _THUMB_QUEUE.put((video_id, url, local_path))
         return None
     else:
         try:
@@ -323,44 +366,55 @@ def resolve_media_url(video):
     return url
 
 
-def download_video_file(video, progress_callback=None):
+def _is_valid_cached_video(path):
+    if not path or not os.path.isfile(path) or os.path.getsize(path) <= 1024:
+        return False
+    try:
+        with open(path, "rb") as f:
+            head = f.read(64).lstrip()
+        if head.startswith((b"<", b"#EXTM3U", b"{")):
+            return False
+    except Exception:
+        return False
+    return True
+
+
+def get_cached_video_file(video):
     video_id = video.get("id")
     if not video_id:
-        raise ValueError("This reference has no ID. Open it on Animation Reference instead.")
-    try:
-        from . import animref_auth
-    except (ImportError, ValueError):
-        import animref_auth
-    token = animref_auth.get_valid_token()
-    if not token:
-        raise RuntimeError("Sign in to your Animation Reference Pro account to import references.")
-    url = animref_auth.SITE_API_BASE + "/videos/" + urllib_parse.quote(str(video_id), safe="") + "/download"
-    request = urllib_request.Request(url, data=b"{}", headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"})
-    try:
-        with urllib_request.urlopen(request, timeout=30) as response:
-            result = json.loads(response.read().decode("utf-8"))
-    except urllib_error.HTTPError as error:
-        try:
-            message = json.loads(error.read().decode("utf-8")).get("message")
-        except (ValueError, UnicodeError):
-            message = None
-        raise RuntimeError(message or "Unable to authorize this download. Check your account and try again.")
-    resolved_url = result.get("url")
-    if not isinstance(resolved_url, str) or urllib_parse.urlparse(resolved_url).scheme != "https":
-        raise RuntimeError("This reference does not have an authorized downloadable file.")
-
+        return None
     clean_id = re.sub(r"[^A-Za-z0-9_-]", "_", str(video_id))
     local_path = os.path.join(get_cache_dir(), "videos", clean_id + ".mp4")
+    if _is_valid_cached_video(local_path):
+        return local_path
+    return None
 
-    if os.path.isfile(local_path) and os.path.getsize(local_path) > 1024:
+
+def get_playable_media_source(video):
+    """Returns tuple of (media_source_str, is_local_bool)"""
+    cached = get_cached_video_file(video)
+    if cached:
+        return cached, True
+    try:
+        resolved_url = resolve_media_url(video)
+        return resolved_url, False
+    except Exception:
+        url = video.get("videoUrl") or video.get("streamUrl") or ""
+        return url, False
+
+
+def _download_from_url(download_url, local_path, progress_callback=None):
+    clean_path = os.path.normpath(local_path).replace("\\", "/")
+    if _is_valid_cached_video(local_path):
         if progress_callback:
             progress_callback(100, 100)
-        return local_path
+        return clean_path
 
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
     temp_path = local_path + ".tmp"
-    req = urllib_request.Request(resolved_url, headers=BROWSER_HEADERS)
+    req = urllib_request.Request(download_url, headers=BROWSER_HEADERS)
 
-    with urllib_request.urlopen(req, timeout=35) as resp:
+    with urllib_request.urlopen(req, timeout=40) as resp:
         total_size = int(resp.headers.get("Content-Length", 0))
         chunk_size = 1024 * 64
         downloaded = 0
@@ -376,7 +430,6 @@ def download_video_file(video, progress_callback=None):
                         pct = int((downloaded / total_size) * 100)
                         progress_callback(pct, 100)
                     else:
-                        # Estimate progress if chunked
                         pct = min(95, int(downloaded / (1024 * 1024 * 2) * 20))
                         progress_callback(pct, 100)
 
@@ -389,4 +442,195 @@ def download_video_file(video, progress_callback=None):
     os.rename(temp_path, local_path)
     if progress_callback:
         progress_callback(100, 100)
-    return local_path
+    return clean_path
+
+
+def download_video_file(video, progress_callback=None):
+    video_id = video.get("id")
+    if not video_id:
+        raise ValueError("This reference has no ID. Open it on Animation Reference instead.")
+    try:
+        from . import animref_auth
+    except (ImportError, ValueError):
+        import animref_auth
+
+    clean_id = re.sub(r"[^A-Za-z0-9_-]", "_", str(video_id))
+    has_video_url = bool((video.get("videoUrl") or video.get("streamUrl") or video.get("uploadedMediaUrl") or video.get("mediaUrl") or video.get("url") or video.get("sourceUrl") or "").strip())
+    media_type = str(video.get("mediaType") or video.get("type") or video.get("source") or "").lower()
+    image_only_url = (video.get("imageUrl") or video.get("posterUrl") or video.get("thumbnailUrl") or video.get("coverUrl") or "").strip()
+    raw_video = (video.get("videoUrl") or video.get("streamUrl") or video.get("uploadedMediaUrl") or video.get("mediaUrl") or video.get("url") or video.get("sourceUrl") or "").strip()
+
+    # Case 1: Static Image or 3D Card (no video stream, or image card)
+    is_static_image = not has_video_url and bool(image_only_url) and (
+        media_type in ("image", "model3d", "sketchfab", "artstation") or
+        str(video_id).startswith(("img-", "sf_", "as_", "upload-")) or
+        image_only_url.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".gif"))
+    )
+    if is_static_image or (not has_video_url and image_only_url):
+        thumb_path = get_thumbnail(video)
+        if thumb_path and os.path.isfile(thumb_path) and os.path.getsize(thumb_path) > 0:
+            if progress_callback:
+                progress_callback(100, 100)
+            return thumb_path
+        ext = ".png" if ".png" in image_only_url.lower() else ".jpg"
+        local_img = os.path.join(get_cache_dir(), "thumbnails", clean_id + ext)
+        try:
+            return _download_from_url(image_only_url, local_img, progress_callback=progress_callback)
+        except Exception:
+            existing_thumb = get_thumbnail_local_path(video_id)
+            if os.path.isfile(existing_thumb) and os.path.getsize(existing_thumb) > 0:
+                if progress_callback:
+                    progress_callback(100, 100)
+                return existing_thumb
+            raise
+
+    token = animref_auth.get_valid_token()
+
+    # Case 2: Direct User Uploads in Firebase / Cloud storage or direct MP4/MOV URLs
+    is_direct_downloadable = (
+        str(video_id).startswith(("upload-", "clip-", "user-")) or
+        "firebasestorage.googleapis.com" in raw_video or
+        "storage.googleapis.com" in raw_video or
+        "firebasestorage.app" in raw_video or
+        "sakugabooru.com" in raw_video or
+        raw_video.lower().endswith((".mp4", ".mov", ".webm"))
+    )
+    if is_direct_downloadable and raw_video.startswith("http"):
+        local_mp4 = os.path.join(get_cache_dir(), "videos", clean_id + ".mp4")
+        if _is_valid_cached_video(local_mp4):
+            if progress_callback:
+                progress_callback(100, 100)
+            return os.path.normpath(local_mp4).replace("\\", "/")
+        try:
+            return _download_from_url(raw_video, local_mp4, progress_callback=progress_callback)
+        except Exception:
+            pass
+
+    # Case 3: Public catalog video references require signing in
+    if not token:
+        # Fallback: if raw_video is accessible via HTTP, try downloading it directly before erroring
+        if raw_video.startswith("http"):
+            try:
+                dl_target = resolve_media_url(video) if ("b-cdn.net" in raw_video or "playlist.m3u8" in raw_video) else raw_video
+                local_mp4 = os.path.join(get_cache_dir(), "videos", clean_id + ".mp4")
+                return _download_from_url(dl_target, local_mp4, progress_callback=progress_callback)
+            except Exception:
+                pass
+        raise RuntimeError("Sign in to your Animation Reference Pro account to import references.")
+
+    # Call server download authorization API
+    url = animref_auth.SITE_API_BASE + "/videos/" + urllib_parse.quote(str(video_id), safe="") + "/download"
+    request = urllib_request.Request(url, data=b"{}", headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"})
+    try:
+        with urllib_request.urlopen(request, timeout=30) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except urllib_error.HTTPError as error:
+        if raw_video and ("b-cdn.net" in raw_video or "sakugabooru.com" in raw_video):
+            try:
+                resolved_fallback = resolve_media_url(video) if "b-cdn.net" in raw_video else raw_video
+                local_mp4 = os.path.join(get_cache_dir(), "videos", clean_id + ".mp4")
+                return _download_from_url(resolved_fallback, local_mp4, progress_callback=progress_callback)
+            except Exception:
+                pass
+        try:
+            message = json.loads(error.read().decode("utf-8")).get("message")
+        except (ValueError, UnicodeError):
+            message = None
+        raise RuntimeError(message or "Unable to authorize this download. Check your account and try again.")
+    except Exception as err:
+        if raw_video and ("b-cdn.net" in raw_video or "sakugabooru.com" in raw_video):
+            try:
+                resolved_fallback = resolve_media_url(video) if "b-cdn.net" in raw_video else raw_video
+                local_mp4 = os.path.join(get_cache_dir(), "videos", clean_id + ".mp4")
+                return _download_from_url(resolved_fallback, local_mp4, progress_callback=progress_callback)
+            except Exception:
+                pass
+        raise RuntimeError("Unable to connect to download server: " + str(err))
+
+    resolved_url = result.get("url")
+    if not isinstance(resolved_url, str) or urllib_parse.urlparse(resolved_url).scheme != "https":
+        if raw_video and ("b-cdn.net" in raw_video or "sakugabooru.com" in raw_video):
+            resolved_fallback = resolve_media_url(video) if ("b-cdn.net" in raw_video or "playlist.m3u8" in raw_video) else raw_video
+            local_mp4 = os.path.join(get_cache_dir(), "videos", clean_id + ".mp4")
+            return _download_from_url(resolved_fallback, local_mp4, progress_callback=progress_callback)
+        raise RuntimeError("This reference does not have an authorized downloadable file.")
+
+    local_path = os.path.join(get_cache_dir(), "videos", clean_id + ".mp4")
+    if _is_valid_cached_video(local_path):
+        if progress_callback:
+            progress_callback(100, 100)
+        return os.path.normpath(local_path).replace("\\", "/")
+
+    return _download_from_url(resolved_url, local_path, progress_callback=progress_callback)
+
+
+def get_cache_stats():
+    """Returns disk usage statistics for cached videos, image sequences, and thumbnails."""
+    cache_root = get_cache_dir()
+    videos_dir = os.path.join(cache_root, "videos")
+    thumbs_dir = os.path.join(cache_root, "thumbnails")
+
+    total_bytes = 0
+    video_count = 0
+    thumb_count = 0
+
+    if os.path.isdir(videos_dir):
+        for root, _, files in os.walk(videos_dir):
+            for fname in files:
+                fpath = os.path.join(root, fname)
+                try:
+                    total_bytes += os.path.getsize(fpath)
+                    if root == videos_dir and fname.lower().endswith((".mp4", ".mov", ".webm")):
+                        video_count += 1
+                except OSError:
+                    pass
+
+    if os.path.isdir(thumbs_dir):
+        for fname in os.listdir(thumbs_dir):
+            fpath = os.path.join(thumbs_dir, fname)
+            if os.path.isfile(fpath):
+                try:
+                    total_bytes += os.path.getsize(fpath)
+                    thumb_count += 1
+                except OSError:
+                    pass
+
+    return {
+        "total_bytes": total_bytes,
+        "video_count": video_count,
+        "thumb_count": thumb_count,
+        "cache_dir": cache_root,
+    }
+
+
+def clear_media_cache(clear_thumbs=False):
+    """Clears cached videos/sequences (and optionally thumbnails), preserving auth.json and boards."""
+    cache_root = get_cache_dir()
+    freed = 0
+    targets = [os.path.join(cache_root, "videos")]
+    if clear_thumbs:
+        targets.append(os.path.join(cache_root, "thumbnails"))
+
+    for tdir in targets:
+        if not os.path.isdir(tdir):
+            continue
+        for entry in os.listdir(tdir):
+            epath = os.path.join(tdir, entry)
+            try:
+                if os.path.isdir(epath):
+                    for r, _, fs in os.walk(epath):
+                        for fn in fs:
+                            try:
+                                freed += os.path.getsize(os.path.join(r, fn))
+                            except OSError:
+                                pass
+                    shutil.rmtree(epath, ignore_errors=True)
+                elif os.path.isfile(epath):
+                    freed += os.path.getsize(epath)
+                    os.remove(epath)
+            except OSError:
+                pass
+
+    if clear_thumbs:
+        _THUMB_VERIFIED_PATHS.clear()
+    return freed

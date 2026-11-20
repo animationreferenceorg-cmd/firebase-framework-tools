@@ -4811,7 +4811,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.pb_upload_row_layout.addLayout(board_box, stretch=1)
         uc_layout.addLayout(self.pb_upload_row_layout)
 
-        self.pb_auto_upload_check = QtWidgets.QCheckBox("Auto-import to AnimationReference.org right after recording")
+        self.pb_auto_upload_check = QtWidgets.QCheckBox("Auto-post to AnimationReference.org Portfolio & Feed right after recording")
         self.pb_auto_upload_check.setStyleSheet("color: #1c1917; font-size: 11px; font-weight: 600; border: none;")
         self.pb_auto_upload_check.setChecked(False)
         uc_layout.addWidget(self.pb_auto_upload_check)
@@ -5713,8 +5713,12 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
 
         if isinstance(res, dict) and res.get("ok"):
             info = res.get("result") or {}
-            clip_url = info.get("url") or "https://animationreference.org"
-            self.pb_status_lbl.setText("✓ Imported to AnimationReference.org!")
+            raw_url = info.get("portfolioUrl") or info.get("url") or "https://animationreference.org/feed"
+            if raw_url.startswith("/"):
+                clip_url = "https://animationreference.org" + raw_url
+            else:
+                clip_url = raw_url
+            self.pb_status_lbl.setText("✓ Posted live to AnimationReference.org!")
             if hasattr(self, "pb_upload_link_lbl"):
                 self.pb_upload_link_lbl.setText(
                     '✓ Live on AnimationReference.org: <a href="{0}" style="color:#047857;">{0}</a>'.format(clip_url)

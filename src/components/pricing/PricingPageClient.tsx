@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Check, Lock, Minus, RefreshCcw, Sparkles } from 'lucide-react';
+import { ArrowRight, Check, Globe, Lock, Minus, RefreshCcw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { CustomCheckoutModal } from '@/components/checkout/CustomCheckoutModal';
@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 import { useIntroOffer } from '@/hooks/use-intro-offer';
+import { formatLocalCurrencyEstimate } from '@/lib/i18n-seo';
 import { cn } from '@/lib/utils';
 import {
   ACCESS_LIMITS,
@@ -107,6 +108,12 @@ export function PricingPageClient() {
   const [billingCycle, setBillingCycle] = useState<CheckoutPlanId>('pro_monthly');
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
+  const [browserLocale, setBrowserLocale] = useState<string>('');
+  useEffect(() => {
+    if (typeof navigator !== 'undefined') {
+      setBrowserLocale(navigator.language || '');
+    }
+  }, []);
   const { user } = useAuth();
   const { userProfile } = useUser();
   const { toast } = useToast();
@@ -260,14 +267,26 @@ export function PricingPageClient() {
               )}
               {!isFree && <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400">{current.title} · {current.price}</span>}
             </div>
-            <p className="flex items-baseline gap-1.5">
+            <p className="flex flex-wrap items-baseline gap-1.5">
               <span className="text-4xl font-black">{formatUsd(showIntro ? intro!.amountCents : monthlyEquivalent)}</span>
               <span className="text-sm text-zinc-400">{showIntro ? 'first month' : '/ month'}</span>
               {showIntro && (
                 <span className="text-xs text-zinc-400 line-through ml-1">{formatUsd(selected.amountCents)}</span>
               )}
+              {(() => {
+                const est = formatLocalCurrencyEstimate(showIntro ? intro!.amountCents : monthlyEquivalent, browserLocale);
+                return est ? (
+                  <span className="ml-1 rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-zinc-200">
+                    {est}
+                  </span>
+                ) : null;
+              })()}
             </p>
             <p className="mt-1 text-xs font-medium text-purple-200/90">{priceLine}</p>
+            <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-zinc-400">
+              <Globe className="h-3.5 w-3.5 text-purple-300 shrink-0" />
+              135+ currencies &amp; local cards accepted via Stripe · Checkout auto-translates to your language
+            </p>
             <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-purple-300">Everything in Free, plus</p>
             <ul className="mt-3 space-y-2.5 text-sm">
               {PRO_FEATURES.map((feature) => (

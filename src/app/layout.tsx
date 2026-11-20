@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { DocumentShell } from '@/components/layout/DocumentShell';
+import { HREFLANG_LANGUAGES } from '@/lib/i18n-seo';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://animationreference.org'),
@@ -55,6 +56,7 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: '/',
+    languages: HREFLANG_LANGUAGES,
   }
 };
 

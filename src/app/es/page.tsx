@@ -3,7 +3,9 @@ import Link from 'next/link';
 import { VideoCard } from '@/components/VideoCard';
 import { getAllSnapshotVideos } from '@/lib/videoSnapshot.server';
 
-export const dynamic = 'force-dynamic';
+import { HREFLANG_LANGUAGES } from '@/lib/i18n-seo';
+
+export const revalidate = 3600;
 
 const BASE_URL = 'https://animationreference.org';
 
@@ -13,10 +15,7 @@ export const metadata: Metadata = {
     keywords: ['referencia de animación', 'referencias de animación gratis', 'clips de animación', 'estudio de animación'],
     alternates: {
         canonical: `${BASE_URL}/es`,
-        languages: {
-            en: BASE_URL,
-            es: `${BASE_URL}/es`,
-        },
+        languages: HREFLANG_LANGUAGES,
     },
     openGraph: {
         title: 'Referencias de Animación Gratis',

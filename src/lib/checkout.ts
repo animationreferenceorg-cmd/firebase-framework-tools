@@ -37,6 +37,7 @@ export function buildCheckoutSessionParams({ plan, uid, customerId, origin, env,
     : { allow_promotion_codes: true };
   const base = {
     mode: 'subscription' as const,
+    locale: 'auto' as const,
     customer: customerId,
     client_reference_id: uid,
     metadata: { userId: uid, firebaseUID: uid, plan: resolved.plan, ...(intro ? { offer: 'intro_first_month' } : {}) },

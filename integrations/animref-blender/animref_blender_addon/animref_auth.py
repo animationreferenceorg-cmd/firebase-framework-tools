@@ -262,6 +262,7 @@ def start_browser_auth_flow(on_success=None, open_browser: bool = True) -> str:
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
                 self.send_header("Access-Control-Allow-Headers", "Content-Type")
+                self.send_header("Access-Control-Allow-Private-Network", "true")
                 self.end_headers()
 
             def do_OPTIONS(self):
@@ -270,7 +271,7 @@ def start_browser_auth_flow(on_success=None, open_browser: bool = True) -> str:
             def do_GET(self):
                 parsed = urllib.parse.urlparse(self.path)
                 qs = urllib.parse.parse_qs(parsed.query)
-                token_str = (qs.get("token") or [""])[0]
+                token_str = (qs.get("payload") or qs.get("token") or [""])[0]
                 if token_str:
                     try:
                         state = sign_in_with_connect_token(token_str)

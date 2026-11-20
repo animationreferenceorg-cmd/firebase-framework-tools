@@ -282,6 +282,7 @@ def start_browser_auth_flow(on_complete_callback=None, open_browser=True):
             self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
             self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+            self.send_header("Access-Control-Allow-Private-Network", "true")
             self.end_headers()
 
         def do_OPTIONS(self):

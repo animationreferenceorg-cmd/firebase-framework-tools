@@ -24,7 +24,9 @@ function ExtensionConnectContent() {
   const [tokenPayload, setTokenPayload] = useState<string>('');
   const [rawToken, setRawToken] = useState<{ token: string; refreshToken: string; expiresAt: number; apiKey: string } | null>(null);
   const extensionId = params.get('extension_id') || '';
-  const clientType = params.get('client') || (extensionId === 'animo_maya' ? 'maya' : '');
+  const clientType =
+    params.get('client') ||
+    (extensionId === 'animo_maya' ? 'maya' : extensionId === 'animref_blender' ? 'blender' : '');
   const callbackPort = params.get('port') || '';
   const callbackState = params.get('state') || '';
 
@@ -61,27 +63,35 @@ function ExtensionConnectContent() {
       };
       let encodedPayload = '';
       try {
-        encodedPayload = btoa(JSON.stringify(payloadObj));
+        encodedPayload = btoa(JSON.stringify(payloadObj))
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
         setTokenPayload(encodedPayload);
       } catch {}
 
-      // Method 0: Automatic localhost loopback callback for Desktop Plugins (Autodesk Maya / Animo)
+      // Method 0: Automatic localhost loopback callback for Desktop Plugins (Autodesk Maya / Blender)
       const portNum = parseInt(callbackPort, 10);
       if (portNum >= 1024 && portNum <= 65535) {
+        let delivered = false;
         try {
-          await fetch(`http://127.0.0.1:${portNum}/callback`, {
+          const cbRes = await fetch(`http://127.0.0.1:${portNum}/callback`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payloadObj),
             mode: 'cors',
           });
+          delivered = cbRes.ok;
         } catch {
-          try {
-            await fetch(
-              `http://127.0.0.1:${portNum}/callback?payload=${encodeURIComponent(encodedPayload)}&state=${encodeURIComponent(callbackState)}`,
-              { mode: 'no-cors' }
-            );
-          } catch {}
+          delivered = false;
+        }
+        // If browser blocked HTTPS->localhost fetch (Private Network Access / Mixed Content),
+        // top-level navigation to http://127.0.0.1 is ALWAYS allowed and auto-syncs the plugin!
+        if (!delivered && encodedPayload) {
+          const cbUrl = `http://127.0.0.1:${portNum}/callback?payload=${encodeURIComponent(encodedPayload)}&state=${encodeURIComponent(callbackState)}`;
+          setStatus('connected');
+          window.location.assign(cbUrl);
+          return;
         }
       }
 
@@ -167,12 +177,18 @@ function ExtensionConnectContent() {
         <>
           <CheckCircle2 className="h-12 w-12 text-emerald-400" />
           <h1 className="text-3xl font-black">
-            {clientType === 'maya' ? 'Maya Plugin Connected!' : 'Extension Connected!'}
+            {clientType === 'maya'
+              ? 'Maya Plugin Connected!'
+              : clientType === 'blender'
+                ? 'Blender Add-on Connected!'
+                : 'Extension Connected!'}
           </h1>
           <p className="max-w-md text-zinc-400">
             {clientType === 'maya'
-              ? 'Your Autodesk Maya AnimRef plugin is linked to your account. You can return to Maya or copy the 1-click code below.'
-              : 'Your Animation Reference extension is linked to your account. You can now save references from any page.'}
+              ? 'Your Autodesk Maya AnimRef plugin is linked and syncing automatically. You can return to Maya now.'
+              : clientType === 'blender'
+                ? 'Your Blender AnimRef add-on is linked and syncing automatically. You can return to Blender now.'
+                : 'Your Animation Reference extension is linked to your account. You can now save references from any page.'}
           </p>
 
           {tokenPayload && (

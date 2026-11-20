@@ -139,8 +139,21 @@ def fetch_saved_references() -> list[dict]:
         headers={"Authorization": f"Bearer {token}"},
         timeout=15,
     )
-    items = data.get("saved") or data.get("videos") or data.get("items") or []
-    return items if isinstance(items, list) else []
+    combined: list[dict] = []
+    seen: set[str] = set()
+    for key in ("savedVideos", "likedVideos", "saved", "videos", "items"):
+        bucket = data.get(key)
+        if isinstance(bucket, list):
+            for item in bucket:
+                if not isinstance(item, dict):
+                    continue
+                vid_id = str(item.get("id") or item.get("videoUrl") or "")
+                if vid_id and vid_id in seen:
+                    continue
+                if vid_id:
+                    seen.add(vid_id)
+                combined.append(item)
+    return combined
 
 
 def fetch_moodboards() -> list[dict]:
@@ -152,8 +165,31 @@ def fetch_moodboards() -> list[dict]:
         headers={"Authorization": f"Bearer {token}"},
         timeout=15,
     )
-    boards = data.get("boards") or data.get("moodboards") or []
+    boards = data.get("moodboards") or data.get("boards") or []
     return boards if isinstance(boards, list) else []
+
+
+def fetch_moodboard_items() -> list[dict]:
+    boards = fetch_moodboards()
+    items: list[dict] = []
+    seen: set[str] = set()
+    for board in boards:
+        if not isinstance(board, dict):
+            continue
+        bname = str(board.get("name") or "Board")
+        for it in board.get("items") or []:
+            if not isinstance(it, dict):
+                continue
+            vid_id = str(it.get("id") or it.get("videoUrl") or "")
+            if vid_id and vid_id in seen:
+                continue
+            if vid_id:
+                seen.add(vid_id)
+            row = dict(it)
+            if not row.get("category"):
+                row["category"] = bname
+            items.append(row)
+    return items
 
 
 def _safe_filename(video_id: str, title: str, ext: str) -> str:

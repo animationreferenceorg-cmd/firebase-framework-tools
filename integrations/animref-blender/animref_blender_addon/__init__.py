@@ -36,6 +36,12 @@ if bpy is not None:
         offset: bpy.props.IntProperty(name="Offset", default=0)
         hidden: bpy.props.BoolProperty(name="Hidden", default=False)
 
+    def _trigger_auto_search(self, context):
+        try:
+            bpy.ops.animref.search_library("INVOKE_DEFAULT", force_refresh=False)
+        except Exception:
+            pass
+
     class AnimRefSettings(bpy.types.PropertyGroup):
         connect_token: bpy.props.StringProperty(
             name="Connect Token",
@@ -48,10 +54,12 @@ if bpy is not None:
             items=[
                 ("EXPLORE", "Explore", "Browse AnimationReference.org catalog"),
                 ("SAVED", "Saved", "Your saved reference clips"),
+                ("BOARDS", "Boards", "Clips from your AnimationReference.org moodboards"),
             ],
             default="EXPLORE",
+            update=_trigger_auto_search,
         )
-        search_query: bpy.props.StringProperty(name="Search", default="")
+        search_query: bpy.props.StringProperty(name="Search", default="", update=_trigger_auto_search)
         tag_filter: bpy.props.EnumProperty(
             name="Category",
             items=[
@@ -65,6 +73,7 @@ if bpy is not None:
                 ("fx", "FX", "Visual effects references"),
             ],
             default="all",
+            update=_trigger_auto_search,
         )
         import_mode: bpy.props.EnumProperty(
             name="Import Mode",

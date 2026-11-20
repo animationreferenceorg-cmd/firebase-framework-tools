@@ -78,6 +78,10 @@ class ANIMREF_OT_BrowserSignIn(bpy.types.Operator):
     def execute(self, context):
         def _on_connected(_state):
             def _redraw():
+                try:
+                    bpy.ops.animref.search_library("INVOKE_DEFAULT", force_refresh=True)
+                except Exception:
+                    pass
                 for win in bpy.context.window_manager.windows:
                     for area in win.screen.areas:
                         area.tag_redraw()
@@ -143,11 +147,15 @@ class ANIMREF_OT_SearchLibrary(bpy.types.Operator):
         try:
             if settings.library_tab == "SAVED":
                 videos = animref_api.fetch_saved_references()
+                if not videos:
+                    videos = animref_api.fetch_moodboard_items()
+            elif settings.library_tab == "BOARDS":
+                videos = animref_api.fetch_moodboard_items()
             else:
                 videos = animref_api.fetch_catalog(force_refresh=self.force_refresh)
             matches = animref_api.search_catalog(
                 query=settings.search_query,
-                tag=settings.tag_filter,
+                tag=settings.tag_filter if settings.library_tab == "EXPLORE" else "all",
                 videos=videos,
                 limit=80,
             )
@@ -439,7 +447,14 @@ class ANIMREF_PT_LibraryPanel(bpy.types.Panel):
         op = row.operator("animref.search_library", text="", icon="FILE_REFRESH")
         op.force_refresh = True
 
-        layout.prop(settings, "tag_filter", text="Category")
+        if settings.library_tab == "EXPLORE":
+            layout.prop(settings, "tag_filter", text="Category")
+
+        if not settings.results:
+            load_row = layout.row()
+            load_row.scale_y = 1.25
+            op_load = load_row.operator("animref.search_library", text="Load References", icon="FILE_REFRESH")
+            op_load.force_refresh = True
 
         layout.template_list(
             "ANIMREF_UL_ClipResults",

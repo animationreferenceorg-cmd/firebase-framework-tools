@@ -5,7 +5,7 @@
 
 export const BASE_URL = 'https://animationreference.org';
 
-export type SeoLocale = 'ja' | 'pt' | 'fr' | 'ko' | 'zh';
+export type SeoLocale = 'ja' | 'pt' | 'fr' | 'ko' | 'zh' | 'sg';
 
 export interface LocaleSeoConfig {
   code: SeoLocale;
@@ -164,11 +164,40 @@ export const SEO_LOCALES: Record<SeoLocale, LocaleSeoConfig> = {
     featuredHeading: '精选参考片段',
     trustBadge: 'Stripe 安全支付 · 支持国际信用卡与 Apple Pay · 随时取消',
   },
+  sg: {
+    code: 'sg',
+    ogLocale: 'en_SG',
+    nativeName: 'Singapore (SG)',
+    countryHint: 'Singapore',
+    title: 'Animation Reference Library Singapore | Frame-by-Frame Study & Portfolios',
+    description:
+      'Study thousands of 2D & 3D animation reference clips frame by frame. Built for Singapore animators, game developers, and students at DigiPen, 3dsense, NYP, and LASALLE.',
+    keywords: [
+      'animation reference singapore',
+      '3d animation reference library',
+      'frame by frame video player',
+      'walk cycle reference',
+      'character acting reference',
+      'animation portfolio singapore',
+    ],
+    h1: 'Animation Reference Library for Singapore Animators',
+    subtitle:
+      'Thousands of curated motion reference clips for 2D/3D animators, game devs, and students across Singapore. Scrub frame by frame, build shot boards, and showcase your reel.',
+    browseCta: 'Browse All Tags',
+    categoriesCta: 'Explore Categories',
+    proCta: 'Try Pro for $1 USD (~S$1.35)',
+    proBannerTitle: 'Built for Singapore Studios & Animation Students',
+    proBannerDesc:
+      'Start Pro for just $1 USD (~S$1.35) your first month. Unlock unlimited daily references, 24 FPS MP4 downloads, private NDA boards, and playblast compare.',
+    featuredHeading: 'Featured Reference Clips',
+    trustBadge: 'Secure Stripe Checkout · SGD Cards, Apple Pay, Google Pay & PayNow supported · Cancel anytime',
+  },
 };
 
 export const HREFLANG_LANGUAGES: Record<string, string> = {
   'x-default': BASE_URL,
   en: BASE_URL,
+  'en-SG': `${BASE_URL}/lang/sg`,
   es: `${BASE_URL}/es`,
   ja: `${BASE_URL}/lang/ja`,
   pt: `${BASE_URL}/lang/pt`,
@@ -202,6 +231,8 @@ const LOCALE_CURRENCY_MAP: Record<string, LocalCurrencyHint> = {
   'nl': { currency: 'EUR', rateFromUsd: 0.92, locale: 'nl-NL' },
   'ko': { currency: 'KRW', rateFromUsd: 1380, locale: 'ko-KR' },
   'zh': { currency: 'CNY', rateFromUsd: 7.2, locale: 'zh-CN' },
+  'en-sg': { currency: 'SGD', rateFromUsd: 1.35, locale: 'en-SG' },
+  'zh-sg': { currency: 'SGD', rateFromUsd: 1.35, locale: 'en-SG' },
   'en-gb': { currency: 'GBP', rateFromUsd: 0.78, locale: 'en-GB' },
   'en-ca': { currency: 'CAD', rateFromUsd: 1.38, locale: 'en-CA' },
   'en-au': { currency: 'AUD', rateFromUsd: 1.52, locale: 'en-AU' },

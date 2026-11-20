@@ -92,7 +92,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             changeFrequency: 'daily',
             priority: 0.9,
         },
-        ...(['ja', 'pt', 'fr', 'ko', 'zh'] as const).map((loc) => ({
+        ...(['ja', 'pt', 'fr', 'ko', 'zh', 'sg'] as const).map((loc) => ({
             url: `${BASE_URL}/lang/${loc}`,
             lastModified: new Date(),
             changeFrequency: 'daily' as const,

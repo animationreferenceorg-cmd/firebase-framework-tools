@@ -3,7 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiErrorResponse, getTrustedProfile, profileHasPro, requireFirebaseUser } from '@/lib/api-auth';
 import { getFirebaseStorage, getFirestore } from '@/lib/firebase-admin';
 import { bunnyStreamConfig } from '@/lib/bunny-stream';
-import { analyzeReferenceVisuals } from '@/lib/reference-discovery';
+import { analyzeReferenceVisuals, inferAnimationCategoryAndTags } from '@/lib/reference-discovery';
 import { challengeStatus, getChallenge } from '@/lib/challenges';
 import { detectClipPlatform } from '@/lib/reference-utils';
 import { parseSourcePage } from '@/lib/source-page';
@@ -50,8 +50,16 @@ export async function POST(request: NextRequest) {
     const fileBuffer = Buffer.from(await file.arrayBuffer());
     const title = String(form.get('title') || file.name).trim().slice(0, 120);
     const description = String(form.get('description') || '').trim().slice(0, 1000);
-    const category = String(form.get('category') || 'Acting').trim().slice(0, 60);
-    const tags = String(form.get('tags') || '').split(',').map((tag) => tag.trim().toLowerCase()).filter(Boolean).slice(0, 20);
+    const rawCategory = String(form.get('category') || '').trim().slice(0, 60);
+    const rawTags = String(form.get('tags') || '').split(',').map((tag) => tag.trim().toLowerCase()).filter(Boolean).slice(0, 20);
+    const inferred = inferAnimationCategoryAndTags({
+      title,
+      description,
+      tags: rawTags,
+      suppliedCategory: rawCategory,
+    });
+    const category = inferred.category;
+    const tags = Array.from(new Set([...rawTags, ...inferred.inferredTags])).slice(0, 24);
     const software = String(form.get('software') || '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 10);
     const isDraft = String(form.get('draft')) === 'true';
     const publishToPortfolio = String(form.get('publishToPortfolio')) === 'true';
@@ -240,10 +248,12 @@ export async function POST(request: NextRequest) {
       });
 
       if (!isPrivate && isVideo && uploadedMediaUrl) {
+        const mergedSearchTags = Array.from(new Set([...tags, ...(discovery.visualTags || [])])).slice(0, 30);
         transaction.set(db.collection('videos').doc(clipRef.id), {
           id: clipRef.id,
+          creatorId: identity.uid,
           title,
-          description: source?.title || title,
+          description: description || source?.title || title,
           videoUrl: uploadedMediaUrl,
           thumbnailUrl: thumbnailUrl || uploadedMediaUrl,
           posterUrl: thumbnailUrl || uploadedMediaUrl,
@@ -252,7 +262,8 @@ export async function POST(request: NextRequest) {
           sourcePlatform: source ? detectClipPlatform(source.url) : 'web',
           uploader: authorName || (source ? `@${source.host}` : profile.displayName || 'Animator'),
           authorAvatar: authorAvatar || null,
-          tags,
+          category,
+          tags: mergedSearchTags,
           categoryIds: [category.toLowerCase()],
           status: 'published',
           isPublic: true,

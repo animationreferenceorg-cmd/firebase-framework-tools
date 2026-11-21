@@ -11,6 +11,86 @@ type DiscoveryInput = {
 
 const STOP_WORDS = new Set(['the', 'and', 'for', 'with', 'from', 'this', 'that', 'video', 'reference', 'animation', 'clip', 'post', 'reel', 'short']);
 
+const CATEGORY_RULES: Array<{ category: string; keywords: string[]; extraTags: string[] }> = [
+  {
+    category: 'Combat',
+    keywords: ['punch', 'kick', 'sword', 'fight', 'martial', 'kungfu', 'karate', 'boxing', 'mma', 'dodge', 'parry', 'slash', 'combat', 'battle', 'weapon', 'spear', 'axe', 'bow', 'shoot', 'recoil'],
+    extraTags: ['combat', 'action'],
+  },
+  {
+    category: 'Locomotion',
+    keywords: ['walk', 'run', 'sprint', 'jog', 'jump', 'leap', 'parkour', 'vault', 'climb', 'crawl', 'sneak', 'stride', 'cycle', 'locomotion', 'skate', 'swim', 'fly', 'landing'],
+    extraTags: ['locomotion'],
+  },
+  {
+    category: 'Creature',
+    keywords: ['dog', 'cat', 'horse', 'wolf', 'lion', 'tiger', 'bear', 'bird', 'eagle', 'dragon', 'dino', 'dinosaur', 'monster', 'quadruped', 'animal', 'creature', 'wing', 'tail', 'gallop', 'trot', 'spider', 'snake'],
+    extraTags: ['creature'],
+  },
+  {
+    category: 'Body Mechanics',
+    keywords: ['lift', 'heavy', 'push', 'pull', 'carry', 'throw', 'catch', 'fall', 'stagger', 'trip', 'slip', 'balance', 'weight', 'mechanics', 'acrobat', 'flip', 'backflip', 'somersault', 'gymnast', 'dance', 'spin', 'sit', 'stand'],
+    extraTags: ['body-mechanics'],
+  },
+  {
+    category: 'Lip Sync',
+    keywords: ['lipsync', 'lip-sync', 'dialogue', 'speech', 'monologue', 'talking', 'talk', 'mouth', 'voice', 'sing', 'singing', 'shout', 'yell'],
+    extraTags: ['lip-sync', 'acting'],
+  },
+  {
+    category: 'FX / VFX',
+    keywords: ['fire', 'flame', 'smoke', 'water', 'splash', 'explosion', 'cloth', 'cape', 'hair', 'wind', 'particle', 'vfx', 'fx', 'lightning', 'magic', 'destruction', 'debris'],
+    extraTags: ['fx', 'vfx'],
+  },
+  {
+    category: 'Acting',
+    keywords: ['acting', 'emotion', 'laugh', 'cry', 'angry', 'sad', 'happy', 'surprise', 'shock', 'fear', 'facial', 'expression', 'eye', 'blink', 'gesture', 'subtle', 'conversation'],
+    extraTags: ['acting'],
+  },
+];
+
+/**
+ * Automatically infer the best animation category and canonical search tags
+ * from title, description, tags, and filename so random user uploads are
+ * immediately discoverable in search and category filters.
+ */
+export function inferAnimationCategoryAndTags(input: {
+  title?: string | null;
+  description?: string | null;
+  tags?: string[] | null;
+  suppliedCategory?: string | null;
+}): { category: string; inferredTags: string[] } {
+  const haystack = `${input.title || ''} ${input.description || ''} ${(input.tags || []).join(' ')}`.toLowerCase();
+  const matchedTags = new Set<string>();
+  let bestCategory = '';
+  let bestScore = 0;
+
+  for (const rule of CATEGORY_RULES) {
+    let score = 0;
+    for (const kw of rule.keywords) {
+      if (haystack.includes(kw)) {
+        score += 1;
+        matchedTags.add(normalizeTag(kw));
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestCategory = rule.category;
+      for (const t of rule.extraTags) matchedTags.add(t);
+    }
+  }
+
+  const rawSupplied = (input.suppliedCategory || '').trim();
+  const isGenericSupplied = !rawSupplied || rawSupplied.toLowerCase() === 'acting' || rawSupplied.toLowerCase() === 'general';
+  const finalCategory = bestCategory && isGenericSupplied ? bestCategory : (rawSupplied || bestCategory || 'Acting');
+  if (finalCategory) matchedTags.add(normalizeTag(finalCategory));
+
+  return {
+    category: finalCategory,
+    inferredTags: [...matchedTags].filter(Boolean),
+  };
+}
+
 export function deriveReferenceTags(input: Omit<DiscoveryInput, 'imageUrl' | 'imageBuffer'>): string[] {
   const supplied = (input.tags || []).map(normalizeTag).filter(Boolean);
   const text = `${input.title || ''} ${input.description || ''}`.toLowerCase();

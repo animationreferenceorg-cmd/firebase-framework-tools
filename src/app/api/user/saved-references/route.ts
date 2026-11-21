@@ -76,9 +76,41 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    const [savedVideos, likedVideos] = await Promise.all([
+    const fetchUploaded = async () => {
+      try {
+        const snap = await db
+          .collection('reference_clips')
+          .where('creatorId', '==', user.uid)
+          .limit(100)
+          .get();
+        return snap.docs
+          .map((docSnap) => {
+            const d = docSnap.data() || {};
+            const createdMs = d.createdAt?.toMillis ? d.createdAt.toMillis() : 0;
+            return {
+              id: docSnap.id,
+              title: d.title || 'Uploaded Reference',
+              videoUrl: d.uploadedMediaUrl || d.sourceUrl || '',
+              mediaType: d.mediaType || 'video',
+              category: d.category || 'Acting',
+              fps: d.fps || 24,
+              thumbnailUrl: d.thumbnailUrl || (d.mediaType !== 'video' ? d.uploadedMediaUrl : '') || '',
+              tags: Array.isArray(d.tags) ? d.tags : [],
+              isOwnUpload: true,
+              _createdMs: createdMs,
+            };
+          })
+          .sort((a, b) => b._createdMs - a._createdMs)
+          .map(({ _createdMs, ...rest }) => rest);
+      } catch {
+        return [];
+      }
+    };
+
+    const [savedVideos, likedVideos, uploadedVideos] = await Promise.all([
       fetchVideos(savedIds),
       fetchVideos(likedIds),
+      fetchUploaded(),
     ]);
 
     return NextResponse.json({
@@ -89,6 +121,7 @@ export async function GET(request: NextRequest) {
       },
       savedVideos,
       likedVideos,
+      uploadedVideos,
     }, {
       headers: {
         ...corsHeaders,

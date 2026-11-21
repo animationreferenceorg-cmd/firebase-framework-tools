@@ -756,6 +756,13 @@ class SidebarNavPanel(QtWidgets.QFrame):
         self.explore_nav_btn.clicked.connect(lambda: self.set_active_index(4))
         self.sidebar_layout.addWidget(self.explore_nav_btn)
 
+        self.uploaded_nav_btn = QtWidgets.QPushButton("☁  Uploaded")
+        self.uploaded_nav_btn.setObjectName("NavBtn")
+        self.uploaded_nav_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        self.uploaded_nav_btn.setToolTip("Your own uploaded references (unlimited imports, no rate limit)")
+        self.uploaded_nav_btn.clicked.connect(lambda: self.set_active_index(7))
+        self.sidebar_layout.addWidget(self.uploaded_nav_btn)
+
         # 3. BOARDS Header Row: "BOARDS" + "Manage"
         self.boards_hdr_widget = QtWidgets.QWidget()
         self.boards_hdr_widget.setStyleSheet("background: transparent;")
@@ -898,10 +905,12 @@ class SidebarNavPanel(QtWidgets.QFrame):
             self.sidebar_layout.setContentsMargins(4, 8, 4, 8)
             self.all_saves_btn.setToolTip("All saves ({} references)".format(self._all_saves_count))
             self.explore_nav_btn.setToolTip("Explore Library (8,000+ references)")
+            self.uploaded_nav_btn.setText("☁")
             self.scene_planes_nav_btn.setText("🎞")
             self.playblast_nav_btn.setText("🎬")
         else:
             self.sidebar_layout.setContentsMargins(10, 10, 10, 10)
+            self.uploaded_nav_btn.setText("☁  Uploaded")
             self.scene_planes_nav_btn.setText("🎞  Scene Planes")
             self.playblast_nav_btn.setText("🎬  Playblast")
 
@@ -1064,6 +1073,11 @@ class SidebarNavPanel(QtWidgets.QFrame):
             clean_name = b_name[:11] + ".." if len(b_name) > 12 else b_name
             btn.setText("📁" if self.is_collapsed else "📁  {}  {}".format(clean_name, cnt))
             self._apply_board_btn_style(btn, self.current_index == 0 and bid == str(self.active_board_id))
+
+        is_up = (self.current_index == 7)
+        self.uploaded_nav_btn.setProperty("active", "true" if is_up else "false")
+        self.uploaded_nav_btn.style().unpolish(self.uploaded_nav_btn)
+        self.uploaded_nav_btn.style().polish(self.uploaded_nav_btn)
 
         is_sp = (self.current_index == 6)
         self.scene_planes_nav_btn.setProperty("active", "true" if is_sp else "false")
@@ -3784,6 +3798,11 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self._selection_job_id = None
         self._install_maya_selection_listener()
 
+        # Page 7: User's Uploaded References (unlimited imports, zero rate limit)
+        self.uploaded_tab = QtWidgets.QWidget()
+        self.build_uploaded_tab(self.uploaded_tab)
+        self.view_stack.addWidget(self.uploaded_tab)
+
         self.splitter.addWidget(self.view_stack)
         body_layout.addWidget(self.splitter, stretch=1)
         main_layout.addWidget(self.body_container, stretch=1)
@@ -4064,10 +4083,13 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
             3: "Account & Cache",
             4: "Explore Library",
             6: "Scene Plane Controls",
+            7: "Uploaded (Unlimited)",
         }
         if hasattr(self, "boards_header_lbl") and idx in header_titles:
             self.boards_header_lbl.setText(header_titles[idx])
-        if idx == 6:
+        if idx == 7:
+            self.load_uploaded_data()
+        elif idx == 6:
             self.refresh_scene_planes_panel()
         elif idx == 0:
             self.load_boards_data()
@@ -5149,6 +5171,68 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
             self.pb_upload_row_layout.setDirection(QtWidgets.QBoxLayout.TopToBottom if is_narrow else QtWidgets.QBoxLayout.LeftToRight)
         if hasattr(self, "pb_subtitle_lbl"):
             self.pb_subtitle_lbl.setVisible(not is_very_narrow)
+
+    # ==================== UPLOADED REFERENCES TAB ====================
+    def build_uploaded_tab(self, parent):
+        layout = QtWidgets.QVBoxLayout(parent)
+        layout.setContentsMargins(14, 12, 14, 14)
+        layout.setSpacing(10)
+
+        hdr = QtWidgets.QHBoxLayout()
+        info = QtWidgets.QLabel("Your Uploaded References — Unlimited Maya imports (no daily rate limit)")
+        info.setStyleSheet("font-size: 11px; font-weight: 700; color: #c4b5fd; background: transparent;")
+        hdr.addWidget(info, stretch=1)
+
+        up_btn = QtWidgets.QPushButton("+ Upload Reference")
+        up_btn.setObjectName("PrimaryBtn")
+        up_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        up_btn.clicked.connect(self.open_upload_reference_dialog)
+        hdr.addWidget(up_btn)
+        layout.addLayout(hdr)
+
+        self.uploaded_scroll = QtWidgets.QScrollArea()
+        self.uploaded_scroll.setWidgetResizable(True)
+        self.uploaded_scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.uploaded_scroll.setStyleSheet("QScrollArea { background-color: #09090e; border: none; }")
+
+        self.uploaded_grid_container = QtWidgets.QWidget()
+        self.uploaded_grid_container.setStyleSheet("background-color: #09090e;")
+        self.uploaded_grid_layout = QtWidgets.QGridLayout(self.uploaded_grid_container)
+        self.uploaded_grid_layout.setContentsMargins(0, 0, 0, 0)
+        self.uploaded_grid_layout.setSpacing(10)
+        self.uploaded_scroll.setWidget(self.uploaded_grid_container)
+        layout.addWidget(self.uploaded_scroll, stretch=1)
+
+    def load_uploaded_data(self):
+        if not hasattr(self, "uploaded_grid_layout"):
+            return
+
+        def _bg():
+            items = animref_auth.fetch_uploaded_references() if hasattr(animref_auth, "fetch_uploaded_references") else []
+            QtCore.QTimer.singleShot(0, lambda v=items: self._render_uploaded_grid(v))
+
+        threading.Thread(target=_bg, daemon=True).start()
+
+    def _render_uploaded_grid(self, items):
+        while self.uploaded_grid_layout.count():
+            child = self.uploaded_grid_layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+
+        if not items:
+            empty = QtWidgets.QLabel("No uploaded references yet. Click '+ Upload Reference' above to add your own videos or images!")
+            empty.setWordWrap(True)
+            empty.setAlignment(QtCore.Qt.AlignCenter)
+            empty.setStyleSheet("color: #71717a; font-size: 12px; padding: 36px; background: transparent;")
+            self.uploaded_grid_layout.addWidget(empty, 0, 0)
+            return
+
+        cols = max(2, min(4, max(1, (self.width() - 220) // 180)))
+        for idx, vid in enumerate(items):
+            card = PinterestReferenceCard(vid, parent=self.uploaded_grid_container)
+            card.clicked.connect(self.on_video_selected)
+            card.import_requested.connect(self.on_quick_import_clicked)
+            self.uploaded_grid_layout.addWidget(card, idx // cols, idx % cols)
 
     # ==================== SCENE PLANE CONTROLS TAB ====================
     def build_scene_planes_tab(self, parent):

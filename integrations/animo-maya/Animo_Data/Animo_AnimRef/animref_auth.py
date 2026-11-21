@@ -891,6 +891,25 @@ def toggle_save_reference(video_id, video_data=None):
     return {"success": True, "isSaved": is_saved}
 
 
+def fetch_uploaded_references():
+    """Fetch the signed-in user's own uploaded references (unlimited imports)."""
+    token = get_valid_token()
+    if not token:
+        return []
+    url = SITE_API_BASE + "/user/saved-references"
+    req = urllib_request.Request(
+        url,
+        headers={"Authorization": "Bearer " + token, "User-Agent": "AnimoMayaPlugin/2.0"},
+    )
+    try:
+        with urllib_request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        uploaded = data.get("uploadedVideos")
+        return uploaded if isinstance(uploaded, list) else []
+    except Exception:
+        return []
+
+
 def upload_reference_to_board(
     file_path,
     title="",

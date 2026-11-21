@@ -156,6 +156,19 @@ def fetch_saved_references() -> list[dict]:
     return combined
 
 
+def fetch_uploaded_references() -> list[dict]:
+    token = animref_auth.get_valid_id_token()
+    if not token:
+        raise RuntimeError("Sign in to view your uploaded references.")
+    data = _http_json(
+        f"{SITE_BASE_URL}/api/user/saved-references",
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=15,
+    )
+    uploaded = data.get("uploadedVideos")
+    return uploaded if isinstance(uploaded, list) else []
+
+
 def fetch_moodboards() -> list[dict]:
     token = animref_auth.get_valid_id_token()
     if not token:

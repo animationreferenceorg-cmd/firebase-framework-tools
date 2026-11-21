@@ -25,7 +25,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const db = getFirestore();
     const todayKey = new Date().toISOString().slice(0, 10);
 
-    if (!isProOrAdmin) {
+    const { id } = await params;
+    const [videoSnap, clipSnap] = await Promise.all([
+      db.collection('videos').doc(id).get(),
+      db.collection('reference_clips').doc(id).get(),
+    ]);
+
+    // Users can always import/download their own uploaded references with zero rate limit
+    const isOwnUpload =
+      (clipSnap.exists && clipSnap.data()?.creatorId === identity.uid) ||
+      (videoSnap.exists && videoSnap.data()?.creatorId === identity.uid);
+
+    if (!isProOrAdmin && !isOwnUpload) {
       if (!isFreeQuotaClient) {
         throw new ApiError(402, 'PRO_REQUIRED', 'Downloading reference MP4s is a Pro feature.');
       }
@@ -45,12 +56,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         { merge: true }
       );
     }
-
-    const { id } = await params;
-    const [videoSnap, clipSnap] = await Promise.all([
-      db.collection('videos').doc(id).get(),
-      db.collection('reference_clips').doc(id).get(),
-    ]);
 
     let url: string | null = null;
     let title = '';

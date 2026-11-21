@@ -367,6 +367,7 @@ STUDIO_HTML = r"""<!DOCTYPE html>
     </div>
 
     <button class="nav-item active" data-view="boards">📁 &nbsp;Moodboards</button>
+    <button class="nav-item" data-view="uploaded">☁ &nbsp;Uploaded</button>
     <button class="nav-item" data-view="explore">🧭 &nbsp;Explore</button>
     <button class="nav-item" data-view="playblast">🎬 &nbsp;Playblast</button>
     <button class="nav-item" data-view="account">👤 &nbsp;Account</button>
@@ -693,11 +694,12 @@ function setActiveView(view) {
   state.view = view;
   document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   closeStudio(false);
-  document.getElementById('gridView').style.display = (view === 'boards' || view === 'explore') ? 'block' : 'none';
+  document.getElementById('gridView').style.display = (view === 'boards' || view === 'explore' || view === 'uploaded') ? 'block' : 'none';
   document.getElementById('catBar').style.display = view === 'explore' ? 'flex' : 'none';
   document.getElementById('playblastView').style.display = view === 'playblast' ? 'block' : 'none';
   document.getElementById('accountView').style.display = view === 'account' ? 'block' : 'none';
   if (view === 'explore') document.getElementById('wsTitle').textContent = 'Explore Library';
+  if (view === 'uploaded') document.getElementById('wsTitle').textContent = 'Uploaded (Unlimited Imports)';
   if (view === 'playblast') { document.getElementById('wsTitle').textContent = 'Playblast & Scene'; loadSceneRefs(); }
   if (view === 'account') { document.getElementById('wsTitle').textContent = 'Account'; loadAccount(); }
 }
@@ -706,7 +708,7 @@ async function loadItems() {
   const grid = document.getElementById('cardGrid');
   grid.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:18px;">Loading references...</div>`;
   try {
-    const tab = state.view === 'explore' ? 'explore' : (state.boardId === '__all_saves__' ? 'saved' : 'board');
+    const tab = state.view === 'explore' ? 'explore' : state.view === 'uploaded' ? 'uploaded' : (state.boardId === '__all_saves__' ? 'saved' : 'board');
     const qs = new URLSearchParams({ tab, board_id: state.boardId, tag: state.tag, q: state.q });
     const data = await api('/api/items?' + qs.toString());
     state.items = data.items || [];
@@ -1143,6 +1145,8 @@ class _StudioHandler(http.server.BaseHTTPRequestHandler):
                         vids.append(item)
                     if not vids and not animref_auth.is_signed_in():
                         vids = animref_api.fetch_catalog(force_refresh=False)
+                elif tab == "uploaded":
+                    vids = animref_api.fetch_uploaded_references() if animref_auth.is_signed_in() else []
                 elif tab == "boards":
                     vids = animref_api.fetch_moodboard_items()
                 else:

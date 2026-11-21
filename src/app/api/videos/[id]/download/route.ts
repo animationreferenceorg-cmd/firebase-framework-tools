@@ -11,7 +11,7 @@ function slugify(title: string) {
   return (title || 'reference').replace(/[^\w\s-]/g, '').trim().toLowerCase().replace(/\s+/g, '-') || 'reference';
 }
 
-const FREE_PLUGIN_DAILY_IMPORTS = 5;
+const FREE_PLUGIN_DAILY_IMPORTS = 15;
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (!isFreeQuotaClient) {
         throw new ApiError(402, 'PRO_REQUIRED', 'Downloading reference MP4s is a Pro feature.');
       }
-      // Allow free users 5 daily reference imports across 3D plugins and moodboards
+      // Allow free users 15 daily reference imports across 3D plugins and moodboards
       const userSnap = await db.collection('users').doc(identity.uid).get();
       const userData = userSnap.data() || {};
       const usedToday = userData.pluginImportsDate === todayKey ? Number(userData.pluginImportsToday || 0) : 0;

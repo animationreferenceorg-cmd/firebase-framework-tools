@@ -10,6 +10,7 @@ import { FilterBar, TabOption, TypeOption, PillOption, MediaOption } from '@/com
 import { VideoGrid } from '@/components/VideoGrid';
 import { PricingDialog } from '@/components/PricingDialog';
 import { ImmersiveHomeHeader } from '@/components/home/ImmersiveHomeHeader';
+import { ToolsLaunchAnnouncement } from '@/components/home/ToolsLaunchAnnouncement';
 import { CommunityFeedShelf } from '@/components/home/CommunityFeedShelf';
 import { RecentlyViewedShelf } from '@/components/home/RecentlyViewedShelf';
 import { InstagramCommunitySpotlight } from '@/components/InstagramFollowFunnel';
@@ -173,6 +174,13 @@ export default function HomePage() {
         searchInputRef={searchInputRef}
         onOpenPricing={() => setShowPricingDialog(true)}
       />
+
+      {/* 1.5. ANNOUNCEMENT: Maya & Blender Studio Plugins */}
+      {!searchQuery && (
+        <Reveal>
+          <ToolsLaunchAnnouncement />
+        </Reveal>
+      )}
 
       {/* 2. SHELF: Recently Viewed References (always playable) */}
       {!searchQuery && (

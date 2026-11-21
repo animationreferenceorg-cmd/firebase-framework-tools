@@ -182,6 +182,11 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                         Drawovers <span className="ml-auto text-[9px] font-black uppercase tracking-wider text-fuchsia-300">Beta</span>
                                     </SidebarLink>
                                 </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarLink href="/tools" icon={Sparkles} tooltip="Maya & Blender Plugins">
+                                        Tools &amp; Plugins <span className="ml-auto text-[9px] font-black uppercase tracking-wider text-violet-300">New</span>
+                                    </SidebarLink>
+                                </SidebarMenuItem>
                             </SidebarMenu>
                         </SidebarGroup>
                         <SidebarGroup>

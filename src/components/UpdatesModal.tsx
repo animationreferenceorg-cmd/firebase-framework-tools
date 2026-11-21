@@ -17,6 +17,14 @@ import { Button } from "@/components/ui/button";
 
 const RECENT_UPDATES = [
   {
+    date: 'November 20, 2026',
+    title: 'Maya & Blender Studio Plugins Now Live!',
+    description: 'Download our official AnimationReference.org plugins for Autodesk Maya (2020–2026) and Blender (3.6–5.1+).\n\n• 15 free daily library imports + unlimited imports on your own uploaded references.\n• Live Scene Plane Controls (Size, Opacity, Center to 0,0,0, Flip, Lock, Magic Align & timing nudge).\n• Upload local references straight into your Moodboards + dedicated Uploaded tab.\n• Stage viewport playblasts as drafts to edit before publishing.\n• Automatic SHA-256 self-updates built right in.',
+    type: 'New',
+    href: '/tools',
+    cta: 'Download Maya & Blender Tools',
+  },
+  {
     date: 'September 10, 2026',
     title: 'Community Uploads Restored & Submissions Live',
     description: 'We have resolved the upload permission issues! Animators can now upload video and reference clips directly to their profile and the community showcase.\n\n• Free accounts receive 3 submissions.\n• Pro accounts ($5/mo) receive unlimited submissions.\n• Instant silent preview playback, WIP stage tagging (blocking, splining, polish), and reel builder.',

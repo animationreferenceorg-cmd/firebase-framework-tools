@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMe
 import { PaintCanvas } from '@/components/paint/PaintCanvas';
 import { LayersPanel } from '@/components/paint/LayersPanel';
 import { FramesPanel } from '@/components/paint/FramesPanel';
-import { ProcreateHeader } from '@/components/paint/ProcreateHeader';
+import { ProcreateHeader, type PaintWorkspaceMode } from '@/components/paint/ProcreateHeader';
 import { ProcreateSliderDock } from '@/components/paint/ProcreateSliderDock';
 import { ToolOptionsBar } from '@/components/paint/ToolOptionsBar';
 import { ProcreateBrushStudio } from '@/components/paint/ProcreateBrushStudio';
@@ -66,7 +66,7 @@ export default function PaintPage() {
   const { toast } = useToast();
   // Layers hold real <canvas> elements, which only exist client-side —
   // start empty and create the first layer after mount to avoid SSR errors.
-  const [workspaceMode, setWorkspaceMode] = useState<'animation' | 'storyboard'>('animation');
+  const [workspaceMode, setWorkspaceMode] = useState<PaintWorkspaceMode>('drawing');
   const [layers, setLayers] = useState<Layer[]>([]);
   const [activeLayerId, setActiveLayerId] = useState<string>('');
   const [tool, setTool] = useState<ToolType>('brush');
@@ -1249,6 +1249,38 @@ export default function PaintPage() {
     }
   };
 
+  const handleSelectWorkspaceMode = useCallback(
+    (mode: PaintWorkspaceMode) => {
+      setWorkspaceMode(mode);
+      if (mode === 'drawing') {
+        setIsTimelineOpen(false);
+        setIsLayersPanelOpen(true);
+        setOnionSkinEnabled(false);
+      } else if (mode === 'storyboard') {
+        setIsTimelineOpen(true);
+        setOnionSkinEnabled(false);
+      } else if (mode === 'animation') {
+        setIsTimelineOpen(true);
+        setOnionSkinEnabled(true);
+      } else if (mode === 'breakdown') {
+        setIsTimelineOpen(true);
+        setOnionSkinEnabled(false);
+        // Switch immediately to crisp bright vector drawover pen for fast motion analysis
+        setTool('brush');
+        setBrush((prev) => ({
+          ...prev,
+          vectorSmooth: true,
+          textureId: undefined,
+          size: Math.min(prev.size, 10),
+          hardness: 1,
+          smoothing: 0.45,
+          color: prev.color === '#111111' ? '#ef4444' : prev.color,
+        }));
+      }
+    },
+    []
+  );
+
   if (layers.length === 0 || !activeLayerId) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-[#0d0d12] text-zinc-500 text-sm font-semibold">
@@ -1281,7 +1313,7 @@ export default function PaintPage() {
         isViewportStreaming={Boolean(viewportStream)}
         onToggleViewportStream={handleToggleViewportStream}
         workspaceMode={workspaceMode}
-        onToggleWorkspaceMode={() => setWorkspaceMode(workspaceMode === 'storyboard' ? 'animation' : 'storyboard')}
+        onSelectWorkspaceMode={handleSelectWorkspaceMode}
         onPrevBoard={() => {
           if (activeFrameIndex > 0) {
             handleSwitchFrame(activeFrameIndex - 1);
@@ -1296,6 +1328,75 @@ export default function PaintPage() {
       {/* ──────────────── MAIN WORKSPACE CANVAS ──────────────── */}
       <div className="flex-1 flex relative overflow-hidden">
         
+        {/* ──────────────── BREAKDOWN WORKSPACE QUICK-ACTION BAR ──────────────── */}
+        {workspaceMode === 'breakdown' && !viewportStream && !isPinnedToCanvas && (
+          <div
+            data-ui-panel="true"
+            onPointerDown={(e) => e.stopPropagation()}
+            className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex flex-wrap items-center gap-2 rounded-2xl border border-cyan-400/35 bg-[#110f1f]/95 px-3.5 py-2 text-xs font-bold text-white shadow-[0_18px_45px_rgba(0,0,0,0.85)] backdrop-blur-2xl"
+          >
+            <span className="text-[10px] font-black uppercase tracking-wider text-cyan-300 pr-1">
+              Breakdown Kit
+            </span>
+            <button
+              type="button"
+              onClick={handleToggleViewportStream}
+              className="inline-flex h-7 items-center gap-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/35 border border-cyan-400/40 px-2.5 text-[11px] font-extrabold text-cyan-100 transition cursor-pointer"
+            >
+              <Radio className="h-3.5 w-3.5 text-cyan-300" />
+              <span>Stream Maya / Blender</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowReferenceModal(true)}
+              className="inline-flex h-7 items-center gap-1.5 rounded-xl bg-violet-500/20 hover:bg-violet-500/35 border border-violet-400/40 px-2.5 text-[11px] font-extrabold text-violet-100 transition cursor-pointer"
+            >
+              <Film className="h-3.5 w-3.5 text-violet-300" />
+              <span>Pin Reference Video</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowComparisonModal(true)}
+              className="inline-flex h-7 items-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 px-2.5 text-[11px] font-bold text-zinc-100 transition cursor-pointer"
+            >
+              <Split className="h-3.5 w-3.5 text-zinc-300" />
+              <span>Compare</span>
+            </button>
+
+            <div className="w-px h-4 bg-white/15 mx-0.5" />
+
+            {/* 1-Click Vector Drawover Analysis Pens */}
+            {[
+              { label: 'Arc', color: '#ef4444' },
+              { label: 'Line of Action', color: '#38bdf8' },
+              { label: 'Spacing', color: '#f59e0b' },
+              { label: 'Silhouette', color: '#a855f7' },
+            ].map((pen) => (
+              <button
+                key={pen.label}
+                type="button"
+                onClick={() => {
+                  setTool('brush');
+                  setBrush((b) => ({
+                    ...b,
+                    color: pen.color,
+                    vectorSmooth: true,
+                    textureId: undefined,
+                    hardness: 1,
+                    size: 7,
+                    smoothing: 0.45,
+                  }));
+                }}
+                className="inline-flex h-7 items-center gap-1.5 rounded-full border border-white/15 bg-black/50 px-2.5 text-[10px] font-bold text-zinc-200 hover:border-white/40 hover:text-white transition cursor-pointer"
+                title={`Switch to ${pen.label} Vector Pen`}
+              >
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: pen.color }} />
+                <span>{pen.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* ──────────────── LIVE MAYA / BLENDER VIEWPORT CONTROLS BAR ──────────────── */}
         {viewportStream && (
           <div className="absolute top-4 left-24 z-40 flex items-center gap-3 bg-[#101828]/95 backdrop-blur-3xl border border-emerald-400/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] px-4 py-2 text-xs font-bold text-white">

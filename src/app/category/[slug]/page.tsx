@@ -14,6 +14,7 @@ import { VideoPlayer } from '@/components/VideoPlayer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VideoGrid } from '@/components/VideoGrid';
 import { CategoryViewTracker } from '@/components/CategoryViewTracker';
+import { getCategoryStudyGuide } from '@/lib/category-study-guides';
 
 export const dynamic = 'force-dynamic';
 
@@ -615,7 +616,117 @@ export default async function Page({ params }: Props) {
                 </div>
             </section>
 
-            {/* 5. SEO KEYWORDS SECTION */}
+            {/* 5. ANIMATOR FRAME-TIMING STUDY GUIDE & FAQ (High-Value Technical SEO + Rich Snippets) */}
+            {(() => {
+                const guide = getCategoryStudyGuide(slug, category.title, videos.length);
+                const faqSchema = {
+                    '@context': 'https://schema.org',
+                    '@type': 'FAQPage',
+                    mainEntity: guide.faqs.map((faq) => ({
+                        '@type': 'Question',
+                        name: faq.question,
+                        acceptedAnswer: {
+                            '@type': 'Answer',
+                            text: faq.answer,
+                        },
+                    })),
+                };
+                const videoObjectsSchema = videos
+                    .filter((v) => v.videoUrl && (v.thumbnailUrl || v.posterUrl))
+                    .slice(0, 6)
+                    .map((v) => ({
+                        '@context': 'https://schema.org',
+                        '@type': 'VideoObject',
+                        name: v.title || `${category.title} Animation Reference`,
+                        description: v.description || `Frame-by-frame ${category.title} animation reference clip for 2D and 3D animators.`,
+                        thumbnailUrl: [v.thumbnailUrl || v.posterUrl],
+                        contentUrl: v.videoUrl,
+                        uploadDate: '2025-01-01T00:00:00Z',
+                    }));
+
+                return (
+                    <>
+                        <section className="py-20 border-t border-white/10 bg-[#070511]">
+                            <div className="container mx-auto px-6 max-w-6xl space-y-12">
+                                <div className="max-w-3xl space-y-3">
+                                    <span className="inline-flex items-center gap-2 rounded-full border border-violet-400/30 bg-violet-500/15 px-3.5 py-1 text-[11px] font-extrabold uppercase tracking-wider text-violet-200">
+                                        {guide.eyebrow}
+                                    </span>
+                                    <h2 className="text-3xl md:text-4xl font-black tracking-tight text-white">
+                                        {guide.headline}
+                                    </h2>
+                                    <p className="text-sm md:text-base text-zinc-300 leading-relaxed">
+                                        {guide.summary}
+                                    </p>
+                                </div>
+
+                                {/* Key Frame-Timing Beats */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {guide.beats.map((beat) => (
+                                        <div key={beat.phase} className="rounded-2xl border border-white/10 bg-[#120e22] p-5 space-y-2">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <h3 className="text-sm font-black text-white">{beat.phase}</h3>
+                                                <span className="rounded-md bg-violet-500/20 border border-violet-400/30 px-2 py-0.5 font-mono text-[11px] font-bold text-violet-200">
+                                                    {beat.frames}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-zinc-400 leading-relaxed">{beat.note}</p>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Pro Tips + Maya/Blender Plugin Callout */}
+                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                                    <div className="lg:col-span-7 rounded-2xl border border-white/10 bg-white/[0.02] p-6 space-y-3">
+                                        <h3 className="text-base font-black text-white">Animator Study Checklist</h3>
+                                        <ul className="space-y-2.5 text-sm text-zinc-300">
+                                            {guide.proTips.map((tip) => (
+                                                <li key={tip} className="flex items-start gap-2.5">
+                                                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-violet-400 shrink-0" />
+                                                    <span>{tip}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+
+                                    <div className="lg:col-span-5 rounded-2xl border border-violet-500/35 bg-gradient-to-br from-[#1b1235] via-[#120e22] to-[#0a0814] p-6 space-y-3">
+                                        <h3 className="text-base font-black text-white">Study Inside Maya &amp; Blender</h3>
+                                        <p className="text-xs text-zinc-300 leading-relaxed">
+                                            Drop any {category.title.toLowerCase()} clip directly onto a 60fps reference plane at (0,0,0) with our free auto-updating plugins.
+                                        </p>
+                                        <div className="flex flex-wrap gap-2 pt-1">
+                                            <Link href="/maya-animation-reference-plugin" className="inline-flex h-9 items-center rounded-xl bg-violet-600 hover:bg-violet-500 px-3.5 text-xs font-extrabold text-white transition">
+                                                Maya Plugin →
+                                            </Link>
+                                            <Link href="/blender-animation-reference-addon" className="inline-flex h-9 items-center rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 px-3.5 text-xs font-bold text-zinc-100 transition">
+                                                Blender Add-on →
+                                            </Link>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* FAQ Accordion Grid */}
+                                <div className="space-y-4">
+                                    <h3 className="text-xl font-black text-white">Frequently Asked Questions</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {guide.faqs.map((faq) => (
+                                            <div key={faq.question} className="rounded-2xl border border-white/10 bg-[#110d1e] p-5 space-y-2">
+                                                <h4 className="text-sm font-bold text-white">{faq.question}</h4>
+                                                <p className="text-xs text-zinc-400 leading-relaxed">{faq.answer}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+                        {videoObjectsSchema.length > 0 && (
+                            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(videoObjectsSchema) }} />
+                        )}
+                    </>
+                );
+            })()}
 
 
             {/* 6. 3 EXAMPLES + CTA */}

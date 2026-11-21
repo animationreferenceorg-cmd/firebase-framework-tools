@@ -57,6 +57,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 0.95,
         },
         {
+            url: `${BASE_URL}/tools`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly',
+            priority: 0.95,
+        },
+        {
+            url: `${BASE_URL}/maya-animation-reference-plugin`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly',
+            priority: 0.95,
+        },
+        {
+            url: `${BASE_URL}/blender-animation-reference-addon`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly',
+            priority: 0.95,
+        },
+        {
             url: `${BASE_URL}/portfolio`,
             lastModified: new Date(),
             changeFrequency: 'weekly',

@@ -3,7 +3,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiErrorResponse, getTrustedProfile, profileHasPro, requireFirebaseUser } from '@/lib/api-auth';
 import { getFirebaseStorage, getFirestore } from '@/lib/firebase-admin';
 import { bunnyStreamConfig } from '@/lib/bunny-stream';
-import { analyzeReferenceVisuals, inferAnimationCategoryAndTags } from '@/lib/reference-discovery';
+import { analyzeReferenceVisuals } from '@/lib/reference-discovery';
+import { categorizeReferenceWithGemma4 } from '@/lib/gemma-taxonomy';
 import { challengeStatus, getChallenge } from '@/lib/challenges';
 import { detectClipPlatform } from '@/lib/reference-utils';
 import { parseSourcePage } from '@/lib/source-page';
@@ -52,14 +53,8 @@ export async function POST(request: NextRequest) {
     const description = String(form.get('description') || '').trim().slice(0, 1000);
     const rawCategory = String(form.get('category') || '').trim().slice(0, 60);
     const rawTags = String(form.get('tags') || '').split(',').map((tag) => tag.trim().toLowerCase()).filter(Boolean).slice(0, 20);
-    const inferred = inferAnimationCategoryAndTags({
-      title,
-      description,
-      tags: rawTags,
-      suppliedCategory: rawCategory,
-    });
-    const category = inferred.category;
-    const tags = Array.from(new Set([...rawTags, ...inferred.inferredTags])).slice(0, 24);
+    let category = rawCategory || 'Acting';
+    let tags = rawTags;
     const software = String(form.get('software') || '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 10);
     const isDraft = String(form.get('draft')) === 'true';
     const publishToPortfolio = String(form.get('publishToPortfolio')) === 'true';
@@ -196,12 +191,27 @@ export async function POST(request: NextRequest) {
       }, { status: 201 });
     }
 
-    const discovery = await analyzeReferenceVisuals({
-      title,
-      tags,
-      sourcePlatform: 'upload',
-      imageBuffer: isImage ? fileBuffer : null,
-    });
+    const [discovery, taxonomy] = await Promise.all([
+      analyzeReferenceVisuals({
+        title,
+        tags,
+        sourcePlatform: 'upload',
+        imageBuffer: isImage ? fileBuffer : null,
+      }),
+      categorizeReferenceWithGemma4({
+        title,
+        description,
+        boardName: boardDoc?.data?.name || boardDoc?.data?.title || null,
+        suppliedCategory: rawCategory,
+        suppliedTags: rawTags,
+        thumbnailUrl: thumbnailUrl || null,
+        imageBuffer: isImage ? fileBuffer : null,
+        imageMimeType: isImage ? file.type : null,
+        timeoutMs: 8000,
+      }),
+    ]);
+    category = taxonomy.category;
+    tags = Array.from(new Set([...rawTags, ...taxonomy.tags])).slice(0, 28);
     const portfolioRef = publishToPortfolio && !isPrivate && uploadedMediaUrl
       ? db.collection('portfolio_items').doc()
       : null;
@@ -231,6 +241,12 @@ export async function POST(request: NextRequest) {
         endTime: isVideo ? Math.max(0.05, Number(form.get('duration') || 10)) : 1,
         title,
         category,
+        subCategory: taxonomy.subCategory || null,
+        subject: taxonomy.subject,
+        cameraAngle: taxonomy.cameraAngle,
+        energy: taxonomy.energy,
+        aiSummary: taxonomy.aiSummary || null,
+        aiCategorizedBy: `${taxonomy.provider}:${taxonomy.model}`,
         tags,
         ...discovery,
         isPrivate,
@@ -263,6 +279,12 @@ export async function POST(request: NextRequest) {
           uploader: authorName || (source ? `@${source.host}` : profile.displayName || 'Animator'),
           authorAvatar: authorAvatar || null,
           category,
+          subCategory: taxonomy.subCategory || null,
+          subject: taxonomy.subject,
+          cameraAngle: taxonomy.cameraAngle,
+          energy: taxonomy.energy,
+          aiSummary: taxonomy.aiSummary || null,
+          aiCategorizedBy: `${taxonomy.provider}:${taxonomy.model}`,
           tags: mergedSearchTags,
           categoryIds: [category.toLowerCase()],
           status: 'published',

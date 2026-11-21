@@ -53,4 +53,7 @@ runConfig:
     - variable: X_ACCESS_TOKEN_SECRET
     - variable: LINKEDIN_ACCESS_TOKEN
     - variable: LINKEDIN_ORGANIZATION_URN
+    # Free Gemma 4 auto-categorization (OpenRouter :free or Google AI Studio free tier)
+    - variable: OPENROUTER_API_KEY
+    - variable: GEMINI_API_KEY
 

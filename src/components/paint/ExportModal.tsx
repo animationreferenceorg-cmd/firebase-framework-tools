@@ -10,7 +10,9 @@ import {
   Check, 
   Sparkles,
   Film,
-  Play
+  Play,
+  Send,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Frame, CanvasSize } from '@/lib/paint/types';
@@ -18,6 +20,8 @@ import { createLayerCanvas } from '@/lib/paint/engine';
 import { serializeProject, downloadProject } from '@/lib/paint/persistence';
 import { Layers } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 import { playFramesIntoCanvas, renderFramesWithReference, type ReferenceExportOptions } from '@/lib/paint/reference-export';
 
 interface ExportModalProps {
@@ -39,6 +43,10 @@ export function ExportModal({
   referenceVideo = null,
 }: ExportModalProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const router = useRouter();
+  const [isPublishing, setIsPublishing] = useState<boolean>(false);
+  const [portfolioTitle, setPortfolioTitle] = useState<string>('');
   // Export the drawing over the reference footage (requested by users), on by default when one is pinned.
   const [includeReference, setIncludeReference] = useState<boolean>(true);
   const withReference = Boolean(referenceVideo && includeReference);
@@ -534,7 +542,7 @@ export function ExportModal({
                 else if (exportType === 'spritesheet') handleExportSpritesheet();
                 else handleExportPNG();
               }}
-              disabled={isExporting}
+              disabled={isExporting || isPublishing}
               className="mt-2 w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-[0_0_25px_rgba(168,85,247,0.5)] border border-purple-300/40 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
             >
               {isExporting ? (
@@ -546,6 +554,99 @@ export function ExportModal({
                 </>
               )}
             </button>
+
+            {/* 1-Click Publish Straight to AnimationReference.org Portfolio */}
+            <div className="mt-2 rounded-2xl border border-violet-400/30 bg-violet-500/10 p-3 space-y-2">
+              <input
+                type="text"
+                value={portfolioTitle}
+                onChange={(e) => setPortfolioTitle(e.target.value)}
+                placeholder="Shot / drawover title (optional)…"
+                className="w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2 text-xs text-white placeholder:text-zinc-400 outline-none focus:border-violet-400"
+              />
+              <button
+                type="button"
+                disabled={isPublishing || isExporting}
+                onClick={async () => {
+                  if (!user) {
+                    toast({
+                      title: 'Sign in to publish',
+                      description: 'Create a free account or sign in to publish drawovers to your Portfolio.',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+                  setIsPublishing(true);
+                  try {
+                    const outCanvas = createLayerCanvas(canvasSize.width, canvasSize.height);
+                    const ctx = outCanvas.getContext('2d')!;
+                    if (includeBackground) {
+                      ctx.fillStyle = backgroundColor;
+                      ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
+                    }
+                    const first = frames[0];
+                    if (first?.layers) {
+                      first.layers.forEach((layer) => {
+                        if (layer.visible && layer.canvas) {
+                          ctx.save();
+                          ctx.globalAlpha = layer.opacity;
+                          ctx.globalCompositeOperation = layer.blendMode as GlobalCompositeOperation;
+                          ctx.drawImage(layer.canvas, 0, 0);
+                          ctx.restore();
+                        }
+                      });
+                    }
+
+                    const blob: Blob | null = await new Promise((resolve) => outCanvas.toBlob(resolve, 'image/png'));
+                    if (!blob) throw new Error('Could not render drawover frame');
+
+                    const form = new FormData();
+                    const cleanTitle = portfolioTitle.trim() || `Paint Drawover Study (${frames.length}f)`;
+                    form.append('file', blob, `${cleanTitle.toLowerCase().replace(/[^a-z0-9]+/g, '_')}.png`);
+                    form.append('title', cleanTitle);
+                    form.append('tags', 'drawover,paint-studio,animation-study');
+                    form.append('draft', 'true');
+
+                    const token = await user.getIdToken();
+                    const res = await fetch('/api/clips/upload?draft=true', {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${token}` },
+                      body: form,
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data?.error || 'Upload failed');
+
+                    toast({
+                      title: 'Sent to Portfolio Composer!',
+                      description: 'Opening your draft on the Portfolio Feed so you can polish & publish.',
+                    });
+                    onClose();
+                    router.push(data?.draftId ? `/feed?draft=${encodeURIComponent(data.draftId)}` : '/feed');
+                  } catch (err: any) {
+                    toast({
+                      title: 'Publish failed',
+                      description: err?.message || 'Could not upload drawover to portfolio.',
+                      variant: 'destructive',
+                    });
+                  } finally {
+                    setIsPublishing(false);
+                  }
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {isPublishing ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Uploading to Portfolio Draft…</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-3.5 w-3.5" />
+                    <span>Publish Drawover to Portfolio</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
         </div>

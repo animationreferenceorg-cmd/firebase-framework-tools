@@ -15,7 +15,9 @@ import {
   Send,
   SkipBack,
   SkipForward,
-  FolderOpen
+  FolderOpen,
+  MonitorPlay,
+  Radio,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -37,6 +39,9 @@ interface ProcreateHeaderProps {
   onNewProject: () => void;
   onOpenProjectFile?: (file: File) => void;
   onOpenExport?: () => void;
+  onPublishToPortfolio?: () => void;
+  isViewportStreaming?: boolean;
+  onToggleViewportStream?: () => void;
   workspaceMode?: 'animation' | 'storyboard';
   onToggleWorkspaceMode?: () => void;
   onPrevBoard?: () => void;
@@ -59,6 +64,9 @@ export function ProcreateHeader({
   onOpenAdjustments,
   onNewProject,
   onOpenExport,
+  onPublishToPortfolio,
+  isViewportStreaming = false,
+  onToggleViewportStream,
   workspaceMode = 'animation',
   onToggleWorkspaceMode,
   onPrevBoard,
@@ -210,7 +218,27 @@ export function ProcreateHeader({
 
       {/* ──────────────── RIGHT GROUP: STUDIO PANELS & TOOL TABS ──────────────── */}
       <div className="flex items-center gap-2">
-        
+        {/* Live Maya / Blender Viewport Stream Toggle */}
+        {onToggleViewportStream && (
+          <button
+            onClick={onToggleViewportStream}
+            className={cn(
+              "h-9 px-3 rounded-2xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border",
+              isViewportStreaming
+                ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60 shadow-lg shadow-emerald-600/25"
+                : "bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-200 border-cyan-400/35"
+            )}
+            title="Stream your live Maya or Blender 3D viewport underneath this canvas to draw over it"
+          >
+            {isViewportStreaming ? (
+              <Radio className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
+            ) : (
+              <MonitorPlay className="h-3.5 w-3.5 text-cyan-300" />
+            )}
+            <span className="hidden xl:inline">{isViewportStreaming ? 'Viewport Live' : 'Stream Maya / Blender'}</span>
+          </button>
+        )}
+
         {/* Timeline Toggle Button */}
         <button
           onClick={onToggleTimeline}
@@ -245,11 +273,23 @@ export function ProcreateHeader({
         {onOpenExport && (
           <button
             onClick={onOpenExport}
-            className="h-9 px-3.5 rounded-2xl font-bold text-xs flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white border border-purple-400/50 shadow-lg shadow-purple-600/30 transition-all cursor-pointer"
+            className="h-9 px-3 rounded-2xl font-bold text-xs flex items-center gap-1.5 bg-white/10 hover:bg-white/15 text-zinc-100 border border-white/15 transition-all cursor-pointer"
             title="Export Spritesheet / Video / PNG"
           >
-            <Download className="h-4 w-4" />
-            <span>Export</span>
+            <Download className="h-3.5 w-3.5" />
+            <span className="hidden xl:inline">Export</span>
+          </button>
+        )}
+
+        {/* Publish Straight to AnimationReference Portfolio */}
+        {onPublishToPortfolio && (
+          <button
+            onClick={onPublishToPortfolio}
+            className="h-9 px-3.5 rounded-2xl font-extrabold text-xs flex items-center gap-1.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white border border-violet-400/50 shadow-lg shadow-violet-600/30 transition-all cursor-pointer"
+            title="Publish your drawover or animation straight to your AnimationReference.org Portfolio"
+          >
+            <Send className="h-3.5 w-3.5" />
+            <span>Publish</span>
           </button>
         )}
 

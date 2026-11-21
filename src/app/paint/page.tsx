@@ -32,7 +32,7 @@ import {
 import type { Layer, ToolType, BrushSettings, BlendMode, CustomBrushTexture, Selection, SymmetryMode, Frame } from '@/lib/paint/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Clapperboard, Pin, PinOff, Film, Eye, Split, X } from 'lucide-react';
+import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Clapperboard, Pin, PinOff, Film, Eye, Split, X, Camera, Radio } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -107,6 +107,99 @@ export default function PaintPage() {
   const [showAdjustments, setShowAdjustments] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showComparisonModal, setShowComparisonModal] = useState(false);
+  const [canvasSize, setCanvasSize] = useState(DEFAULT_CANVAS_SIZE);
+
+  // Live Maya / Blender Viewport Stream-to-Drawover state
+  const [viewportStream, setViewportStream] = useState<MediaStream | null>(null);
+  const [viewportOpacity, setViewportOpacity] = useState<number>(0.85);
+  const viewportVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  const stopViewportStream = useCallback(() => {
+    setViewportStream((prev) => {
+      if (prev) {
+        prev.getTracks().forEach((t) => t.stop());
+      }
+      return null;
+    });
+  }, []);
+
+  const handleToggleViewportStream = useCallback(async () => {
+    if (viewportStream) {
+      stopViewportStream();
+      toast({ title: 'Viewport Stream Stopped', description: 'Disconnected live Maya / Blender viewport feed.' });
+      return;
+    }
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getDisplayMedia) {
+      toast({
+        title: 'Screen capture unavailable',
+        description: 'Please open Paint Studio in Chrome or Edge on desktop to stream Maya or Blender.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: { ideal: 60, max: 60 } },
+        audio: false,
+      });
+      const track = stream.getVideoTracks()[0];
+      if (track) {
+        track.addEventListener('ended', () => {
+          setViewportStream(null);
+        });
+      }
+      setViewportStream(stream);
+      toast({
+        title: 'Live Maya / Blender Viewport Connected!',
+        description: 'Draw arcs, silhouettes & notes directly over your live 3D viewport — or click Freeze Frame.',
+      });
+    } catch {
+      // User cancelled window picker
+    }
+  }, [viewportStream, stopViewportStream, toast]);
+
+  useEffect(() => {
+    const vid = viewportVideoRef.current;
+    if (!vid) return;
+    if (viewportStream) {
+      vid.srcObject = viewportStream;
+      vid.play().catch(() => {});
+    } else {
+      vid.srcObject = null;
+    }
+  }, [viewportStream]);
+
+  useEffect(() => {
+    return () => {
+      if (viewportStream) {
+        viewportStream.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, [viewportStream]);
+
+  const handleFreezeViewportFrame = useCallback(() => {
+    const vid = viewportVideoRef.current;
+    if (!vid || vid.readyState < 2) {
+      toast({ title: 'Waiting for viewport frame…', variant: 'destructive' });
+      return;
+    }
+    const snapLayer = createLayer(`Viewport Snap ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`, canvasSize);
+    const ctx = snapLayer.canvas.getContext('2d');
+    if (ctx) {
+      const vw = vid.videoWidth || canvasSize.width;
+      const vh = vid.videoHeight || canvasSize.height;
+      const scale = Math.min(canvasSize.width / vw, canvasSize.height / vh);
+      const dw = vw * scale;
+      const dh = vh * scale;
+      ctx.drawImage(vid, (canvasSize.width - dw) / 2, (canvasSize.height - dh) / 2, dw, dh);
+    }
+    // Insert frozen snapshot as bottom reference layer and keep user drawing on top
+    setLayers((prev) => [snapLayer, ...prev]);
+    toast({
+      title: 'Viewport Frame Frozen to Layer!',
+      description: 'Saved as a bottom layer so you can keep drawing or export your breakdown.',
+    });
+  }, [canvasSize, toast]);
   // `frames` holds every OTHER frame's committed state; the currently-active
   // frame's live/in-progress edits live in `layers`/`activeLayerId` above
   // and only get written back into frames[activeFrameIndex] at explicit
@@ -149,7 +242,6 @@ export default function PaintPage() {
   const isPanningRef = useRef(false);
   const lastPanPointRef = useRef<{ x: number; y: number } | null>(null);
   const [recentColors, setRecentColors] = useState<string[]>([]);
-  const [canvasSize, setCanvasSize] = useState(DEFAULT_CANVAS_SIZE);
   const [showCanvasSettings, setShowCanvasSettings] = useState(false);
   const pendingZoomAnchorRef = useRef<{ oldZoom: number; canvasX: number; canvasY: number; mouseX: number; mouseY: number } | null>(null);
   const zoomRef = useRef(zoom);
@@ -1185,6 +1277,9 @@ export default function PaintPage() {
         onNewProject={() => setShowNewProjectModal(true)}
         onOpenProjectFile={handleLoadProjectFile}
         onOpenExport={() => setShowExportModal(true)}
+        onPublishToPortfolio={() => setShowExportModal(true)}
+        isViewportStreaming={Boolean(viewportStream)}
+        onToggleViewportStream={handleToggleViewportStream}
         workspaceMode={workspaceMode}
         onToggleWorkspaceMode={() => setWorkspaceMode(workspaceMode === 'storyboard' ? 'animation' : 'storyboard')}
         onPrevBoard={() => {
@@ -1201,6 +1296,52 @@ export default function PaintPage() {
       {/* ──────────────── MAIN WORKSPACE CANVAS ──────────────── */}
       <div className="flex-1 flex relative overflow-hidden">
         
+        {/* ──────────────── LIVE MAYA / BLENDER VIEWPORT CONTROLS BAR ──────────────── */}
+        {viewportStream && (
+          <div className="absolute top-4 left-24 z-40 flex items-center gap-3 bg-[#101828]/95 backdrop-blur-3xl border border-emerald-400/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] px-4 py-2 text-xs font-bold text-white">
+            <div className="flex items-center gap-2">
+              <Radio className="h-4 w-4 text-emerald-400 animate-pulse shrink-0" />
+              <span className="text-emerald-200 text-xs">Maya / Blender Live</span>
+            </div>
+
+            <div className="w-px h-4 bg-white/15" />
+
+            <div className="flex items-center gap-1.5 text-[11px] font-mono">
+              <Eye className="h-3.5 w-3.5 text-cyan-300 shrink-0" />
+              <input
+                type="range"
+                min={0.15}
+                max={1}
+                step={0.05}
+                value={viewportOpacity}
+                onChange={(e) => setViewportOpacity(parseFloat(e.target.value))}
+                className="w-20 h-1 accent-cyan-400 cursor-pointer"
+              />
+              <span className="text-cyan-200 font-bold min-w-[32px]">{Math.round(viewportOpacity * 100)}%</span>
+            </div>
+
+            <div className="w-px h-4 bg-white/15" />
+
+            <button
+              onClick={handleFreezeViewportFrame}
+              className="px-2.5 py-1.5 rounded-xl bg-violet-600/35 hover:bg-violet-600 border border-violet-400/50 text-violet-100 hover:text-white transition-all cursor-pointer text-xs font-bold flex items-center gap-1.5"
+              title="Snapshot the current 3D viewport frame onto a locked bottom layer"
+            >
+              <Camera className="h-3.5 w-3.5" />
+              <span>Freeze Frame</span>
+            </button>
+
+            <button
+              onClick={stopViewportStream}
+              className="px-2.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/40 border border-rose-400/40 text-rose-200 hover:text-white transition-all cursor-pointer text-xs font-bold flex items-center gap-1"
+              title="Stop live viewport stream"
+            >
+              <X className="h-3.5 w-3.5" />
+              <span>Stop</span>
+            </button>
+          </div>
+        )}
+
         {/* ──────────────── TOP-LEFT CANVAS REFERENCE CONTROLS BAR ──────────────── */}
         {isPinnedToCanvas && activeReferenceVideo && (
           <div className="absolute top-4 left-24 z-40 flex items-center gap-3 bg-[#161622]/95 backdrop-blur-3xl border border-purple-500/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] px-4 py-2 text-xs font-bold text-white animate-in slide-in-from-left-2 duration-200">
@@ -1375,9 +1516,29 @@ export default function PaintPage() {
                 }} 
                 className={cn(
                   "relative z-10 flex flex-col items-center shadow-2xl rounded-2xl overflow-hidden border-2 border-slate-300 transition-none",
-                  isPinnedToCanvas && activeReferenceVideo ? "bg-black" : "bg-white"
+                  (isPinnedToCanvas && activeReferenceVideo) || viewportStream ? "bg-black" : "bg-white"
                 )}
               >
+                {/* Live Maya / Blender 60fps Viewport Stream Overlay (rendered behind transparent drawing canvas) */}
+                {viewportStream && (
+                  <div
+                    className="absolute top-0 left-0 pointer-events-none z-0 overflow-hidden flex items-center justify-center bg-black"
+                    style={{
+                      width: canvasSize.width,
+                      height: canvasSize.height,
+                      opacity: viewportOpacity,
+                    }}
+                  >
+                    <video
+                      ref={viewportVideoRef}
+                      autoPlay
+                      muted
+                      playsInline
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                )}
+
                 {/* Pinned Tracing Reference Video Overlay (rendered behind drawing canvas) */}
                 {isPinnedToCanvas && activeReferenceVideo && (
                   <div 
@@ -1440,7 +1601,7 @@ export default function PaintPage() {
                   onionSkinPrev={onionSkinPrevCanvas}
                   onionSkinNext={onionSkinNextCanvas}
                   onionSkinOpacity={onionSkinOpacity}
-                  hasBackgroundVideo={isPinnedToCanvas && !!activeReferenceVideo}
+                  hasBackgroundVideo={(isPinnedToCanvas && !!activeReferenceVideo) || Boolean(viewportStream)}
                 />
 
                 {workspaceMode === 'storyboard' && (

@@ -262,22 +262,27 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                         isMoodboardPage ? "h-svh overflow-hidden" : "min-h-screen"
                     )}>
                         <MemberIntroPromoBanner />
-                        <Suspense fallback={null}>
-                            <GlassHeader />
-                        </Suspense>
-                        <main className={cn(
-                            "flex-1 transition-all duration-300 ease-in-out",
-                            isMoodboardPage && "h-full overflow-hidden flex flex-col",
-                            (!isMoodboardPage && !isProfilePage && !isCategoriesPage) && "px-4 md:px-8 pb-8"
+                        <div className={cn(
+                            "relative flex flex-col flex-1",
+                            isMoodboardPage && "min-h-0 overflow-hidden"
                         )}>
-                            {/* Each route fades in rather than cutting. Opacity
-                                only, deliberately: a transform here would make this
-                                wrapper the containing block for every position:fixed
-                                element on every page, breaking toolbars and overlays. */}
-                            <div key={pathname} className={cn("animate-fade-in", isMoodboardPage && "h-full flex-1 flex flex-col")}>
-                                {children}
-                            </div>
-                        </main>
+                            <Suspense fallback={null}>
+                                <GlassHeader />
+                            </Suspense>
+                            <main className={cn(
+                                "flex-1 transition-all duration-300 ease-in-out",
+                                isMoodboardPage && "h-full overflow-hidden flex flex-col",
+                                (!isMoodboardPage && !isProfilePage && !isCategoriesPage) && "px-4 md:px-8 pb-8"
+                            )}>
+                                {/* Each route fades in rather than cutting. Opacity
+                                    only, deliberately: a transform here would make this
+                                    wrapper the containing block for every position:fixed
+                                    element on every page, breaking toolbars and overlays. */}
+                                <div key={pathname} className={cn("animate-fade-in", isMoodboardPage && "h-full flex-1 flex flex-col")}>
+                                    {children}
+                                </div>
+                            </main>
+                        </div>
                             
                         {!isMoodboardPage && (
                             <footer className="mt-auto py-10 px-4 border-t border-white/[0.06] bg-gradient-to-b from-transparent to-black/30 flex flex-col items-center gap-4 text-center">

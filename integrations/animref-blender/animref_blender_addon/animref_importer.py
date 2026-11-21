@@ -167,12 +167,22 @@ def import_to_3d_empty(
     obj_name = f"AnimRef_{clean_name(title)}"
     empty = bpy.data.objects.new(obj_name, None)
     empty.empty_display_type = "IMAGE"
-    empty.empty_display_size = 4.0
+    empty.empty_display_size = 5.0
     empty.data = img
-    empty.location = (0.0, 3.0, 2.0)
+    cursor_loc = getattr(getattr(context.scene, "cursor", None), "location", None)
+    if cursor_loc is not None:
+        empty.location = (float(cursor_loc[0]), float(cursor_loc[1]), float(cursor_loc[2]) + 2.0)
+    else:
+        empty.location = (0.0, 0.0, 2.0)
     empty.rotation_euler = (math.radians(90.0), 0.0, 0.0)
     empty.use_empty_image_alpha = True
     empty.color = (1.0, 1.0, 1.0, max(0.05, min(1.0, float(opacity))))
+    if hasattr(empty, "show_empty_image_perspective"):
+        empty.show_empty_image_perspective = True
+    if hasattr(empty, "show_empty_image_orthographic"):
+        empty.show_empty_image_orthographic = True
+    if hasattr(empty, "show_empty_image_only_axis_aligned"):
+        empty.show_empty_image_only_axis_aligned = False
     empty["animref_managed"] = True
     empty["animref_title"] = title
 
@@ -184,7 +194,7 @@ def import_to_3d_empty(
         iu.use_cyclic = True
         frame_count = getattr(img, "frame_duration", 0) or (int(round(duration_sec * fps)) if duration_sec > 0 else 250)
         iu.frame_duration = max(1, int(frame_count))
-        iu.frame_start = int(context.scene.frame_current) if start_at_current_frame else int(context.scene.frame_start)
+        iu.frame_start = int(context.scene.frame_current) if start_at_current_frame else 1
         iu.frame_offset = 0
 
     if face_camera and context.scene.camera:
@@ -200,6 +210,20 @@ def import_to_3d_empty(
         empty.select_set(True)
         if hasattr(context, "view_layer") and context.view_layer:
             context.view_layer.objects.active = empty
+            context.view_layer.update()
+        # Auto-frame the new reference plane in the active 3D Viewport so it's immediately visible
+        for win in bpy.context.window_manager.windows:
+            for area in win.screen.areas:
+                if area.type == "VIEW_3D":
+                    region = next((r for r in area.regions if r.type == "WINDOW"), None)
+                    if region and hasattr(bpy.context, "temp_override"):
+                        with bpy.context.temp_override(window=win, area=area, region=region):
+                            try:
+                                bpy.ops.view3d.view_selected()
+                            except Exception:
+                                pass
+                    area.tag_redraw()
+                    break
     except Exception:
         pass
     _redraw_viewports()

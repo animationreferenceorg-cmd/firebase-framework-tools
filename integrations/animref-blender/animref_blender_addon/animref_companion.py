@@ -92,352 +92,420 @@ STUDIO_HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>AnimationReference.org Studio — Blender</title>
+<title>Animation Reference Studio — Blender</title>
 <style>
   :root {
-    --bg: #09090e;
-    --panel: #111119;
-    --card: #161622;
-    --border: rgba(255,255,255,0.08);
-    --text: #f4f4f5;
-    --muted: #a1a1aa;
+    --canvas: #f7f6f2;
+    --surface: #ffffff;
+    --surface-2: #f1efe9;
+    --border: #e7e5e4;
+    --ink: #0c0a09;
+    --muted: #78716c;
     --accent: #7c3aed;
-    --accent-hover: #8b5cf6;
-    --emerald: #10b981;
+    --accent-hover: #6d28d9;
+    --emerald: #059669;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    background: var(--bg);
-    color: var(--text);
+    background: var(--canvas);
+    color: var(--ink);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
     height: 100vh;
     display: flex;
-    flex-direction: column;
     overflow: hidden;
     user-select: none;
   }
-  /* Header */
-  header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
+  /* Left Sidebar (matches Maya SidebarNavPanel) */
+  aside.sidebar {
+    width: 210px;
     flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 14px 10px;
+    gap: 6px;
+    overflow-y: auto;
   }
   .brand {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-weight: 800;
-    font-size: 13px;
-    letter-spacing: -0.2px;
-    white-space: nowrap;
+    padding: 4px 8px 12px;
+    border-bottom: 1px solid #f0eee8;
+    margin-bottom: 4px;
   }
-  .brand-dot {
-    width: 10px; height: 10px; border-radius: 50%;
-    background: linear-gradient(135deg, #a855f7, #f97316);
+  .brand-circle {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #0c0a09; color: #fff;
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 900; flex-shrink: 0;
   }
-  .badge-blender {
-    font-size: 9px; font-weight: 800; text-transform: uppercase;
+  .brand-name { font-weight: 800; font-size: 12px; letter-spacing: -0.2px; color: #0c0a09; }
+  .badge-host {
+    font-size: 8px; font-weight: 800; text-transform: uppercase;
     padding: 2px 6px; border-radius: 6px;
-    background: rgba(249,115,22,0.18); color: #fdba74; border: 1px solid rgba(249,115,22,0.35);
+    background: #eceae3; color: #57534e; margin-left: auto;
   }
-  .tabs {
-    display: flex; gap: 4px; background: rgba(255,255,255,0.04);
-    padding: 3px; border-radius: 10px; border: 1px solid var(--border);
+  .nav-item {
+    display: flex; align-items: center; gap: 9px;
+    width: 100%; border: none; background: transparent;
+    color: #44403c; padding: 8px 10px; border-radius: 10px;
+    font-size: 12px; font-weight: 700; cursor: pointer; text-align: left;
+    transition: all .14s;
   }
-  .tab-btn {
-    border: none; background: transparent; color: var(--muted);
-    padding: 5px 11px; border-radius: 7px; font-size: 12px; font-weight: 700;
-    cursor: pointer; transition: all .15s;
+  .nav-item:hover { background: #f5f5f0; color: #0c0a09; }
+  .nav-item.active { background: #0c0a09; color: #ffffff; }
+  .sidebar-section {
+    font-size: 9px; font-weight: 800; letter-spacing: 1.2px;
+    color: #a8a29e; text-transform: uppercase;
+    padding: 12px 10px 4px;
   }
-  .tab-btn:hover { color: #fff; }
-  .tab-btn.active { background: var(--accent); color: #fff; }
-  .search-wrap {
-    flex: 1; display: flex; align-items: center; gap: 6px;
-    background: #0b0b12; border: 1px solid var(--border);
-    border-radius: 10px; padding: 0 10px; height: 32px;
+  .board-item {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; border: none; background: transparent;
+    color: #57534e; padding: 6px 10px; border-radius: 8px;
+    font-size: 11px; font-weight: 600; cursor: pointer; text-align: left;
   }
-  .search-wrap input {
-    flex: 1; background: transparent; border: none; outline: none;
-    color: #fff; font-size: 12px;
+  .board-item:hover { background: #f5f5f0; color: #0c0a09; }
+  .board-item.active { background: #eceae3; color: #0c0a09; font-weight: 800; }
+  .board-count { font-size: 10px; color: #a8a29e; font-weight: 700; }
+  .sidebar-footer {
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid #f0eee8;
+    display: flex; flex-direction: column; gap: 6px;
   }
-  .acct-area { display: flex; align-items: center; gap: 6px; margin-left: auto; }
-  .btn {
-    border: 1px solid var(--border); background: rgba(255,255,255,0.06);
-    color: #fff; padding: 6px 11px; border-radius: 9px; font-size: 11px; font-weight: 700;
-    cursor: pointer; transition: all .15s; white-space: nowrap;
-  }
-  .btn:hover { background: rgba(255,255,255,0.13); }
-  .btn-primary { background: var(--accent); border-color: rgba(167,139,250,0.4); }
-  .btn-primary:hover { background: var(--accent-hover); }
-  .btn-emerald { background: #059669; border-color: rgba(16,185,129,0.4); }
-  .btn-emerald:hover { background: #047857; }
-  .btn-danger { background: rgba(239,68,68,0.15); color: #fca5a5; border-color: rgba(239,68,68,0.3); }
-  .btn-danger:hover { background: rgba(239,68,68,0.3); color: #fff; }
 
-  /* Filter chips bar */
-  .subbar {
-    display: flex; align-items: center; gap: 6px;
-    padding: 8px 14px; background: #0d0d14;
+  /* Main Workspace */
+  .workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--canvas);
+  }
+  header.ws-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 18px;
+    background: var(--surface);
     border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .ws-title {
+    font-size: 16px; font-weight: 800; color: #0c0a09;
+    letter-spacing: -0.3px; white-space: nowrap;
+  }
+  .search-pill {
+    flex: 1; max-width: 380px;
+    display: flex; align-items: center; gap: 6px;
+    background: #f5f5f0; border: 1px solid #e7e5e4;
+    border-radius: 999px; padding: 0 14px; height: 34px;
+  }
+  .search-pill input {
+    flex: 1; border: none; background: transparent; outline: none;
+    font-size: 12px; color: #0c0a09;
+  }
+  .btn {
+    border: 1px solid #e5e5e0; background: #ffffff;
+    color: #1c1917; padding: 6px 12px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; cursor: pointer;
+    transition: all .14s; white-space: nowrap;
+  }
+  .btn:hover { background: #f5f5f0; border-color: #d6d3d1; }
+  .btn-dark { background: #0c0a09; color: #ffffff; border-color: #0c0a09; }
+  .btn-dark:hover { background: #292524; }
+  .btn-violet { background: var(--accent); color: #ffffff; border-color: var(--accent); }
+  .btn-violet:hover { background: var(--accent-hover); }
+  .btn-emerald { background: var(--emerald); color: #ffffff; border-color: var(--emerald); }
+  .btn-emerald:hover { background: #047857; }
+  .btn-danger { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+  .btn-danger:hover { background: #dc2626; color: #fff; }
+
+  .tag-bar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 18px; background: var(--canvas);
+    border-bottom: 1px solid #eceae3;
     overflow-x: auto; flex-shrink: 0;
   }
   .chip {
-    border: 1px solid var(--border); background: rgba(255,255,255,0.04);
-    color: var(--muted); padding: 4px 10px; border-radius: 999px;
-    font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap;
+    border: 1px solid #e5e5e0; background: #ffffff;
+    color: #57534e; padding: 4px 12px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
   }
-  .chip:hover { color: #fff; border-color: rgba(255,255,255,0.2); }
-  .chip.active { background: rgba(124,58,237,0.25); color: #ddd6fe; border-color: rgba(167,139,250,0.5); }
+  .chip:hover { border-color: #0c0a09; color: #0c0a09; }
+  .chip.active { background: #0c0a09; color: #ffffff; border-color: #0c0a09; }
 
-  /* Main content */
-  main { flex: 1; overflow-y: auto; padding: 14px; position: relative; }
+  main { flex: 1; overflow-y: auto; padding: 16px 18px; }
+
+  /* Pure Edge-to-Edge Rounded Masonry Cards (matches Maya PinterestClipCardWidget) */
   .masonry {
-    columns: 4 190px;
+    columns: 4 175px;
     column-gap: 12px;
   }
   .card {
     break-inside: avoid;
     margin-bottom: 12px;
     position: relative;
-    border-radius: 13px;
+    border-radius: 12px;
     overflow: hidden;
-    background: var(--card);
-    border: 1px solid var(--border);
+    background: #e7e5e4;
     cursor: pointer;
-    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    transition: transform .18s ease, box-shadow .18s ease;
   }
   .card:hover {
     transform: translateY(-2px);
-    border-color: rgba(167,139,250,0.55);
-    box-shadow: 0 12px 28px rgba(0,0,0,0.55);
+    box-shadow: 0 12px 26px rgba(12,10,9,0.16);
   }
   .card-media {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 10;
-    background: #06060a;
-    overflow: hidden;
+    position: relative; width: 100%; background: #1c1917; overflow: hidden;
   }
-  .card-media img, .card-media video {
-    width: 100%; height: 100%; object-fit: cover; display: block;
-  }
+  .card-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .card-media video {
-    position: absolute; inset: 0; opacity: 0; transition: opacity .2s;
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    opacity: 0; transition: opacity .18s;
   }
   .card:hover .card-media video.playing { opacity: 1; }
   .card-overlay {
     position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.85) 100%);
-    opacity: 0; transition: opacity .18s;
+    background: linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0) 48%, rgba(0,0,0,0.82) 100%);
+    opacity: 0; transition: opacity .16s;
     display: flex; flex-direction: column; justify-content: space-between;
     padding: 8px;
   }
   .card:hover .card-overlay { opacity: 1; }
-  .card-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
-  .card-cat {
-    font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
-    background: rgba(0,0,0,0.65); color: #e4e4e7; border: 1px solid rgba(255,255,255,0.12);
+  .card-top { display: flex; justify-content: flex-end; gap: 5px; }
+  .pill-import {
+    background: #0c0a09; color: #fff; border: 1px solid rgba(255,255,255,0.28);
+    border-radius: 999px; padding: 4px 10px; font-size: 10px; font-weight: 800; cursor: pointer;
   }
+  .pill-import:hover { background: #fff; color: #0c0a09; }
   .card-bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; }
   .card-title { font-size: 11px; font-weight: 700; color: #fff; line-height: 1.25; }
-  .icon-btn {
-    width: 28px; height: 28px; border-radius: 50%;
-    border: 1px solid rgba(255,255,255,0.2); background: rgba(12,10,18,0.85);
-    color: #fff; font-size: 13px; cursor: pointer; display: grid; place-items: center;
-    flex-shrink: 0;
+  .fs-btn {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(12,10,9,0.82); color: #fff;
+    border: 1px solid rgba(255,255,255,0.35);
+    font-size: 12px; cursor: pointer; display: grid; place-items: center; flex-shrink: 0;
   }
-  .icon-btn:hover { background: var(--accent); border-color: #c4b5fd; }
+  .fs-btn:hover { background: var(--accent); border-color: #c4b5fd; }
 
-  /* Full-Window Studio Video Player Screen (No extra pop-out!) */
+  /* Full-Panel Studio Video Player (matches Maya modernized dark player inside light studio!) */
   #studioScreen {
-    display: none;
-    flex-direction: column;
-    height: 100%;
-    gap: 12px;
+    display: none; flex-direction: column; height: 100%; gap: 12px;
   }
   #studioScreen.open { display: flex; }
-  .studio-top {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  }
   .player-shell {
-    background: #0d0d13; border: 1px solid #242432; border-radius: 14px;
-    padding: 10px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 260px;
+    background: #0e0e13; border: 1px solid #242430; border-radius: 14px;
+    padding: 10px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 280px;
   }
   .player-stage {
-    flex: 1; background: #000; border-radius: 10px; overflow: hidden;
-    display: flex; align-items: center; justify-content: center; position: relative; min-height: 200px;
+    flex: 1; background: #050508; border-radius: 10px; overflow: hidden;
+    display: flex; align-items: center; justify-content: center; min-height: 220px;
   }
   .player-stage video, .player-stage img {
-    max-width: 100%; max-height: 100%; width: 100%; height: 100%; object-fit: contain;
+    width: 100%; height: 100%; object-fit: contain;
   }
   .scrubber { width: 100%; accent-color: #8b5cf6; cursor: pointer; }
-  .transport {
-    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  .transport { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .yt-btn {
+    background: rgba(255,255,255,0.07); color: #e4e4e7;
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+    padding: 4px 9px; font-size: 11px; font-weight: 700; cursor: pointer;
   }
+  .yt-btn:hover { background: rgba(255,255,255,0.16); color: #fff; }
+  .play-pill {
+    width: 32px; height: 28px; border-radius: 14px; border: none;
+    background: #7c3aed; color: #fff; font-weight: 800; cursor: pointer;
+  }
+  .play-pill:hover { background: #8b5cf6; }
   .frame-pill {
-    font-family: ui-monospace, SFMono-Regular, monospace;
-    font-size: 11px; font-weight: 700; color: #c4b5fd;
-    background: rgba(124,58,237,0.18); padding: 3px 8px; border-radius: 7px;
+    font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700;
+    color: #c4b5fd; background: rgba(124,58,237,0.22); padding: 3px 8px; border-radius: 7px;
   }
-  .import-bar {
-    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    background: var(--panel); border: 1px solid var(--border);
-    border-radius: 12px; padding: 10px 12px;
+  .placement-card {
+    background: #ffffff; border: 1px solid #e7e5e4; border-radius: 12px;
+    padding: 12px 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   }
-  select, input[type="text"], input[type="number"] {
-    background: #0b0b12; color: #fff; border: 1px solid var(--border);
-    border-radius: 8px; padding: 5px 8px; font-size: 11px;
+  select, input[type="text"] {
+    background: #f5f5f0; color: #0c0a09; border: 1px solid #e5e5e0;
+    border-radius: 8px; padding: 6px 10px; font-size: 11px; font-weight: 600;
   }
 
-  /* Scene & Playblast View */
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  @media (max-width: 720px) { .two-col { grid-template-columns: 1fr; } }
+  /* Playblast & Scene Panel Cards */
   .panel-card {
-    background: var(--panel); border: 1px solid var(--border);
-    border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px;
+    background: #ffffff; border: 1px solid #e7e5e4; border-radius: 14px;
+    padding: 16px; display: flex; flex-direction: column; gap: 12px;
+    margin-bottom: 14px;
   }
-  .panel-card h3 { font-size: 13px; font-weight: 800; color: #fff; }
+  .panel-card h3 { font-size: 14px; font-weight: 800; color: #0c0a09; }
   .ref-row {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    padding: 8px 10px; background: var(--card); border: 1px solid var(--border);
+    padding: 8px 12px; background: #f7f6f2; border: 1px solid #e7e5e4;
     border-radius: 10px; font-size: 11px;
   }
   .toast {
     position: fixed; bottom: 16px; right: 16px;
-    background: #181826; color: #fff; border: 1px solid rgba(167,139,250,0.45);
-    padding: 10px 14px; border-radius: 12px; font-size: 12px; font-weight: 600;
-    box-shadow: 0 12px 32px rgba(0,0,0,0.6); opacity: 0; pointer-events: none;
+    background: #0c0a09; color: #fff;
+    padding: 10px 16px; border-radius: 12px; font-size: 12px; font-weight: 700;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.25); opacity: 0; pointer-events: none;
     transition: opacity .2s; z-index: 999;
   }
   .toast.show { opacity: 1; }
 </style>
 </head>
 <body>
-  <header>
+  <aside class="sidebar">
     <div class="brand">
-      <span class="brand-dot"></span>
-      <span>AnimRef Studio</span>
-      <span class="badge-blender">Blender</span>
-    </div>
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="explore">Explore</button>
-      <button class="tab-btn" data-tab="saved">Saved</button>
-      <button class="tab-btn" data-tab="boards">Boards</button>
-      <button class="tab-btn" data-tab="scene">Scene &amp; Playblast</button>
-    </div>
-    <div class="search-wrap" id="searchWrap">
-      <input id="searchInput" type="text" placeholder="Search walk cycle, combat, acting..." />
-    </div>
-    <div class="acct-area" id="acctArea"></div>
-  </header>
-
-  <div class="subbar" id="catBar">
-    <button class="chip active" data-tag="all">All</button>
-    <button class="chip" data-tag="walk">Walk Cycle</button>
-    <button class="chip" data-tag="run">Run Cycle</button>
-    <button class="chip" data-tag="combat">Combat</button>
-    <button class="chip" data-tag="acting">Acting</button>
-    <button class="chip" data-tag="parkour">Parkour</button>
-    <button class="chip" data-tag="creature">Creature</button>
-    <button class="chip" data-tag="fx">FX</button>
-  </div>
-
-  <main>
-    <!-- Grid View -->
-    <div id="gridView">
-      <div class="masonry" id="cardGrid"></div>
+      <div class="brand-circle">A</div>
+      <span class="brand-name">AnimRef</span>
+      <span class="badge-host">BLENDER</span>
     </div>
 
-    <!-- Full-Window Studio Video Player -->
-    <div id="studioScreen">
-      <div class="studio-top">
-        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-          <button class="btn" id="backToGridBtn">← Back</button>
-          <span id="studioTitle" style="font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
-        </div>
-        <button class="btn btn-primary" id="studioImportBtn">+ Import to Blender</button>
+    <button class="nav-item active" data-view="boards">📁 &nbsp;Moodboards</button>
+    <button class="nav-item" data-view="explore">🧭 &nbsp;Explore</button>
+    <button class="nav-item" data-view="playblast">🎬 &nbsp;Playblast</button>
+    <button class="nav-item" data-view="account">👤 &nbsp;Account</button>
+
+    <div class="sidebar-section">Your Boards</div>
+    <div id="boardsSidebarList" style="display:flex;flex-direction:column;gap:2px;">
+      <button class="board-item active" data-board="__all_saves__">
+        <span>All saves</span>
+      </button>
+    </div>
+
+    <div class="sidebar-footer" id="sidebarAcctFooter"></div>
+  </aside>
+
+  <div class="workspace">
+    <header class="ws-header">
+      <span class="ws-title" id="wsTitle">All saves</span>
+      <div class="search-pill">
+        <span style="color:#a8a29e;font-size:12px;">🔍</span>
+        <input id="searchInput" type="text" placeholder="Search references..." />
       </div>
-      <div class="player-shell">
-        <div class="player-stage" id="playerStage">
-          <video id="studioVideo" loop playsinline></video>
-          <img id="studioImg" style="display:none;" />
-        </div>
-        <input id="scrubber" class="scrubber" type="range" min="0" max="1000" value="0" />
-        <div class="transport">
-          <button class="btn btn-primary" id="playPauseBtn">▶</button>
-          <button class="btn" id="prevFrameBtn">‹ -1f</button>
-          <button class="btn" id="nextFrameBtn">+1f ›</button>
-          <span class="frame-pill" id="frameReadout">0f · 24fps</span>
-          <div style="flex:1;"></div>
-          <button class="btn" id="speedBtn">1.0x</button>
-          <button class="btn" id="loopBtn">↻ Loop</button>
-          <button class="btn" id="openWebBtn">Web ↗</button>
-        </div>
-      </div>
-      <div class="import-bar">
-        <label style="font-size:11px;color:var(--muted);">Mode</label>
-        <select id="importMode">
-          <option value="CAMERA_BG">Camera Background (PiP)</option>
-          <option value="EMPTY_3D">3D Reference Plane</option>
-          <option value="VSE">Video Sequencer (VSE)</option>
-        </select>
-        <label style="font-size:11px;color:var(--muted);">PiP</label>
-        <select id="pipPreset">
-          <option value="TOP_RIGHT">Top-Right</option>
-          <option value="TOP_LEFT">Top-Left</option>
-          <option value="BOTTOM_RIGHT">Bottom-Right</option>
-          <option value="BOTTOM_LEFT">Bottom-Left</option>
-          <option value="FULL">Full Frame</option>
-        </select>
-        <label style="font-size:11px;color:var(--muted);">Opacity</label>
-        <input id="importOpacity" type="range" min="0.1" max="1" step="0.05" value="0.75" style="width:90px;accent-color:#8b5cf6;" />
-        <label style="font-size:11px;display:flex;align-items:center;gap:4px;">
-          <input id="matchFps" type="checkbox" checked /> Match FPS
-        </label>
-      </div>
+      <button class="btn" id="openStudioBtn">🎬 Studio</button>
+      <button class="btn" id="refreshBtn">↻</button>
+    </header>
+
+    <div class="tag-bar" id="catBar" style="display:none;">
+      <button class="chip active" data-tag="all">All</button>
+      <button class="chip" data-tag="walk">Walk Cycle</button>
+      <button class="chip" data-tag="run">Run Cycle</button>
+      <button class="chip" data-tag="combat">Combat</button>
+      <button class="chip" data-tag="acting">Acting</button>
+      <button class="chip" data-tag="parkour">Parkour</button>
+      <button class="chip" data-tag="creature">Creature</button>
+      <button class="chip" data-tag="fx">FX</button>
     </div>
 
-    <!-- Scene Manager & Playblast View -->
-    <div id="sceneView" style="display:none;">
-      <div class="two-col">
-        <div class="panel-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <h3>Active Blender Scene References</h3>
-            <button class="btn" id="refreshSceneBtn">↻ Refresh</button>
+    <main>
+      <div id="gridView">
+        <div class="masonry" id="cardGrid"></div>
+      </div>
+
+      <!-- Full-Panel Studio Player Screen -->
+      <div id="studioScreen">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+            <button class="btn" id="backToGridBtn">← Back</button>
+            <span id="studioTitle" style="font-weight:800;font-size:14px;color:#0c0a09;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
           </div>
-          <div id="sceneRefList" style="display:flex;flex-direction:column;gap:8px;"></div>
-          <div style="margin-top:8px;">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:700;">Drop Timeline Pose Marker</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;" id="poseMarkerBtns"></div>
+          <button class="btn btn-dark" id="studioImportBtn">+ Import to Blender</button>
+        </div>
+        <div class="player-shell">
+          <div class="player-stage">
+            <video id="studioVideo" loop playsinline></video>
+            <img id="studioImg" style="display:none;" />
+          </div>
+          <input id="scrubber" class="scrubber" type="range" min="0" max="1000" value="0" />
+          <div class="transport">
+            <button class="play-pill" id="playPauseBtn">▶</button>
+            <button class="yt-btn" id="prevFrameBtn">‹</button>
+            <button class="yt-btn" id="nextFrameBtn">›</button>
+            <span class="frame-pill" id="frameReadout">0f · 24fps</span>
+            <div style="flex:1;"></div>
+            <button class="yt-btn" id="speedBtn">1.0x</button>
+            <button class="yt-btn" id="loopBtn">↻</button>
+            <button class="yt-btn" id="openWebBtn">Web ↗</button>
           </div>
         </div>
+        <div class="placement-card">
+          <strong style="font-size:11px;color:#57534e;">Blender Placement:</strong>
+          <select id="importMode">
+            <option value="CAMERA_BG">Camera Background (PiP)</option>
+            <option value="EMPTY_3D">3D Reference Plane</option>
+            <option value="VSE">Video Sequencer (VSE)</option>
+          </select>
+          <select id="pipPreset">
+            <option value="TOP_RIGHT">PiP: Top-Right</option>
+            <option value="TOP_LEFT">PiP: Top-Left</option>
+            <option value="BOTTOM_RIGHT">PiP: Bottom-Right</option>
+            <option value="BOTTOM_LEFT">PiP: Bottom-Left</option>
+            <option value="FULL">Full Frame</option>
+          </select>
+          <label style="font-size:11px;color:#57534e;">Opacity</label>
+          <input id="importOpacity" type="range" min="0.1" max="1" step="0.05" value="0.75" style="width:85px;accent-color:#0c0a09;" />
+          <label style="font-size:11px;color:#57534e;display:flex;align-items:center;gap:4px;">
+            <input id="matchFps" type="checkbox" checked /> Match FPS
+          </label>
+        </div>
+      </div>
+
+      <!-- Playblast & Active Scene View -->
+      <div id="playblastView" style="display:none;">
         <div class="panel-card">
-          <h3>Viewport Playblast &amp; Auto-Post</h3>
-          <div style="display:flex;gap:8px;">
-            <input id="pbTitle" type="text" placeholder="Playblast title..." style="flex:1;" />
+          <h3>Viewport Playblast &amp; Auto-Post to AnimationReference.org</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <input id="pbTitle" type="text" placeholder="Playblast title (e.g. Hero Walk Pass 02)" style="flex:1;min-width:180px;" />
             <select id="pbFormat">
               <option value="MP4">MP4 (H.264)</option>
               <option value="AVI">AVI (MJPEG)</option>
             </select>
           </div>
-          <label style="font-size:12px;color:#d4d4d8;display:flex;align-items:center;gap:6px;">
-            <input id="pbAutoPost" type="checkbox" checked /> Auto-post to AnimationReference.org Portfolio &amp; Feed
+          <label style="font-size:12px;color:#44403c;font-weight:600;display:flex;align-items:center;gap:6px;">
+            <input id="pbAutoPost" type="checkbox" checked /> Auto-post to AnimationReference.org Portfolio &amp; Feed right after recording
           </label>
-          <button class="btn btn-emerald" id="recordPbBtn" style="padding:10px;">● Record Blender Playblast</button>
-          <div id="pbResult" style="font-size:11px;color:#a7f3d0;"></div>
+          <button class="btn btn-emerald" id="recordPbBtn" style="padding:10px 16px;font-size:12px;">● Record Blender Playblast</button>
+          <div id="pbResult" style="font-size:11px;color:#047857;font-weight:700;"></div>
+        </div>
+
+        <div class="panel-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h3>Active Blender Scene References</h3>
+            <button class="btn" id="refreshSceneBtn">↻ Refresh Scene</button>
+          </div>
+          <div id="sceneRefList" style="display:flex;flex-direction:column;gap:8px;"></div>
+          <div>
+            <div style="font-size:11px;color:#78716c;margin-bottom:6px;font-weight:700;">Drop Timeline Pose Marker</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;" id="poseMarkerBtns"></div>
+          </div>
         </div>
       </div>
-    </div>
-  </main>
+
+      <!-- Account View -->
+      <div id="accountView" style="display:none;">
+        <div class="panel-card" id="accountCard"></div>
+      </div>
+    </main>
+  </div>
 
   <div class="toast" id="toast"></div>
 
 <script>
-let state = { tab: 'explore', tag: 'all', q: '', items: [], activeClip: null, speeds: [0.25, 0.5, 0.75, 1, 1.5, 2], speedIdx: 3 };
+const RATIOS = [0.78, 0.65, 0.92, 0.70, 0.85];
+let state = {
+  view: 'boards',
+  boardId: '__all_saves__',
+  boards: [],
+  tag: 'all',
+  q: '',
+  items: [],
+  activeClip: null,
+  account: { signed_in: false },
+  speeds: [0.25, 0.5, 0.75, 1, 1.5, 2],
+  speedIdx: 3,
+};
 
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -448,10 +516,7 @@ function showToast(msg) {
 }
 
 async function api(path, opts = {}) {
-  const res = await fetch(path, {
-    headers: { 'Content-Type': 'application/json' },
-    ...opts,
-  });
+  const res = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opts });
   const data = await res.json();
   if (!res.ok || data.error) throw new Error(data.error || 'Request failed');
   return data;
@@ -465,49 +530,110 @@ function previewUrl(v) {
   return u;
 }
 
+async function startBrowserSignIn() {
+  await api('/api/auth/browser', { method: 'POST' });
+  showToast('Opened browser sign-in — will auto-sync!');
+  const poll = setInterval(async () => {
+    const cur = await api('/api/account');
+    if (cur.signed_in) {
+      clearInterval(poll);
+      await loadAccount();
+      await loadBoardsSidebar();
+      await loadItems();
+      showToast('Connected as ' + (cur.display_name || cur.email));
+    }
+  }, 1500);
+  setTimeout(() => clearInterval(poll), 120000);
+}
+
 async function loadAccount() {
   try {
-    const a = await api('/api/account');
-    const el = document.getElementById('acctArea');
-    if (a.signed_in) {
-      el.innerHTML = `<span style="font-size:11px;color:#d4d4d8;font-weight:700;">${a.display_name || a.email}</span>` +
-        (a.is_pro ? `<span class="badge-blender" style="background:rgba(124,58,237,0.25);color:#ddd6fe;border-color:#8b5cf6;">PRO</span>` : '') +
-        `<button class="btn" id="signOutBtn">Sign Out</button>`;
-      document.getElementById('signOutBtn').onclick = async () => {
+    state.account = await api('/api/account');
+    const foot = document.getElementById('sidebarAcctFooter');
+    const card = document.getElementById('accountCard');
+    if (state.account.signed_in) {
+      foot.innerHTML = `<div style="font-size:11px;font-weight:800;color:#0c0a09;padding:0 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${state.account.display_name || state.account.email}</div>`;
+      card.innerHTML = `
+        <h3>Signed in to AnimationReference.org</h3>
+        <p style="font-size:12px;color:#57534e;">Account: <strong>${state.account.display_name || ''}</strong> (${state.account.email || ''})</p>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-dark" onclick="window.open('https://animationreference.org/pricing','_blank')">Manage Pro</button>
+          <button class="btn btn-danger" id="acctSignOutBtn">Sign Out</button>
+        </div>`;
+      document.getElementById('acctSignOutBtn').onclick = async () => {
         await api('/api/auth/signout', { method: 'POST' });
         await loadAccount();
         showToast('Signed out');
       };
     } else {
-      el.innerHTML = `<button class="btn btn-primary" id="signInBtn">Sign In</button>`;
-      document.getElementById('signInBtn').onclick = async () => {
-        await api('/api/auth/browser', { method: 'POST' });
-        showToast('Opened browser sign-in — will auto-sync!');
-        const poll = setInterval(async () => {
-          const cur = await api('/api/account');
-          if (cur.signed_in) {
-            clearInterval(poll);
-            loadAccount();
-            loadItems();
-            showToast('Connected as ' + (cur.display_name || cur.email));
-          }
-        }, 1500);
-        setTimeout(() => clearInterval(poll), 120000);
-      };
+      foot.innerHTML = `<button class="btn btn-dark" id="sideSignInBtn" style="width:100%;">Sign In</button>`;
+      document.getElementById('sideSignInBtn').onclick = startBrowserSignIn;
+      card.innerHTML = `
+        <h3>Connect AnimationReference.org</h3>
+        <p style="font-size:12px;color:#57534e;">Sign in once in your browser to sync your Moodboards, Saved references, and auto-post Blender playblasts.</p>
+        <button class="btn btn-dark" id="acctSignInBtn" style="padding:10px 18px;font-size:12px;align-self:flex-start;">🌐 Sign In with AnimationReference.org</button>`;
+      document.getElementById('acctSignInBtn').onclick = startBrowserSignIn;
     }
   } catch {}
 }
 
+async function loadBoardsSidebar() {
+  const list = document.getElementById('boardsSidebarList');
+  try {
+    const data = await api('/api/boards');
+    state.boards = data.boards || [];
+  } catch {
+    state.boards = [];
+  }
+  list.innerHTML = '';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'board-item' + (state.view === 'boards' && state.boardId === '__all_saves__' ? ' active' : '');
+  allBtn.innerHTML = `<span>All saves</span>`;
+  allBtn.onclick = () => selectBoard('__all_saves__', 'All saves');
+  list.appendChild(allBtn);
+
+  for (const b of state.boards) {
+    const btn = document.createElement('button');
+    btn.className = 'board-item' + (state.view === 'boards' && state.boardId === b.id ? ' active' : '');
+    btn.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${b.name || 'Board'}</span><span class="board-count">${(b.items || []).length}</span>`;
+    btn.onclick = () => selectBoard(b.id, b.name || 'Board');
+    list.appendChild(btn);
+  }
+}
+
+function selectBoard(id, name) {
+  state.view = 'boards';
+  state.boardId = id;
+  document.getElementById('wsTitle').textContent = name;
+  setActiveView('boards');
+  loadBoardsSidebar();
+  loadItems();
+}
+
+function setActiveView(view) {
+  state.view = view;
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  closeStudio(false);
+  document.getElementById('gridView').style.display = (view === 'boards' || view === 'explore') ? 'block' : 'none';
+  document.getElementById('catBar').style.display = view === 'explore' ? 'flex' : 'none';
+  document.getElementById('playblastView').style.display = view === 'playblast' ? 'block' : 'none';
+  document.getElementById('accountView').style.display = view === 'account' ? 'block' : 'none';
+  if (view === 'explore') document.getElementById('wsTitle').textContent = 'Explore Library';
+  if (view === 'playblast') { document.getElementById('wsTitle').textContent = 'Playblast & Scene'; loadSceneRefs(); }
+  if (view === 'account') { document.getElementById('wsTitle').textContent = 'Account'; loadAccount(); }
+}
+
 async function loadItems() {
   const grid = document.getElementById('cardGrid');
-  grid.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:20px;">Loading references...</div>`;
+  grid.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:18px;">Loading references...</div>`;
   try {
-    const qs = new URLSearchParams({ tab: state.tab, tag: state.tag, q: state.q });
+    const tab = state.view === 'explore' ? 'explore' : (state.boardId === '__all_saves__' ? 'saved' : 'board');
+    const qs = new URLSearchParams({ tab, board_id: state.boardId, tag: state.tag, q: state.q });
     const data = await api('/api/items?' + qs.toString());
     state.items = data.items || [];
     renderGrid();
   } catch (e) {
-    grid.innerHTML = `<div style="color:#fca5a5;font-size:12px;padding:20px;">${e.message}</div>`;
+    grid.innerHTML = `<div style="color:#dc2626;font-size:12px;padding:18px;">${e.message}</div>`;
   }
 }
 
@@ -515,31 +641,30 @@ function renderGrid() {
   const grid = document.getElementById('cardGrid');
   grid.innerHTML = '';
   if (!state.items.length) {
-    grid.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:20px;">No references found.</div>`;
+    grid.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:18px;">No references here yet. Try Explore or Sign In!</div>`;
     return;
   }
-  for (const item of state.items) {
+  state.items.forEach((item, idx) => {
     const card = document.createElement('div');
     card.className = 'card';
     const thumb = item.thumbnailUrl || item.posterUrl || '';
     const vUrl = previewUrl(item);
     const isVideo = vUrl && !/\.(png|jpg|jpeg|webp|gif)(\?|$)/i.test(vUrl);
+    const ratio = RATIOS[idx % RATIOS.length];
     card.innerHTML = `
-      <div class="card-media">
+      <div class="card-media" style="aspect-ratio: 1 / ${ratio};">
         ${thumb ? `<img src="${thumb}" loading="lazy" />` : ''}
         ${isVideo ? `<video muted loop playsinline preload="none" data-src="${vUrl}"></video>` : ''}
         <div class="card-overlay">
           <div class="card-top">
-            <span class="card-cat">${item.category || 'Ref'}</span>
-            <button class="btn btn-primary quick-imp" style="padding:3px 8px;font-size:10px;">+ Blender</button>
+            <button class="pill-import">+ Blender</button>
           </div>
           <div class="card-bottom">
-            <div class="card-title">${(item.title || 'Reference').slice(0, 46)}</div>
-            <button class="icon-btn open-studio" title="Open Studio Player">⛶</button>
+            <div class="card-title">${(item.title || 'Reference').slice(0, 44)}</div>
+            <button class="fs-btn" title="Open Studio Video Player">⛶</button>
           </div>
         </div>
-      </div>
-    `;
+      </div>`;
     const vid = card.querySelector('video');
     if (vid) {
       card.addEventListener('mouseenter', () => {
@@ -551,15 +676,15 @@ function renderGrid() {
         vid.classList.remove('playing');
       });
     }
-    card.querySelector('.quick-imp').onclick = (e) => { e.stopPropagation(); importClip(item); };
-    card.querySelector('.open-studio').onclick = (e) => { e.stopPropagation(); openStudio(item); };
-    card.onclick = () => openStudio(item);
+    card.querySelector('.pill-import').onclick = (e) => { e.stopPropagation(); importClip(item); };
+    card.querySelector('.fs-btn').onclick = (e) => { e.stopPropagation(); openStudio(item); };
+    card.onclick = () => importClip(item);
     grid.appendChild(card);
-  }
+  });
 }
 
 async function importClip(item) {
-  showToast('Importing "' + (item.title || 'Reference') + '" into Blender...');
+  showToast('Streaming "' + (item.title || 'Reference') + '" to Blender...');
   try {
     await api('/api/import', {
       method: 'POST',
@@ -571,16 +696,19 @@ async function importClip(item) {
         auto_conform_fps: document.getElementById('matchFps').checked,
       }),
     });
-    showToast('✓ Imported into Blender!');
+    showToast('✓ Added to Blender Viewport!');
   } catch (e) {
     showToast('Error: ' + e.message);
   }
 }
 
 function openStudio(item) {
+  if (!item && state.items.length) item = state.items[0];
+  if (!item) return showToast('Select a reference first');
   state.activeClip = item;
   document.getElementById('gridView').style.display = 'none';
-  document.getElementById('sceneView').style.display = 'none';
+  document.getElementById('playblastView').style.display = 'none';
+  document.getElementById('accountView').style.display = 'none';
   document.getElementById('catBar').style.display = 'none';
   document.getElementById('studioScreen').classList.add('open');
   document.getElementById('studioTitle').textContent = item.title || 'Reference';
@@ -603,11 +731,13 @@ function openStudio(item) {
   }
 }
 
-function closeStudio() {
+function closeStudio(restoreGrid = true) {
   document.getElementById('studioVideo').pause();
   document.getElementById('studioScreen').classList.remove('open');
-  document.getElementById('gridView').style.display = 'block';
-  document.getElementById('catBar').style.display = state.tab === 'explore' ? 'flex' : 'none';
+  if (restoreGrid) {
+    document.getElementById('gridView').style.display = 'block';
+    document.getElementById('catBar').style.display = state.view === 'explore' ? 'flex' : 'none';
+  }
 }
 
 const sVid = document.getElementById('studioVideo');
@@ -618,9 +748,7 @@ sVid.ontimeupdate = () => {
   const fps = (state.activeClip && state.activeClip.fps) || 24;
   document.getElementById('frameReadout').textContent = `${Math.round(sVid.currentTime * fps)}f · ${fps}fps`;
 };
-scrubber.oninput = () => {
-  if (sVid.duration) sVid.currentTime = (scrubber.value / 1000) * sVid.duration;
-};
+scrubber.oninput = () => { if (sVid.duration) sVid.currentTime = (scrubber.value / 1000) * sVid.duration; };
 document.getElementById('playPauseBtn').onclick = () => {
   if (sVid.paused) { sVid.play(); document.getElementById('playPauseBtn').textContent = '❚❚'; }
   else { sVid.pause(); document.getElementById('playPauseBtn').textContent = '▶'; }
@@ -645,11 +773,13 @@ document.getElementById('loopBtn').onclick = () => {
   sVid.loop = !sVid.loop;
   document.getElementById('loopBtn').style.opacity = sVid.loop ? '1' : '0.45';
 };
-document.getElementById('backToGridBtn').onclick = closeStudio;
+document.getElementById('backToGridBtn').onclick = () => closeStudio(true);
+document.getElementById('openStudioBtn').onclick = () => openStudio(state.activeClip);
 document.getElementById('studioImportBtn').onclick = () => state.activeClip && importClip(state.activeClip);
 document.getElementById('openWebBtn').onclick = () => {
   if (state.activeClip && state.activeClip.id) window.open('https://animationreference.org/video/' + state.activeClip.id, '_blank');
 };
+document.getElementById('refreshBtn').onclick = () => { loadBoardsSidebar(); loadItems(); };
 
 async function loadSceneRefs() {
   const list = document.getElementById('sceneRefList');
@@ -657,7 +787,7 @@ async function loadSceneRefs() {
     const data = await api('/api/scene/refs');
     const refs = data.refs || [];
     if (!refs.length) {
-      list.innerHTML = `<div style="font-size:11px;color:var(--muted);">No AnimRef references in scene yet.</div>`;
+      list.innerHTML = `<div style="font-size:11px;color:#78716c;">No AnimRef references in your Blender scene yet.</div>`;
       return;
     }
     list.innerHTML = '';
@@ -672,21 +802,17 @@ async function loadSceneRefs() {
           <button class="btn" data-act="nudge" data-d="1">+1f</button>
           <button class="btn" data-act="flip">Flip</button>
           <button class="btn btn-danger" data-act="delete">✕</button>
-        </div>
-      `;
+        </div>`;
       row.querySelectorAll('button').forEach(b => {
         b.onclick = async () => {
-          await api('/api/scene/action', {
-            method: 'POST',
-            body: JSON.stringify({ action: b.dataset.act, ref_key: r.name, delta: parseInt(b.dataset.d || '0', 10) }),
-          });
+          await api('/api/scene/action', { method: 'POST', body: JSON.stringify({ action: b.dataset.act, ref_key: r.name, delta: parseInt(b.dataset.d || '0', 10) }) });
           loadSceneRefs();
         };
       });
       list.appendChild(row);
     }
   } catch (e) {
-    list.innerHTML = `<div style="font-size:11px;color:#fca5a5;">${e.message}</div>`;
+    list.innerHTML = `<div style="font-size:11px;color:#dc2626;">${e.message}</div>`;
   }
 }
 
@@ -697,7 +823,7 @@ document.getElementById('refreshSceneBtn').onclick = loadSceneRefs;
   b.textContent = lbl;
   b.onclick = async () => {
     await api('/api/scene/action', { method: 'POST', body: JSON.stringify({ action: 'marker', label: lbl }) });
-    showToast('Added marker: ' + lbl);
+    showToast('Added pose marker: ' + lbl);
   };
   document.getElementById('poseMarkerBtns').appendChild(b);
 });
@@ -715,8 +841,8 @@ document.getElementById('recordPbBtn').onclick = async () => {
         auto_upload: document.getElementById('pbAutoPost').checked,
       }),
     });
-    document.getElementById('pbResult').textContent = res.uploaded_url
-      ? '✓ Posted live: ' + res.uploaded_url
+    document.getElementById('pbResult').innerHTML = res.uploaded_url
+      ? `✓ Live on AnimationReference.org: <a href="${res.uploaded_url}" target="_blank" style="color:#047857;">${res.uploaded_url}</a>`
       : '✓ Saved: ' + res.path;
     showToast('✓ Playblast complete!');
   } catch (e) {
@@ -727,23 +853,11 @@ document.getElementById('recordPbBtn').onclick = async () => {
   }
 };
 
-document.querySelectorAll('.tab-btn').forEach(btn => {
+document.querySelectorAll('.nav-item').forEach(btn => {
   btn.onclick = () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    state.tab = btn.dataset.tab;
-    closeStudio();
-    if (state.tab === 'scene') {
-      document.getElementById('gridView').style.display = 'none';
-      document.getElementById('catBar').style.display = 'none';
-      document.getElementById('sceneView').style.display = 'block';
-      loadSceneRefs();
-    } else {
-      document.getElementById('sceneView').style.display = 'none';
-      document.getElementById('gridView').style.display = 'block';
-      document.getElementById('catBar').style.display = state.tab === 'explore' ? 'flex' : 'none';
-      loadItems();
-    }
+    const v = btn.dataset.view;
+    setActiveView(v);
+    if (v === 'boards' || v === 'explore') loadItems();
   };
 });
 
@@ -760,11 +874,10 @@ let searchTimer = null;
 document.getElementById('searchInput').oninput = (e) => {
   state.q = e.target.value;
   clearTimeout(searchTimer);
-  searchTimer = setTimeout(loadItems, 240);
+  searchTimer = setTimeout(loadItems, 220);
 };
 
-loadAccount();
-loadItems();
+loadAccount().then(() => { loadBoardsSidebar(); loadItems(); });
 </script>
 </body>
 </html>
@@ -803,16 +916,42 @@ class _StudioHandler(http.server.BaseHTTPRequestHandler):
             self._send_json(animref_auth.get_account_summary())
             return
 
+        if parsed.path == "/api/boards":
+            try:
+                boards = animref_api.fetch_moodboards() if animref_auth.is_signed_in() else []
+                self._send_json({"boards": boards})
+            except Exception:
+                self._send_json({"boards": []})
+            return
+
         if parsed.path == "/api/items":
             qs = urllib.parse.parse_qs(parsed.query)
             tab = (qs.get("tab") or ["explore"])[0]
+            board_id = (qs.get("board_id") or [""])[0]
             tag = (qs.get("tag") or ["all"])[0]
             q = (qs.get("q") or [""])[0]
             try:
-                if tab == "saved":
-                    vids = animref_api.fetch_saved_references()
-                    if not vids:
-                        vids = animref_api.fetch_moodboard_items()
+                if tab == "board" and board_id:
+                    boards = animref_api.fetch_moodboards()
+                    vids = []
+                    for b in boards:
+                        if str(b.get("id")) == board_id:
+                            vids = b.get("items") or []
+                            break
+                elif tab == "saved":
+                    saved = animref_api.fetch_saved_references() if animref_auth.is_signed_in() else []
+                    board_items = animref_api.fetch_moodboard_items() if animref_auth.is_signed_in() else []
+                    seen = set()
+                    vids = []
+                    for item in saved + board_items:
+                        key = str(item.get("id") or item.get("videoUrl") or "")
+                        if key and key in seen:
+                            continue
+                        if key:
+                            seen.add(key)
+                        vids.append(item)
+                    if not vids and not animref_auth.is_signed_in():
+                        vids = animref_api.fetch_catalog(force_refresh=False)
                 elif tab == "boards":
                     vids = animref_api.fetch_moodboard_items()
                 else:

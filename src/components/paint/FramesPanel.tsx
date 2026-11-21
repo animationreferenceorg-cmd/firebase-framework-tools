@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import type { Frame, CanvasSize } from '@/lib/paint/types';
 import { 
   Play, 
@@ -49,6 +49,8 @@ interface FramesPanelProps {
   onExtendFrame?: () => void;
   onMergeFrames?: () => void;
   onSetPoseType?: (frameIdx: number, type: 'key' | 'extreme' | 'breakdown' | 'inbetween') => void;
+  onSetFrameHold?: (frameIdx: number, holdFrames: number) => void;
+  onApplyGlobalHold?: (holdFrames: number) => void;
   isPlaying: boolean;
   onTogglePlay: () => void;
   fps: number;
@@ -97,6 +99,8 @@ export function FramesPanel({
   onLoopStartChange,
   onLoopEndChange,
   onSetPoseType,
+  onSetFrameHold,
+  onApplyGlobalHold,
   audioBuffer,
   audioFileName,
   onUploadAudio,
@@ -210,17 +214,45 @@ export function FramesPanel({
         onAddFrame();
       } else if (e.key === 'F5') {
         e.preventDefault();
-        onDuplicateFrame();
+        if (e.shiftKey && onSetFrameHold) {
+          const curHold = frames[activeFrameIndex]?.holdFrames ?? 1;
+          onSetFrameHold(activeFrameIndex, Math.max(1, curHold - 1));
+        } else if (onExtendFrame) {
+          onExtendFrame();
+        } else {
+          onDuplicateFrame();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeFrameIndex, frames.length, loopStart, loopEnd, onSelectFrame, onAddFrame, onDuplicateFrame]);
+  }, [activeFrameIndex, frames, loopStart, loopEnd, onSelectFrame, onAddFrame, onDuplicateFrame, onExtendFrame, onSetFrameHold]);
 
-  // Scaled Cel Cell Dimensions
+  // Scaled Cel Cell Dimensions (unit frame width + 4px gap-1)
   const cellWidth = Math.max(24, Math.round(36 * timelineZoom));
+  const unitStride = cellWidth + 4;
 
-  // High-Performance RAF Scrubbing
+  // Callipeg / Toon Boom Exposure Sheet Spans (cumulative frame ticks per cel)
+  const { celSpans, totalExposureFrames, tickToCelIndex } = useMemo(() => {
+    const spans: Array<{ startTick: number; endTick: number; hold: number }> = [];
+    const lookup: number[] = [];
+    let cursor = 0;
+    for (let i = 0; i < frames.length; i++) {
+      const hold = Math.max(1, frames[i]?.holdFrames ?? 1);
+      spans.push({ startTick: cursor, endTick: cursor + hold - 1, hold });
+      for (let t = 0; t < hold; t++) {
+        lookup.push(i);
+      }
+      cursor += hold;
+    }
+    return { celSpans: spans, totalExposureFrames: Math.max(1, cursor), tickToCelIndex: lookup };
+  }, [frames]);
+
+  const activeHold = Math.max(1, frames[activeFrameIndex]?.holdFrames ?? 1);
+  const activeSpan = celSpans[activeFrameIndex] ?? { startTick: 0, endTick: 0, hold: 1 };
+  const totalDurationSec = (totalExposureFrames / Math.max(1, fps)).toFixed(1);
+
+  // High-Performance RAF Scrubbing across cumulative exposure widths
   const scrubRafRef = useRef<number | null>(null);
 
   const scrubToPosition = useCallback((clientX: number) => {
@@ -232,12 +264,13 @@ export function FramesPanel({
       // Account for track label header width (176px / pl-44) and stage container scroll position
       const trackOffsetLeft = 176;
       const scrollX = (clientX - rect.left - trackOffsetLeft) + container.scrollLeft;
-      const targetIdx = Math.max(0, Math.min(frames.length - 1, Math.floor(scrollX / cellWidth)));
+      const tickIdx = Math.max(0, Math.min(tickToCelIndex.length - 1, Math.floor(scrollX / unitStride)));
+      const targetIdx = tickToCelIndex[tickIdx] ?? 0;
       if (targetIdx !== activeFrameIndex) {
         onSelectFrame(targetIdx);
       }
     });
-  }, [activeFrameIndex, cellWidth, frames.length, onSelectFrame]);
+  }, [activeFrameIndex, unitStride, tickToCelIndex, onSelectFrame]);
 
   const handleRulerPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
@@ -286,7 +319,7 @@ export function FramesPanel({
   useEffect(() => {
     const el = stageContainerRef.current;
     if (!el) return;
-    const activeCelPos = activeFrameIndex * cellWidth;
+    const activeCelPos = activeSpan.startTick * unitStride;
     const viewLeft = el.scrollLeft;
     const viewRight = el.scrollLeft + el.clientWidth - 200; // Account for track label width
 
@@ -296,7 +329,7 @@ export function FramesPanel({
         behavior: 'smooth',
       });
     }
-  }, [activeFrameIndex, cellWidth]);
+  }, [activeSpan.startTick, unitStride]);
 
   const [isDraggingSlider, setIsDraggingSlider] = useState(false);
 
@@ -337,7 +370,7 @@ export function FramesPanel({
     window.addEventListener('pointerup', onUp, { passive: false });
   };
 
-  const maxTimelineTicks = Math.max(24, frames.length + 12);
+  const maxTimelineTicks = Math.max(24, totalExposureFrames + 12);
   const rulerTicks = Array.from({ length: maxTimelineTicks }, (_, idx) => idx);
 
   return (
@@ -347,94 +380,139 @@ export function FramesPanel({
       className="w-full bg-[#101016]/95 backdrop-blur-3xl border-t border-white/10 select-none shadow-[0_-20px_50px_rgba(0,0,0,0.8)] z-40 flex flex-col shrink-0"
     >
       
-      {/* ──────────────── CLEAN TOP TIMELINE TOOLBAR ──────────────── */}
-      <div className="h-12 px-6 border-b border-white/10 flex items-center justify-between bg-[#14141d]/90">
+      {/* ──────────────── OPTIMIZED ANIMATION TIMELINE TOOLBAR ──────────────── */}
+      <div className="min-h-12 px-4 py-1.5 border-b border-white/10 flex flex-wrap items-center justify-between gap-2 bg-[#14141d]/95">
         
-        {/* 1. PLAYBACK & FRAME NAVIGATION */}
-        <div className="flex items-center gap-3">
+        {/* 1. PLAYBACK, FRAME STEPPER & FPS */}
+        <div className="flex items-center gap-2">
           <button
             onClick={onTogglePlay}
             className={cn(
-              "h-8 px-4 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-md border",
+              "h-8 px-3.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md border",
               isPlaying 
                 ? "bg-amber-500 hover:bg-amber-400 text-black border-amber-300" 
                 : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white border-purple-400/40"
             )}
+            title="Play / Pause Animation (Space)"
           >
             {isPlaying ? <Pause className="h-3.5 w-3.5 fill-black" /> : <Play className="h-3.5 w-3.5 fill-white" />}
-            <span>{isPlaying ? 'Pause' : 'Play (Space)'}</span>
+            <span>{isPlaying ? 'Pause' : 'Play'}</span>
           </button>
 
-          {/* Stepper & Counter Pill */}
-          <div className="flex items-center gap-2">
-            {/* Timeline Cel Zoom Stepper */}
-            <div className="flex items-center gap-1 bg-white/5 border border-white/10 px-2 py-1 rounded-xl shadow-inner text-xs font-mono">
-              <button
-                onClick={() => setTimelineZoom((z) => Math.max(0.5, Math.round((z - 0.2) * 10) / 10))}
-                className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white font-bold cursor-pointer"
-                title="Zoom Out Cel Tracks (-)"
-              >
-                -
-              </button>
-              <button
-                onClick={() => setTimelineZoom(1.0)}
-                className="text-purple-300 hover:text-white font-bold px-1 min-w-[36px] text-center cursor-pointer"
-                title="Reset Zoom to 100%"
-              >
-                {Math.round(timelineZoom * 100)}%
-              </button>
-              <button
-                onClick={() => setTimelineZoom((z) => Math.min(2.5, Math.round((z + 0.2) * 10) / 10))}
-                className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white font-bold cursor-pointer"
-                title="Zoom In Cel Tracks (+)"
-              >
-                +
-              </button>
-            </div>
+          {/* Frame Counter & Arrow Steppers */}
+          <div className="flex items-center gap-0.5 bg-white/5 border border-white/10 rounded-xl p-0.5">
+            <button
+              onClick={() => onSelectFrame(Math.max(loopStart, activeFrameIndex - 1))}
+              className="h-7 w-7 rounded-lg hover:bg-white/10 flex items-center justify-center text-zinc-300 hover:text-white transition-colors cursor-pointer"
+              title="Previous Cel (← or ,)"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="text-[11px] font-mono font-bold px-2 text-purple-200 min-w-[60px] text-center" title={`Cel ${activeFrameIndex + 1} of ${frames.length} (${totalExposureFrames} total frames)`}>
+              {String(activeFrameIndex + 1).padStart(2, '0')} / {String(frames.length).padStart(2, '0')}
+            </span>
+            <button
+              onClick={() => onSelectFrame(Math.min(loopEnd, activeFrameIndex + 1))}
+              className="h-7 w-7 rounded-lg hover:bg-white/10 flex items-center justify-center text-zinc-300 hover:text-white transition-colors cursor-pointer"
+              title="Next Cel (→ or .)"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
 
-            {/* Frame Counter & Arrow Steppers */}
-            <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-0.5">
+          {/* Quick FPS Toggle (12 / 24) + Total Runtime */}
+          <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-0.5 text-[10px] font-mono font-bold">
+            {[12, 24].map((preset) => (
               <button
-                onClick={() => onSelectFrame(Math.max(loopStart, activeFrameIndex - 1))}
-                className="h-7 w-7 rounded-lg hover:bg-white/10 flex items-center justify-center text-zinc-300 hover:text-white transition-colors cursor-pointer"
-                title="Previous Frame (←)"
+                key={preset}
+                onClick={() => onFpsChange(preset)}
+                className={cn(
+                  "h-7 px-2 rounded-lg transition-colors cursor-pointer",
+                  fps === preset
+                    ? "bg-purple-600 text-white shadow"
+                    : "text-zinc-400 hover:text-white hover:bg-white/10"
+                )}
+                title={`Set playback to ${preset} FPS`}
               >
-                <ChevronLeft className="h-4 w-4" />
+                {preset}fps
               </button>
-              <span className="text-xs font-mono font-bold px-2 text-purple-300 min-w-[70px] text-center">
-                {String(activeFrameIndex + 1).padStart(2, '0')} / {String(frames.length).padStart(2, '0')}
-              </span>
-              <button
-                onClick={() => onSelectFrame(Math.min(loopEnd, activeFrameIndex + 1))}
-                className="h-7 w-7 rounded-lg hover:bg-white/10 flex items-center justify-center text-zinc-300 hover:text-white transition-colors cursor-pointer"
-                title="Next Frame (→)"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+            ))}
+            <span className="px-2 text-zinc-400 border-l border-white/10">
+              {totalExposureFrames}f · {totalDurationSec}s
+            </span>
           </div>
         </div>
 
-        {/* 2. CORE TOON BOOM KEYFRAME ACTIONS */}
-        <div className="flex items-center gap-2">
+        {/* 2. CALLIPEG KEYFRAME, EXPOSURE HOLD & ONION SKIN CONTROLS */}
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Insert Keyframe Cel (F6) */}
           <button
             onClick={onAddFrame}
-            className="h-8 px-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md border border-purple-400/40"
-            title="Insert Keyframe Drawing (F6)"
+            className="h-8 px-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md border border-purple-400/40"
+            title="Insert Blank Keyframe Cel (F6)"
           >
             <Plus className="h-3.5 w-3.5" />
-            <span>+ Keyframe (F6)</span>
+            <span>+ Key</span>
           </button>
 
-          {/* Extend Exposure / Hold Cel (F5) */}
+          {/* Callipeg Exposure / Hold Timing Control */}
+          {onSetFrameHold && (
+            <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl px-1.5 py-0.5 text-[10px] font-mono font-bold">
+              <span className="text-zinc-400 px-1">HOLD:</span>
+              <button
+                onClick={() => onSetFrameHold(activeFrameIndex, Math.max(1, activeHold - 1))}
+                disabled={activeHold <= 1}
+                className="h-6 w-6 rounded-lg bg-white/5 hover:bg-white/15 disabled:opacity-30 text-white flex items-center justify-center cursor-pointer"
+                title="Shorten Cel Exposure -1f (Shift+F5)"
+              >
+                −
+              </button>
+              <span className="min-w-[26px] text-center text-violet-300 font-black">
+                {activeHold}f
+              </span>
+              <button
+                onClick={() => onSetFrameHold(activeFrameIndex, Math.min(24, activeHold + 1))}
+                disabled={activeHold >= 24}
+                className="h-6 w-6 rounded-lg bg-white/5 hover:bg-white/15 disabled:opacity-30 text-white flex items-center justify-center cursor-pointer"
+                title="Extend Cel Exposure +1f (F5)"
+              >
+                +
+              </button>
+
+              <div className="w-px h-4 bg-white/10 mx-0.5" />
+
+              {[1, 2, 3].map((h) => (
+                <button
+                  key={h}
+                  onClick={(e) => {
+                    if (e.shiftKey && onApplyGlobalHold) {
+                      onApplyGlobalHold(h);
+                    } else {
+                      onSetFrameHold(activeFrameIndex, h);
+                    }
+                  }}
+                  className={cn(
+                    "h-6 px-1.5 rounded-md transition-colors cursor-pointer",
+                    activeHold === h
+                      ? "bg-violet-600 text-white shadow"
+                      : "text-zinc-400 hover:text-white hover:bg-white/10"
+                  )}
+                  title={`Hold active cel on ${h}s (Shift+Click to set ALL cels on ${h}s)`}
+                >
+                  {h}s
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Duplicate Cel */}
           <button
-            onClick={onExtendFrame || onDuplicateFrame}
-            className="h-8 px-3 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-            title="Extend Exposure / Hold Cel (F5)"
+            onClick={onDuplicateFrame}
+            className="h-8 px-2.5 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-zinc-200 hover:text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+            title="Duplicate Active Cel as Editable Copy"
           >
             <Copy className="h-3.5 w-3.5 text-indigo-400" />
-            <span>Extend / Hold (F5)</span>
+            <span className="hidden xl:inline">Dup</span>
           </button>
 
           {/* Merge Cels */}
@@ -442,73 +520,77 @@ export function FramesPanel({
             <button
               onClick={onMergeFrames}
               disabled={activeFrameIndex >= frames.length - 1}
-              className="h-8 px-3 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-zinc-300 hover:text-white disabled:opacity-30 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+              className="h-8 px-2.5 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-zinc-300 hover:text-white disabled:opacity-30 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
               title="Merge Current Cel with Next Cel"
             >
               <Layers className="h-3.5 w-3.5 text-purple-400" />
-              <span>Merge Cels</span>
+              <span className="hidden xl:inline">Merge</span>
             </button>
           )}
 
-          {/* Pose Type Color Badges Selector */}
+          {/* Compact Pose Type Badges (K / E / B / I) */}
           {onSetPoseType && (
             <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-1">
-              <span className="text-[10px] font-mono font-bold text-zinc-400 px-1">POSE:</span>
               <button
                 onClick={() => onSetPoseType(activeFrameIndex, 'key')}
-                className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-600 hover:bg-red-500 text-white shadow cursor-pointer"
+                className="h-6 px-2 rounded-md text-[10px] font-black bg-red-600/90 hover:bg-red-500 text-white cursor-pointer"
                 title="Tag Active Cel as KEY Pose (Red)"
               >
-                Key
+                K
               </button>
               <button
                 onClick={() => onSetPoseType(activeFrameIndex, 'extreme')}
-                className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-400 hover:bg-amber-300 text-black shadow cursor-pointer"
+                className="h-6 px-2 rounded-md text-[10px] font-black bg-amber-400 hover:bg-amber-300 text-black cursor-pointer"
                 title="Tag Active Cel as EXTREME Pose (Yellow)"
               >
-                Extreme
+                E
               </button>
               <button
                 onClick={() => onSetPoseType(activeFrameIndex, 'breakdown')}
-                className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow cursor-pointer"
+                className="h-6 px-2 rounded-md text-[10px] font-black bg-emerald-600/90 hover:bg-emerald-500 text-white cursor-pointer"
                 title="Tag Active Cel as BREAKDOWN Pose (Green)"
               >
-                Break
+                B
               </button>
               <button
                 onClick={() => onSetPoseType(activeFrameIndex, 'inbetween')}
-                className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-600 hover:bg-blue-500 text-white shadow cursor-pointer"
+                className="h-6 px-2 rounded-md text-[10px] font-black bg-blue-600/90 hover:bg-blue-500 text-white cursor-pointer"
                 title="Tag Active Cel as IN-BETWEEN Pose (Blue)"
               >
-                InBet
+                I
               </button>
             </div>
           )}
 
-          {/* Onion Skins Toggle & Opacity Slider */}
-          <div className="flex items-center gap-2 bg-black/20 border border-white/5 rounded-xl px-1 py-1">
+          {/* Callipeg Multi-Frame Color-Tinted Onion Skin Toggle */}
+          <div className="flex items-center gap-1.5 bg-black/25 border border-white/10 rounded-xl px-1 py-0.5">
             <button
               onClick={onToggleOnionSkinPrev}
               className={cn(
-                "h-7 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border",
-                onionSkinPrev ? "bg-amber-500/20 text-amber-300 border-amber-500/50 shadow" : "bg-white/5 text-zinc-400 border-white/10 hover:bg-white/10"
+                "h-7 px-2.5 rounded-lg font-bold text-[10px] uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border",
+                onionSkinPrev
+                  ? "bg-violet-500/20 text-white border-violet-400/50 shadow"
+                  : "bg-white/5 text-zinc-400 border-white/10 hover:bg-white/10"
               )}
-              title="Toggle Ghosting / Onion Skins"
+              title="Toggle 2-Frame Color-Tinted Onion Skin (Rose = Prev, Cyan = Next)"
             >
-              <Sparkles className="h-3 w-3 text-amber-400" />
-              <span>Onion Skins</span>
+              <span className="flex items-center gap-0.5">
+                <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
+                <span className="w-2 h-2 rounded-full bg-cyan-400 inline-block" />
+              </span>
+              <span>Onion</span>
             </button>
 
             {onionSkinPrev && onOnionSkinOpacityChange && (
-              <div className="flex items-center gap-1.5 px-2">
+              <div className="flex items-center gap-1.5 px-1.5">
                 <input
                   type="range"
                   min="0.1" max="1.0" step="0.05"
                   value={onionSkinOpacity}
                   onChange={(e) => onOnionSkinOpacityChange(parseFloat(e.target.value))}
-                  className="w-16 h-1 accent-amber-500 cursor-pointer"
+                  className="w-14 h-1 accent-violet-500 cursor-pointer"
                 />
-                <span className="text-[10px] font-mono font-bold text-amber-200/70 w-6 text-right">
+                <span className="text-[10px] font-mono font-bold text-zinc-300 w-7 text-right">
                   {Math.round(onionSkinOpacity * 100)}%
                 </span>
               </div>
@@ -633,7 +715,7 @@ export function FramesPanel({
         </div>
 
         <span className="text-[10px] font-mono font-bold text-purple-300 shrink-0">
-          {frames.length} CELS
+          {frames.length} CELS · {totalExposureFrames}F
         </span>
       </div>
 
@@ -714,7 +796,7 @@ export function FramesPanel({
         )}
       >
         
-        {/* Frame Ruler Numbers Header Bar with In/Out Region Overlay */}
+        {/* Frame Ruler Numbers Header Bar with Exposure-Aware In/Out Region Overlay */}
         <div 
           ref={rulerTrackRef}
           onPointerDown={handleRulerPointerDown}
@@ -722,18 +804,24 @@ export function FramesPanel({
           title="Drag along ruler to scrub playhead"
         >
           {rulerTicks.map((tick) => {
-            const isKeyframe = tick < frames.length;
-            const isActive = tick === activeFrameIndex;
-            const isInLoopRange = tick >= loopStart && tick <= loopEnd;
+            const celIdx = tickToCelIndex[tick];
+            const isKeyframe = celIdx !== undefined;
+            const isActiveStart = tick === activeSpan.startTick;
+            const isInActiveHold = tick >= activeSpan.startTick && tick <= activeSpan.endTick;
+            const loopStartTick = celSpans[loopStart]?.startTick ?? 0;
+            const loopEndTick = celSpans[loopEnd]?.endTick ?? totalExposureFrames - 1;
+            const isInLoopRange = isKeyframe && tick >= loopStartTick && tick <= loopEndTick;
             return (
               <div
                 key={tick}
-                onClick={() => isKeyframe && onSelectFrame(tick)}
+                onClick={() => isKeyframe && onSelectFrame(celIdx)}
                 style={{ width: `${cellWidth}px` }}
                 className={cn(
                   "h-5 shrink-0 text-center text-[9px] font-mono font-bold transition-all flex items-center justify-center rounded cursor-pointer border relative",
-                  isActive 
+                  isActiveStart
                     ? "bg-red-600 text-white shadow-[0_0_12px_rgba(239,68,68,0.9)] border-red-400 font-black scale-105" 
+                    : isInActiveHold
+                    ? "bg-red-500/35 text-red-100 border-red-400/50"
                     : isInLoopRange
                     ? "bg-purple-950/60 text-purple-200 border-purple-500/40"
                     : isKeyframe 
@@ -742,15 +830,15 @@ export function FramesPanel({
                 )}
               >
                 {/* Red Playhead Needle Top Arrow */}
-                {isActive && (
+                {isActiveStart && (
                   <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[5px] border-t-red-500" />
                 )}
 
                 {/* Loop Start / End Markers */}
-                {tick === loopStart && (
+                {tick === loopStartTick && (
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-400 rounded-l" title="Loop In Point" />
                 )}
-                {tick === loopEnd && (
+                {tick === loopEndTick && (
                   <div className="absolute right-0 top-0 bottom-0 w-1 bg-amber-400 rounded-r" title="Loop Out Point" />
                 )}
 
@@ -896,11 +984,13 @@ export function FramesPanel({
                 </div>
               </div>
 
-              {/* Right Keyframe Exposure Strip */}
+              {/* Right Keyframe Exposure Strip (Callipeg Proportional Exposure Bars) */}
               <div className="flex items-center gap-1">
                 {frames.map((frame, i) => {
                   const isActive = i === activeFrameIndex;
                   const isInRange = i >= loopStart && i <= loopEnd;
+                  const hold = Math.max(1, frame.holdFrames ?? 1);
+                  const celWidth = cellWidth * hold + (hold - 1) * 4;
                   return (
                     <div
                       key={`${tr.id}-frame-${frame.id}`}
@@ -908,44 +998,65 @@ export function FramesPanel({
                         setActiveTrackId(tr.id);
                         onSelectFrame(i);
                       }}
-                      style={{ width: `${cellWidth}px` }}
+                      style={{ width: `${celWidth}px` }}
+                      title={`Cel ${i + 1} · Exposure: ${hold}f${frame.poseType ? ` (${frame.poseType})` : ''}`}
                       className={cn(
-                        'h-9 shrink-0 rounded-lg border transition-all cursor-pointer shadow flex flex-col items-center justify-center relative overflow-hidden',
+                        'h-9 shrink-0 rounded-lg border transition-all cursor-pointer shadow flex flex-col justify-center relative overflow-hidden px-1.5',
                         isActive && isTrackActive
-                          ? 'bg-gradient-to-b from-purple-600 to-indigo-600 border-red-500 ring-2 ring-red-500/50 scale-105 z-10 text-white'
+                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 border-red-500 ring-2 ring-red-500/50 z-10 text-white'
                           : isActive
                           ? 'bg-purple-900/60 border-purple-400/60 text-purple-200'
                           : isInRange
-                          ? 'bg-[#1a1a28] border-purple-500/20 text-zinc-300'
-                          : 'bg-[#14141e] border-white/5 text-zinc-500'
+                          ? 'bg-[#1a1a28] border-purple-500/25 text-zinc-300 hover:border-purple-400/50'
+                          : 'bg-[#14141e] border-white/5 text-zinc-500 hover:border-white/15'
                       )}
                     >
-                      {/* Pose Type Color Badge Node (●) */}
-                      <div className={cn(
-                        "w-3.5 h-3.5 rounded-full flex items-center justify-center transition-all shadow-inner text-[8px] font-mono font-black",
-                        frame.poseType === 'key'
-                          ? "bg-red-600 text-white ring-1 ring-red-400"
-                          : frame.poseType === 'extreme'
-                          ? "bg-amber-400 text-black ring-1 ring-amber-300"
-                          : frame.poseType === 'breakdown'
-                          ? "bg-emerald-600 text-white ring-1 ring-emerald-400"
-                          : frame.poseType === 'inbetween'
-                          ? "bg-blue-600 text-white ring-1 ring-blue-400"
-                          : isActive && isTrackActive 
-                          ? "bg-white text-purple-900" 
-                          : "bg-purple-500/80 text-white"
-                      )}>
-                        {frame.poseType === 'key' ? 'K' : frame.poseType === 'extreme' ? 'E' : frame.poseType === 'breakdown' ? 'B' : frame.poseType === 'inbetween' ? 'I' : '●'}
+                      <div className={cn("flex items-center w-full", hold > 1 ? "justify-between gap-1" : "justify-center")}>
+                        {/* Pose Type Color Badge Node (●) */}
+                        <div className={cn(
+                          "w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 transition-all shadow-inner text-[8px] font-mono font-black",
+                          frame.poseType === 'key'
+                            ? "bg-red-600 text-white ring-1 ring-red-400"
+                            : frame.poseType === 'extreme'
+                            ? "bg-amber-400 text-black ring-1 ring-amber-300"
+                            : frame.poseType === 'breakdown'
+                            ? "bg-emerald-600 text-white ring-1 ring-emerald-400"
+                            : frame.poseType === 'inbetween'
+                            ? "bg-blue-600 text-white ring-1 ring-blue-400"
+                            : isActive && isTrackActive 
+                            ? "bg-white text-purple-900" 
+                            : "bg-purple-500/80 text-white"
+                        )}>
+                          {frame.poseType === 'key' ? 'K' : frame.poseType === 'extreme' ? 'E' : frame.poseType === 'breakdown' ? 'B' : frame.poseType === 'inbetween' ? 'I' : '●'}
+                        </div>
+
+                        {/* Exposure Hold Extension Track & Badge (when held > 1f) */}
+                        {hold > 1 && (
+                          <>
+                            <div className="flex-1 h-0.5 rounded-full bg-white/25 mx-0.5" />
+                            <span className={cn(
+                              "text-[9px] font-mono font-black px-1 rounded leading-tight shrink-0",
+                              isActive && isTrackActive ? "bg-black/30 text-white" : "bg-white/10 text-violet-200"
+                            )}>
+                              {hold}f
+                            </span>
+                          </>
+                        )}
                       </div>
 
-                      {/* Bottom Keyframe Connector Line */}
-                      <div className={cn("w-full h-1 mt-0.5 rounded-full", frame.poseType ? (frame.poseType === 'key' ? 'bg-red-500' : frame.poseType === 'extreme' ? 'bg-amber-400' : frame.poseType === 'breakdown' ? 'bg-emerald-500' : 'bg-blue-500') : isActive ? "bg-white/80" : "bg-purple-500/30")} />
+                      {/* Bottom Keyframe Exposure Connector Bar */}
+                      <div className={cn(
+                        "w-full h-1 mt-1 rounded-full",
+                        frame.poseType
+                          ? (frame.poseType === 'key' ? 'bg-red-500' : frame.poseType === 'extreme' ? 'bg-amber-400' : frame.poseType === 'breakdown' ? 'bg-emerald-500' : 'bg-blue-500')
+                          : isActive ? "bg-white/80" : "bg-purple-500/35"
+                      )} />
                     </div>
                   );
                 })}
 
                 {/* Empty Timeline Keyframe Slots (◯) */}
-                {Array.from({ length: Math.max(0, maxTimelineTicks - frames.length) }).map((_, slotIdx) => (
+                {Array.from({ length: Math.max(0, maxTimelineTicks - totalExposureFrames) }).map((_, slotIdx) => (
                   <div
                     key={`${tr.id}-empty-${slotIdx}`}
                     style={{ width: `${cellWidth}px` }}

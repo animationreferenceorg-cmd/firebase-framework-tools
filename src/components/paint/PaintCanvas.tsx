@@ -46,6 +46,8 @@ interface PaintCanvasProps {
   onionSkinNext?: HTMLCanvasElement | null;
   onionSkinOpacity?: number;
   hasBackgroundVideo?: boolean;
+  /** Non-destructive horizontal canvas mirror (Callipeg/Procreate 'H' flip). */
+  flipped?: boolean;
   /** Increment to clear the clone-stamp source point from outside. */
   cloneSourceResetToken?: number;
 }
@@ -71,6 +73,7 @@ export function PaintCanvas({
   onionSkinNext,
   onionSkinOpacity = 0.35,
   hasBackgroundVideo = false,
+  flipped = false,
   cloneSourceResetToken = 0,
 }: PaintCanvasProps) {
   const displayRef = useRef<HTMLCanvasElement>(null);
@@ -181,30 +184,18 @@ export function PaintCanvas({
       ctx.fillRect(0, 0, display.width, display.height);
     }
 
-    // Render Onion Skin Ghosts (Blue = Prev Frame, Orange = Next Frame)
+    // Render pre-tinted Callipeg-style Multi-Frame Onion Skin Ghosts (Rose-Red = Prev, Cyan = Next)
     if (onionSkinPrev) {
       ctx.save();
       ctx.globalAlpha = onionSkinOpacity;
-      const tmpPrev = createLayerCanvas(display.width, display.height);
-      const tCtx = tmpPrev.getContext('2d')!;
-      tCtx.drawImage(onionSkinPrev, 0, 0);
-      tCtx.globalCompositeOperation = 'source-in';
-      tCtx.fillStyle = '#3b82f6';
-      tCtx.fillRect(0, 0, display.width, display.height);
-      ctx.drawImage(tmpPrev, 0, 0);
+      ctx.drawImage(onionSkinPrev, 0, 0);
       ctx.restore();
     }
 
     if (onionSkinNext) {
       ctx.save();
       ctx.globalAlpha = onionSkinOpacity;
-      const tmpNext = createLayerCanvas(display.width, display.height);
-      const tCtx = tmpNext.getContext('2d')!;
-      tCtx.drawImage(onionSkinNext, 0, 0);
-      tCtx.globalCompositeOperation = 'source-in';
-      tCtx.fillStyle = '#f97316';
-      tCtx.fillRect(0, 0, display.width, display.height);
-      ctx.drawImage(tmpNext, 0, 0);
+      ctx.drawImage(onionSkinNext, 0, 0);
       ctx.restore();
     }
 
@@ -256,13 +247,14 @@ export function PaintCanvas({
       const scaleY = cvs.height / rect.height;
 
       const p = normalizedPressure(e.nativeEvent.pressure, e.nativeEvent.pointerType);
+      const rawX = (e.clientX - rect.left) * scaleX;
       return {
-        x: (e.clientX - rect.left) * scaleX,
+        x: flipped ? cvs.width - rawX : rawX,
         y: (e.clientY - rect.top) * scaleY,
         pressure: p,
       };
     },
-    []
+    [flipped]
   );
 
   const activeTargetCanvas = useCallback((): HTMLCanvasElement | null => {

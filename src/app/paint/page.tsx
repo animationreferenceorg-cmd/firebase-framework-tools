@@ -32,7 +32,7 @@ import {
 import type { Layer, ToolType, BrushSettings, BlendMode, CustomBrushTexture, Selection, SymmetryMode, Frame } from '@/lib/paint/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Clapperboard, Pin, PinOff, Film, Eye, Split, X, Camera, Radio } from 'lucide-react';
+import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Clapperboard, Pin, PinOff, Film, Eye, Split, X, Camera, Radio, FlipHorizontal2 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -848,20 +848,35 @@ export default function PaintPage() {
     enterFrame(activeFrameIndex + 1, updated);
   };
 
-  // Extend Exposure / Hold Cel (Toon Boom Style F5)
+  // Extend Exposure / Hold Cel (Callipeg & Toon Boom Style F5 — increments exposure without duplicating canvases)
   const handleExtendFrame = () => {
     const current = frames[activeFrameIndex];
     if (!current) return;
-    const clonedLayers = current.layers.map((l) => ({
-      ...l,
-      id: nanoid(),
-      canvas: cloneCanvas(l.canvas),
-      mask: l.mask ? cloneCanvas(l.mask) : undefined,
-    }));
-    const newFrame: Frame = { id: nanoid(), name: `${current.name} (Hold)`, layers: clonedLayers, activeLayerId: current.activeLayerId };
-    const updated = framesWithLiveActive();
-    updated.splice(activeFrameIndex + 1, 0, newFrame);
-    enterFrame(activeFrameIndex + 1, updated);
+    const nextHold = Math.min(24, (current.holdFrames ?? 1) + 1);
+    handleSetFrameHold(activeFrameIndex, nextHold);
+  };
+
+  // Set exposure duration (holdFrames) for a single cel (1 = on 1s, 2 = on 2s, 3 = on 3s, etc.)
+  const handleSetFrameHold = (frameIdx: number, holdFrames: number) => {
+    const clamped = Math.max(1, Math.min(24, Math.round(holdFrames)));
+    setFrames((prev) => {
+      if (!prev[frameIdx]) return prev;
+      const next = prev.map((f, i) => (i === frameIdx ? { ...f, holdFrames: clamped } : f));
+      framesRef.current = next;
+      return next;
+    });
+    scheduleAutosave();
+  };
+
+  // Apply uniform exposure timing (On 1s / On 2s / On 3s) across all cels in one click
+  const handleApplyGlobalHold = (holdFrames: number) => {
+    const clamped = Math.max(1, Math.min(24, Math.round(holdFrames)));
+    setFrames((prev) => {
+      const next = prev.map((f) => ({ ...f, holdFrames: clamped }));
+      framesRef.current = next;
+      return next;
+    });
+    scheduleAutosave();
   };
 
   // Merge Cels (Combines artwork from active frame and next frame into 1 keyframe)
@@ -899,23 +914,22 @@ export default function PaintPage() {
     enterFrame(Math.min(activeFrameIndex, updated.length - 1), updated);
   };
 
+  const [canvasFlipped, setCanvasFlipped] = useState(false);
 
-  // Tinted, background-excluded silhouettes of the neighboring frames for
-  // the onion-skin ghost overlay (see flattenLayers/tintSilhouette).
-  // Tinted ghost silhouettes of the neighboring frames for the onion-skin overlay
-  const onionSkinPrev = useMemo(() => {
-    if (!onionSkinEnabled || activeFrameIndex <= 0) return null;
-    const prevFrame = frames[activeFrameIndex - 1];
-    if (!prevFrame || prevFrame.layers.length === 0) return null;
-    return tintSilhouette(flattenLayers(prevFrame.layers, canvasSize.width, canvasSize.height, false), '#3b82f6');
-  }, [onionSkinEnabled, frames, activeFrameIndex, canvasSize]);
-
-  const onionSkinNext = useMemo(() => {
-    if (!onionSkinEnabled || activeFrameIndex >= frames.length - 1) return null;
-    const nextFrame = frames[activeFrameIndex + 1];
-    if (!nextFrame || nextFrame.layers.length === 0) return null;
-    return tintSilhouette(flattenLayers(nextFrame.layers, canvasSize.width, canvasSize.height, false), '#f97316');
-  }, [onionSkinEnabled, frames, activeFrameIndex, canvasSize]);
+  // Callipeg / Procreate / Photoshop horizontal mirror toggle ('H' key)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) return;
+      if (e.key === 'h' || e.key === 'H') {
+        e.preventDefault();
+        setCanvasFlipped((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const displayFrames = useMemo(
     () => frames.map((f, i) => (i === activeFrameIndex ? { ...f, layers, activeLayerId } : f)),
@@ -1104,8 +1118,10 @@ export default function PaintPage() {
   // ──────────────── HIGH-PRECISION REQUESTANIMATIONFRAME PLAYBACK ENGINE ────────────────
   const lastFrameTimeRef = useRef<number>(0);
   const playheadRafRef = useRef<number | null>(null);
+  const holdTickRef = useRef<number>(0);
 
   useEffect(() => {
+    holdTickRef.current = 0;
     if (!isPlaying || frames.length <= 1) {
       if (playheadRafRef.current) cancelAnimationFrame(playheadRafRef.current);
       return;
@@ -1122,28 +1138,34 @@ export default function PaintPage() {
         const total = framesRef.current.length;
         if (total > 1) {
           const curIdx = activeFrameIndexRef.current;
-          const start = Math.max(0, Math.min(loopStartRef.current, total - 1));
-          const end = Math.max(start, Math.min(loopEndRef.current > 0 ? loopEndRef.current : total - 1, total - 1));
+          const curHold = Math.max(1, framesRef.current[curIdx]?.holdFrames ?? 1);
+          holdTickRef.current += 1;
 
-          let nextIdx = curIdx + 1;
-          if (nextIdx < start || nextIdx > end) {
-            nextIdx = start;
+          if (holdTickRef.current >= curHold) {
+            holdTickRef.current = 0;
+            const start = Math.max(0, Math.min(loopStartRef.current, total - 1));
+            const end = Math.max(start, Math.min(loopEndRef.current > 0 ? loopEndRef.current : total - 1, total - 1));
+
+            let nextIdx = curIdx + 1;
+            if (nextIdx < start || nextIdx > end) {
+              nextIdx = start;
+            }
+
+            const updated = framesRef.current.map((f, i) =>
+              i === curIdx ? { ...f, layers: layersRef.current, activeLayerId: activeLayerIdRef.current } : f
+            );
+            const target = updated[nextIdx] || updated[0];
+
+            framesRef.current = updated;
+            layersRef.current = target.layers;
+            activeLayerIdRef.current = target.activeLayerId;
+            activeFrameIndexRef.current = nextIdx;
+
+            setFrames(updated);
+            setLayers(target.layers);
+            setActiveLayerId(target.activeLayerId);
+            setActiveFrameIndex(nextIdx);
           }
-
-          const updated = framesRef.current.map((f, i) =>
-            i === curIdx ? { ...f, layers: layersRef.current, activeLayerId: activeLayerIdRef.current } : f
-          );
-          const target = updated[nextIdx] || updated[0];
-
-          framesRef.current = updated;
-          layersRef.current = target.layers;
-          activeLayerIdRef.current = target.activeLayerId;
-          activeFrameIndexRef.current = nextIdx;
-
-          setFrames(updated);
-          setLayers(target.layers);
-          setActiveLayerId(target.activeLayerId);
-          setActiveFrameIndex(nextIdx);
         }
       }
       playheadRafRef.current = requestAnimationFrame(loop);
@@ -1174,43 +1196,55 @@ export default function PaintPage() {
     }
   }, [isPinnedToCanvas, activeFrameIndex, fps]);
 
-  // Compute Onion Skin Ghost Canvases for Previous (Blue) and Next (Orange) frames
+  // Callipeg-style Multi-Frame Color-Tinted Onion Skin Ghosts:
+  // Previous 2 frames tinted Rose-Red (#f43f5e: -1 @ 100%, -2 @ 42%)
+  // Next 2 frames tinted Cyan (#06b6d4: +1 @ 100%, +2 @ 42%)
   const onionSkinPrevCanvas = useMemo(() => {
     if (typeof window === 'undefined') return null;
     if (!onionSkinEnabled || activeFrameIndex <= 0) return null;
-    const prevFrame = frames[activeFrameIndex - 1];
-    if (!prevFrame || !prevFrame.layers) return null;
     const cvs = createLayerCanvas(canvasSize.width, canvasSize.height);
     const ctx = cvs.getContext('2d')!;
-    for (const layer of prevFrame.layers) {
-      if (layer.visible) {
-        ctx.save();
-        ctx.globalAlpha = layer.opacity;
-        ctx.globalCompositeOperation = layer.blendMode;
-        ctx.drawImage(layer.canvas, 0, 0);
-        ctx.restore();
-      }
+    let hasContent = false;
+    const offsets: Array<{ delta: number; alpha: number }> = [
+      { delta: -2, alpha: 0.42 },
+      { delta: -1, alpha: 1.0 },
+    ];
+    for (const { delta, alpha } of offsets) {
+      const targetFrame = frames[activeFrameIndex + delta];
+      if (!targetFrame || !targetFrame.layers || targetFrame.layers.length === 0) continue;
+      const flat = flattenLayers(targetFrame.layers, canvasSize.width, canvasSize.height, false);
+      const tinted = tintSilhouette(flat, '#f43f5e');
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(tinted, 0, 0);
+      ctx.restore();
+      hasContent = true;
     }
-    return cvs;
+    return hasContent ? cvs : null;
   }, [onionSkinEnabled, activeFrameIndex, frames, canvasSize]);
 
   const onionSkinNextCanvas = useMemo(() => {
     if (typeof window === 'undefined') return null;
     if (!onionSkinEnabled || activeFrameIndex >= frames.length - 1) return null;
-    const nextFrame = frames[activeFrameIndex + 1];
-    if (!nextFrame || !nextFrame.layers) return null;
     const cvs = createLayerCanvas(canvasSize.width, canvasSize.height);
     const ctx = cvs.getContext('2d')!;
-    for (const layer of nextFrame.layers) {
-      if (layer.visible) {
-        ctx.save();
-        ctx.globalAlpha = layer.opacity;
-        ctx.globalCompositeOperation = layer.blendMode;
-        ctx.drawImage(layer.canvas, 0, 0);
-        ctx.restore();
-      }
+    let hasContent = false;
+    const offsets: Array<{ delta: number; alpha: number }> = [
+      { delta: 2, alpha: 0.42 },
+      { delta: 1, alpha: 1.0 },
+    ];
+    for (const { delta, alpha } of offsets) {
+      const targetFrame = frames[activeFrameIndex + delta];
+      if (!targetFrame || !targetFrame.layers || targetFrame.layers.length === 0) continue;
+      const flat = flattenLayers(targetFrame.layers, canvasSize.width, canvasSize.height, false);
+      const tinted = tintSilhouette(flat, '#06b6d4');
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(tinted, 0, 0);
+      ctx.restore();
+      hasContent = true;
     }
-    return cvs;
+    return hasContent ? cvs : null;
   }, [onionSkinEnabled, activeFrameIndex, frames, canvasSize]);
 
   const handleLoadProjectFile = async (file: File) => {
@@ -1620,90 +1654,101 @@ export default function PaintPage() {
                   (isPinnedToCanvas && activeReferenceVideo) || viewportStream ? "bg-black" : "bg-white"
                 )}
               >
-                {/* Live Maya / Blender 60fps Viewport Stream Overlay (rendered behind transparent drawing canvas) */}
-                {viewportStream && (
-                  <div
-                    className="absolute top-0 left-0 pointer-events-none z-0 overflow-hidden flex items-center justify-center bg-black"
-                    style={{
-                      width: canvasSize.width,
-                      height: canvasSize.height,
-                      opacity: viewportOpacity,
-                    }}
-                  >
-                    <video
-                      ref={viewportVideoRef}
-                      autoPlay
-                      muted
-                      playsInline
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                )}
-
-                {/* Pinned Tracing Reference Video Overlay (rendered behind drawing canvas) */}
-                {isPinnedToCanvas && activeReferenceVideo && (
-                  <div 
-                    className="absolute top-0 left-0 pointer-events-none z-0 overflow-hidden flex items-center justify-center bg-black"
-                    style={{ 
-                      width: canvasSize.width, 
-                      height: canvasSize.height,
-                      opacity: tracingOpacity 
-                    }}
-                  >
-                    <video
-                      ref={canvasBgVideoRef}
-                      src={activeReferenceVideo.videoUrl}
-                      muted
-                      playsInline
-                      autoPlay
-                      loop
-                      onLoadedMetadata={(e) => {
-                        const vid = e.currentTarget;
-                        if (vid && vid.duration && vid.duration > 0) {
-                          const totalFrames = Math.max(24, Math.round(vid.duration * fps));
-                          setFrames((prev) => {
-                            if (prev.length >= totalFrames) return prev;
-                            const updated = [...prev];
-                            while (updated.length < totalFrames) {
-                              const newLayer = createLayer('Layer 1', canvasSize);
-                              updated.push({
-                                id: nanoid(),
-                                name: `Frame ${updated.length + 1}`,
-                                layers: [newLayer],
-                                activeLayerId: newLayer.id,
-                              });
-                            }
-                            return updated;
-                          });
-                        }
+                {/* Mirrorable Canvas + Video Stage (leaves Storyboard Script Dock un-mirrored) */}
+                <div
+                  className="relative"
+                  style={{
+                    width: canvasSize.width,
+                    height: canvasSize.height,
+                    transform: canvasFlipped ? 'scaleX(-1)' : undefined,
+                  }}
+                >
+                  {/* Live Maya / Blender 60fps Viewport Stream Overlay (rendered behind transparent drawing canvas) */}
+                  {viewportStream && (
+                    <div
+                      className="absolute top-0 left-0 pointer-events-none z-0 overflow-hidden flex items-center justify-center bg-black"
+                      style={{
+                        width: canvasSize.width,
+                        height: canvasSize.height,
+                        opacity: viewportOpacity,
                       }}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                <PaintCanvas
-                  layers={layers}
-                  activeLayerId={activeLayerId}
-                  tool={tool}
-                  brush={brush}
-                  canvasSize={canvasSize}
-                  zoom={1}
-                  onBeforeStroke={handleBeforeStroke}
-                  onAfterStroke={handleAfterStroke}
-                  onEyedropperPick={(hex) => { setBrush((b) => ({ ...b, color: hex })); addRecentColor(hex); }}
-                  selection={selection}
-                  onSelectionChange={setSelection}
-                  customTextures={customTextures}
-                  onRequestContextMenu={(x, y) => setContextMenuPos({ x, y })}
-                  isSpaceHeld={isSpaceHeld}
-                  maskTargetLayerId={maskTargetLayerId}
-                  symmetry={symmetry}
-                  cloneSourceResetToken={cloneSourceResetToken}
-                  onionSkinPrev={onionSkinPrevCanvas}
-                  onionSkinNext={onionSkinNextCanvas}
-                  onionSkinOpacity={onionSkinOpacity}
-                  hasBackgroundVideo={(isPinnedToCanvas && !!activeReferenceVideo) || Boolean(viewportStream)}
-                />
+                    >
+                      <video
+                        ref={viewportVideoRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  )}
+
+                  {/* Pinned Tracing Reference Video Overlay (rendered behind drawing canvas) */}
+                  {isPinnedToCanvas && activeReferenceVideo && (
+                    <div 
+                      className="absolute top-0 left-0 pointer-events-none z-0 overflow-hidden flex items-center justify-center bg-black"
+                      style={{ 
+                        width: canvasSize.width, 
+                        height: canvasSize.height,
+                        opacity: tracingOpacity 
+                      }}
+                    >
+                      <video
+                        ref={canvasBgVideoRef}
+                        src={activeReferenceVideo.videoUrl}
+                        muted
+                        playsInline
+                        autoPlay
+                        loop
+                        onLoadedMetadata={(e) => {
+                          const vid = e.currentTarget;
+                          if (vid && vid.duration && vid.duration > 0) {
+                            const totalFrames = Math.max(24, Math.round(vid.duration * fps));
+                            setFrames((prev) => {
+                              if (prev.length >= totalFrames) return prev;
+                              const updated = [...prev];
+                              while (updated.length < totalFrames) {
+                                const newLayer = createLayer('Layer 1', canvasSize);
+                                updated.push({
+                                  id: nanoid(),
+                                  name: `Frame ${updated.length + 1}`,
+                                  layers: [newLayer],
+                                  activeLayerId: newLayer.id,
+                                });
+                              }
+                              return updated;
+                            });
+                          }
+                        }}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <PaintCanvas
+                    layers={layers}
+                    activeLayerId={activeLayerId}
+                    tool={tool}
+                    brush={brush}
+                    canvasSize={canvasSize}
+                    zoom={1}
+                    onBeforeStroke={handleBeforeStroke}
+                    onAfterStroke={handleAfterStroke}
+                    onEyedropperPick={(hex) => { setBrush((b) => ({ ...b, color: hex })); addRecentColor(hex); }}
+                    selection={selection}
+                    onSelectionChange={setSelection}
+                    customTextures={customTextures}
+                    onRequestContextMenu={(x, y) => setContextMenuPos({ x, y })}
+                    isSpaceHeld={isSpaceHeld}
+                    maskTargetLayerId={maskTargetLayerId}
+                    symmetry={symmetry}
+                    cloneSourceResetToken={cloneSourceResetToken}
+                    onionSkinPrev={onionSkinPrevCanvas}
+                    onionSkinNext={onionSkinNextCanvas}
+                    onionSkinOpacity={onionSkinOpacity}
+                    hasBackgroundVideo={(isPinnedToCanvas && !!activeReferenceVideo) || Boolean(viewportStream)}
+                    flipped={canvasFlipped}
+                  />
+                </div>
 
                 {workspaceMode === 'storyboard' && (
                   <div className="w-full border-t-8 border-slate-300 bg-slate-100 mt-0">
@@ -1782,8 +1827,24 @@ export default function PaintPage() {
             )}
           </div>
 
-          {/* Floating Canvas Zoom HUD */}
+          {/* Floating Canvas Zoom & Flip HUD */}
           <div className="absolute bottom-6 right-6 flex items-center gap-2 bg-[#161620]/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.8)] px-2 py-1.5 z-40">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCanvasFlipped((f) => !f)}
+              className={cn(
+                "h-8 px-2.5 rounded-xl text-xs font-bold gap-1.5 flex items-center transition-colors",
+                canvasFlipped
+                  ? "bg-violet-600/35 text-violet-200 border border-violet-400/50 hover:bg-violet-600/50 w-auto"
+                  : "text-zinc-300 hover:text-white hover:bg-white/10 w-8"
+              )}
+              title="Flip Canvas Horizontal (H) — check proportions"
+            >
+              <FlipHorizontal2 className="h-4 w-4 shrink-0" />
+              {canvasFlipped && <span className="text-[10px] font-mono tracking-wider">FLIPPED</span>}
+            </Button>
+            <div className="w-px h-5 bg-white/10" />
             <Button variant="ghost" size="icon" onClick={() => setZoom((z) => Math.max(0.05, z - 0.1))} className="h-8 w-8 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10" title="Zoom Out">
               <ZoomOut className="h-4 w-4" />
             </Button>
@@ -1900,6 +1961,8 @@ export default function PaintPage() {
           onLoopStartChange={setLoopStart}
           onLoopEndChange={setLoopEnd}
           onSetPoseType={handleSetPoseType}
+          onSetFrameHold={handleSetFrameHold}
+          onApplyGlobalHold={handleApplyGlobalHold}
           audioBuffer={audioBuffer}
           audioFileName={audioFileName}
           onUploadAudio={handleUploadAudio}

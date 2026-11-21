@@ -411,6 +411,8 @@ export interface Frame {
   layers: Layer[];
   activeLayerId: string;
   poseType?: 'key' | 'extreme' | 'breakdown' | 'inbetween';
+  /** Callipeg/Toon Boom exposure duration in timeline frames (1 = on 1s, 2 = on 2s, 3 = on 3s). Defaults to 1. */
+  holdFrames?: number;
   /** Flattened preview of the frame, used by the storyboard timeline panels. */
   thumbnail?: string;
   storyboardScript?: {

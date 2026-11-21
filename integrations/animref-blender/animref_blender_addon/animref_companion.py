@@ -95,15 +95,15 @@ STUDIO_HTML = r"""<!DOCTYPE html>
 <title>Animation Reference Studio — Blender</title>
 <style>
   :root {
-    --canvas: #f7f6f2;
-    --surface: #ffffff;
-    --surface-2: #f1efe9;
-    --border: #e7e5e4;
-    --ink: #0c0a09;
-    --muted: #78716c;
+    --canvas: #09090e;
+    --surface: #111119;
+    --surface-2: #161622;
+    --border: rgba(255,255,255,0.08);
+    --ink: #f4f4f5;
+    --muted: #a1a1aa;
     --accent: #7c3aed;
-    --accent-hover: #6d28d9;
-    --emerald: #059669;
+    --accent-hover: #8b5cf6;
+    --emerald: #10b981;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -115,7 +115,7 @@ STUDIO_HTML = r"""<!DOCTYPE html>
     overflow: hidden;
     user-select: none;
   }
-  /* Left Sidebar (matches Maya SidebarNavPanel) */
+  /* Left Sidebar (Dark Studio Theme) */
   aside.sidebar {
     width: 210px;
     flex-shrink: 0;
@@ -132,48 +132,49 @@ STUDIO_HTML = r"""<!DOCTYPE html>
     align-items: center;
     gap: 8px;
     padding: 4px 8px 12px;
-    border-bottom: 1px solid #f0eee8;
+    border-bottom: 1px solid var(--border);
     margin-bottom: 4px;
   }
   .brand-circle {
     width: 22px; height: 22px; border-radius: 50%;
-    background: #0c0a09; color: #fff;
+    background: linear-gradient(135deg, #8b5cf6, #ec4899); color: #fff;
     display: grid; place-items: center;
     font-size: 11px; font-weight: 900; flex-shrink: 0;
   }
-  .brand-name { font-weight: 800; font-size: 12px; letter-spacing: -0.2px; color: #0c0a09; }
+  .brand-name { font-weight: 800; font-size: 12px; letter-spacing: -0.2px; color: #ffffff; }
   .badge-host {
     font-size: 8px; font-weight: 800; text-transform: uppercase;
     padding: 2px 6px; border-radius: 6px;
-    background: #eceae3; color: #57534e; margin-left: auto;
+    background: rgba(249,115,22,0.18); color: #fdba74; border: 1px solid rgba(249,115,22,0.35);
+    margin-left: auto;
   }
   .nav-item {
     display: flex; align-items: center; gap: 9px;
     width: 100%; border: none; background: transparent;
-    color: #44403c; padding: 8px 10px; border-radius: 10px;
+    color: #a1a1aa; padding: 8px 10px; border-radius: 10px;
     font-size: 12px; font-weight: 700; cursor: pointer; text-align: left;
     transition: all .14s;
   }
-  .nav-item:hover { background: #f5f5f0; color: #0c0a09; }
-  .nav-item.active { background: #0c0a09; color: #ffffff; }
+  .nav-item:hover { background: rgba(255,255,255,0.06); color: #ffffff; }
+  .nav-item.active { background: var(--accent); color: #ffffff; }
   .sidebar-section {
     font-size: 9px; font-weight: 800; letter-spacing: 1.2px;
-    color: #a8a29e; text-transform: uppercase;
+    color: #71717a; text-transform: uppercase;
     padding: 12px 10px 4px;
   }
   .board-item {
     display: flex; align-items: center; justify-content: space-between;
     width: 100%; border: none; background: transparent;
-    color: #57534e; padding: 6px 10px; border-radius: 8px;
+    color: #a1a1aa; padding: 6px 10px; border-radius: 8px;
     font-size: 11px; font-weight: 600; cursor: pointer; text-align: left;
   }
-  .board-item:hover { background: #f5f5f0; color: #0c0a09; }
-  .board-item.active { background: #eceae3; color: #0c0a09; font-weight: 800; }
-  .board-count { font-size: 10px; color: #a8a29e; font-weight: 700; }
+  .board-item:hover { background: rgba(255,255,255,0.06); color: #ffffff; }
+  .board-item.active { background: rgba(124,58,237,0.22); color: #ddd6fe; font-weight: 800; }
+  .board-count { font-size: 10px; color: #71717a; font-weight: 700; }
   .sidebar-footer {
     margin-top: auto;
     padding-top: 10px;
-    border-top: 1px solid #f0eee8;
+    border-top: 1px solid var(--border);
     display: flex; flex-direction: column; gap: 6px;
   }
 
@@ -193,52 +194,52 @@ STUDIO_HTML = r"""<!DOCTYPE html>
     flex-shrink: 0;
   }
   .ws-title {
-    font-size: 16px; font-weight: 800; color: #0c0a09;
+    font-size: 16px; font-weight: 800; color: #ffffff;
     letter-spacing: -0.3px; white-space: nowrap;
   }
   .search-pill {
     flex: 1; max-width: 380px;
     display: flex; align-items: center; gap: 6px;
-    background: #f5f5f0; border: 1px solid #e7e5e4;
+    background: #0b0b12; border: 1px solid var(--border);
     border-radius: 999px; padding: 0 14px; height: 34px;
   }
   .search-pill input {
     flex: 1; border: none; background: transparent; outline: none;
-    font-size: 12px; color: #0c0a09;
+    font-size: 12px; color: #ffffff;
   }
   .btn {
-    border: 1px solid #e5e5e0; background: #ffffff;
-    color: #1c1917; padding: 6px 12px; border-radius: 999px;
+    border: 1px solid var(--border); background: rgba(255,255,255,0.06);
+    color: #f4f4f5; padding: 6px 12px; border-radius: 999px;
     font-size: 11px; font-weight: 700; cursor: pointer;
     transition: all .14s; white-space: nowrap;
   }
-  .btn:hover { background: #f5f5f0; border-color: #d6d3d1; }
-  .btn-dark { background: #0c0a09; color: #ffffff; border-color: #0c0a09; }
-  .btn-dark:hover { background: #292524; }
+  .btn:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.2); }
+  .btn-dark { background: var(--accent); color: #ffffff; border-color: rgba(167,139,250,0.45); }
+  .btn-dark:hover { background: var(--accent-hover); }
   .btn-violet { background: var(--accent); color: #ffffff; border-color: var(--accent); }
   .btn-violet:hover { background: var(--accent-hover); }
-  .btn-emerald { background: var(--emerald); color: #ffffff; border-color: var(--emerald); }
+  .btn-emerald { background: #059669; color: #ffffff; border-color: rgba(16,185,129,0.45); }
   .btn-emerald:hover { background: #047857; }
-  .btn-danger { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
-  .btn-danger:hover { background: #dc2626; color: #fff; }
+  .btn-danger { background: rgba(239,68,68,0.16); color: #fca5a5; border-color: rgba(239,68,68,0.35); }
+  .btn-danger:hover { background: rgba(239,68,68,0.32); color: #fff; }
 
   .tag-bar {
     display: flex; align-items: center; gap: 6px;
-    padding: 8px 18px; background: var(--canvas);
-    border-bottom: 1px solid #eceae3;
+    padding: 8px 18px; background: #0d0d14;
+    border-bottom: 1px solid var(--border);
     overflow-x: auto; flex-shrink: 0;
   }
   .chip {
-    border: 1px solid #e5e5e0; background: #ffffff;
-    color: #57534e; padding: 4px 12px; border-radius: 999px;
+    border: 1px solid var(--border); background: rgba(255,255,255,0.04);
+    color: #a1a1aa; padding: 4px 12px; border-radius: 999px;
     font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
   }
-  .chip:hover { border-color: #0c0a09; color: #0c0a09; }
-  .chip.active { background: #0c0a09; color: #ffffff; border-color: #0c0a09; }
+  .chip:hover { border-color: rgba(255,255,255,0.22); color: #ffffff; }
+  .chip.active { background: rgba(124,58,237,0.28); color: #ddd6fe; border-color: rgba(167,139,250,0.55); }
 
   main { flex: 1; overflow-y: auto; padding: 16px 18px; }
 
-  /* Pure Edge-to-Edge Rounded Masonry Cards (matches Maya PinterestClipCardWidget) */
+  /* Dark Rounded Masonry Cards */
   .masonry {
     columns: 4 175px;
     column-gap: 12px;
@@ -247,18 +248,20 @@ STUDIO_HTML = r"""<!DOCTYPE html>
     break-inside: avoid;
     margin-bottom: 12px;
     position: relative;
-    border-radius: 12px;
+    border-radius: 13px;
     overflow: hidden;
-    background: #e7e5e4;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
     cursor: pointer;
-    transition: transform .18s ease, box-shadow .18s ease;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
   }
   .card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 26px rgba(12,10,9,0.16);
+    border-color: rgba(167,139,250,0.55);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.55);
   }
   .card-media {
-    position: relative; width: 100%; background: #1c1917; overflow: hidden;
+    position: relative; width: 100%; background: #06060a; overflow: hidden;
   }
   .card-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .card-media video {
@@ -268,7 +271,7 @@ STUDIO_HTML = r"""<!DOCTYPE html>
   .card:hover .card-media video.playing { opacity: 1; }
   .card-overlay {
     position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0) 48%, rgba(0,0,0,0.82) 100%);
+    background: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 48%, rgba(0,0,0,0.85) 100%);
     opacity: 0; transition: opacity .16s;
     display: flex; flex-direction: column; justify-content: space-between;
     padding: 8px;
@@ -276,31 +279,31 @@ STUDIO_HTML = r"""<!DOCTYPE html>
   .card:hover .card-overlay { opacity: 1; }
   .card-top { display: flex; justify-content: flex-end; gap: 5px; }
   .pill-import {
-    background: #0c0a09; color: #fff; border: 1px solid rgba(255,255,255,0.28);
+    background: var(--accent); color: #fff; border: 1px solid rgba(196,181,253,0.45);
     border-radius: 999px; padding: 4px 10px; font-size: 10px; font-weight: 800; cursor: pointer;
   }
-  .pill-import:hover { background: #fff; color: #0c0a09; }
+  .pill-import:hover { background: var(--accent-hover); }
   .card-bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; }
   .card-title { font-size: 11px; font-weight: 700; color: #fff; line-height: 1.25; }
   .fs-btn {
     width: 26px; height: 26px; border-radius: 50%;
-    background: rgba(12,10,9,0.82); color: #fff;
-    border: 1px solid rgba(255,255,255,0.35);
+    background: rgba(12,10,18,0.85); color: #fff;
+    border: 1px solid rgba(255,255,255,0.28);
     font-size: 12px; cursor: pointer; display: grid; place-items: center; flex-shrink: 0;
   }
   .fs-btn:hover { background: var(--accent); border-color: #c4b5fd; }
 
-  /* Full-Panel Studio Video Player (matches Maya modernized dark player inside light studio!) */
+  /* Full-Panel Studio Video Player */
   #studioScreen {
     display: none; flex-direction: column; height: 100%; gap: 12px;
   }
   #studioScreen.open { display: flex; }
   .player-shell {
-    background: #0e0e13; border: 1px solid #242430; border-radius: 14px;
+    background: #0e0e15; border: 1px solid #242434; border-radius: 14px;
     padding: 10px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 280px;
   }
   .player-stage {
-    flex: 1; background: #050508; border-radius: 10px; overflow: hidden;
+    flex: 1; background: #040407; border-radius: 10px; overflow: hidden;
     display: flex; align-items: center; justify-content: center; min-height: 220px;
   }
   .player-stage video, .player-stage img {
@@ -324,31 +327,31 @@ STUDIO_HTML = r"""<!DOCTYPE html>
     color: #c4b5fd; background: rgba(124,58,237,0.22); padding: 3px 8px; border-radius: 7px;
   }
   .placement-card {
-    background: #ffffff; border: 1px solid #e7e5e4; border-radius: 12px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
     padding: 12px 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   }
   select, input[type="text"] {
-    background: #f5f5f0; color: #0c0a09; border: 1px solid #e5e5e0;
+    background: #0b0b12; color: #ffffff; border: 1px solid var(--border);
     border-radius: 8px; padding: 6px 10px; font-size: 11px; font-weight: 600;
   }
 
   /* Playblast & Scene Panel Cards */
   .panel-card {
-    background: #ffffff; border: 1px solid #e7e5e4; border-radius: 14px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
     padding: 16px; display: flex; flex-direction: column; gap: 12px;
     margin-bottom: 14px;
   }
-  .panel-card h3 { font-size: 14px; font-weight: 800; color: #0c0a09; }
+  .panel-card h3 { font-size: 14px; font-weight: 800; color: #ffffff; }
   .ref-row {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    padding: 8px 12px; background: #f7f6f2; border: 1px solid #e7e5e4;
+    padding: 8px 12px; background: var(--surface-2); border: 1px solid var(--border);
     border-radius: 10px; font-size: 11px;
   }
   .toast {
     position: fixed; bottom: 16px; right: 16px;
-    background: #0c0a09; color: #fff;
+    background: #181826; color: #fff; border: 1px solid rgba(167,139,250,0.45);
     padding: 10px 16px; border-radius: 12px; font-size: 12px; font-weight: 700;
-    box-shadow: 0 10px 28px rgba(0,0,0,0.25); opacity: 0; pointer-events: none;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.6); opacity: 0; pointer-events: none;
     transition: opacity .2s; z-index: 999;
   }
   .toast.show { opacity: 1; }
@@ -409,7 +412,7 @@ STUDIO_HTML = r"""<!DOCTYPE html>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
           <div style="display:flex;align-items:center;gap:10px;min-width:0;">
             <button class="btn" id="backToGridBtn">← Back</button>
-            <span id="studioTitle" style="font-weight:800;font-size:14px;color:#0c0a09;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
+            <span id="studioTitle" style="font-weight:800;font-size:14px;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
           </div>
           <button class="btn btn-dark" id="studioImportBtn">+ Import to Blender</button>
         </div>
@@ -431,7 +434,7 @@ STUDIO_HTML = r"""<!DOCTYPE html>
           </div>
         </div>
         <div class="placement-card">
-          <strong style="font-size:11px;color:#57534e;">Blender Placement:</strong>
+          <strong style="font-size:11px;color:#a1a1aa;">Blender Placement:</strong>
           <select id="importMode">
             <option value="EMPTY_3D" selected>3D Reference Plane (Viewport)</option>
             <option value="CAMERA_BG">Camera Background (PiP)</option>
@@ -444,9 +447,9 @@ STUDIO_HTML = r"""<!DOCTYPE html>
             <option value="BOTTOM_LEFT">PiP: Bottom-Left</option>
             <option value="FULL">Full Frame</option>
           </select>
-          <label style="font-size:11px;color:#57534e;">Opacity</label>
-          <input id="importOpacity" type="range" min="0.1" max="1" step="0.05" value="0.75" style="width:85px;accent-color:#0c0a09;" />
-          <label style="font-size:11px;color:#57534e;display:flex;align-items:center;gap:4px;">
+          <label style="font-size:11px;color:#a1a1aa;">Opacity</label>
+          <input id="importOpacity" type="range" min="0.1" max="1" step="0.05" value="0.75" style="width:85px;accent-color:#8b5cf6;" />
+          <label style="font-size:11px;color:#a1a1aa;display:flex;align-items:center;gap:4px;">
             <input id="matchFps" type="checkbox" checked /> Match FPS
           </label>
         </div>
@@ -463,7 +466,7 @@ STUDIO_HTML = r"""<!DOCTYPE html>
               <option value="AVI">AVI (MJPEG)</option>
             </select>
           </div>
-          <label style="font-size:12px;color:#44403c;font-weight:600;display:flex;align-items:center;gap:6px;">
+          <label style="font-size:12px;color:#d4d4d8;font-weight:600;display:flex;align-items:center;gap:6px;">
             <input id="pbAutoPost" type="checkbox" checked /> Auto-post to AnimationReference.org Portfolio &amp; Feed right after recording
           </label>
           <button class="btn btn-emerald" id="recordPbBtn" style="padding:10px 16px;font-size:12px;">● Record Blender Playblast</button>
@@ -552,10 +555,10 @@ async function loadAccount() {
     const foot = document.getElementById('sidebarAcctFooter');
     const card = document.getElementById('accountCard');
     if (state.account.signed_in) {
-      foot.innerHTML = `<div style="font-size:11px;font-weight:800;color:#0c0a09;padding:0 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${state.account.display_name || state.account.email}</div>`;
+      foot.innerHTML = `<div style="font-size:11px;font-weight:800;color:#ffffff;padding:0 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${state.account.display_name || state.account.email}</div>`;
       card.innerHTML = `
         <h3>Signed in to AnimationReference.org</h3>
-        <p style="font-size:12px;color:#57534e;">Account: <strong>${state.account.display_name || ''}</strong> (${state.account.email || ''})</p>
+        <p style="font-size:12px;color:#a1a1aa;">Account: <strong style="color:#fff;">${state.account.display_name || ''}</strong> (${state.account.email || ''})</p>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-dark" onclick="window.open('https://animationreference.org/pricing','_blank')">Manage Pro</button>
           <button class="btn btn-danger" id="acctSignOutBtn">Sign Out</button>

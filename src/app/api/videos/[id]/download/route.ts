@@ -11,16 +11,42 @@ function slugify(title: string) {
   return (title || 'reference').replace(/[^\w\s-]/g, '').trim().toLowerCase().replace(/\s+/g, '-') || 'reference';
 }
 
+const FREE_PLUGIN_DAILY_IMPORTS = 3;
+
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const identity = await requireFirebaseUser(request);
     const profile = await getTrustedProfile(identity.uid);
-    if (identity.admin !== true && !profileHasPro(profile)) {
-      throw new ApiError(402, 'PRO_REQUIRED', 'Downloading reference MP4s is a Pro feature.');
+    const body = await request.json().catch(() => ({}));
+    const client = typeof body?.client === 'string' ? body.client.toLowerCase() : '';
+    const isPluginClient = client === 'blender' || client === 'maya';
+    const isProOrAdmin = identity.admin === true || profileHasPro(profile);
+
+    const db = getFirestore();
+    const todayKey = new Date().toISOString().slice(0, 10);
+
+    if (!isProOrAdmin) {
+      if (!isPluginClient) {
+        throw new ApiError(402, 'PRO_REQUIRED', 'Downloading reference MP4s is a Pro feature.');
+      }
+      // Allow free users 3 daily 3D plugin imports so they can experience the workflow before upgrading
+      const userSnap = await db.collection('users').doc(identity.uid).get();
+      const userData = userSnap.data() || {};
+      const usedToday = userData.pluginImportsDate === todayKey ? Number(userData.pluginImportsToday || 0) : 0;
+      if (usedToday >= FREE_PLUGIN_DAILY_IMPORTS) {
+        throw new ApiError(
+          402,
+          'PRO_REQUIRED',
+          `You've used all ${FREE_PLUGIN_DAILY_IMPORTS} free daily 3D plugin imports. Upgrade to Pro ($1 first month) for unlimited imports.`
+        );
+      }
+      await db.collection('users').doc(identity.uid).set(
+        { pluginImportsDate: todayKey, pluginImportsToday: usedToday + 1 },
+        { merge: true }
+      );
     }
 
     const { id } = await params;
-    const db = getFirestore();
     const [videoSnap, clipSnap] = await Promise.all([
       db.collection('videos').doc(id).get(),
       db.collection('reference_clips').doc(id).get(),

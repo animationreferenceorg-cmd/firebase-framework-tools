@@ -881,9 +881,12 @@ def import_animref_to_maya(video_dict, local_video_path, mode="sequence", target
             plane = cmds.imagePlane(fileName=clean_local_path)
             plane_transform = plane[0]
             try:
-                cmds.setAttr(plane_transform + ".translateX", -12.0)
-                cmds.setAttr(plane_transform + ".translateY", 10.0)
+                cmds.setAttr(plane_transform + ".translateX", 0.0)
+                cmds.setAttr(plane_transform + ".translateY", 0.0)
                 cmds.setAttr(plane_transform + ".translateZ", 0.0)
+                cmds.setAttr(plane_transform + ".rotateX", 0.0)
+                cmds.setAttr(plane_transform + ".rotateY", 0.0)
+                cmds.setAttr(plane_transform + ".rotateZ", 0.0)
             except Exception:
                 pass
         plane_shape = plane[1]
@@ -914,9 +917,12 @@ def import_animref_to_maya(video_dict, local_video_path, mode="sequence", target
                 plane_transform = plane[0]
                 plane_shape = plane[1]
                 try:
-                    cmds.setAttr(plane_transform + ".translateX", -12.0)
-                    cmds.setAttr(plane_transform + ".translateY", 10.0)
+                    cmds.setAttr(plane_transform + ".translateX", 0.0)
+                    cmds.setAttr(plane_transform + ".translateY", 0.0)
                     cmds.setAttr(plane_transform + ".translateZ", 0.0)
+                    cmds.setAttr(plane_transform + ".rotateX", 0.0)
+                    cmds.setAttr(plane_transform + ".rotateY", 0.0)
+                    cmds.setAttr(plane_transform + ".rotateZ", 0.0)
                     cov = cmds.getAttr(plane_shape + ".coverage") or []
                     cov_w, cov_h = (cov[0] if cov and len(cov[0]) == 2 else (16, 9))
                     if cov_w and cov_h and cov_w > 0 and cov_h > 0:
@@ -969,9 +975,12 @@ def import_animref_to_maya(video_dict, local_video_path, mode="sequence", target
                 plane_transform = plane[0]
                 plane_shape = plane[1]
                 try:
-                    cmds.setAttr(plane_transform + ".translateX", -12.0)
-                    cmds.setAttr(plane_transform + ".translateY", 10.0)
+                    cmds.setAttr(plane_transform + ".translateX", 0.0)
+                    cmds.setAttr(plane_transform + ".translateY", 0.0)
                     cmds.setAttr(plane_transform + ".translateZ", 0.0)
+                    cmds.setAttr(plane_transform + ".rotateX", 0.0)
+                    cmds.setAttr(plane_transform + ".rotateY", 0.0)
+                    cmds.setAttr(plane_transform + ".rotateZ", 0.0)
                     cov = cmds.getAttr(plane_shape + ".coverage") or []
                     cov_w, cov_h = (cov[0] if cov and len(cov[0]) == 2 else (16, 9))
                     if cov_w and cov_h and cov_w > 0 and cov_h > 0:

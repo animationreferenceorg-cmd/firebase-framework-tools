@@ -28,6 +28,10 @@ export const ANALYTICS_EVENTS = [
   'marketplace_tab_clicked',
   'instagram_prompt_shown',
   'instagram_follow_clicked',
+  'plugin_download_clicked',
+  'plugin_account_linked',
+  'plugin_upgrade_clicked',
+  'plugin_pro_converted',
 ] as const;
 
 export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];
@@ -51,6 +55,7 @@ export const ALLOWED_PROPERTIES = [
   // GA4 monetization: purchase value and currency.
   'value',
   'currency',
+  'plugin',
 ] as const;
 
 export type AnalyticsProperty = (typeof ALLOWED_PROPERTIES)[number];

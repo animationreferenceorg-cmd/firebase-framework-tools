@@ -15,6 +15,7 @@ import {
   Film,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { trackPluginDownload } from '@/lib/plugin-analytics';
 import {
   Dialog,
   DialogContent,
@@ -145,13 +146,13 @@ export function ToolsLaunchAnnouncement() {
 
               {/* Action buttons */}
               <div className="flex flex-wrap items-center gap-2.5 pt-1">
-                <a href="/downloads/animref_maya_plugin.zip" download>
+                <a href="/downloads/animref_maya_plugin.zip" download onClick={() => trackPluginDownload('maya', 'home_banner')}>
                   <Button className="h-10 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-extrabold px-4 gap-1.5 shadow-lg shadow-violet-900/40 cursor-pointer">
                     <Download className="h-3.5 w-3.5" />
                     <span>Download Maya</span>
                   </Button>
                 </a>
-                <a href="/downloads/animref_blender_addon.zip" download>
+                <a href="/downloads/animref_blender_addon.zip" download onClick={() => trackPluginDownload('blender', 'home_banner')}>
                   <Button className="h-10 rounded-xl bg-white/10 hover:bg-white/15 border border-orange-400/35 text-orange-100 text-xs font-extrabold px-4 gap-1.5 cursor-pointer">
                     <Download className="h-3.5 w-3.5 text-orange-300" />
                     <span>Download Blender</span>
@@ -288,13 +289,13 @@ export function ToolsLaunchAnnouncement() {
             {/* Modal Footer CTAs */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
               <div className="flex flex-wrap items-center gap-2.5">
-                <a href="/downloads/animref_maya_plugin.zip" download>
+                <a href="/downloads/animref_maya_plugin.zip" download onClick={() => trackPluginDownload('maya', 'home_popup')}>
                   <Button className="h-10 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-white text-xs font-extrabold px-4 gap-1.5 cursor-pointer">
                     <Download className="h-3.5 w-3.5" />
                     <span>Download Maya (.zip)</span>
                   </Button>
                 </a>
-                <a href="/downloads/animref_blender_addon.zip" download>
+                <a href="/downloads/animref_blender_addon.zip" download onClick={() => trackPluginDownload('blender', 'home_popup')}>
                   <Button className="h-10 rounded-xl bg-gradient-to-r from-orange-500 to-violet-600 hover:from-orange-400 hover:to-violet-500 text-white text-xs font-extrabold px-4 gap-1.5 cursor-pointer">
                     <Download className="h-3.5 w-3.5" />
                     <span>Download Blender (.zip)</span>

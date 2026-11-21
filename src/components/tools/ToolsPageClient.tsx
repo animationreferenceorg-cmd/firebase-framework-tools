@@ -19,6 +19,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { trackPluginDownload } from '@/lib/plugin-analytics';
 
 type HostTab = 'maya' | 'blender';
 
@@ -144,13 +145,13 @@ export function ToolsPageClient() {
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-1">
-              <a href="/downloads/animref_maya_plugin.zip" download>
+              <a href="/downloads/animref_maya_plugin.zip" download onClick={() => trackPluginDownload('maya', 'tools_hero')}>
                 <Button className="h-11 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-white font-extrabold px-5 gap-2 shadow-lg shadow-violet-900/40 cursor-pointer">
                   <Download className="h-4 w-4" />
                   <span>Download for Maya</span>
                 </Button>
               </a>
-              <a href="/downloads/animref_blender_addon.zip" download>
+              <a href="/downloads/animref_blender_addon.zip" download onClick={() => trackPluginDownload('blender', 'tools_hero')}>
                 <Button className="h-11 rounded-xl bg-gradient-to-r from-orange-500 to-violet-600 hover:from-orange-400 hover:to-violet-500 text-white font-extrabold px-5 gap-2 shadow-lg shadow-orange-950/30 cursor-pointer">
                   <Download className="h-4 w-4" />
                   <span>Download for Blender</span>
@@ -260,12 +261,12 @@ export function ToolsPageClient() {
             </div>
 
             <div className="flex gap-2.5">
-              <a href="/downloads/animref_maya_plugin.zip" download className="flex-1">
+              <a href="/downloads/animref_maya_plugin.zip" download onClick={() => trackPluginDownload('maya', 'tools_free_card')} className="flex-1">
                 <Button variant="outline" className="w-full h-10 rounded-xl border-white/15 bg-white/5 hover:bg-white/10 text-white text-xs font-bold cursor-pointer">
                   Get Maya Free
                 </Button>
               </a>
-              <a href="/downloads/animref_blender_addon.zip" download className="flex-1">
+              <a href="/downloads/animref_blender_addon.zip" download onClick={() => trackPluginDownload('blender', 'tools_free_card')} className="flex-1">
                 <Button variant="outline" className="w-full h-10 rounded-xl border-white/15 bg-white/5 hover:bg-white/10 text-white text-xs font-bold cursor-pointer">
                   Get Blender Free
                 </Button>
@@ -404,7 +405,7 @@ export function ToolsPageClient() {
                 </div>
               </div>
 
-              <a href={host.downloadUrl} download className="block">
+              <a href={host.downloadUrl} download onClick={() => trackPluginDownload(key, 'tools_detail_card')} className="block">
                 <Button
                   className={`w-full h-12 rounded-2xl bg-gradient-to-r ${host.buttonGradient} text-white font-extrabold text-sm gap-2 cursor-pointer`}
                 >

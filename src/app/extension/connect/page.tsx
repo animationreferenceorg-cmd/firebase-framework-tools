@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { auth } from '@/lib/firebase';
+import { trackPluginAccountLinked, type PluginKind } from '@/lib/plugin-analytics';
 
 export default function ExtensionConnectPage() {
   return (
@@ -88,12 +89,18 @@ function ExtensionConnectContent() {
         // If browser blocked HTTPS->localhost fetch (Private Network Access / Mixed Content),
         // top-level navigation to http://127.0.0.1 is ALWAYS allowed and auto-syncs the plugin!
         if (!delivered && encodedPayload) {
+          const pluginKind: PluginKind = clientType === 'maya' ? 'maya' : clientType === 'blender' ? 'blender' : 'extension';
+          trackPluginAccountLinked(pluginKind, token, 'extension_connect');
           const cbUrl = `http://127.0.0.1:${portNum}/callback?payload=${encodeURIComponent(encodedPayload)}&state=${encodeURIComponent(callbackState)}`;
           setStatus('connected');
           window.location.assign(cbUrl);
           return;
         }
       }
+
+      // Record plugin account link in Firebase & Analytics
+      const pluginKind: PluginKind = clientType === 'maya' ? 'maya' : clientType === 'blender' ? 'blender' : 'extension';
+      trackPluginAccountLinked(pluginKind, token, 'extension_connect');
 
       // Method 1: Bridge via window.postMessage
       window.postMessage({

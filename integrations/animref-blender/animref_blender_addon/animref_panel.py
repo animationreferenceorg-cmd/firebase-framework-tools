@@ -244,19 +244,89 @@ class ANIMREF_OT_RefreshSceneRefs(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class ANIMREF_OT_SelectSceneRef(bpy.types.Operator):
+    bl_idname = "animref.select_scene_ref"
+    bl_label = "Select Reference Plane"
+    bl_description = "Select and activate this reference plane in the 3D Viewport"
+    bl_options = {"REGISTER", "UNDO"}
+
+    obj_name: bpy.props.StringProperty(default="")
+
+    def execute(self, context):
+        obj = bpy.data.objects.get(self.obj_name)
+        if not obj:
+            return {"CANCELLED"}
+        try:
+            for o in context.scene.objects:
+                o.select_set(False)
+            obj.hide_viewport = False
+            obj.hide_select = False
+            obj.select_set(True)
+            context.view_layer.objects.active = obj
+        except Exception:
+            pass
+        return {"FINISHED"}
+
+
+class ANIMREF_OT_FocusRef(bpy.types.Operator):
+    bl_idname = "animref.focus_ref"
+    bl_label = "Frame Plane"
+    bl_description = "Center the 3D Viewport camera on this reference plane"
+
+    obj_name: bpy.props.StringProperty(default="")
+
+    def execute(self, context):
+        obj = bpy.data.objects.get(self.obj_name)
+        if not obj:
+            return {"CANCELLED"}
+        try:
+            for o in context.scene.objects:
+                o.select_set(False)
+            obj.select_set(True)
+            context.view_layer.objects.active = obj
+            bpy.ops.view3d.view_selected()
+        except Exception:
+            pass
+        return {"FINISHED"}
+
+
+class ANIMREF_OT_ResetRefOrigin(bpy.types.Operator):
+    bl_idname = "animref.reset_ref_origin"
+    bl_label = "Center (0,0,0)"
+    bl_description = "Reset reference plane to world origin (0, 0, 0) upright"
+    bl_options = {"REGISTER", "UNDO"}
+
+    obj_name: bpy.props.StringProperty(default="")
+
+    def execute(self, context):
+        import math
+        obj = bpy.data.objects.get(self.obj_name)
+        if not obj:
+            return {"CANCELLED"}
+        obj.location = (0.0, 0.0, 0.0)
+        obj.rotation_euler = (math.radians(90.0), 0.0, 0.0)
+        obj.scale = (abs(obj.scale.x) or 1.0, abs(obj.scale.y) or 1.0, abs(obj.scale.z) or 1.0)
+        self.report({"INFO"}, f"Centered '{obj.name}' at (0, 0, 0).")
+        return {"FINISHED"}
+
+
 class ANIMREF_OT_MagicAlign(bpy.types.Operator):
     bl_idname = "animref.magic_align"
     bl_label = "Magic Align"
     bl_description = "Align reference start to the current timeline frame"
     bl_options = {"REGISTER", "UNDO"}
 
+    ref_key: bpy.props.StringProperty(default="")
+
     def execute(self, context):
         settings = context.scene.animref_settings
-        if not settings.scene_refs or settings.active_scene_ref_index >= len(settings.scene_refs):
+        key = self.ref_key
+        if not key and settings.scene_refs and settings.active_scene_ref_index < len(settings.scene_refs):
+            key = settings.scene_refs[settings.active_scene_ref_index].ref_key
+        if not key:
             return {"CANCELLED"}
-        ref_key = settings.scene_refs[settings.active_scene_ref_index].ref_key
         try:
-            frame = animref_importer.magic_align_reference(context, ref_key)
+            frame = animref_importer.magic_align_reference(context, key)
             _refresh_scene_list(context)
             self.report({"INFO"}, f"Aligned reference to frame {frame}.")
             return {"FINISHED"}
@@ -272,14 +342,17 @@ class ANIMREF_OT_NudgeRef(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     delta: bpy.props.IntProperty(default=1)
+    ref_key: bpy.props.StringProperty(default="")
 
     def execute(self, context):
         settings = context.scene.animref_settings
-        if not settings.scene_refs or settings.active_scene_ref_index >= len(settings.scene_refs):
+        key = self.ref_key
+        if not key and settings.scene_refs and settings.active_scene_ref_index < len(settings.scene_refs):
+            key = settings.scene_refs[settings.active_scene_ref_index].ref_key
+        if not key:
             return {"CANCELLED"}
-        ref_key = settings.scene_refs[settings.active_scene_ref_index].ref_key
         try:
-            new_off = animref_importer.nudge_reference_offset(context, ref_key, self.delta)
+            new_off = animref_importer.nudge_reference_offset(context, key, self.delta)
             _refresh_scene_list(context)
             self.report({"INFO"}, f"Reference offset: {new_off:+d}f")
             return {"FINISHED"}
@@ -293,12 +366,16 @@ class ANIMREF_OT_MirrorRef(bpy.types.Operator):
     bl_label = "Flip Horizontal"
     bl_options = {"REGISTER", "UNDO"}
 
+    ref_key: bpy.props.StringProperty(default="")
+
     def execute(self, context):
         settings = context.scene.animref_settings
-        if not settings.scene_refs or settings.active_scene_ref_index >= len(settings.scene_refs):
+        key = self.ref_key
+        if not key and settings.scene_refs and settings.active_scene_ref_index < len(settings.scene_refs):
+            key = settings.scene_refs[settings.active_scene_ref_index].ref_key
+        if not key:
             return {"CANCELLED"}
-        ref_key = settings.scene_refs[settings.active_scene_ref_index].ref_key
-        animref_importer.toggle_reference_mirror(context, ref_key)
+        animref_importer.toggle_reference_mirror(context, key)
         return {"FINISHED"}
 
 
@@ -307,12 +384,16 @@ class ANIMREF_OT_ToggleVisRef(bpy.types.Operator):
     bl_label = "Show / Hide"
     bl_options = {"REGISTER", "UNDO"}
 
+    ref_key: bpy.props.StringProperty(default="")
+
     def execute(self, context):
         settings = context.scene.animref_settings
-        if not settings.scene_refs or settings.active_scene_ref_index >= len(settings.scene_refs):
+        key = self.ref_key
+        if not key and settings.scene_refs and settings.active_scene_ref_index < len(settings.scene_refs):
+            key = settings.scene_refs[settings.active_scene_ref_index].ref_key
+        if not key:
             return {"CANCELLED"}
-        ref_key = settings.scene_refs[settings.active_scene_ref_index].ref_key
-        animref_importer.toggle_reference_visibility(context, ref_key)
+        animref_importer.toggle_reference_visibility(context, key)
         _refresh_scene_list(context)
         return {"FINISHED"}
 
@@ -322,12 +403,16 @@ class ANIMREF_OT_DeleteRef(bpy.types.Operator):
     bl_label = "Remove Reference"
     bl_options = {"REGISTER", "UNDO"}
 
+    ref_key: bpy.props.StringProperty(default="")
+
     def execute(self, context):
         settings = context.scene.animref_settings
-        if not settings.scene_refs or settings.active_scene_ref_index >= len(settings.scene_refs):
+        key = self.ref_key
+        if not key and settings.scene_refs and settings.active_scene_ref_index < len(settings.scene_refs):
+            key = settings.scene_refs[settings.active_scene_ref_index].ref_key
+        if not key:
             return {"CANCELLED"}
-        ref_key = settings.scene_refs[settings.active_scene_ref_index].ref_key
-        animref_importer.delete_reference(context, ref_key)
+        animref_importer.delete_reference(context, key)
         _refresh_scene_list(context)
         return {"FINISHED"}
 
@@ -437,11 +522,12 @@ class ANIMREF_PT_AccountPanel(bpy.types.Panel):
 
 
 class ANIMREF_PT_LibraryPanel(bpy.types.Panel):
-    bl_label = "Reference Library"
+    bl_label = "Quick Library (Compact)"
     bl_idname = "ANIMREF_PT_library"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "AnimRef"
+    bl_options = {"DEFAULT_CLOSED"}
 
     def draw(self, context):
         layout = self.layout
@@ -493,43 +579,124 @@ class ANIMREF_PT_LibraryPanel(bpy.types.Panel):
 
 
 class ANIMREF_PT_SceneManagerPanel(bpy.types.Panel):
-    bl_label = "Scene References"
+    bl_label = "Scene Plane Controls"
     bl_idname = "ANIMREF_PT_scene_manager"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "AnimRef"
-    bl_options = {"DEFAULT_CLOSED"}
 
     def draw(self, context):
         layout = self.layout
-        settings = context.scene.animref_settings
 
-        row = layout.row(align=True)
-        row.operator("animref.refresh_scene_refs", text="Refresh Scene", icon="FILE_REFRESH")
+        # Live-detect all AnimRef 3D reference planes & camera backgrounds in the scene
+        empties = [
+            obj for obj in context.scene.objects
+            if obj.type == "EMPTY" and (obj.get("animref_managed") or obj.name.startswith("AnimRef_"))
+        ]
+        cam = context.scene.camera
+        cam_bgs = []
+        if cam and cam.type == "CAMERA" and cam.data:
+            for idx, bg in enumerate(cam.data.background_images):
+                if bg.image:
+                    cam_bgs.append((cam, idx, bg))
 
-        layout.template_list(
-            "ANIMREF_UL_SceneRefs",
-            "",
-            settings,
-            "scene_refs",
-            settings,
-            "active_scene_ref_index",
-            rows=3,
-        )
+        if not empties and not cam_bgs:
+            box = layout.box()
+            box.label(text="No reference plane in scene yet.", icon="INFO")
+            box.label(text="Click 'Open AnimRef Studio Window' above to import.")
+            return
 
-        if settings.scene_refs:
-            row = layout.row(align=True)
-            row.operator("animref.magic_align", text="Magic Align", icon="PLAY")
-            row.operator("animref.mirror_ref", text="Flip", icon="MOD_MIRROR")
+        # Pick active plane: prefer currently active/selected AnimRef plane, else first in scene
+        active_obj = context.active_object
+        target_empty = active_obj if (active_obj in empties) else (empties[0] if empties else None)
 
-            row = layout.row(align=True)
+        # Plane switcher chips if multiple planes exist
+        if len(empties) > 1:
+            sel_box = layout.box()
+            sel_box.label(text="Active Plane in Scene", icon="OUTLINER_OB_IMAGE")
+            for obj in empties:
+                row = sel_box.row(align=True)
+                is_curr = (obj == target_empty)
+                op = row.operator(
+                    "animref.select_scene_ref",
+                    text=str(obj.get("animref_title") or obj.name),
+                    icon="RADIOBUT_ON" if is_curr else "RADIOBUT_OFF",
+                    depress=is_curr,
+                )
+                op.obj_name = obj.name
+
+        if target_empty is not None:
+            ref_key = target_empty.name
+            title = str(target_empty.get("animref_title") or target_empty.name)
+
+            # Header + Quick Viewport Actions
+            box = layout.box()
+            hdr = box.row(align=True)
+            hdr.label(text=title, icon="OUTLINER_OB_IMAGE")
+            op_foc = hdr.operator("animref.focus_ref", text="", icon="VIEWZOOM")
+            op_foc.obj_name = ref_key
+            op_del = hdr.operator("animref.delete_ref", text="", icon="TRASH")
+            op_del.ref_key = ref_key
+
+            # Live Transform & Opacity Sliders
+            col = box.column(align=True)
+            col.prop(target_empty, "empty_display_size", text="Size")
+            if hasattr(target_empty, "color"):
+                col.prop(target_empty, "color", index=3, text="Opacity", slider=True)
+
+            loc_row = box.row(align=True)
+            loc_row.prop(target_empty, "location", text="")
+            op_orig = box.operator("animref.reset_ref_origin", text="Center at (0, 0, 0)", icon="CURSOR")
+            op_orig.obj_name = ref_key
+
+            # Quick Toggles: In Front, Lock, Visibility, Flip
+            toggles = box.row(align=True)
+            toggles.prop(target_empty, "show_in_front", text="In Front", toggle=True)
+            toggles.prop(target_empty, "hide_select", text="Lock", icon="LOCKED" if target_empty.hide_select else "UNLOCKED", toggle=True)
+
+            vis_row = box.row(align=True)
+            op_vis = vis_row.operator("animref.toggle_vis_ref", text="Show" if target_empty.hide_viewport else "Hide", icon="HIDE_ON" if target_empty.hide_viewport else "HIDE_OFF")
+            op_vis.ref_key = ref_key
+            op_flip = vis_row.operator("animref.mirror_ref", text="Flip X", icon="MOD_MIRROR")
+            op_flip.ref_key = ref_key
+
+            # Live Timeline Sync Controls
+            tbox = layout.box()
+            tbox.label(text="Timeline Sync", icon="TIME")
+            if getattr(target_empty, "image_user", None):
+                iu = target_empty.image_user
+                row = tbox.row(align=True)
+                row.prop(iu, "frame_start", text="Start")
+                row.prop(iu, "frame_offset", text="Offset")
+
+            align_row = tbox.row(align=True)
+            op_al = align_row.operator("animref.magic_align", text="Magic Align to Current Frame", icon="PLAY")
+            op_al.ref_key = ref_key
+
+            nudge_row = tbox.row(align=True)
             for delta in (-5, -1, 1, 5):
-                op = row.operator("animref.nudge_ref", text=f"{delta:+d}f")
-                op.delta = delta
+                op_n = nudge_row.operator("animref.nudge_ref", text=f"{delta:+d}f")
+                op_n.delta = delta
+                op_n.ref_key = ref_key
 
-            row = layout.row(align=True)
-            row.operator("animref.toggle_vis_ref", text="Hide/Show", icon="HIDE_OFF")
-            row.operator("animref.delete_ref", text="Remove", icon="TRASH")
+        # Camera Background References (if any)
+        for cam_obj, idx, bg in cam_bgs:
+            ref_key = f"{cam_obj.name}::bg::{idx}"
+            cbox = layout.box()
+            hdr = cbox.row(align=True)
+            hdr.label(text=f"[Cam] {bg.image.name}", icon="CAMERA_DATA")
+            op_del = hdr.operator("animref.delete_ref", text="", icon="TRASH")
+            op_del.ref_key = ref_key
+
+            cbox.prop(bg, "alpha", text="Opacity", slider=True)
+            cbox.prop(bg, "scale", text="Scale")
+            row = cbox.row(align=True)
+            op_vis = row.operator("animref.toggle_vis_ref", text="Hide" if bg.show_background_image else "Show", icon="HIDE_OFF" if bg.show_background_image else "HIDE_ON")
+            op_vis.ref_key = ref_key
+            op_flip = row.operator("animref.mirror_ref", text="Flip X", icon="MOD_MIRROR")
+            op_flip.ref_key = ref_key
+            op_al = cbox.operator("animref.magic_align", text="Magic Align", icon="PLAY")
+            op_al.ref_key = ref_key
 
 
 class ANIMREF_PT_ToolsPanel(bpy.types.Panel):
@@ -577,6 +744,9 @@ CLASSES = (
     ANIMREF_OT_SearchLibrary,
     ANIMREF_OT_ImportSelected,
     ANIMREF_OT_RefreshSceneRefs,
+    ANIMREF_OT_SelectSceneRef,
+    ANIMREF_OT_FocusRef,
+    ANIMREF_OT_ResetRefOrigin,
     ANIMREF_OT_MagicAlign,
     ANIMREF_OT_NudgeRef,
     ANIMREF_OT_MirrorRef,
@@ -586,9 +756,9 @@ CLASSES = (
     ANIMREF_OT_RecordPlayblast,
     ANIMREF_OT_UploadLastPlayblast,
     ANIMREF_PT_AccountPanel,
-    ANIMREF_PT_LibraryPanel,
     ANIMREF_PT_SceneManagerPanel,
     ANIMREF_PT_ToolsPanel,
+    ANIMREF_PT_LibraryPanel,
 )
 
 

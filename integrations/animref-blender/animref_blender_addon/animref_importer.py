@@ -80,6 +80,34 @@ def _ensure_active_camera(context):
     return cam_obj
 
 
+def _redraw_viewports() -> None:
+    if bpy is None:
+        return
+    try:
+        for win in bpy.context.window_manager.windows:
+            for area in win.screen.areas:
+                if area.type == "VIEW_3D":
+                    area.tag_redraw()
+    except Exception:
+        pass
+
+
+def _switch_to_camera_view() -> None:
+    if bpy is None:
+        return
+    try:
+        for win in bpy.context.window_manager.windows:
+            for area in win.screen.areas:
+                if area.type == "VIEW_3D":
+                    for space in area.spaces:
+                        if space.type == "VIEW_3D" and getattr(space, "region_3d", None):
+                            space.region_3d.view_perspective = "CAMERA"
+                            area.tag_redraw()
+                            return
+    except Exception:
+        pass
+
+
 def import_to_camera_background(
     context,
     local_path: str,
@@ -118,6 +146,7 @@ def import_to_camera_background(
         iu.frame_start = int(context.scene.frame_current) if start_at_current_frame else int(context.scene.frame_start)
         iu.frame_offset = 0
 
+    _switch_to_camera_view()
     return cam_obj, bg
 
 
@@ -165,6 +194,15 @@ def import_to_3d_empty(
         c.track_axis = "TRACK_Z"
         c.up_axis = "UP_Y"
 
+    try:
+        for obj in context.scene.objects:
+            obj.select_set(False)
+        empty.select_set(True)
+        if hasattr(context, "view_layer") and context.view_layer:
+            context.view_layer.objects.active = empty
+    except Exception:
+        pass
+    _redraw_viewports()
     return empty
 
 

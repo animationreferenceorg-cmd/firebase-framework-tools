@@ -433,8 +433,8 @@ STUDIO_HTML = r"""<!DOCTYPE html>
         <div class="placement-card">
           <strong style="font-size:11px;color:#57534e;">Blender Placement:</strong>
           <select id="importMode">
+            <option value="EMPTY_3D" selected>3D Reference Plane (Viewport)</option>
             <option value="CAMERA_BG">Camera Background (PiP)</option>
-            <option value="EMPTY_3D">3D Reference Plane</option>
             <option value="VSE">Video Sequencer (VSE)</option>
           </select>
           <select id="pipPreset">
@@ -698,7 +698,13 @@ async function importClip(item) {
     });
     showToast('✓ Added to Blender Viewport!');
   } catch (e) {
-    showToast('Error: ' + e.message);
+    const msg = String(e.message || e);
+    if (msg.includes('PRO_REQUIRED') || msg.includes('402')) {
+      showToast('Pro required for video imports — Try Pro for $1 first month!');
+      setTimeout(() => window.open('https://animationreference.org/pricing', '_blank'), 1200);
+    } else {
+      showToast('Import error: ' + msg);
+    }
   }
 }
 
@@ -1124,10 +1130,18 @@ def launch_studio_app_window() -> str:
             if found:
                 candidates.append(found)
 
+    profile_dir = os.path.join(animref_auth.get_storage_dir(), "app_window_profile")
+    os.makedirs(profile_dir, exist_ok=True)
     for exe in candidates:
         if os.path.isfile(exe):
             try:
-                subprocess.Popen([exe, f"--app={url}", "--window-size=980,720"])
+                subprocess.Popen([
+                    exe,
+                    f"--user-data-dir={profile_dir}",
+                    f"--app={url}",
+                    "--new-window",
+                    "--window-size=1040,740",
+                ])
                 return url
             except Exception:
                 pass

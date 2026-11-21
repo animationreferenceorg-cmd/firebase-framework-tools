@@ -232,6 +232,10 @@ def authorize_and_download_media(video: dict) -> str:
     if not download_url:
         raise RuntimeError("No downloadable media URL found for this reference.")
 
+    # Blender cannot load HLS .m3u8 playlists natively — convert Bunny Stream URLs to direct MP4
+    if "b-cdn.net" in download_url.lower() and "playlist.m3u8" in download_url.lower():
+        download_url = download_url.replace("playlist.m3u8", "play_720p.mp4")
+
     parsed = urllib.parse.urlparse(download_url)
     _, ext = os.path.splitext(parsed.path)
     if not ext or len(ext) > 6:

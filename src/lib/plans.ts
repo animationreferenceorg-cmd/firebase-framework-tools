@@ -276,19 +276,19 @@ export function formatUsd(cents: number): string {
  */
 export const FREE_FEATURES = [
   `${ACCESS_LIMITS.free.maxUnlockedReferences} new library references a day (re-watch anytime)`,
+  'Maya & Blender Studio plugins (15 daily imports + unlimited own uploads)',
   `Earn up to +${MAX_CONTRIBUTION_BONUS} extra a day by sharing references`,
   'Unlimited public boards and uploads',
-  'Unlimited portfolio posts',
   'Frame-by-frame playback and speed controls',
 ] as const;
 
 export const PRO_FEATURES = [
-  'Unlimited references every day',
+  'Unlimited imports from AnimRef Moodboards into Maya & Blender',
+  'Unlimited library references every day',
   'Private boards & private uploads for studio/NDA work',
   'Side-by-side synchronized playblast compare',
-  'High-resolution contact sheets & PureRef export',
   'Reference MP4 video downloads & exports',
-  'Pitch deck & director presentation PDF exports',
+  'High-resolution contact sheets & pitch deck PDF exports',
   'Shot breakdowns & a Pro badge on your portfolio',
 ] as const;
 

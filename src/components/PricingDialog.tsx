@@ -402,7 +402,12 @@ export function PricingDialog({ children, open: openProp, onOpenChange: onOpenCh
                                         </tr>
                                         <tr className="hover:bg-white/[0.02]">
                                             <td className="p-2.5 text-zinc-300 font-medium">New Library References</td>
-                                            <td className="p-2.5 text-center text-zinc-400 bg-white/[0.01]">25/day (+ bonus for sharing)</td>
+                                            <td className="p-2.5 text-center text-zinc-400 bg-white/[0.01]">15/day (+ bonus for sharing)</td>
+                                            <td className="p-2.5 text-center font-bold text-purple-300 bg-purple-950/20 border-l border-purple-500/10">Unlimited</td>
+                                        </tr>
+                                        <tr className="hover:bg-white/[0.02]">
+                                            <td className="p-2.5 text-zinc-300 font-medium">Maya &amp; Blender Moodboard Imports</td>
+                                            <td className="p-2.5 text-center text-zinc-400 bg-white/[0.01]">15/day (+ unlimited own uploads)</td>
                                             <td className="p-2.5 text-center font-bold text-purple-300 bg-purple-950/20 border-l border-purple-500/10">Unlimited</td>
                                         </tr>
                                         <tr className="hover:bg-white/[0.02]">

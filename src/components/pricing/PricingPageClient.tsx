@@ -49,10 +49,19 @@ const COMPARISON: { group: string; rows: { label: string; free: Cell; pro: Cell 
     ],
   },
   {
+    group: 'Maya & Blender plugins',
+    rows: [
+      { label: 'Maya & Blender Studio plugins (auto-updating)', free: true, pro: true },
+      { label: 'Imports from AnimRef Moodboards & library', free: '15 per day', pro: 'Unlimited' },
+      { label: 'Imports of your own uploaded references', free: 'Unlimited', pro: 'Unlimited' },
+      { label: 'Live Scene Plane controls & playblast draft upload', free: true, pro: true },
+    ],
+  },
+  {
     group: 'Export',
     rows: [
       { label: 'Reference MP4 video downloads & exports', free: false, pro: true },
-      { label: 'High-resolution contact sheets & PureRef export', free: false, pro: true },
+      { label: 'High-resolution keyframe contact sheets', free: false, pro: true },
       { label: 'Pitch deck & director presentation PDF export', free: false, pro: true },
     ],
   },

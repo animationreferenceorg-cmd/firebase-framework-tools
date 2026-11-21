@@ -134,7 +134,7 @@ export function VideoQuotaSlate({
           </div>
           <div className="flex items-center gap-2 text-zinc-200">
             <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span>1-click PureRef contact sheets</span>
+            <span>Unlimited Maya &amp; Blender Moodboard imports</span>
           </div>
           <div className="flex items-center gap-2 text-zinc-200">
             <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />

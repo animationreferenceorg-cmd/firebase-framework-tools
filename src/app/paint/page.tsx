@@ -267,24 +267,91 @@ export default function PaintPage() {
 
   const hasCenteredRef = useRef(false);
 
-  // Centers the canvas in the viewport on first load and whenever the canvas
-  // is resized. Deliberately excludes `zoom` — the zoom-to-cursor effect
-  // above owns scroll position during interactive zooming.
-  // We use hasCenteredRef so it only runs once when panContainerRef first mounts,
-  // instead of depending on activeLayerId which caused the camera to shoot back
-  // to the center every time the user added or changed a layer!
+  // Exact pixel-accurate canvas centering helper — accounts for CSS `transform: scale(zoom)`
+  // with `transformOrigin: '0 0'` inside the padded pan spacer so the visible canvas is
+  // ALWAYS dead-center in the stage viewport regardless of zoom, timeline, or sidebars.
+  const centerCanvasAtZoom = useCallback(
+    (targetZoom?: number) => {
+      const container = panContainerRef.current;
+      const spacer = spacerRef.current;
+      if (!container || !spacer) return;
+      const padLeft = parseFloat(getComputedStyle(spacer).paddingLeft) || 0;
+      const padTop = parseFloat(getComputedStyle(spacer).paddingTop) || 0;
+      const z = targetZoom ?? zoomRef.current;
+      container.scrollLeft = Math.max(0, padLeft + (canvasSize.width * z) / 2 - container.clientWidth / 2);
+      container.scrollTop = Math.max(0, padTop + (canvasSize.height * z) / 2 - container.clientHeight / 2);
+    },
+    [canvasSize.width, canvasSize.height]
+  );
+
+  // Compute optimal zoom so the full canvas fits comfortably in the middle of the stage
+  const fitAndCenterCanvas = useCallback(() => {
+    const container = panContainerRef.current;
+    if (!container || container.clientWidth === 0 || container.clientHeight === 0) return;
+    const availW = Math.max(240, container.clientWidth - 160);
+    const availH = Math.max(200, container.clientHeight - 100);
+    const bestZoom = Math.max(0.15, Math.min(1.2, Math.min(availW / canvasSize.width, availH / canvasSize.height)));
+    const rounded = Math.round(bestZoom * 100) / 100;
+    pendingZoomAnchorRef.current = null;
+    setZoom(rounded);
+    requestAnimationFrame(() => centerCanvasAtZoom(rounded));
+  }, [canvasSize.width, canvasSize.height, centerCanvasAtZoom]);
+
+  // Zoom anchored to the exact center of the viewport (used by +/-/100% buttons & Ctrl +/-)
+  const zoomAroundViewportCenter = useCallback((nextZoom: number) => {
+    const container = panContainerRef.current;
+    const spacer = spacerRef.current;
+    if (!container || !spacer) {
+      setZoom(nextZoom);
+      return;
+    }
+    const padLeft = parseFloat(getComputedStyle(spacer).paddingLeft) || 0;
+    const padTop = parseFloat(getComputedStyle(spacer).paddingTop) || 0;
+    const oldZoom = zoomRef.current;
+    const centerX = container.clientWidth / 2;
+    const centerY = container.clientHeight / 2;
+    pendingZoomAnchorRef.current = {
+      oldZoom,
+      canvasX: (container.scrollLeft + centerX - padLeft) / oldZoom,
+      canvasY: (container.scrollTop + centerY - padTop) / oldZoom,
+      mouseX: centerX,
+      mouseY: centerY,
+    };
+    setZoom(nextZoom);
+  }, []);
+
+  // Auto-fit & center on initial mount and whenever canvas dimensions change
   useLayoutEffect(() => {
     const container = panContainerRef.current;
     if (!container) return;
-    // We want to re-center if canvasSize changes, but otherwise only once on initial mount
-    // To handle canvasSize changes, we could track lastCanvasSize, but for now just centering
-    // on first mount is the most critical fix.
     if (!hasCenteredRef.current) {
-      container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2;
-      container.scrollTop = (container.scrollHeight - container.clientHeight) / 2;
       hasCenteredRef.current = true;
+      fitAndCenterCanvas();
     }
-  }, [canvasSize, activeLayerId]); // Keep activeLayerId in deps so it fires when the loading screen unmounts
+  }, [canvasSize, activeLayerId, fitAndCenterCanvas]);
+
+  // Keep canvas centered whenever the stage container resizes (window resize, opening/closing
+  // the Animation timeline, switching workspaces, or toggling the Layers panel)
+  useEffect(() => {
+    const container = panContainerRef.current;
+    if (!container || typeof ResizeObserver === 'undefined') return;
+    let lastW = container.clientWidth;
+    let lastH = container.clientHeight;
+    const ro = new ResizeObserver(() => {
+      const nextW = container.clientWidth;
+      const nextH = container.clientHeight;
+      if (nextW === 0 || nextH === 0) return;
+      if (Math.abs(nextW - lastW) > 2 || Math.abs(nextH - lastH) > 2) {
+        lastW = nextW;
+        lastH = nextH;
+        if (!isPanningRef.current) {
+          centerCanvasAtZoom();
+        }
+      }
+    });
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [centerCanvasAtZoom, activeLayerId]);
 
   // Plain scroll-wheel zoom. Attached manually with { passive: false } —
   // React's JSX onWheel prop is registered passive, so e.preventDefault()
@@ -559,21 +626,21 @@ export default function PaintPage() {
         return;
       }
 
-      // Ctrl/Cmd +/- to zoom, Ctrl/Cmd+0 to reset to fit-ish default.
+      // Ctrl/Cmd +/- to zoom around center, Ctrl/Cmd+0 to fit & center canvas.
       if (e.ctrlKey || e.metaKey) {
         if (e.key === '=' || e.key === '+') {
           e.preventDefault();
-          setZoom((z) => Math.min(3, z + 0.1));
+          zoomAroundViewportCenter(Math.min(3, Math.round((zoomRef.current + 0.1) * 100) / 100));
           return;
         }
         if (e.key === '-') {
           e.preventDefault();
-          setZoom((z) => Math.max(0.1, z - 0.1));
+          zoomAroundViewportCenter(Math.max(0.1, Math.round((zoomRef.current - 0.1) * 100) / 100));
           return;
         }
         if (e.key === '0') {
           e.preventDefault();
-          setZoom(0.6);
+          fitAndCenterCanvas();
           return;
         }
       }
@@ -1845,20 +1912,24 @@ export default function PaintPage() {
               {canvasFlipped && <span className="text-[10px] font-mono tracking-wider">FLIPPED</span>}
             </Button>
             <div className="w-px h-5 bg-white/10" />
-            <Button variant="ghost" size="icon" onClick={() => setZoom((z) => Math.max(0.05, z - 0.1))} className="h-8 w-8 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10" title="Zoom Out">
+            <Button variant="ghost" size="icon" onClick={() => zoomAroundViewportCenter(Math.max(0.05, Math.round((zoom - 0.1) * 100) / 100))} className="h-8 w-8 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10" title="Zoom Out">
               <ZoomOut className="h-4 w-4" />
             </Button>
             <button
-              onClick={() => setZoom(1)}
+              onClick={() => {
+                pendingZoomAnchorRef.current = null;
+                setZoom(1);
+                requestAnimationFrame(() => centerCanvasAtZoom(1));
+              }}
               className="text-xs font-mono font-bold w-14 text-center text-zinc-300 hover:text-white bg-white/5 hover:bg-white/10 py-1 rounded-lg border border-white/10 transition-colors cursor-pointer"
-              title="Reset to 100%"
+              title="Reset to 100% & Center"
             >
               {Math.round(zoom * 100)}%
             </button>
-            <Button variant="ghost" size="icon" onClick={() => setZoom((z) => Math.min(4, z + 0.1))} className="h-8 w-8 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10" title="Zoom In">
+            <Button variant="ghost" size="icon" onClick={() => zoomAroundViewportCenter(Math.min(4, Math.round((zoom + 0.1) * 100) / 100))} className="h-8 w-8 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10" title="Zoom In">
               <ZoomIn className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setZoom(0.6)} className="h-8 w-8 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10" title="Fit Screen">
+            <Button variant="ghost" size="icon" onClick={fitAndCenterCanvas} className="h-8 w-8 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10" title="Fit & Center Canvas (Ctrl+0)">
               <Maximize className="h-4 w-4" />
             </Button>
           </div>

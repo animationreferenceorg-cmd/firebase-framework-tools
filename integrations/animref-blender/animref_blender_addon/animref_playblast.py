@@ -110,6 +110,7 @@ def upload_playblast(
     board_id: str = "",
     publish_to_portfolio: bool = True,
     is_private: bool = False,
+    draft: bool = True,
 ) -> dict:
     return animref_api.upload_playblast_to_site(
         file_path=file_path,
@@ -121,4 +122,5 @@ def upload_playblast(
         board_id=board_id,
         publish_to_portfolio=publish_to_portfolio,
         is_private=is_private,
+        draft=draft,
     )

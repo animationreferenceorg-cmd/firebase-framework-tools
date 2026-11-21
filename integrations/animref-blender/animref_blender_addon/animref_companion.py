@@ -488,13 +488,13 @@ STUDIO_HTML = r"""<!DOCTYPE html>
           </div>
           <div style="display:flex;gap:14px;flex-wrap:wrap;">
             <label style="font-size:12px;color:#d4d4d8;font-weight:600;display:flex;align-items:center;gap:6px;">
-              <input id="pbAutoPost" type="checkbox" checked /> Auto-post to AnimationReference.org Portfolio &amp; Feed
+              <input id="pbAutoPost" type="checkbox" checked /> Send to AnimationReference.org as Draft (edit &amp; publish on site)
             </label>
             <label style="font-size:12px;color:#a1a1aa;font-weight:600;display:flex;align-items:center;gap:6px;">
-              <input id="pbOpenBrowser" type="checkbox" checked /> Open live post in browser
+              <input id="pbOpenBrowser" type="checkbox" checked /> Open editor in browser
             </label>
           </div>
-          <button class="btn btn-emerald" id="recordPbBtn" style="padding:10px 16px;font-size:12px;">● Record &amp; Auto-Upload Playblast</button>
+          <button class="btn btn-emerald" id="recordPbBtn" style="padding:10px 16px;font-size:12px;">● Record &amp; Open Draft on AnimationReference.org</button>
           <div id="pbResult" style="font-size:11px;color:#34d399;font-weight:700;"></div>
         </div>
 
@@ -892,14 +892,14 @@ document.getElementById('recordPbBtn').onclick = async () => {
       }),
     });
     document.getElementById('pbResult').innerHTML = res.uploaded_url
-      ? `✓ Live on AnimationReference.org: <a href="${res.uploaded_url}" target="_blank" style="color:#6ee7b7;text-decoration:underline;">${res.uploaded_url}</a>`
+      ? `✓ Draft ready to edit on AnimationReference.org: <a href="${res.uploaded_url}" target="_blank" style="color:#6ee7b7;text-decoration:underline;">Open Draft Editor ↗</a>`
       : '✓ Saved: ' + res.path;
-    showToast(res.uploaded_url ? '✓ Uploaded & live on AnimationReference.org!' : '✓ Playblast saved!');
+    showToast(res.uploaded_url ? '✓ Draft staged — edit & publish in browser!' : '✓ Playblast saved!');
   } catch (e) {
     showToast('Playblast error: ' + e.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = '● Record & Auto-Upload Playblast';
+    btn.textContent = '● Record & Open Draft on AnimationReference.org';
   }
 };
 
@@ -1120,8 +1120,9 @@ class _StudioHandler(http.server.BaseHTTPRequestHandler):
                         category=category,
                         wip_stage=wip_stage,
                         board_id=board_id,
+                        draft=True,
                     )
-                    raw_u = res.get("portfolioUrl") or res.get("url") or ""
+                    raw_u = res.get("reviewUrl") or res.get("portfolioUrl") or res.get("url") or ""
                     if raw_u:
                         uploaded_url = (
                             animref_auth.SITE_BASE_URL + raw_u if raw_u.startswith("/") else raw_u

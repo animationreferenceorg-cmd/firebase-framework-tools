@@ -901,6 +901,7 @@ def upload_playblast_to_animref(
     publish_to_portfolio=True,
     software="Maya",
     wip_stage="blocking",
+    draft=True,
     description="",
     progress_callback=None,
 ):
@@ -942,7 +943,8 @@ def upload_playblast_to_animref(
             "category": (category or "Acting").strip()[:60],
             "tags": (tags or "maya,playblast").strip(),
             "isPrivate": "true" if is_private else "false",
-            "publishToPortfolio": "true" if (publish_to_portfolio and not is_private) else "false",
+            "draft": "true" if draft else "false",
+            "publishToPortfolio": "true" if (publish_to_portfolio and not is_private and not draft) else "false",
             "software": (software or "Maya").strip(),
             "wipStage": (wip_stage or "blocking").strip().lower(),
         }
@@ -1000,11 +1002,15 @@ def upload_playblast_to_animref(
 
         rel_url = data.get("url") or ""
         full_url = ("https://animationreference.org" + rel_url) if rel_url.startswith("/") else rel_url
+        rel_review = data.get("reviewUrl") or ""
+        full_review = ("https://animationreference.org" + rel_review) if rel_review.startswith("/") else rel_review
         rel_portfolio = data.get("portfolioUrl") or ""
         full_portfolio = ("https://animationreference.org" + rel_portfolio) if rel_portfolio.startswith("/") else rel_portfolio
         return {
             "id": data.get("id", ""),
+            "draft": bool(data.get("draft", False)),
             "url": full_url,
+            "reviewUrl": full_review or full_url,
             "portfolioItemId": data.get("portfolioItemId"),
             "portfolioUrl": full_portfolio,
             "uploadedMediaUrl": data.get("uploadedMediaUrl", ""),

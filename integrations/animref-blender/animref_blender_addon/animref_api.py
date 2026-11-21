@@ -267,6 +267,7 @@ def upload_playblast_to_site(
     board_id: str = "",
     publish_to_portfolio: bool = True,
     is_private: bool = False,
+    draft: bool = True,
 ) -> dict:
     """Upload a recorded Blender playblast MP4/AVI directly to AnimationReference.org."""
     if not os.path.isfile(file_path):
@@ -293,7 +294,8 @@ def upload_playblast_to_site(
     add_field("tags", tags or "blender,playblast")
     add_field("software", "Blender")
     add_field("isPrivate", "true" if is_private else "false")
-    add_field("publishToPortfolio", "true" if (publish_to_portfolio and not is_private) else "false")
+    add_field("draft", "true" if draft else "false")
+    add_field("publishToPortfolio", "true" if (publish_to_portfolio and not is_private and not draft) else "false")
     add_field("wipStage", wip_stage or "blocking")
     if board_id:
         add_field("boardId", str(board_id))

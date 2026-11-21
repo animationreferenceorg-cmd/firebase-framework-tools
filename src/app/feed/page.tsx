@@ -7,7 +7,7 @@ import { saveVideo, unsaveVideo } from '@/lib/firestore';
 import { PortfolioItemCard } from '@/components/portfolio/PortfolioItemCard';
 import { PortfolioItemDetailModal } from '@/components/portfolio/PortfolioItemDetailModal';
 import { SaveToBoardModal } from '@/components/SaveToBoardModal';
-import { UploadPortfolioItemModal } from '@/components/portfolio/UploadPortfolioItemModal';
+import { UploadPortfolioItemModal, type PlayblastDraftPayload } from '@/components/portfolio/UploadPortfolioItemModal';
 import { FilterBar, TabOption, TypeOption, PillOption } from '@/components/FilterBar';
 import { CaptureClipDialog } from '@/components/reference/CaptureClipDialog';
 import { useAuth } from '@/hooks/use-auth';
@@ -38,6 +38,43 @@ export default function CommunityFeedPage() {
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [stagedDraft, setStagedDraft] = useState<PlayblastDraftPayload | null>(null);
+
+  // Open Upload composer pre-filled when arriving from Maya/Blender (?draft=<id>)
+  useEffect(() => {
+    if (!user) return;
+    const params = new URLSearchParams(window.location.search);
+    const draftId = params.get('draft');
+    if (!draftId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch(`/api/playblast-drafts/${encodeURIComponent(draftId)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const draft = (await res.json()) as PlayblastDraftPayload;
+        if (cancelled || !draft?.mediaUrl) return;
+        setStagedDraft(draft);
+        setIsUploadModalOpen(true);
+        toast({
+          title: 'Playblast ready to review',
+          description: 'Edit your title, stage, description, or tags and publish when ready.',
+        });
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.delete('draft');
+        window.history.replaceState({}, '', nextUrl.toString());
+      } catch (err) {
+        console.error('Failed to load playblast draft:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, toast]);
   const [isMockPreview, setIsMockPreview] = useState(false);
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -388,10 +425,14 @@ export default function CommunityFeedPage() {
       {/* Upload Portfolio Item Modal Trigger */}
       <UploadPortfolioItemModal
         open={isUploadModalOpen}
-        onOpenChange={setIsUploadModalOpen}
+        onOpenChange={(nextOpen) => {
+          setIsUploadModalOpen(nextOpen);
+          if (!nextOpen) setStagedDraft(null);
+        }}
         userId={user?.uid || 'guest-user'}
         authorName={userProfile?.displayName || user?.displayName || 'Animator'}
         authorAvatar={userProfile?.photoURL || user?.photoURL || ''}
+        initialDraft={stagedDraft}
         onItemCreated={(newItem) => {
           setPortfolioItems((prev) => [newItem, ...prev.filter((i) => i.id !== newItem.id)]);
           setIsMockPreview(false);

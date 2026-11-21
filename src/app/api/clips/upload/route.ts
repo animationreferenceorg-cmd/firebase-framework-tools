@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
     const category = String(form.get('category') || 'Acting').trim().slice(0, 60);
     const tags = String(form.get('tags') || '').split(',').map((tag) => tag.trim().toLowerCase()).filter(Boolean).slice(0, 20);
     const software = String(form.get('software') || '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 10);
+    const isDraft = String(form.get('draft')) === 'true';
     const publishToPortfolio = String(form.get('publishToPortfolio')) === 'true';
     const rawWipStage = String(form.get('wipStage') || 'blocking').trim().toLowerCase();
     const validWipStages = new Set(['concept', 'blocking', 'splining', 'polish', 'cleanup', 'completed']);
@@ -153,6 +154,40 @@ export async function POST(request: NextRequest) {
     }
 
     const now = FieldValue.serverTimestamp();
+
+    // Draft mode (used by Maya / Blender plugins): stage the uploaded media so the animator
+    // can review, edit title/tags/description/stage, and publish manually on AnimationReference.org.
+    if (isDraft) {
+      const draftRef = db.collection('playblast_drafts').doc();
+      await draftRef.set({
+        userId: identity.uid,
+        title,
+        description,
+        category,
+        wipStage,
+        tags,
+        software: software.length > 0 ? software : ['Maya'],
+        mediaType,
+        mediaUrl: uploadedMediaUrl,
+        thumbnailUrl: thumbnailUrl || (isImage ? uploadedMediaUrl : ''),
+        storagePath,
+        externalBunnyId,
+        boardId: boardId || '',
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const reviewUrl = `/feed?draft=${draftRef.id}`;
+      return NextResponse.json({
+        id: draftRef.id,
+        draft: true,
+        url: reviewUrl,
+        reviewUrl,
+        uploadedMediaUrl,
+        thumbnailUrl: thumbnailUrl || '',
+      }, { status: 201 });
+    }
+
     const discovery = await analyzeReferenceVisuals({
       title,
       tags,

@@ -27,6 +27,18 @@ import type { PortfolioItem, WipStage } from '@/lib/types';
 import { createPortfolioItem, generateAutoThumbnail } from '@/lib/portfolio-service';
 import { CONTRIBUTION_CHANGED_EVENT } from '@/hooks/use-viewing-quota';
 
+export interface PlayblastDraftPayload {
+  id: string;
+  title?: string;
+  description?: string;
+  category?: string;
+  wipStage?: WipStage;
+  tags?: string[];
+  software?: string[];
+  mediaUrl: string;
+  thumbnailUrl?: string;
+}
+
 interface UploadPortfolioItemModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -34,6 +46,7 @@ interface UploadPortfolioItemModalProps {
   authorName: string;
   authorAvatar?: string;
   onItemCreated: (newItem: PortfolioItem) => void;
+  initialDraft?: PlayblastDraftPayload | null;
 }
 
 const ALL_TAG_SUGGESTIONS = [
@@ -376,6 +389,7 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
   authorName,
   authorAvatar,
   onItemCreated,
+  initialDraft,
 }) => {
   const { toast } = useToast();
   const { userProfile } = useUser();
@@ -432,6 +446,21 @@ export const UploadPortfolioItemModal: React.FC<UploadPortfolioItemModalProps> =
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatusMsg, setUploadStatusMsg] = useState('Preparing animation...');
+
+  // Pre-fill composer when opened from a Maya / Blender staged playblast draft
+  React.useEffect(() => {
+    if (!open || !initialDraft || !initialDraft.mediaUrl) return;
+    setActiveTab('url');
+    setVideoUrlInput(initialDraft.mediaUrl);
+    setType('wip');
+    if (initialDraft.wipStage) setWipStage(initialDraft.wipStage);
+    if (initialDraft.title) setTitle(initialDraft.title);
+    if (initialDraft.description) setDescription(initialDraft.description);
+    if (Array.isArray(initialDraft.tags) && initialDraft.tags.length > 0) setSelectedTags(initialDraft.tags);
+    if (Array.isArray(initialDraft.software) && initialDraft.software.length > 0) setSelectedSoftware(initialDraft.software);
+    if (initialDraft.thumbnailUrl) setAutoThumbPreview(initialDraft.thumbnailUrl);
+    setCurrentStep(2);
+  }, [open, initialDraft]);
 
   // Auto Thumbnail Generation Effect
   React.useEffect(() => {

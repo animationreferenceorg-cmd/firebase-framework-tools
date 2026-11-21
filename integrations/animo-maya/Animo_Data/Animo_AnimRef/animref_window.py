@@ -4906,12 +4906,12 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         meta_upload_row.addWidget(self.pb_upload_category_combo, stretch=1)
         uc_layout.addLayout(meta_upload_row)
 
-        self.pb_auto_upload_check = QtWidgets.QCheckBox("Auto-post to AnimationReference.org Portfolio & Feed right after recording")
+        self.pb_auto_upload_check = QtWidgets.QCheckBox("Send to AnimationReference.org as Draft (edit & publish in browser)")
         self.pb_auto_upload_check.setStyleSheet("color: #f4f4f5; font-size: 11px; font-weight: 600; border: none;")
         self.pb_auto_upload_check.setChecked(True)
         uc_layout.addWidget(self.pb_auto_upload_check)
 
-        self.upload_pb_btn = QtWidgets.QPushButton("☁️ Upload Playblast to AnimationReference.org")
+        self.upload_pb_btn = QtWidgets.QPushButton("☁️ Send Draft to AnimationReference.org to Edit")
         self.upload_pb_btn.setMinimumHeight(38)
         self.upload_pb_btn.setCursor(QtCore.Qt.PointingHandCursor)
         self.upload_pb_btn.setStyleSheet(
@@ -5809,21 +5809,33 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
     def on_playblast_uploaded(self, res):
         if hasattr(self, "upload_pb_btn"):
             self.upload_pb_btn.setEnabled(True)
-            self.upload_pb_btn.setText("☁️ Upload Playblast to AnimationReference.org")
+            self.upload_pb_btn.setText("☁️ Send Draft to AnimationReference.org to Edit")
 
         if isinstance(res, dict) and res.get("ok"):
             info = res.get("result") or {}
-            raw_url = info.get("portfolioUrl") or info.get("url") or "https://animationreference.org/feed"
+            raw_url = info.get("reviewUrl") or info.get("portfolioUrl") or info.get("url") or "https://animationreference.org/feed"
             if raw_url.startswith("/"):
                 clip_url = "https://animationreference.org" + raw_url
             else:
                 clip_url = raw_url
-            self.pb_status_lbl.setText("✓ Posted live to AnimationReference.org!")
-            if hasattr(self, "pb_upload_link_lbl"):
-                self.pb_upload_link_lbl.setText(
-                    '✓ Live on AnimationReference.org: <a href="{0}" style="color:#047857;">{0}</a>'.format(clip_url)
-                )
-                self.pb_upload_link_lbl.setVisible(True)
+            if info.get("draft"):
+                try:
+                    webbrowser.open(clip_url)
+                except Exception:
+                    pass
+                self.pb_status_lbl.setText("✓ Draft staged — finish editing & publish in your browser!")
+                if hasattr(self, "pb_upload_link_lbl"):
+                    self.pb_upload_link_lbl.setText(
+                        '✓ Draft ready to edit on AnimationReference.org: <a href="{0}" style="color:#6ee7b7;">Open Draft Editor ↗</a>'.format(clip_url)
+                    )
+                    self.pb_upload_link_lbl.setVisible(True)
+            else:
+                self.pb_status_lbl.setText("✓ Posted live to AnimationReference.org!")
+                if hasattr(self, "pb_upload_link_lbl"):
+                    self.pb_upload_link_lbl.setText(
+                        '✓ Live on AnimationReference.org: <a href="{0}" style="color:#6ee7b7;">{0}</a>'.format(clip_url)
+                    )
+                    self.pb_upload_link_lbl.setVisible(True)
         else:
             err = (res.get("error") if isinstance(res, dict) else None) or "Upload failed."
             self.pb_status_lbl.setText("Upload failed: " + str(err))

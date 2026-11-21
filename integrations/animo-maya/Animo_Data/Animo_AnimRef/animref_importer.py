@@ -1102,8 +1102,140 @@ def import_animref_to_maya(video_dict, local_video_path, mode="sequence", target
         pass
 
     try:
+        from . import add_animref_shelf
+    except (ImportError, ValueError):
+        try:
+            import add_animref_shelf
+        except ImportError:
+            add_animref_shelf = None
+    if add_animref_shelf is not None:
+        try:
+            add_animref_shelf.ensure_animref_shelf(select=True, notify=False)
+        except Exception:
+            pass
+
+    try:
         print("[AnimRef] ✓ Reference added to Maya Viewport: '{}' ({})".format(title, plane_transform))
     except Exception:
         pass
 
     return plane_transform
+
+
+def get_active_or_latest_plane():
+    """Return the currently selected AnimRef plane, or fall back to the latest one in the scene."""
+    if not cmds:
+        return None
+    try:
+        sel = cmds.ls(selection=True, long=False) or []
+        for s in sel:
+            t, sh = _resolve_plane_pair(s)
+            if t and sh:
+                return t
+    except Exception:
+        pass
+    planes = list_scene_animref_planes()
+    if planes:
+        return planes[-1]["node"]
+    return None
+
+
+def center_plane_origin(plane_node):
+    """Reset a Maya reference plane to world origin (0, 0, 0) with zero rotation."""
+    if not cmds:
+        return False
+    transform, _ = _resolve_plane_pair(plane_node)
+    if not transform:
+        return False
+    for attr in ("translateX", "translateY", "translateZ", "rotateX", "rotateY", "rotateZ"):
+        try:
+            cmds.setAttr(transform + "." + attr, 0.0)
+        except Exception:
+            pass
+    try:
+        cmds.inViewMessage(
+            amg='Centered <hl style="color:#a78bfa;">{}</hl> at (0, 0, 0)'.format(transform),
+            pos="topCenter",
+            fade=True,
+        )
+    except Exception:
+        pass
+    return True
+
+
+def cycle_plane_opacity(plane_node):
+    """Cycle reference plane opacity through 100% -> 75% -> 50% -> 25%."""
+    if not cmds:
+        return 1.0
+    _, shape = _resolve_plane_pair(plane_node)
+    if not shape:
+        return 1.0
+    try:
+        cur = float(cmds.getAttr(shape + ".alphaGain") or 1.0)
+    except Exception:
+        cur = 1.0
+    steps = [1.0, 0.75, 0.50, 0.25]
+    next_val = steps[0]
+    for idx, val in enumerate(steps):
+        if cur > val - 0.08:
+            next_val = steps[(idx + 1) % len(steps)]
+            break
+    set_plane_opacity(plane_node, next_val)
+    try:
+        cmds.inViewMessage(
+            amg='Ref Opacity: <hl style="color:#a78bfa;">{}%</hl>'.format(int(round(next_val * 100))),
+            pos="topCenter",
+            fade=True,
+        )
+    except Exception:
+        pass
+    return next_val
+
+
+def toggle_plane_visibility(plane_node):
+    """Toggle visibility of a Maya reference plane."""
+    if not cmds:
+        return True
+    transform, _ = _resolve_plane_pair(plane_node)
+    if not transform:
+        return True
+    try:
+        cur = bool(cmds.getAttr(transform + ".visibility"))
+        cmds.setAttr(transform + ".visibility", not cur)
+        cmds.inViewMessage(
+            amg='Ref Plane: <hl style="color:#a78bfa;">{}</hl>'.format("Hidden" if cur else "Visible"),
+            pos="topCenter",
+            fade=True,
+        )
+        return not cur
+    except Exception:
+        return True
+
+
+def toggle_plane_lock_hud(plane_node):
+    """Toggle unselectable reference lock mode with an in-viewport HUD message."""
+    if not cmds:
+        return False
+    transform, _ = _resolve_plane_pair(plane_node)
+    if not transform:
+        return False
+    try:
+        cur_override = bool(cmds.getAttr(transform + ".overrideEnabled"))
+        cur_type = int(cmds.getAttr(transform + ".overrideDisplayType") or 0)
+        is_locked = cur_override and cur_type == 2
+        if is_locked:
+            cmds.setAttr(transform + ".overrideDisplayType", 0)
+            cmds.setAttr(transform + ".overrideEnabled", False)
+            state_txt = "Unlocked"
+        else:
+            cmds.setAttr(transform + ".overrideEnabled", True)
+            cmds.setAttr(transform + ".overrideDisplayType", 2)  # Reference (unselectable)
+            state_txt = "Locked (Unselectable)"
+        cmds.inViewMessage(
+            amg='Ref Plane: <hl style="color:#a78bfa;">{}</hl>'.format(state_txt),
+            pos="topCenter",
+            fade=True,
+        )
+        return not is_locked
+    except Exception:
+        return False

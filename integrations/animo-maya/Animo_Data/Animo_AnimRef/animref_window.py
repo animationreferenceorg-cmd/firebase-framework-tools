@@ -4847,6 +4847,8 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.detail_scroll.setWidget(self.detail_content)
         bd_layout.addWidget(self.detail_scroll, stretch=1)
         self.boards_view_stack.addWidget(self.board_detail_page)
+        # Default immediately to Saved References masonry view
+        self.boards_view_stack.setCurrentIndex(1)
 
         layout.addWidget(self.boards_view_stack, stretch=1)
 
@@ -6043,16 +6045,33 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         t.daemon = True
         t.start()
 
+    def _merge_saved_and_board_items(self, boards=None):
+        seen = set()
+        merged = []
+        for it in (getattr(self, "_all_saves_items", None) or []):
+            vid = it.get("id")
+            if vid and vid not in seen:
+                seen.add(vid)
+                merged.append(it)
+        for b in (boards if boards is not None else (getattr(self, "_cached_boards_list", None) or [])):
+            for it in b.get("items", []):
+                vid = it.get("id")
+                if vid and vid not in seen:
+                    seen.add(vid)
+                    merged.append(it)
+        return merged
+
     def on_saved_data_ready(self, saved, liked, is_cached=False):
         all_vids = (saved or []) + (liked or [])
         self._all_saves_items = all_vids
+        combined = self._merge_saved_and_board_items()
         if hasattr(self, "sidebar"):
-            self.sidebar.set_all_saves_count(len(all_vids))
-        if getattr(self.sidebar, "active_board_id", None) == "__all_saves__" and all_vids:
+            self.sidebar.set_all_saves_count(len(combined))
+        if getattr(self.sidebar, "active_board_id", "__all_saves__") == "__all_saves__" and combined:
             self.show_board_detail({
                 "id": "__all_saves__",
-                "name": "All saves",
-                "items": all_vids,
+                "name": "Saved References",
+                "items": combined,
             })
 
     def load_boards_data(self, force_refresh=False):
@@ -6235,25 +6254,14 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
             self._last_boards_fetch_time = time.time()
 
         boards = list(boards or [])
-        if not boards:
+        has_saved = bool(getattr(self, "_all_saves_items", None))
+        if not boards and not has_saved:
             boards = self._build_starter_boards_from_catalog()
 
         self._cached_boards_list = boards
 
-        # Collect all unique items across boards + saves for "All saves"
-        seen = set()
-        combined_saves = []
-        for it in (getattr(self, "_all_saves_items", None) or []):
-            vid = it.get("id")
-            if vid and vid not in seen:
-                seen.add(vid)
-                combined_saves.append(it)
-        for b in boards:
-            for it in b.get("items", []):
-                vid = it.get("id")
-                if vid and vid not in seen:
-                    seen.add(vid)
-                    combined_saves.append(it)
+        # Collect all unique items with user's Saved References first, then board items
+        combined_saves = self._merge_saved_and_board_items(boards)
 
         if hasattr(self, "sidebar"):
             self.sidebar.set_all_saves_count(len(combined_saves))
@@ -6262,11 +6270,11 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self._boards_rendered_ids = [b.get("id") for b in boards]
         self._render_boards_cards_grid(boards)
 
-        # Default initial view: show "All saves" pure image masonry grid (matching user's screenshot!)
+        # Default initial view: show Saved References masonry grid first
         if getattr(self.sidebar, "active_board_id", "__all_saves__") == "__all_saves__":
             self.show_board_detail({
                 "id": "__all_saves__",
-                "name": "All saves",
+                "name": "Saved References",
                 "items": combined_saves,
             })
 
@@ -7255,33 +7263,33 @@ def show_docked_window():
                 break
 
         created_docked = False
-        if dock_target:
+        # Prefer docking directly to Maya's right side panel so AnimRef Studio is immediately visible
+        try:
+            cmds.workspaceControl(
+                WORKSPACE_NAME,
+                label="AnimRef Studio",
+                retain=False,
+                floating=False,
+                initialWidth=360,
+                minimumWidth=220,
+                minimumHeight=160,
+                dockToMainWindow=["right", False]
+            )
+            created_docked = True
+        except Exception:
+            created_docked = False
+
+        if not created_docked and dock_target:
             try:
                 cmds.workspaceControl(
                     WORKSPACE_NAME,
                     label="AnimRef Studio",
                     retain=False,
                     floating=False,
-                    initialWidth=310,
-                    minimumWidth=200,
+                    initialWidth=360,
+                    minimumWidth=220,
                     minimumHeight=160,
                     tabToControl=[dock_target, -1]
-                )
-                created_docked = True
-            except Exception:
-                created_docked = False
-
-        if not created_docked:
-            try:
-                cmds.workspaceControl(
-                    WORKSPACE_NAME,
-                    label="AnimRef Studio",
-                    retain=False,
-                    floating=False,
-                    initialWidth=310,
-                    minimumWidth=200,
-                    minimumHeight=160,
-                    dockToMainWindow=["right", False]
                 )
                 created_docked = True
             except Exception:
@@ -7384,7 +7392,7 @@ def show_floating_window():
     _window_instance.activateWindow()
     return _window_instance
 
-def show_window(dock=False):
+def show_window(dock=True):
     if dock:
         return show_docked_window()
     return show_floating_window()

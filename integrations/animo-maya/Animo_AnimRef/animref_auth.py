@@ -891,6 +891,85 @@ def toggle_save_reference(video_id, video_data=None):
     return {"success": True, "isSaved": is_saved}
 
 
+def upload_reference_to_board(
+    file_path,
+    title="",
+    board_id="",
+    category="Acting",
+    tags="reference,maya",
+):
+    """Upload a local video, image, or GIF reference directly to AnimationReference.org and optionally a Moodboard."""
+    if not file_path or not os.path.isfile(file_path):
+        raise RuntimeError("File not found: {}".format(file_path))
+
+    token = get_valid_token()
+    if not token:
+        raise RuntimeError("Please sign in to AnimationReference.org in the Account tab first.")
+
+    import mimetypes
+    filename = os.path.basename(file_path)
+    mime_type = mimetypes.guess_type(filename)[0] or "video/mp4"
+    with open(file_path, "rb") as f:
+        file_bytes = f.read()
+
+    boundary = "----AnimRefRefUpload" + str(int(time.time() * 1000))
+    parts = []
+    fields = {
+        "title": (title or os.path.splitext(filename)[0] or "Reference").strip(),
+        "category": (category or "Acting").strip(),
+        "tags": (tags or "reference,maya").strip(),
+        "isPrivate": "false",
+        "draft": "false",
+        "publishToPortfolio": "false",
+    }
+    if board_id:
+        fields["boardId"] = str(board_id)
+
+    for k, v in fields.items():
+        parts.append(("--" + boundary + "\r\n").encode("utf-8"))
+        parts.append(('Content-Disposition: form-data; name="{}"\r\n\r\n'.format(k)).encode("utf-8"))
+        parts.append((str(v) + "\r\n").encode("utf-8"))
+
+    parts.append(("--" + boundary + "\r\n").encode("utf-8"))
+    parts.append(
+        (
+            'Content-Disposition: form-data; name="file"; filename="{}"\r\n'
+            'Content-Type: {}\r\n\r\n'
+        ).format(filename, mime_type).encode("utf-8")
+    )
+    parts.append(file_bytes)
+    parts.append(("\r\n--" + boundary + "--\r\n").encode("utf-8"))
+
+    body = b"".join(parts)
+    url = SITE_API_BASE + "/clips/upload"
+    req = urllib_request.Request(
+        url,
+        data=body,
+        headers={
+            "Authorization": "Bearer " + token,
+            "Content-Type": "multipart/form-data; boundary=" + boundary,
+            "Content-Length": str(len(body)),
+            "User-Agent": "AnimoMayaPlugin/2.0",
+        },
+        method="POST",
+    )
+    try:
+        with urllib_request.urlopen(req, timeout=180) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except urllib_error.HTTPError as he:
+        err_body = ""
+        try:
+            err_body = he.read().decode("utf-8")
+            msg = json.loads(err_body).get("message") or err_body
+        except Exception:
+            msg = err_body or str(he)
+        raise RuntimeError("Upload failed ({}): {}".format(he.code, msg))
+
+    rel_url = data.get("url") or ""
+    full_url = ("https://animationreference.org" + rel_url) if rel_url.startswith("/") else rel_url
+    return {"id": data.get("id", ""), "url": full_url, "uploadedMediaUrl": data.get("uploadedMediaUrl", "")}
+
+
 def upload_playblast_to_animref(
     mp4_file_path,
     title="Maya Playblast",

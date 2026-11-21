@@ -13,6 +13,7 @@ Provides a true studio-grade UI/UX matching Maya's AnimRef Studio:
 
 from __future__ import annotations
 
+import base64
 import http.server
 import json
 import os
@@ -387,6 +388,7 @@ STUDIO_HTML = r"""<!DOCTYPE html>
         <span style="color:#a8a29e;font-size:12px;">🔍</span>
         <input id="searchInput" type="text" placeholder="Search references..." />
       </div>
+      <button class="btn btn-dark" id="openUploadRefBtn">+ Upload Ref</button>
       <button class="btn" id="openStudioBtn">🎬 Studio</button>
       <button class="btn" id="refreshBtn">↻</button>
     </header>
@@ -520,6 +522,36 @@ STUDIO_HTML = r"""<!DOCTYPE html>
 
   <div class="toast" id="toast"></div>
 
+<!-- Upload Reference to Moodboard Modal -->
+<div id="uploadRefModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:200;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#111119;border:1px solid #272736;border-radius:16px;padding:18px;width:100%;max-width:440px;display:flex;flex-direction:column;gap:12px;box-shadow:0 24px 60px rgba(0,0,0,0.7);">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <strong style="font-size:14px;color:#ffffff;">Upload Reference to Moodboard</strong>
+      <button class="btn" id="closeUploadRefModal" style="padding:3px 9px;">✕</button>
+    </div>
+    <p style="font-size:11px;color:#a1a1aa;line-height:1.4;">Upload a video, GIF, or image — it automatically syncs to your AnimationReference.org moodboard too.</p>
+    <input id="refFileInput" type="file" accept="video/*,image/*" style="font-size:11px;color:#e4e4e7;background:#161622;border:1px solid #272736;border-radius:10px;padding:8px;" />
+    <input id="refTitleInput" type="text" placeholder="Reference title" />
+    <div style="display:flex;gap:8px;">
+      <select id="refBoardSelect" style="flex:1.4;">
+        <option value="">All Saves (No specific board)</option>
+      </select>
+      <select id="refCatSelect" style="flex:1;">
+        <option value="Acting">Acting</option>
+        <option value="Body Mechanics">Body Mechanics</option>
+        <option value="Creature">Creature</option>
+        <option value="Combat">Combat</option>
+        <option value="Locomotion">Locomotion</option>
+        <option value="Lip Sync">Lip Sync</option>
+        <option value="FX / VFX">FX / VFX</option>
+      </select>
+    </div>
+    <input id="refTagsInput" type="text" placeholder="Tags (comma-separated, e.g. walk, parkour)" />
+    <div id="refUploadStatus" style="font-size:11px;color:#a1a1aa;"></div>
+    <button class="btn btn-dark" id="submitUploadRefBtn" style="padding:10px;font-size:12px;">☁ Upload to Moodboard</button>
+  </div>
+</div>
+
 <script>
 const RATIOS = [0.78, 0.65, 0.92, 0.70, 0.85];
 let state = {
@@ -618,16 +650,20 @@ async function loadBoardsSidebar() {
   }
   list.innerHTML = '';
   const pbBoardSel = document.getElementById('pbBoard');
-  if (pbBoardSel) {
-    const prevVal = pbBoardSel.value;
-    pbBoardSel.innerHTML = '<option value="">Library &amp; Portfolio (No Board)</option>';
+  const refBoardSel = document.getElementById('refBoardSelect');
+  for (const sel of [pbBoardSel, refBoardSel]) {
+    if (!sel) continue;
+    const prevVal = sel.value;
+    sel.innerHTML = sel === pbBoardSel
+      ? '<option value="">Library &amp; Portfolio (No Board)</option>'
+      : '<option value="">All Saves (No specific board)</option>';
     for (const b of state.boards) {
       const opt = document.createElement('option');
       opt.value = b.id || '';
       opt.textContent = 'Board: ' + (b.name || 'Untitled');
-      pbBoardSel.appendChild(opt);
+      sel.appendChild(opt);
     }
-    if (prevVal) pbBoardSel.value = prevVal;
+    if (prevVal) sel.value = prevVal;
   }
   const allBtn = document.createElement('button');
   allBtn.className = 'board-item' + (state.view === 'boards' && state.boardId === '__all_saves__' ? ' active' : '');
@@ -828,6 +864,75 @@ document.getElementById('studioImportBtn').onclick = () => state.activeClip && i
 document.getElementById('openWebBtn').onclick = () => {
   if (state.activeClip && state.activeClip.id) window.open('https://animationreference.org/video/' + state.activeClip.id, '_blank');
 };
+document.getElementById('openUploadRefBtn').onclick = () => {
+  const modal = document.getElementById('uploadRefModal');
+  const sel = document.getElementById('refBoardSelect');
+  if (sel && state.view === 'boards' && state.boardId && state.boardId !== '__all_saves__') {
+    sel.value = state.boardId;
+  }
+  document.getElementById('refUploadStatus').textContent = '';
+  modal.style.display = 'flex';
+};
+document.getElementById('closeUploadRefModal').onclick = () => {
+  document.getElementById('uploadRefModal').style.display = 'none';
+};
+document.getElementById('refFileInput').onchange = (e) => {
+  const f = e.target.files && e.target.files[0];
+  const titleEl = document.getElementById('refTitleInput');
+  if (f && !titleEl.value.trim()) {
+    titleEl.value = f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
+  }
+};
+document.getElementById('submitUploadRefBtn').onclick = async () => {
+  const fileInput = document.getElementById('refFileInput');
+  const file = fileInput.files && fileInput.files[0];
+  const statusEl = document.getElementById('refUploadStatus');
+  if (!file) { statusEl.textContent = 'Choose a video, GIF, or image file first.'; statusEl.style.color = '#fca5a5'; return; }
+  const btn = document.getElementById('submitUploadRefBtn');
+  btn.disabled = true;
+  btn.textContent = 'Uploading to AnimationReference.org...';
+  statusEl.textContent = 'Uploading ' + file.name + '...';
+  statusEl.style.color = '#c4b5fd';
+  try {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+    const base64Data = String(dataUrl).split(',')[1] || '';
+    const res = await api('/api/upload-reference', {
+      method: 'POST',
+      body: JSON.stringify({
+        filename: file.name,
+        mime_type: file.type || '',
+        data_base64: base64Data,
+        title: document.getElementById('refTitleInput').value.trim(),
+        board_id: document.getElementById('refBoardSelect').value,
+        category: document.getElementById('refCatSelect').value,
+        tags: document.getElementById('refTagsInput').value.trim(),
+      }),
+    });
+    statusEl.textContent = '✓ Uploaded & synced to AnimationReference.org moodboard!';
+    statusEl.style.color = '#6ee7b7';
+    showToast('✓ Reference added to Moodboard!');
+    fileInput.value = '';
+    document.getElementById('refTitleInput').value = '';
+    document.getElementById('refTagsInput').value = '';
+    setTimeout(() => {
+      document.getElementById('uploadRefModal').style.display = 'none';
+      loadBoardsSidebar();
+      loadItems();
+    }, 650);
+  } catch (err) {
+    statusEl.textContent = 'Upload failed: ' + err.message;
+    statusEl.style.color = '#fca5a5';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '☁ Upload to Moodboard';
+  }
+};
+
 document.getElementById('refreshBtn').onclick = () => { loadBoardsSidebar(); loadItems(); };
 
 async function loadSceneRefs() {
@@ -1130,6 +1235,24 @@ class _StudioHandler(http.server.BaseHTTPRequestHandler):
 
                 _run_on_blender_main(_do_act)
                 self._send_json({"ok": True})
+            except Exception as exc:
+                self._send_json({"error": str(exc)}, 400)
+            return
+
+        if parsed.path == "/api/upload-reference":
+            try:
+                b64 = str(body.get("data_base64") or "")
+                raw_bytes = base64.b64decode(b64) if b64 else b""
+                res = animref_api.upload_reference_bytes(
+                    file_bytes=raw_bytes,
+                    filename=str(body.get("filename") or "reference.mp4"),
+                    title=str(body.get("title") or ""),
+                    board_id=str(body.get("board_id") or ""),
+                    category=str(body.get("category") or "Acting"),
+                    tags=str(body.get("tags") or ""),
+                    mime_type=str(body.get("mime_type") or ""),
+                )
+                self._send_json({"ok": True, "result": res})
             except Exception as exc:
                 self._send_json({"error": str(exc)}, 400)
             return

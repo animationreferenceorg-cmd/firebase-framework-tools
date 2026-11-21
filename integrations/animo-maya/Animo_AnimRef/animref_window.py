@@ -3680,7 +3680,29 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.toggle_studio_btn.clicked.connect(self.toggle_inspector_drawer)
         wh_layout.addWidget(self.toggle_studio_btn)
 
-        # Solid Black Pill Button: "+ Board"
+        # Solid Violet Pill Button: "+ Upload Ref" (uploads straight to AnimationReference.org Moodboard)
+        self.upload_ref_btn = QtWidgets.QPushButton("+ Upload Ref")
+        self.upload_ref_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        self.upload_ref_btn.setFixedHeight(26)
+        self.upload_ref_btn.setToolTip("Upload a local video, GIF, or image directly to your AnimationReference.org Moodboard")
+        self.upload_ref_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #7c3aed;
+                color: #ffffff;
+                border: none;
+                border-radius: 13px;
+                padding: 0px 10px;
+                font-size: 10px;
+                font-weight: 700;
+            }
+            QPushButton:hover {
+                background-color: #8b5cf6;
+            }
+        """)
+        self.upload_ref_btn.clicked.connect(self.open_upload_reference_dialog)
+        wh_layout.addWidget(self.upload_ref_btn)
+
+        # Secondary Pill Button: "+ Board"
         self.open_web_boards_btn = QtWidgets.QPushButton("+ Board")
         self.open_web_boards_btn.setCursor(QtCore.Qt.PointingHandCursor)
         self.open_web_boards_btn.setFixedHeight(26)
@@ -3765,6 +3787,140 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.splitter.addWidget(self.view_stack)
         body_layout.addWidget(self.splitter, stretch=1)
         main_layout.addWidget(self.body_container, stretch=1)
+
+    def open_upload_reference_dialog(self):
+        """Modal dialog to upload a local video/image/GIF reference directly to a Moodboard (syncs to AnimationReference.org)."""
+        dlg = QtWidgets.QDialog(self)
+        dlg.setWindowTitle("Upload Reference to Moodboard")
+        dlg.setMinimumWidth(420)
+        dlg.setStyleSheet("QDialog { background-color: #111119; color: #f4f4f5; }")
+
+        vbox = QtWidgets.QVBoxLayout(dlg)
+        vbox.setContentsMargins(18, 16, 18, 16)
+        vbox.setSpacing(10)
+
+        hdr = QtWidgets.QLabel("Upload Reference to Moodboard")
+        hdr.setStyleSheet("font-size: 15px; font-weight: 800; color: #ffffff; background: transparent;")
+        vbox.addWidget(hdr)
+
+        sub = QtWidgets.QLabel("Upload any MP4, MOV, AVI, GIF, or image — it automatically syncs to your AnimationReference.org moodboard.")
+        sub.setWordWrap(True)
+        sub.setStyleSheet("font-size: 11px; color: #a1a1aa; background: transparent;")
+        vbox.addWidget(sub)
+
+        file_row = QtWidgets.QHBoxLayout()
+        file_edit = QtWidgets.QLineEdit()
+        file_edit.setPlaceholderText("Choose a video, GIF, or image file...")
+        file_row.addWidget(file_edit, stretch=1)
+        browse_btn = QtWidgets.QPushButton("Browse...")
+        browse_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        file_row.addWidget(browse_btn)
+        vbox.addLayout(file_row)
+
+        title_edit = QtWidgets.QLineEdit()
+        title_edit.setPlaceholderText("Reference title")
+        vbox.addWidget(title_edit)
+
+        row_meta = QtWidgets.QHBoxLayout()
+        board_combo = QtWidgets.QComboBox()
+        board_combo.addItem("All Saves (No specific board)", "")
+        active_board_id = getattr(self, "_active_board_id", "") or ""
+        sel_idx = 0
+        for b in (getattr(self, "user_boards", None) or []):
+            bid = b.get("id") or ""
+            bname = b.get("name") or "Untitled Board"
+            board_combo.addItem("Board: " + bname, bid)
+            if bid and bid == active_board_id:
+                sel_idx = board_combo.count() - 1
+        board_combo.setCurrentIndex(sel_idx)
+        row_meta.addWidget(board_combo, stretch=2)
+
+        cat_combo = QtWidgets.QComboBox()
+        cat_combo.addItems(["Acting", "Body Mechanics", "Creature", "Combat", "Locomotion", "Lip Sync", "FX / VFX"])
+        row_meta.addWidget(cat_combo, stretch=1)
+        vbox.addLayout(row_meta)
+
+        tags_edit = QtWidgets.QLineEdit()
+        tags_edit.setPlaceholderText("Tags (comma-separated, e.g. walk, parkour)")
+        vbox.addWidget(tags_edit)
+
+        status_lbl = QtWidgets.QLabel("")
+        status_lbl.setWordWrap(True)
+        status_lbl.setStyleSheet("font-size: 11px; color: #a1a1aa; background: transparent;")
+        vbox.addWidget(status_lbl)
+
+        btn_row = QtWidgets.QHBoxLayout()
+        btn_row.addStretch()
+        cancel_btn = QtWidgets.QPushButton("Cancel")
+        cancel_btn.clicked.connect(dlg.reject)
+        btn_row.addWidget(cancel_btn)
+
+        upload_btn = QtWidgets.QPushButton("☁ Upload to Moodboard")
+        upload_btn.setObjectName("PrimaryBtn")
+        upload_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        btn_row.addWidget(upload_btn)
+        vbox.addLayout(btn_row)
+
+        def _pick_file():
+            f_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+                dlg,
+                "Choose Reference Media",
+                "",
+                "Media Files (*.mp4 *.mov *.webm *.avi *.gif *.jpg *.jpeg *.png *.webp);;All Files (*.*)",
+            )
+            if f_path:
+                file_edit.setText(f_path)
+                if not title_edit.text().strip():
+                    stem = os.path.splitext(os.path.basename(f_path))[0].replace("_", " ").replace("-", " ")
+                    title_edit.setText(stem)
+
+        browse_btn.clicked.connect(_pick_file)
+
+        def _do_upload():
+            f_path = file_edit.text().strip()
+            if not f_path or not os.path.isfile(f_path):
+                status_lbl.setText("Please choose a valid file first.")
+                status_lbl.setStyleSheet("font-size: 11px; color: #fca5a5; background: transparent;")
+                return
+            upload_btn.setEnabled(False)
+            upload_btn.setText("Uploading...")
+            status_lbl.setText("Uploading to AnimationReference.org...")
+            status_lbl.setStyleSheet("font-size: 11px; color: #c4b5fd; background: transparent;")
+
+            title_val = title_edit.text().strip()
+            board_val = board_combo.currentData() or ""
+            cat_val = cat_combo.currentText()
+            tags_val = tags_edit.text().strip()
+
+            def _worker():
+                try:
+                    animref_auth.upload_reference_to_board(
+                        f_path,
+                        title=title_val,
+                        board_id=board_val,
+                        category=cat_val,
+                        tags=tags_val,
+                    )
+                    QtCore.QTimer.singleShot(0, lambda: _on_done(True, ""))
+                except Exception as exc:
+                    QtCore.QTimer.singleShot(0, lambda e=str(exc): _on_done(False, e))
+
+            def _on_done(ok, err):
+                upload_btn.setEnabled(True)
+                upload_btn.setText("☁ Upload to Moodboard")
+                if ok:
+                    status_lbl.setText("✓ Uploaded & synced to AnimationReference.org moodboard!")
+                    status_lbl.setStyleSheet("font-size: 11px; color: #6ee7b7; font-weight: 700; background: transparent;")
+                    self.force_sync_boards_and_saves()
+                    QtCore.QTimer.singleShot(600, dlg.accept)
+                else:
+                    status_lbl.setText("Upload failed: " + err)
+                    status_lbl.setStyleSheet("font-size: 11px; color: #fca5a5; background: transparent;")
+
+            threading.Thread(target=_worker, daemon=True).start()
+
+        upload_btn.clicked.connect(_do_upload)
+        dlg.exec_()
 
     def _show_header_preview_menu(self):
         menu = QtWidgets.QMenu(self)

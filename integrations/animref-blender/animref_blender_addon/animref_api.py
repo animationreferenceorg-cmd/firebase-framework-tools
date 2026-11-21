@@ -332,6 +332,71 @@ def upload_playblast_to_site(
         raise RuntimeError(f"Upload failed (HTTP {exc.code}): {err_body}") from exc
 
 
+def upload_reference_bytes(
+    file_bytes: bytes,
+    filename: str,
+    title: str = "",
+    board_id: str = "",
+    category: str = "Acting",
+    tags: str = "",
+    mime_type: str = "",
+) -> dict:
+    """Upload a local video/image/GIF reference directly to AnimationReference.org and optionally a Moodboard."""
+    if not file_bytes:
+        raise ValueError("No file data provided.")
+
+    token = animref_auth.get_valid_id_token()
+    if not token:
+        raise RuntimeError("Please sign in to AnimationReference.org to upload references to your moodboards.")
+
+    boundary = f"----AnimRefRefUpload{uuid.uuid4().hex}"
+    clean_name = os.path.basename(filename or "reference.mp4")
+    resolved_mime = mime_type or mimetypes.guess_type(clean_name)[0] or "video/mp4"
+
+    parts: list[bytes] = []
+
+    def add_field(name: str, value: str) -> None:
+        parts.append(f"--{boundary}\r\n".encode("utf-8"))
+        parts.append(f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode("utf-8"))
+        parts.append(f"{value}\r\n".encode("utf-8"))
+
+    add_field("title", title or os.path.splitext(clean_name)[0] or "Reference")
+    add_field("category", category or "Acting")
+    add_field("tags", tags or "reference,blender")
+    add_field("isPrivate", "false")
+    add_field("draft", "false")
+    add_field("publishToPortfolio", "false")
+    if board_id and board_id != "__all_saves__":
+        add_field("boardId", str(board_id))
+
+    parts.append(f"--{boundary}\r\n".encode("utf-8"))
+    parts.append(
+        f'Content-Disposition: form-data; name="file"; filename="{clean_name}"\r\n'
+        f"Content-Type: {resolved_mime}\r\n\r\n".encode("utf-8")
+    )
+    parts.append(file_bytes)
+    parts.append(f"\r\n--{boundary}--\r\n".encode("utf-8"))
+
+    body = b"".join(parts)
+    req = urllib.request.Request(
+        f"{SITE_BASE_URL}/api/clips/upload",
+        data=body,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+            "User-Agent": USER_AGENT,
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=180) as resp:
+            raw = resp.read().decode("utf-8")
+            return json.loads(raw) if raw else {"ok": True}
+    except urllib.error.HTTPError as exc:
+        err_body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Upload failed (HTTP {exc.code}): {err_body}") from exc
+
+
 def clear_media_cache() -> int:
     cache_dir = get_cache_dir()
     removed = 0

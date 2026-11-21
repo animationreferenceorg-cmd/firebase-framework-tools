@@ -30,7 +30,7 @@ try:
 except ImportError:
     bpy = None
 
-from . import animref_api, animref_auth, animref_importer, animref_playblast
+from . import animref_api, animref_auth, animref_importer, animref_playblast, animref_updater
 
 _server = None
 _server_port = 0
@@ -584,10 +584,13 @@ async function loadAccount() {
       card.innerHTML = `
         <h3>Signed in to AnimationReference.org</h3>
         <p style="font-size:12px;color:#a1a1aa;">Account: <strong style="color:#fff;">${state.account.display_name || ''}</strong> (${state.account.email || ''})</p>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-dark" onclick="window.open('https://animationreference.org/pricing','_blank')">Manage Pro</button>
+          <button class="btn" id="checkUpdatesBtn">↻ Check for Updates</button>
           <button class="btn btn-danger" id="acctSignOutBtn">Sign Out</button>
-        </div>`;
+        </div>
+        <div id="updateStatusLine" style="font-size:11px;color:#a1a1aa;">Auto-updates enabled — checks AnimationReference.org on launch.</div>`;
+      document.getElementById('checkUpdatesBtn').onclick = checkPluginUpdates;
       document.getElementById('acctSignOutBtn').onclick = async () => {
         await api('/api/auth/signout', { method: 'POST' });
         await loadAccount();
@@ -927,7 +930,36 @@ document.getElementById('searchInput').oninput = (e) => {
   searchTimer = setTimeout(loadItems, 220);
 };
 
-loadAccount().then(() => { loadBoardsSidebar(); loadItems(); });
+async function checkPluginUpdates() {
+  const line = document.getElementById('updateStatusLine');
+  if (line) line.textContent = 'Checking AnimationReference.org for updates...';
+  try {
+    const res = await api('/api/updates/check', { method: 'POST', body: JSON.stringify({ force: true }) });
+    if (line) {
+      line.textContent = res.message || 'Up to date.';
+      line.style.color = res.updated ? '#6ee7b7' : '#a1a1aa';
+    }
+    showToast(res.updated ? '✓ ' + res.message : (res.message || 'Already up to date!'));
+  } catch (e) {
+    if (line) line.textContent = 'Update check failed: ' + e.message;
+  }
+}
+
+loadAccount().then(() => {
+  loadBoardsSidebar();
+  loadItems();
+  // Silently check if background auto-updater pulled a newer version
+  setTimeout(async () => {
+    try {
+      const u = await api('/api/updates/status');
+      if (u && u.updated) {
+        showToast('✓ ' + (u.message || 'Plugin updated — restart Blender to apply.'));
+        const line = document.getElementById('updateStatusLine');
+        if (line) { line.textContent = u.message; line.style.color = '#6ee7b7'; }
+      }
+    } catch {}
+  }, 2500);
+});
 </script>
 </body>
 </html>
@@ -960,6 +992,10 @@ class _StudioHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(raw)))
             self.end_headers()
             self.wfile.write(raw)
+            return
+
+        if parsed.path == "/api/updates/status":
+            self._send_json(animref_updater.get_last_update_status())
             return
 
         if parsed.path == "/api/account":
@@ -1098,6 +1134,11 @@ class _StudioHandler(http.server.BaseHTTPRequestHandler):
                 self._send_json({"error": str(exc)}, 400)
             return
 
+        if parsed.path == "/api/updates/check":
+            res = animref_updater.check_and_apply_updates(force=bool(body.get("force", True)))
+            self._send_json(res)
+            return
+
         if parsed.path == "/api/playblast":
             try:
                 fmt = body.get("file_format", "MP4")
@@ -1144,6 +1185,7 @@ class _StudioHandler(http.server.BaseHTTPRequestHandler):
 def start_companion_server() -> str:
     global _server, _server_port
     _ensure_main_timer()
+    animref_updater.check_in_background(force=False)
     with _server_lock:
         if _server is None:
             _server_port = _find_free_port()

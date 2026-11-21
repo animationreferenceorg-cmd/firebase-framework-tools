@@ -3,6 +3,13 @@ const nextConfig = {
   // A separate output directory also avoids stale OneDrive build artifacts during profiling.
   distDir: process.env.NEXT_BUILD_DIR || '.next',
   output: 'standalone',
+  outputFileTracingIncludes: {
+    '/api/plugins/updates': [
+      './integrations/animo-maya/Animo_Data/Animo_AnimRef/*.py',
+      './integrations/animref-blender/animref_blender_addon/*.py',
+      './integrations/animref-blender/animref_blender_addon/blender_manifest.toml',
+    ],
+  },
   async headers() {
     return [
       {

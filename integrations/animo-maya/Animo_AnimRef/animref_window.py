@@ -49,11 +49,13 @@ try:
     from . import animref_importer
     from . import animref_auth
     from . import animref_playblast
+    from . import animref_updater
 except (ImportError, ValueError):
     import animref_api
     import animref_importer
     import animref_auth
     import animref_playblast
+    import animref_updater
 
 
 def get_maya_main_window():
@@ -5116,6 +5118,43 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         c_layout.addLayout(c_btn_row)
 
         layout.addWidget(self.cache_box)
+
+        # Automatic Plugin Updates Card
+        self.update_box = QtWidgets.QFrame()
+        self.update_box.setStyleSheet("background-color: #111119; border: 1px solid #272736; border-radius: 14px;")
+        u_layout = QtWidgets.QVBoxLayout(self.update_box)
+        u_layout.setContentsMargins(14, 12, 14, 12)
+        u_layout.setSpacing(8)
+
+        u_title = QtWidgets.QLabel("Automatic Updates")
+        u_title.setStyleSheet("font-size: 13px; font-weight: 800; color: #f4f4f5; border: none;")
+        u_layout.addWidget(u_title)
+
+        self.update_status_lbl = QtWidgets.QLabel("Auto-updates enabled — checks AnimationReference.org on launch.")
+        self.update_status_lbl.setWordWrap(True)
+        self.update_status_lbl.setStyleSheet("color: #a1a1aa; font-size: 11px; border: none;")
+        u_layout.addWidget(self.update_status_lbl)
+
+        u_btn_row = QtWidgets.QHBoxLayout()
+        u_btn_row.setSpacing(8)
+        self.check_update_btn = QtWidgets.QPushButton("↻ Check for Updates")
+        self.check_update_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        self.check_update_btn.clicked.connect(lambda: self.trigger_plugin_update_check(force=True))
+        u_btn_row.addWidget(self.check_update_btn)
+
+        self.reload_plugin_btn = QtWidgets.QPushButton("⚡ Reload Plugin Now")
+        self.reload_plugin_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        self.reload_plugin_btn.setVisible(False)
+        self.reload_plugin_btn.setStyleSheet(
+            "QPushButton { background-color: #7c3aed; color: #ffffff; border: none; border-radius: 8px; padding: 6px 12px; font-weight: 800; font-size: 11px; }"
+            "QPushButton:hover { background-color: #8b5cf6; }"
+        )
+        self.reload_plugin_btn.clicked.connect(self.hot_reload_plugin)
+        u_btn_row.addWidget(self.reload_plugin_btn)
+        u_btn_row.addStretch()
+        u_layout.addLayout(u_btn_row)
+
+        layout.addWidget(self.update_box)
         layout.addStretch()
         acc_scroll.setWidget(content)
         outer.addWidget(acc_scroll)
@@ -5841,8 +5880,60 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
             self.pb_status_lbl.setText("Upload failed: " + str(err))
 
     # ==================== INITIAL LOAD & SELECTION ====================
+    def trigger_plugin_update_check(self, force=False):
+        if hasattr(self, "update_status_lbl") and force:
+            self.update_status_lbl.setText("Checking AnimationReference.org for updates...")
+        if hasattr(self, "check_update_btn") and force:
+            self.check_update_btn.setEnabled(False)
+
+        def _done(res):
+            QtCore.QTimer.singleShot(0, lambda r=res: self._on_plugin_update_checked(r))
+
+        animref_updater.check_in_background(on_complete=_done, force=force)
+
+    def _on_plugin_update_checked(self, res):
+        if hasattr(self, "check_update_btn"):
+            self.check_update_btn.setEnabled(True)
+        if not isinstance(res, dict) or res.get("skipped"):
+            return
+        msg = res.get("message") or ""
+        if hasattr(self, "update_status_lbl") and msg:
+            self.update_status_lbl.setText(msg)
+        if res.get("updated"):
+            if hasattr(self, "reload_plugin_btn"):
+                self.reload_plugin_btn.setVisible(True)
+            if hasattr(self, "update_status_lbl"):
+                self.update_status_lbl.setStyleSheet("color: #6ee7b7; font-size: 11px; font-weight: 700; border: none;")
+            if cmds and hasattr(cmds, "inViewMessage"):
+                try:
+                    cmds.inViewMessage(
+                        amg='AnimRef updated to <hl style="color:#a78bfa;">v{}</hl> — reopen or click Reload in Account tab.'.format(res.get("version") or "latest"),
+                        pos="topCenter",
+                        fade=True,
+                    )
+                except Exception:
+                    pass
+
+    def hot_reload_plugin(self):
+        try:
+            for name in ("Animo_AnimRef.animref_launcher", "animref_launcher"):
+                if name in sys.modules:
+                    try:
+                        sys.modules[name].close_existing_windows()
+                    except Exception:
+                        pass
+            for mod in [k for k in list(sys.modules.keys()) if "animref" in k.lower() or "animo_animref" in k.lower()]:
+                sys.modules.pop(mod, None)
+            from Animo_AnimRef import animref_launcher
+            animref_launcher.launch(force_new=True)
+        except Exception as exc:
+            if hasattr(self, "update_status_lbl"):
+                self.update_status_lbl.setText("Close and reopen AnimRef to finish applying update ({})".format(exc))
+
     def load_initial_data(self):
         self.load_boards_data()
+        # Non-blocking background auto-update check on launch
+        self.trigger_plugin_update_check(force=False)
 
         def _bg_load():
             try:

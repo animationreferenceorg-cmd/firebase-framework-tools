@@ -4827,7 +4827,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.pb_status_lbl = QtWidgets.QLabel("Ready — choose MP4 or AVI and click 'Record Playblast' or 'Export As...'.")
         self.pb_status_lbl.setStyleSheet(
             "background-color: #111119; border: 1px solid #272736; border-radius: 10px; "
-            "padding: 8px 10px; color: #334155; font-size: 11px; font-weight: 600;"
+            "padding: 8px 10px; color: #a1a1aa; font-size: 11px; font-weight: 600;"
         )
         self.pb_status_lbl.setWordWrap(True)
         card_layout.addWidget(self.pb_status_lbl)
@@ -4886,9 +4886,29 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.pb_upload_row_layout.addLayout(board_box, stretch=1)
         uc_layout.addLayout(self.pb_upload_row_layout)
 
+        meta_upload_row = QtWidgets.QHBoxLayout()
+        meta_upload_row.setSpacing(8)
+        stg_lbl = QtWidgets.QLabel("Stage:")
+        stg_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #f4f4f5; border: none;")
+        meta_upload_row.addWidget(stg_lbl)
+        self.pb_upload_stage_combo = QtWidgets.QComboBox()
+        for label, val in [("Blocking", "blocking"), ("Splining", "splining"), ("Polish", "polish"), ("Completed", "completed")]:
+            self.pb_upload_stage_combo.addItem(label, val)
+        self.pb_upload_stage_combo.setStyleSheet(ctrl_style)
+        meta_upload_row.addWidget(self.pb_upload_stage_combo, stretch=1)
+
+        cat_lbl = QtWidgets.QLabel("Category:")
+        cat_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #f4f4f5; border: none;")
+        meta_upload_row.addWidget(cat_lbl)
+        self.pb_upload_category_combo = QtWidgets.QComboBox()
+        self.pb_upload_category_combo.addItems(["Acting", "Body Mechanics", "Creature", "Combat", "Locomotion", "Lip Sync", "FX / VFX"])
+        self.pb_upload_category_combo.setStyleSheet(ctrl_style)
+        meta_upload_row.addWidget(self.pb_upload_category_combo, stretch=1)
+        uc_layout.addLayout(meta_upload_row)
+
         self.pb_auto_upload_check = QtWidgets.QCheckBox("Auto-post to AnimationReference.org Portfolio & Feed right after recording")
         self.pb_auto_upload_check.setStyleSheet("color: #f4f4f5; font-size: 11px; font-weight: 600; border: none;")
-        self.pb_auto_upload_check.setChecked(False)
+        self.pb_auto_upload_check.setChecked(True)
         uc_layout.addWidget(self.pb_auto_upload_check)
 
         self.upload_pb_btn = QtWidgets.QPushButton("☁️ Upload Playblast to AnimationReference.org")
@@ -5767,11 +5787,16 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
             self.pb_upload_link_lbl.setVisible(False)
         self.pb_status_lbl.setText("Uploading playblast '{}' to AnimationReference.org...".format(title))
 
+        wip_stage = self.pb_upload_stage_combo.currentData() if hasattr(self, "pb_upload_stage_combo") else "blocking"
+        category = self.pb_upload_category_combo.currentText() if hasattr(self, "pb_upload_category_combo") else "Acting"
+
         def _worker():
             try:
                 res = animref_auth.upload_playblast_to_animref(
                     pb_path,
                     title=title,
+                    category=category,
+                    wip_stage=wip_stage,
                     board_id=board_id,
                 )
                 self.playblast_uploaded.emit({"ok": True, "result": res, "title": title})

@@ -900,6 +900,7 @@ def upload_playblast_to_animref(
     is_private=False,
     publish_to_portfolio=True,
     software="Maya",
+    wip_stage="blocking",
     description="",
     progress_callback=None,
 ):
@@ -943,7 +944,7 @@ def upload_playblast_to_animref(
             "isPrivate": "true" if is_private else "false",
             "publishToPortfolio": "true" if (publish_to_portfolio and not is_private) else "false",
             "software": (software or "Maya").strip(),
-            "wipStage": "blocking",
+            "wipStage": (wip_stage or "blocking").strip().lower(),
         }
         if description:
             fields["description"] = str(description).strip()[:1000]
@@ -999,9 +1000,13 @@ def upload_playblast_to_animref(
 
         rel_url = data.get("url") or ""
         full_url = ("https://animationreference.org" + rel_url) if rel_url.startswith("/") else rel_url
+        rel_portfolio = data.get("portfolioUrl") or ""
+        full_portfolio = ("https://animationreference.org" + rel_portfolio) if rel_portfolio.startswith("/") else rel_portfolio
         return {
             "id": data.get("id", ""),
             "url": full_url,
+            "portfolioItemId": data.get("portfolioItemId"),
+            "portfolioUrl": full_portfolio,
             "uploadedMediaUrl": data.get("uploadedMediaUrl", ""),
         }
     finally:

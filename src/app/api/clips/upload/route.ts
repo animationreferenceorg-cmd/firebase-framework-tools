@@ -11,7 +11,7 @@ import { parseSourcePage } from '@/lib/source-page';
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
-const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
+const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/avi']);
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const MAX_VIDEO_BYTES = 250 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;

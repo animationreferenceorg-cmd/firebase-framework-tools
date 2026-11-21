@@ -460,17 +460,42 @@ STUDIO_HTML = r"""<!DOCTYPE html>
         <div class="panel-card">
           <h3>Viewport Playblast &amp; Auto-Post to AnimationReference.org</h3>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <input id="pbTitle" type="text" placeholder="Playblast title (e.g. Hero Walk Pass 02)" style="flex:1;min-width:180px;" />
+            <input id="pbTitle" type="text" placeholder="Playblast title (e.g. Hero Walk Pass 02)" style="flex:2;min-width:180px;" />
             <select id="pbFormat">
               <option value="MP4">MP4 (H.264)</option>
               <option value="AVI">AVI (MJPEG)</option>
             </select>
           </div>
-          <label style="font-size:12px;color:#d4d4d8;font-weight:600;display:flex;align-items:center;gap:6px;">
-            <input id="pbAutoPost" type="checkbox" checked /> Auto-post to AnimationReference.org Portfolio &amp; Feed right after recording
-          </label>
-          <button class="btn btn-emerald" id="recordPbBtn" style="padding:10px 16px;font-size:12px;">● Record Blender Playblast</button>
-          <div id="pbResult" style="font-size:11px;color:#047857;font-weight:700;"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="pbStage" style="flex:1;min-width:120px;">
+              <option value="blocking" selected>Stage: Blocking</option>
+              <option value="splining">Stage: Splining</option>
+              <option value="polish">Stage: Polish</option>
+              <option value="completed">Stage: Completed</option>
+            </select>
+            <select id="pbCategory" style="flex:1;min-width:130px;">
+              <option value="Acting" selected>Acting</option>
+              <option value="Body Mechanics">Body Mechanics</option>
+              <option value="Creature">Creature</option>
+              <option value="Combat">Combat</option>
+              <option value="Locomotion">Locomotion</option>
+              <option value="Lip Sync">Lip Sync</option>
+              <option value="FX / VFX">FX / VFX</option>
+            </select>
+            <select id="pbBoard" style="flex:1.4;min-width:150px;">
+              <option value="">Library &amp; Portfolio (No Board)</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;">
+            <label style="font-size:12px;color:#d4d4d8;font-weight:600;display:flex;align-items:center;gap:6px;">
+              <input id="pbAutoPost" type="checkbox" checked /> Auto-post to AnimationReference.org Portfolio &amp; Feed
+            </label>
+            <label style="font-size:12px;color:#a1a1aa;font-weight:600;display:flex;align-items:center;gap:6px;">
+              <input id="pbOpenBrowser" type="checkbox" checked /> Open live post in browser
+            </label>
+          </div>
+          <button class="btn btn-emerald" id="recordPbBtn" style="padding:10px 16px;font-size:12px;">● Record &amp; Auto-Upload Playblast</button>
+          <div id="pbResult" style="font-size:11px;color:#34d399;font-weight:700;"></div>
         </div>
 
         <div class="panel-card">
@@ -589,6 +614,18 @@ async function loadBoardsSidebar() {
     state.boards = [];
   }
   list.innerHTML = '';
+  const pbBoardSel = document.getElementById('pbBoard');
+  if (pbBoardSel) {
+    const prevVal = pbBoardSel.value;
+    pbBoardSel.innerHTML = '<option value="">Library &amp; Portfolio (No Board)</option>';
+    for (const b of state.boards) {
+      const opt = document.createElement('option');
+      opt.value = b.id || '';
+      opt.textContent = 'Board: ' + (b.name || 'Untitled');
+      pbBoardSel.appendChild(opt);
+    }
+    if (prevVal) pbBoardSel.value = prevVal;
+  }
   const allBtn = document.createElement('button');
   allBtn.className = 'board-item' + (state.view === 'boards' && state.boardId === '__all_saves__' ? ' active' : '');
   allBtn.innerHTML = `<span>All saves</span>`;
@@ -847,18 +884,22 @@ document.getElementById('recordPbBtn').onclick = async () => {
       body: JSON.stringify({
         title: document.getElementById('pbTitle').value,
         file_format: document.getElementById('pbFormat').value,
+        wip_stage: document.getElementById('pbStage').value,
+        category: document.getElementById('pbCategory').value,
+        board_id: document.getElementById('pbBoard').value,
         auto_upload: document.getElementById('pbAutoPost').checked,
+        open_browser: document.getElementById('pbOpenBrowser').checked,
       }),
     });
     document.getElementById('pbResult').innerHTML = res.uploaded_url
-      ? `✓ Live on AnimationReference.org: <a href="${res.uploaded_url}" target="_blank" style="color:#047857;">${res.uploaded_url}</a>`
+      ? `✓ Live on AnimationReference.org: <a href="${res.uploaded_url}" target="_blank" style="color:#6ee7b7;text-decoration:underline;">${res.uploaded_url}</a>`
       : '✓ Saved: ' + res.path;
-    showToast('✓ Playblast complete!');
+    showToast(res.uploaded_url ? '✓ Uploaded & live on AnimationReference.org!' : '✓ Playblast saved!');
   } catch (e) {
     showToast('Playblast error: ' + e.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = '● Record Blender Playblast';
+    btn.textContent = '● Record & Auto-Upload Playblast';
   }
 };
 
@@ -1061,7 +1102,11 @@ class _StudioHandler(http.server.BaseHTTPRequestHandler):
             try:
                 fmt = body.get("file_format", "MP4")
                 title = str(body.get("title") or "Blender Playblast")
+                wip_stage = str(body.get("wip_stage") or "blocking")
+                category = str(body.get("category") or "Acting")
+                board_id = str(body.get("board_id") or "")
                 auto_upload = bool(body.get("auto_upload", True))
+                open_browser = bool(body.get("open_browser", True))
 
                 out_path = _run_on_blender_main(
                     lambda ctx: animref_playblast.record_viewport_playblast(ctx, file_format=fmt),
@@ -1069,12 +1114,23 @@ class _StudioHandler(http.server.BaseHTTPRequestHandler):
                 )
                 uploaded_url = None
                 if auto_upload:
-                    res = animref_playblast.upload_playblast(out_path, title=title)
+                    res = animref_playblast.upload_playblast(
+                        out_path,
+                        title=title,
+                        category=category,
+                        wip_stage=wip_stage,
+                        board_id=board_id,
+                    )
                     raw_u = res.get("portfolioUrl") or res.get("url") or ""
                     if raw_u:
                         uploaded_url = (
                             animref_auth.SITE_BASE_URL + raw_u if raw_u.startswith("/") else raw_u
                         )
+                        if open_browser:
+                            try:
+                                webbrowser.open(uploaded_url)
+                            except Exception:
+                                pass
                 self._send_json({"ok": True, "path": out_path, "uploaded_url": uploaded_url})
             except Exception as exc:
                 self._send_json({"error": str(exc)}, 400)

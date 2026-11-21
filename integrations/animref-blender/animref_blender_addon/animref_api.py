@@ -257,7 +257,17 @@ def authorize_and_download_media(video: dict) -> str:
     return dest_path
 
 
-def upload_playblast_to_site(file_path: str, title: str, description: str = "") -> dict:
+def upload_playblast_to_site(
+    file_path: str,
+    title: str,
+    description: str = "",
+    category: str = "Acting",
+    wip_stage: str = "blocking",
+    tags: str = "blender,playblast",
+    board_id: str = "",
+    publish_to_portfolio: bool = True,
+    is_private: bool = False,
+) -> dict:
     """Upload a recorded Blender playblast MP4/AVI directly to AnimationReference.org."""
     if not os.path.isfile(file_path):
         raise FileNotFoundError(f"Playblast file not found: {file_path}")
@@ -279,12 +289,14 @@ def upload_playblast_to_site(file_path: str, title: str, description: str = "") 
 
     add_field("title", title or "Blender Playblast")
     add_field("description", description or "Uploaded directly from AnimationReference.org Blender Studio Add-on")
-    add_field("category", "Acting")
-    add_field("tags", "blender,playblast")
+    add_field("category", category or "Acting")
+    add_field("tags", tags or "blender,playblast")
     add_field("software", "Blender")
-    add_field("isPrivate", "false")
-    add_field("publishToPortfolio", "true")
-    add_field("wipStage", "blocking")
+    add_field("isPrivate", "true" if is_private else "false")
+    add_field("publishToPortfolio", "true" if (publish_to_portfolio and not is_private) else "false")
+    add_field("wipStage", wip_stage or "blocking")
+    if board_id:
+        add_field("boardId", str(board_id))
     add_field("source", "blender_plugin")
 
     with open(file_path, "rb") as f:

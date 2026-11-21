@@ -100,5 +100,25 @@ def record_viewport_playblast(
     return clean_out
 
 
-def upload_playblast(file_path: str, title: str, description: str = "") -> dict:
-    return animref_api.upload_playblast_to_site(file_path=file_path, title=title, description=description)
+def upload_playblast(
+    file_path: str,
+    title: str,
+    description: str = "",
+    category: str = "Acting",
+    wip_stage: str = "blocking",
+    tags: str = "blender,playblast",
+    board_id: str = "",
+    publish_to_portfolio: bool = True,
+    is_private: bool = False,
+) -> dict:
+    return animref_api.upload_playblast_to_site(
+        file_path=file_path,
+        title=title,
+        description=description,
+        category=category,
+        wip_stage=wip_stage,
+        tags=tags,
+        board_id=board_id,
+        publish_to_portfolio=publish_to_portfolio,
+        is_private=is_private,
+    )

@@ -17,13 +17,14 @@ except ImportError:
     bpy = None
 
 if bpy is not None:
-    from . import animref_panel
+    from . import animref_panel, animref_studio_window
 
     class AnimRefClipItem(bpy.types.PropertyGroup):
         clip_id: bpy.props.StringProperty(name="ID", default="")
         title: bpy.props.StringProperty(name="Title", default="")
         category: bpy.props.StringProperty(name="Category", default="")
         video_url: bpy.props.StringProperty(name="Video URL", default="")
+        thumbnail_url: bpy.props.StringProperty(name="Thumbnail URL", default="")
         media_type: bpy.props.StringProperty(name="Media Type", default="video")
         fps: bpy.props.IntProperty(name="FPS", default=24)
         duration: bpy.props.FloatProperty(name="Duration", default=0.0)
@@ -102,6 +103,7 @@ if bpy is not None:
 
         results: bpy.props.CollectionProperty(type=AnimRefClipItem)
         active_result_index: bpy.props.IntProperty(name="Active Result", default=0)
+        studio_page: bpy.props.IntProperty(name="Studio Page", default=0, min=0)
 
         scene_refs: bpy.props.CollectionProperty(type=AnimRefSceneRefItem)
         active_scene_ref_index: bpy.props.IntProperty(name="Active Scene Ref", default=0)
@@ -131,8 +133,10 @@ if bpy is not None:
             bpy.utils.register_class(cls)
         bpy.types.Scene.animref_settings = bpy.props.PointerProperty(type=AnimRefSettings)
         animref_panel.register()
+        animref_studio_window.register()
 
     def unregister():
+        animref_studio_window.unregister()
         animref_panel.unregister()
         if hasattr(bpy.types.Scene, "animref_settings"):
             del bpy.types.Scene.animref_settings

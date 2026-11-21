@@ -20,10 +20,13 @@ def _populate_results(settings, items: list[dict]) -> None:
         row.title = str(item.get("title") or "Untitled Reference")
         row.category = str(item.get("category") or "")
         row.video_url = str(item.get("videoUrl") or item.get("mediaUrl") or "")
+        row.thumbnail_url = str(item.get("thumbnailUrl") or item.get("posterUrl") or item.get("previewUrl") or "")
         row.media_type = str(item.get("mediaType") or "video")
         row.fps = int(item.get("fps") or 24)
         row.duration = float(item.get("duration") or 0.0)
     settings.active_result_index = 0
+    if hasattr(settings, "studio_page"):
+        settings.studio_page = 0
 
 
 def _refresh_scene_list(context) -> None:
@@ -410,6 +413,11 @@ class ANIMREF_PT_AccountPanel(bpy.types.Panel):
         layout = self.layout
         settings = context.scene.animref_settings
         acct = animref_auth.get_account_summary()
+
+        # Hero CTA: Launch Custom Visual Studio Window (Maya-style)
+        hero = layout.row()
+        hero.scale_y = 1.5
+        hero.operator("animref.open_studio_window", text="Open AnimRef Studio Window", icon="WINDOW")
 
         box = layout.box()
         if acct["signed_in"]:

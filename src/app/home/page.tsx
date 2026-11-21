@@ -10,10 +10,9 @@ import { FilterBar, TabOption, TypeOption, PillOption, MediaOption } from '@/com
 import { VideoGrid } from '@/components/VideoGrid';
 import { PricingDialog } from '@/components/PricingDialog';
 import { ImmersiveHomeHeader } from '@/components/home/ImmersiveHomeHeader';
-import { ToolsLaunchAnnouncement } from '@/components/home/ToolsLaunchAnnouncement';
+import { FeaturedSpotlightsBar } from '@/components/home/FeaturedSpotlightsBar';
 import { CommunityFeedShelf } from '@/components/home/CommunityFeedShelf';
 import { RecentlyViewedShelf } from '@/components/home/RecentlyViewedShelf';
-import { InstagramCommunitySpotlight } from '@/components/InstagramFollowFunnel';
 import { getPublicPortfolioItems, portfolioItemToVideo } from '@/lib/portfolio-service';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from '@/components/motion/SectionHeading';
@@ -175,32 +174,27 @@ export default function HomePage() {
         onOpenPricing={() => setShowPricingDialog(true)}
       />
 
-      {/* 1.5. ANNOUNCEMENT: Maya & Blender Studio Plugins */}
+      {/* 1. SCULPTURAL 3D BRAND ICONS BAR (Plugins · Moodboards · Portfolios) */}
       {!searchQuery && (
-        <Reveal>
-          <ToolsLaunchAnnouncement />
-        </Reveal>
+        <FeaturedSpotlightsBar />
       )}
 
-      {/* 2. SHELF: Recently Viewed References (always playable) */}
+      {/* 2. FEATURED ANIMATOR PORTFOLIOS & COMMUNITY SHOWCASE */}
       {!searchQuery && (
-        <Reveal>
-          <RecentlyViewedShelf videos={allVideos} />
-        </Reveal>
+        <div className="[content-visibility:auto] [contain-intrinsic-size:auto_none_auto_360px]">
+          <Reveal>
+            <CommunityFeedShelf />
+          </Reveal>
+        </div>
       )}
 
-      {/* 5. SHELF: Community Portfolio Feed */}
+      {/* 3. RECENTLY VIEWED (Only renders when user has watched clips) */}
       {!searchQuery && (
-        <Reveal>
-          <CommunityFeedShelf />
-        </Reveal>
-      )}
-
-      {/* 5.5. INSTAGRAM COMMUNITY SPOTLIGHT */}
-      {!searchQuery && (
-        <Reveal>
-          <InstagramCommunitySpotlight />
-        </Reveal>
+        <div className="[content-visibility:auto] [contain-intrinsic-size:auto_none_auto_280px]">
+          <Reveal>
+            <RecentlyViewedShelf videos={allVideos} />
+          </Reveal>
+        </div>
       )}
 
       {/* 6. CATALOG / SEARCH RESULTS */}

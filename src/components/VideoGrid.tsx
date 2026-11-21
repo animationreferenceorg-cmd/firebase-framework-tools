@@ -63,7 +63,7 @@ export const VideoGrid = memo(function VideoGrid({ title, videos, columns = 4, l
             style={index < 12 ? undefined : { animationDelay: `${(index % 6) * 15}ms` }}
           >
             <div data-masonry-content={layout === 'masonry' ? '' : undefined}>
-              <VideoCard video={video} priority={index < 4} layout={layout === 'masonry' && isArtworkReference(video) ? 'natural' : 'video'} />
+              <VideoCard video={video} playlist={videos} priority={index < 4} layout={layout === 'masonry' && isArtworkReference(video) ? 'natural' : 'video'} />
             </div>
           </div>
         ))}

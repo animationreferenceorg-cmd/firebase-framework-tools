@@ -58,13 +58,14 @@ import { useWatchTracker } from '@/hooks/use-watch-tracker';
 
 interface VideoCardProps {
   video: Video;
+  playlist?: Video[];
   poster?: boolean;
   onSelect?: (video: Video) => void;
   priority?: boolean;
   layout?: 'video' | 'natural';
 }
 
-function VideoCardComponent({ video, poster, onSelect, priority = false, layout = 'video' }: VideoCardProps) {
+function VideoCardComponent({ video, playlist, poster, onSelect, priority = false, layout = 'video' }: VideoCardProps) {
   const [imageRatio, setImageRatio] = useState<number | null>(null);
   const natural = layout === 'natural';
   const nativeRatio = video.width && video.height ? video.width / video.height : 1;
@@ -108,6 +109,8 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
   }, [endWatch, hoverKey, playKey]);
 
   const [isHovered, setIsHovered] = useState(false);
+  const [scrubProgress, setScrubProgress] = useState<number | null>(null);
+  const [scrubFrame, setScrubFrame] = useState<number | null>(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [hasImageError, setHasImageError] = useState(false);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
@@ -326,8 +329,26 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
       hoverTimeoutRef.current = null;
     }
     endWatch(hoverKey);
+    setScrubProgress(null);
+    setScrubFrame(null);
     if (video.isShort || poster) return;
     setIsHovered(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isHovered || isPlayerOpen || previewBlocked || !playableVideoUrl || video.isShort || poster) return;
+    // Don't scrub while pointer is over the bottom action buttons
+    if ((e.target as HTMLElement).closest('button')) return;
+    const vid = videoRef.current;
+    if (!vid || !Number.isFinite(vid.duration) || vid.duration <= 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    try {
+      vid.currentTime = ratio * vid.duration;
+      setScrubProgress(ratio);
+      setScrubFrame(Math.round(ratio * vid.duration * 24));
+    } catch {}
   };
 
   const countedVideoViewRef = useRef(false);
@@ -648,6 +669,7 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
         <div ref={containerRef}
           style={naturalStyle}
           onMouseEnter={handleMouseEnter}
+          onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
           onClick={handleCardClick}
           className={cn(
@@ -761,9 +783,28 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
             </div>
           ) : null}
 
-          {/* Bottom Actions Bar (High Z-Index so buttons STAY visible when video plays) */}
+          {/* Interactive Hover Scrub Progress Bar + Live 24fps Frame Pill */}
+          {playableVideoUrl && isHovered && !isPlayerOpen && !previewBlocked && scrubProgress !== null && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-40">
+              {scrubFrame !== null && (
+                <div className="flex justify-end px-2.5 pb-1">
+                  <span className="rounded bg-black/75 px-1.5 py-0.5 font-mono text-[9px] font-bold text-violet-200 backdrop-blur-sm border border-violet-400/30">
+                    F{String(scrubFrame).padStart(3, '0')}
+                  </span>
+                </div>
+              )}
+              <div className="h-[3px] w-full bg-white/15">
+                <div
+                  className="h-full bg-gradient-to-r from-violet-500 via-fuchsia-400 to-cyan-300"
+                  style={{ width: `${Math.round(scrubProgress * 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Bottom Actions Bar (High Z-Index so buttons STAY visible when video plays; accessible via focus-within & touch) */}
           <div className={cn(
-            "absolute bottom-0 left-0 right-0 p-3 transition-all duration-300 z-30 pointer-events-auto",
+            "absolute bottom-0 left-0 right-0 p-3 transition-all duration-300 z-30 pointer-events-auto group-focus-within/card:opacity-100 group-focus-within/card:translate-y-0 group-focus-within/card:pointer-events-auto [@media(hover:none)]:opacity-100 [@media(hover:none)]:translate-y-0 [@media(hover:none)]:pointer-events-auto",
             isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
           )}>
             <div className="flex items-center gap-2 mb-2">
@@ -823,6 +864,7 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
             ) : (
               <VideoFullscreenViewer
                 video={video}
+                playlist={playlist}
                 title={displayTitle}
                 description={displayDescription}
                 onClose={() => setIsPlayerOpen(false)}
@@ -873,6 +915,7 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
         ref={containerRef}
         style={naturalStyle}
         onMouseEnter={handleMouseEnter}
+        onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onClick={handleCardClick}
         className={cn(
@@ -993,20 +1036,39 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
           </div>
         )}
 
-        {/* Bottom Title & Action Controls Bar */}
-        <div className="absolute bottom-0 left-0 right-0 p-3 transition-all duration-300 z-30 pointer-events-auto">
-          <h3 className={cn(
-            "text-white font-bold text-xs sm:text-sm truncate drop-shadow-md transition-all duration-300 ease-in-out",
-            isHovered ? "opacity-0 -translate-y-2 pointer-events-none h-0 overflow-hidden mb-0" : "opacity-100 translate-y-0 mb-1.5"
-          )}>
-            {displayTitle}
-          </h3>
+          {/* Interactive Hover Scrub Progress Bar + Live 24fps Frame Pill */}
+          {playableVideoUrl && isHovered && !isPlayerOpen && !previewBlocked && scrubProgress !== null && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-40">
+              {scrubFrame !== null && (
+                <div className="flex justify-end px-2.5 pb-1">
+                  <span className="rounded bg-black/75 px-1.5 py-0.5 font-mono text-[9px] font-bold text-violet-200 backdrop-blur-sm border border-violet-400/30">
+                    F{String(scrubFrame).padStart(3, '0')}
+                  </span>
+                </div>
+              )}
+              <div className="h-[3px] w-full bg-white/15">
+                <div
+                  className="h-full bg-gradient-to-r from-violet-500 via-fuchsia-400 to-cyan-300"
+                  style={{ width: `${Math.round(scrubProgress * 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
 
-          {/* Interactive UI Action Buttons (Reveals on hover) */}
-          <div className={cn(
-            "flex items-center justify-between transition-all duration-300",
-            isHovered ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none h-0 sm:h-auto"
-          )}>
+          {/* Bottom Title & Action Controls Bar */}
+          <div className="absolute bottom-0 left-0 right-0 p-3 transition-all duration-300 z-30 pointer-events-auto">
+            <h3 className={cn(
+              "text-white font-bold text-xs sm:text-sm truncate drop-shadow-md transition-all duration-300 ease-in-out",
+              isHovered ? "opacity-0 -translate-y-2 pointer-events-none h-0 overflow-hidden mb-0" : "opacity-100 translate-y-0 mb-1.5"
+            )}>
+              {displayTitle}
+            </h3>
+
+            {/* Interactive UI Action Buttons (Reveals on hover, keyboard focus-within, and touch devices) */}
+            <div className={cn(
+              "flex items-center justify-between transition-all duration-300 group-focus-within/card:opacity-100 group-focus-within/card:translate-y-0 group-focus-within/card:pointer-events-auto [@media(hover:none)]:opacity-100 [@media(hover:none)]:translate-y-0 [@media(hover:none)]:pointer-events-auto",
+              isHovered ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none h-0 sm:h-auto"
+            )}>
             <div className="flex items-center gap-1.5">
               <Button variant="ghost" size="icon" onClick={handleBookmarkToggle} className="h-7 px-2 squash rounded-full bg-black/35 hover:bg-white/25 ring-1 ring-white/15 backdrop-blur-md gap-1 w-auto" title="Save Video to Board">
                 <Bookmark className={cn("h-3.5 w-3.5", isSaved ? "fill-purple-400 text-purple-400" : "text-purple-300 fill-purple-400/30 hover:fill-purple-400")} />
@@ -1040,6 +1102,7 @@ function VideoCardComponent({ video, poster, onSelect, priority = false, layout 
         ) : (
           <VideoFullscreenViewer
             video={video}
+            playlist={playlist}
             title={displayTitle}
             description={displayDescription}
             onClose={() => setIsPlayerOpen(false)}

@@ -2,8 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { ArrowRight, LayoutGrid, Paintbrush, Play, Search, Sparkles, Upload, UserPlus } from 'lucide-react';
+import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
+import { ArrowRight, Download, LayoutGrid, Paintbrush, Play, Plug, Search, Sparkles, Upload, UserPlus, Users } from 'lucide-react';
 import type { Video } from '@/lib/types';
 import { useElementActivity } from '@/hooks/use-element-activity';
 import { LiveSearchDropdown } from './LiveSearchDropdown';
@@ -24,9 +24,60 @@ type ImmersiveHomeHeaderProps = {
 };
 
 const announcements = [
-  { label: 'Paint workspace is in beta', href: '/paint', icon: Paintbrush },
+  { label: 'Maya & Blender Studio Plugins are live', href: '/tools', icon: Plug },
   { label: 'Free portfolio submissions are open', href: '/profile?tab=portfolio', icon: UserPlus },
-  { label: 'Visual boards have been upgraded', href: '/moodboard', icon: LayoutGrid },
+  { label: 'Visual Moodboards sync to 3D', href: '/moodboard', icon: LayoutGrid },
+  { label: 'Paint drawover workspace', href: '/paint', icon: Paintbrush },
+];
+
+type HeroSpotlightSlide = {
+  id: string;
+  tag: string;
+  tagTone: string;
+  title: string;
+  desc: string;
+  image: string;
+  ctaLabel: string;
+  href: string;
+  secondaryLabel?: string;
+  secondaryHref?: string;
+};
+
+const HERO_ANNOUNCEMENT_SLIDES: HeroSpotlightSlide[] = [
+  {
+    id: 'plugins',
+    tag: 'NEW · FREE PLUGINS',
+    tagTone: 'border-cyan-400/40 bg-cyan-500/20 text-cyan-200',
+    title: 'Maya & Blender Studio Plugins',
+    desc: 'Drop 60fps reference planes straight to (0,0,0) with live Scene Plane controls & auto-updates.',
+    image: '/images/plugins/maya-studio-preview.jpg',
+    ctaLabel: 'Download Plugins',
+    href: '/tools',
+    secondaryLabel: 'Blender Preview',
+    secondaryHref: '/tools',
+  },
+  {
+    id: 'community',
+    tag: 'COMMUNITY SPOTLIGHT',
+    tagTone: 'border-violet-400/40 bg-violet-500/20 text-violet-200',
+    title: 'Featured Animator Portfolios',
+    desc: 'Upload your playblasts, share shot breakdowns, and get discovered by studios & peers.',
+    image: '/images/plugins/blender-studio-preview.jpg',
+    ctaLabel: 'Explore Portfolios',
+    href: '/feed',
+    secondaryLabel: 'Share Your Shot',
+    secondaryHref: '/profile?tab=studio&upload=true',
+  },
+  {
+    id: 'pro',
+    tag: 'PRO · $1 FIRST MONTH',
+    tagTone: 'border-amber-400/40 bg-amber-500/20 text-amber-200',
+    title: 'Unlimited Moodboards & 3D Sync',
+    desc: 'Unlock unlimited Maya & Blender Moodboard imports, 24 FPS MP4s, and Contact Sheets.',
+    image: '/images/plugins/maya-studio-preview.jpg',
+    ctaLabel: 'Unlock Pro — $1',
+    href: '/pricing',
+  },
 ];
 
 function playbackUrl(video?: Video) {
@@ -91,10 +142,48 @@ export function ImmersiveHomeHeader({
   const reduceMotion = useReducedMotion();
   const { ref: sectionRef, isActive } = useElementActivity<HTMLElement>();
   const [activeVideoIndex, setActiveVideoIndex] = React.useState(0);
+  const [activeSlideIdx, setActiveSlideIdx] = React.useState(0);
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [selectedVideo, setSelectedVideo] = React.useState<Video | null>(null);
   const [selectedArtwork, setSelectedArtwork] = React.useState<any | null>(null);
   const featured = videos[activeVideoIndex] || videos[0];
+
+  // Interactive 3D tilt spring values for the right-side Announcement & Community Deck
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-10, 10]), { stiffness: 180, damping: 22 });
+  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [8, -8]), { stiffness: 180, damping: 22 });
+
+  const handleCardPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (reduceMotion) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    mouseX.set((e.clientX - rect.left) / rect.width - 0.5);
+    mouseY.set((e.clientY - rect.top) / rect.height - 0.5);
+  };
+
+  const handleCardPointerLeave = () => {
+    mouseX.set(0);
+    mouseY.set(0);
+  };
+
+  // Auto-rotate announcement slides gently when active
+  React.useEffect(() => {
+    if (!isActive || reduceMotion) return;
+    const t = window.setInterval(() => {
+      setActiveSlideIdx((i) => (i + 1) % HERO_ANNOUNCEMENT_SLIDES.length);
+    }, 7000);
+    return () => window.clearInterval(t);
+  }, [isActive, reduceMotion]);
+
+  // Live community shots for the interactive 3D card when on the Community slide
+  const communityAvatars = React.useMemo(() => {
+    return allVideos
+      .filter((v) => (v.isPortfolio || v.uploader || v.author_name) && (v.thumbnailUrl || v.posterUrl))
+      .slice(0, 3);
+  }, [allVideos]);
+
+  const activeSlide = HERO_ANNOUNCEMENT_SLIDES[activeSlideIdx] || HERO_ANNOUNCEMENT_SLIDES[0];
 
   React.useEffect(() => {
     if (!isActive || reduceMotion || videos.length < 2) return;
@@ -133,9 +222,10 @@ export function ImmersiveHomeHeader({
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(7,5,12,0.62)_0%,transparent_30%,rgba(7,5,12,0.12)_55%,rgba(7,5,12,0.96)_100%)]" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_24%_46%,rgba(124,58,237,0.2),transparent_42%)]" />
 
-      <div className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-[1600px] flex-col justify-center px-6 pb-32 pt-36 sm:px-10 md:px-14 lg:px-20">
+      <div className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-[1640px] flex-col justify-center px-6 pb-32 pt-32 sm:px-10 md:px-14 lg:px-16">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
         <motion.div
-          className="max-w-3xl"
+          className="lg:col-span-7 max-w-3xl"
           initial={reduceMotion ? false : { opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
@@ -290,6 +380,136 @@ export function ImmersiveHomeHeader({
             </Link>
           )}
         </motion.div>
+
+        {/* Right Column: Interactive 3D Perspective Community & Announcements Deck */}
+        <div
+          className="lg:col-span-5 hidden lg:block [perspective:1200px]"
+          onPointerMove={handleCardPointerMove}
+          onPointerLeave={handleCardPointerLeave}
+        >
+          <motion.div
+            style={reduceMotion ? undefined : { rotateX, rotateY, transformStyle: 'preserve-3d' }}
+            className="relative rounded-3xl border border-white/15 bg-[#120e22]/85 p-5 shadow-[0_32px_90px_-24px_rgba(124,58,237,0.55)] backdrop-blur-2xl"
+          >
+            {/* Floating ambient violet depth ring */}
+            <div className="pointer-events-none absolute -inset-px rounded-3xl bg-gradient-to-br from-violet-400/25 via-transparent to-cyan-400/20 opacity-70" />
+
+            {/* Deck Header: Live Community Pulse + Slide Switcher */}
+            <div className="relative z-10 flex items-center justify-between gap-2 pb-3.5">
+              <div className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.16em] text-violet-200">
+                <Users className="h-3.5 w-3.5 text-violet-400" />
+                <span>Studio Announcements</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {HERO_ANNOUNCEMENT_SLIDES.map((s, idx) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    aria-label={`Show ${s.title}`}
+                    onClick={() => setActiveSlideIdx(idx)}
+                    className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                      idx === activeSlideIdx ? 'w-7 bg-violet-400' : 'w-2 bg-white/25 hover:bg-white/50'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Interactive 3D Floating Preview Stage */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeSlide.id}
+                initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduceMotion ? undefined : { opacity: 0, y: -10 }}
+                transition={{ duration: 0.28 }}
+                className="relative z-10 space-y-4"
+              >
+                <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-black aspect-[16/10] shadow-xl">
+                  <img
+                    src={
+                      activeSlide.id === 'community' && communityAvatars[0]
+                        ? communityAvatars[0].thumbnailUrl || communityAvatars[0].posterUrl || activeSlide.image
+                        : activeSlide.image
+                    }
+                    alt={activeSlide.title}
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0b0816] via-transparent to-transparent" />
+                  <span
+                    className={`absolute left-3 top-3 rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider backdrop-blur-md ${activeSlide.tagTone}`}
+                  >
+                    {activeSlide.tag}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <h2 className="text-xl font-black tracking-tight text-white">
+                    {activeSlide.title}
+                  </h2>
+                  <p className="text-xs text-zinc-300 leading-relaxed">
+                    {activeSlide.desc}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  {activeSlide.id === 'pro' ? (
+                    <button
+                      type="button"
+                      onClick={onOpenPricing}
+                      className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 text-xs font-extrabold text-white shadow-lg shadow-violet-950/50 hover:from-violet-500 hover:to-fuchsia-500 transition cursor-pointer"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+                      <span>{activeSlide.ctaLabel}</span>
+                    </button>
+                  ) : (
+                    <Link
+                      href={activeSlide.href}
+                      className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 text-xs font-extrabold text-white shadow-lg shadow-violet-950/50 hover:from-violet-500 hover:to-indigo-500 transition"
+                    >
+                      {activeSlide.id === 'plugins' ? <Download className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 fill-current" />}
+                      <span>{activeSlide.ctaLabel}</span>
+                    </Link>
+                  )}
+
+                  {activeSlide.secondaryHref && activeSlide.secondaryLabel && (
+                    <Link
+                      href={activeSlide.secondaryHref}
+                      className="inline-flex h-10 items-center justify-center rounded-xl border border-white/15 bg-white/[0.06] px-3.5 text-xs font-bold text-zinc-200 hover:bg-white/12 hover:text-white transition"
+                    >
+                      {activeSlide.secondaryLabel}
+                    </Link>
+                  )}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Mini Live Community Avatars Footer */}
+            {communityAvatars.length > 0 && (
+              <div className="relative z-10 mt-4 flex items-center justify-between border-t border-white/10 pt-3.5">
+                <div className="flex items-center gap-2">
+                  <div className="flex -space-x-2">
+                    {communityAvatars.map((shot) => (
+                      <img
+                        key={shot.id}
+                        src={shot.thumbnailUrl || shot.posterUrl}
+                        alt={shot.uploader || shot.title || 'Animator'}
+                        className="h-7 w-7 rounded-full border-2 border-[#120e22] object-cover"
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[11px] font-semibold text-zinc-300">
+                    Active community reels &amp; breakdowns
+                  </span>
+                </div>
+                <Link href="/feed" className="text-[11px] font-bold text-violet-300 hover:text-violet-200">
+                  View all →
+                </Link>
+              </div>
+            )}
+          </motion.div>
+        </div>
+        </div>
       </div>
 
       {videos.length > 1 && (

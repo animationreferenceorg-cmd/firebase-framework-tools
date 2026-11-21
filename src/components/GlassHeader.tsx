@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import AuthHeader from '@/components/AuthHeader';
-import { Film, Sparkles, Plus, PlayCircle, Layers, LayoutGrid, Scissors } from 'lucide-react';
+import { Film, Sparkles, Plus, Layers, LayoutGrid, Plug } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { UpdatesModal } from '@/components/UpdatesModal';
@@ -63,7 +63,9 @@ export function GlassHeader() {
                     {[
                         { label: 'Discover', href: '/home', icon: Film },
                         { label: 'Categories', href: '/categories', icon: LayoutGrid },
+                        { label: 'Moodboards', href: '/moodboard', icon: Layers },
                         { label: 'Community', href: '/feed', icon: Sparkles },
+                        { label: 'Plugins', href: '/tools', icon: Plug },
                     ].map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname === item.href || (item.href !== '/home' && pathname.startsWith(item.href));

@@ -40,6 +40,10 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     const { storage } = useFirebase();
     const { toast } = useToast();
     const [uploading, setUploading] = useState(false);
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        setMounted(true);
+    }, []);
     const pathname = usePathname();
     const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -105,7 +109,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                                 uploading && "opacity-50 pointer-events-none"
                             )}>
                                 <label htmlFor="sidebar-avatar-upload" className="cursor-pointer block w-full h-full relative">
-                                    {user?.photoURL ? (
+                                    {mounted && user?.photoURL ? (
                                         <Image
                                             src={user.photoURL}
                                             alt="Profile"

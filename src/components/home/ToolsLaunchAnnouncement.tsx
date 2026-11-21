@@ -29,7 +29,7 @@ const PREVIEWS = {
     label: 'Maya Studio',
     badge: 'MAYA 2020–2026',
     badgeClass: 'border-cyan-400/35 bg-cyan-500/15 text-cyan-200',
-    image: '/images/plugins/maya-studio-preview.jpg',
+    image: '/images/plugins/maya-studio-preview.png',
     caption: 'Native dark obsidian Studio Window docked in Maya — imports 60fps reference planes centered at (0,0,0) with live Scene Plane controls.',
     downloadUrl: '/downloads/animref_maya_plugin.zip',
     downloadLabel: 'Download for Maya',
@@ -38,7 +38,7 @@ const PREVIEWS = {
     label: 'Blender Studio',
     badge: 'BLENDER 3.6–5.1+',
     badgeClass: 'border-orange-400/35 bg-orange-500/15 text-orange-200',
-    image: '/images/plugins/blender-studio-preview.jpg',
+    image: '/images/plugins/blender-studio-preview.png',
     caption: 'Frameless dark Companion Studio + native View3D N-panel controller for live Size, Opacity, Origin, Flip & Timeline Sync.',
     downloadUrl: '/downloads/animref_blender_addon.zip',
     downloadLabel: 'Download for Blender',
@@ -63,18 +63,18 @@ export function ToolsLaunchAnnouncement() {
           setPopupOpen(true);
           try {
             localStorage.setItem(POPUP_SEEN_KEY, '1');
-          } catch {}
+          } catch { }
         }, 1200);
         return () => window.clearTimeout(timer);
       }
-    } catch {}
+    } catch { }
   }, []);
 
   const handleDismissBanner = () => {
     setBannerDismissed(true);
     try {
       localStorage.setItem(BANNER_DISMISS_KEY, '1');
-    } catch {}
+    } catch { }
   };
 
   const current = PREVIEWS[activeTab];
@@ -118,9 +118,9 @@ export function ToolsLaunchAnnouncement() {
               </h2>
 
               <p className="text-xs md:text-sm text-zinc-300 leading-relaxed">
-                Browse 8,000+ references, sync moodboards, import 3D reference planes straight to{' '}
+                Browse 8,000+ references, sync your AnimRef Moodboards, import 3D reference planes straight to{' '}
                 <code className="rounded bg-white/10 px-1.5 py-0.5 text-[11px] text-violet-200">(0, 0, 0)</code>,
-                control timing live in your viewport, and upload references or playblasts directly from Maya &amp; Blender.
+                and control timing live. <strong className="text-violet-200">Pro users get unlimited imports from AnimRef Moodboards</strong> (free accounts get 15/day + unlimited own uploads).
               </p>
 
               {/* Feature pills */}
@@ -178,11 +178,10 @@ export function ToolsLaunchAnnouncement() {
                         key={key}
                         type="button"
                         onClick={() => setActiveTab(key)}
-                        className={`rounded-lg px-3 py-1.5 text-[11px] font-extrabold transition-all cursor-pointer ${
-                          active
+                        className={`rounded-lg px-3 py-1.5 text-[11px] font-extrabold transition-all cursor-pointer ${active
                             ? 'bg-violet-600 text-white shadow'
                             : 'text-zinc-400 hover:text-white'
-                        }`}
+                          }`}
                       >
                         {PREVIEWS[key].label}
                       </button>
@@ -244,11 +243,10 @@ export function ToolsLaunchAnnouncement() {
                       key={key}
                       type="button"
                       onClick={() => setActiveTab(key)}
-                      className={`rounded-lg px-3.5 py-1.5 text-xs font-extrabold transition-all cursor-pointer ${
-                        active
+                      className={`rounded-lg px-3.5 py-1.5 text-xs font-extrabold transition-all cursor-pointer ${active
                           ? 'bg-violet-600 text-white shadow'
                           : 'text-zinc-400 hover:text-white'
-                      }`}
+                        }`}
                     >
                       {PREVIEWS[key].label}
                     </button>
@@ -275,10 +273,10 @@ export function ToolsLaunchAnnouncement() {
             {/* Quick Feature Highlights */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-zinc-300">
               {[
-                '15 free daily library imports + unlimited imports on your own uploads',
+                'Pro users get unlimited imports from AnimRef Moodboards & the entire 8,000+ library',
+                'Free accounts get 15 daily library imports + unlimited imports on your own uploads',
                 'Live viewport plane controls: Size, Opacity, Center (0,0,0), Flip & Magic Align',
-                'Upload videos/images straight to Moodboards + stage playblasts as drafts',
-                'Built-in SHA-256 auto-updates so you never manually reinstall',
+                'Upload videos/images to Moodboards + automatic SHA-256 self-updates forever',
               ].map((line) => (
                 <div key={line} className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
                   <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />

@@ -14,7 +14,7 @@ import webbrowser
 
 import bpy
 
-from . import animref_api, animref_auth, animref_importer, animref_thumbs
+from . import animref_api, animref_auth, animref_companion, animref_importer, animref_thumbs
 
 CARDS_PER_PAGE = 9
 
@@ -70,19 +70,12 @@ class ANIMREF_OT_StudioPageNav(bpy.types.Operator):
 
 class ANIMREF_OT_OpenStudioWindow(bpy.types.Operator):
     bl_idname = "animref.open_studio_window"
-    bl_label = "AnimationReference.org Studio"
-    bl_description = "Open the visual AnimationReference.org Studio Browser window"
-
-    def invoke(self, context, event):
-        settings = context.scene.animref_settings
-        if not settings.results:
-            try:
-                bpy.ops.animref.search_library("EXEC_DEFAULT", force_refresh=False)
-            except Exception:
-                pass
-        return context.window_manager.invoke_props_dialog(self, width=780)
+    bl_label = "Open AnimRef Studio"
+    bl_description = "Launch the modern AnimationReference.org Studio window (masonry grid, hover-to-play, studio player & live Blender sync)"
 
     def execute(self, context):
+        url = animref_companion.launch_studio_app_window()
+        self.report({"INFO"}, f"Opened AnimRef Studio Window ({url})")
         return {"FINISHED"}
 
     def draw(self, context):
@@ -214,6 +207,7 @@ def register():
 
 
 def unregister():
+    animref_companion.stop_companion_server()
     for cls in reversed(CLASSES):
         try:
             bpy.utils.unregister_class(cls)

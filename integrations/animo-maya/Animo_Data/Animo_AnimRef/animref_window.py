@@ -471,10 +471,10 @@ class FramelessTitleBar(QtWidgets.QFrame):
             self.dock_btn.setToolTip("Dock into Maya workspace panels")
             layout.addWidget(self.dock_btn)
 
-        self.web_btn = QtWidgets.QPushButton("web ↗")
+        self.web_btn = QtWidgets.QPushButton("🌐 Website ↗")
         self.web_btn.setObjectName("TitleBarBtn")
-        self.web_btn.setToolTip("Open AnimationReference.org/moodboard")
-        self.web_btn.clicked.connect(lambda: webbrowser.open("https://animationreference.org/moodboard"))
+        self.web_btn.setToolTip("Open AnimationReference.org in your browser")
+        self.web_btn.clicked.connect(lambda: webbrowser.open("https://animationreference.org"))
         layout.addWidget(self.web_btn)
 
         btn_box = QtWidgets.QHBoxLayout()
@@ -3693,6 +3693,29 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         """)
         self.toggle_studio_btn.clicked.connect(self.toggle_inspector_drawer)
         wh_layout.addWidget(self.toggle_studio_btn)
+
+        # Quick Website Pill Button in Workspace Header
+        self.header_website_btn = QtWidgets.QPushButton("🌐 Website ↗")
+        self.header_website_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        self.header_website_btn.setFixedHeight(26)
+        self.header_website_btn.setToolTip("Open AnimationReference.org in your browser")
+        self.header_website_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #111119;
+                color: #f4f4f5;
+                border: 1px solid #272736;
+                border-radius: 13px;
+                padding: 0px 9px;
+                font-size: 10px;
+                font-weight: 700;
+            }
+            QPushButton:hover {
+                background-color: #161622;
+                border-color: #8b5cf6;
+            }
+        """)
+        self.header_website_btn.clicked.connect(lambda: webbrowser.open("https://animationreference.org"))
+        wh_layout.addWidget(self.header_website_btn)
 
         # Solid Violet Pill Button: "+ Upload Ref" (uploads straight to AnimationReference.org Moodboard)
         self.upload_ref_btn = QtWidgets.QPushButton("+ Upload Ref")

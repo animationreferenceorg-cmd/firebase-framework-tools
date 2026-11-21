@@ -400,6 +400,7 @@ STUDIO_HTML = r"""<!DOCTYPE html>
       </div>
       <button class="btn btn-dark" id="openUploadRefBtn">+ Upload Ref</button>
       <button class="btn" id="openStudioBtn">🎬 Studio</button>
+      <button class="btn" id="openWebsiteBtn" title="Open AnimationReference.org in your browser" onclick="window.open('https://animationreference.org','_blank')">🌐 Website ↗</button>
       <button class="btn" id="refreshBtn">↻</button>
     </header>
 

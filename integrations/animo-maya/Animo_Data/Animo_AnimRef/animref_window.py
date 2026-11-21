@@ -69,45 +69,45 @@ def get_maya_main_window():
 
 DARK_STYLESHEET = """
 QWidget {
-    background-color: #f7f6f2;
-    color: #0c0a09;
+    background-color: #09090e;
+    color: #f4f4f5;
     font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-size: 12px;
 }
 
 QDialog {
-    background-color: #f7f6f2;
-    border: 1px solid #dcd9d0;
+    background-color: #09090e;
+    border: 1px solid #272736;
     border-radius: 14px;
 }
 
-/* Clean Minimalist Window Header */
+/* Dark Obsidian Window Header (Matches Blender Studio) */
 FramelessTitleBar {
-    background-color: #f7f6f2;
-    border-bottom: 1px solid #e7e5e4;
+    background-color: #111119;
+    border-bottom: 1px solid #232332;
     border-top-left-radius: 14px;
     border-top-right-radius: 14px;
 }
 
 QPushButton#TitleBarBtn {
-    background-color: #ffffff;
-    border: 1px solid #e5e5e5;
+    background-color: #161622;
+    border: 1px solid #272736;
     border-radius: 12px;
     padding: 3px 10px;
-    color: #44403c;
+    color: #d4d4d8;
     font-size: 10px;
     font-weight: 600;
 }
 QPushButton#TitleBarBtn:hover {
-    background-color: #0c0a09;
-    border-color: #0c0a09;
+    background-color: #7c3aed;
+    border-color: #8b5cf6;
     color: #ffffff;
 }
 
 QPushButton#WinCtrlBtn {
     background-color: transparent;
     border: none;
-    color: #78716c;
+    color: #a1a1aa;
     font-size: 11px;
     font-weight: bold;
     width: 24px;
@@ -115,14 +115,14 @@ QPushButton#WinCtrlBtn {
     border-radius: 12px;
 }
 QPushButton#WinCtrlBtn:hover {
-    background-color: #e7e5e4;
-    color: #0c0a09;
+    background-color: #232332;
+    color: #ffffff;
 }
 
 QPushButton#WinCloseBtn {
     background-color: transparent;
     border: none;
-    color: #78716c;
+    color: #a1a1aa;
     font-size: 11px;
     font-weight: bold;
     width: 24px;
@@ -134,46 +134,46 @@ QPushButton#WinCloseBtn:hover {
     color: #ffffff;
 }
 
-/* Left Navigation Sidebar (Matches MoodboardDashboard.tsx) */
+/* Left Navigation Sidebar (Matches Blender Dark Studio) */
 SidebarNavPanel {
-    background-color: #f7f6f2;
-    border-right: 1px solid #e7e5e4;
+    background-color: #111119;
+    border-right: 1px solid #232332;
     border-bottom-left-radius: 14px;
 }
 
 QPushButton#NavBtn {
     background-color: transparent;
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     padding: 9px 12px;
-    color: #1c1917;
-    font-weight: 600;
+    color: #a1a1aa;
+    font-weight: 700;
     font-size: 12px;
     text-align: left;
 }
 QPushButton#NavBtn:hover {
-    background-color: #eceae3;
-    color: #0c0a09;
+    background-color: #1b1b29;
+    color: #ffffff;
 }
 QPushButton#NavBtn[active="true"] {
-    background-color: #0c0a09;
+    background-color: #7c3aed;
     color: #ffffff;
     font-weight: 700;
 }
 
 QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
-    background-color: #ffffff;
-    border: 1px solid #e4e4e7;
+    background-color: #161622;
+    border: 1px solid #272736;
     border-radius: 10px;
     padding: 5px 10px;
-    color: #09090b;
+    color: #f4f4f5;
     font-size: 12px;
-    selection-background-color: #2563eb;
+    selection-background-color: #7c3aed;
     selection-color: #ffffff;
 }
 QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
-    border: 1px solid #2563eb;
-    background-color: #ffffff;
+    border: 1px solid #8b5cf6;
+    background-color: #1a1a28;
 }
 QComboBox::drop-down {
     subcontrol-origin: padding;
@@ -182,19 +182,19 @@ QComboBox::drop-down {
     border: none;
 }
 QComboBox QAbstractItemView {
-    background-color: #ffffff;
-    color: #09090b;
-    border: 1px solid #e4e4e7;
+    background-color: #161622;
+    color: #f4f4f5;
+    border: 1px solid #272736;
     border-radius: 8px;
     padding: 4px;
-    selection-background-color: #eff6ff;
-    selection-color: #1d4ed8;
+    selection-background-color: #7c3aed;
+    selection-color: #ffffff;
     outline: 0;
 }
 
 QCheckBox {
     spacing: 6px;
-    color: #18181b;
+    color: #e4e4e7;
     font-size: 11px;
     font-weight: 600;
 }
@@ -202,42 +202,42 @@ QCheckBox::indicator {
     width: 15px;
     height: 15px;
     border-radius: 4px;
-    border: 1px solid #d4d4d8;
-    background-color: #ffffff;
+    border: 1px solid #3f3f52;
+    background-color: #161622;
 }
 QCheckBox::indicator:checked {
-    background-color: #2563eb;
-    border-color: #2563eb;
+    background-color: #7c3aed;
+    border-color: #8b5cf6;
 }
 
 QToolTip {
-    background-color: #18181b;
-    color: #ffffff;
-    border: 1px solid #27272a;
+    background-color: #161622;
+    color: #f4f4f5;
+    border: 1px solid #3f3f52;
     border-radius: 6px;
     padding: 4px 8px;
     font-size: 11px;
 }
 
 QPushButton {
-    background-color: #ffffff;
-    border: 1px solid #e4e4e7;
+    background-color: #161622;
+    border: 1px solid #272736;
     border-radius: 10px;
     padding: 6px 12px;
-    color: #18181b;
+    color: #e4e4e7;
     font-weight: 600;
 }
 QPushButton:hover {
-    background-color: #f4f4f5;
-    border-color: #d4d4d8;
-    color: #09090b;
+    background-color: #202030;
+    border-color: #3f3f52;
+    color: #ffffff;
 }
 QPushButton:pressed {
-    background-color: #e4e4e7;
+    background-color: #27273a;
 }
 
 QPushButton#PrimaryBtn {
-    background-color: #0c0a09;
+    background-color: #7c3aed;
     border: none;
     color: #ffffff;
     font-weight: 700;
@@ -246,15 +246,15 @@ QPushButton#PrimaryBtn {
     padding: 9px 18px;
 }
 QPushButton#PrimaryBtn:hover {
-    background-color: #292524;
+    background-color: #8b5cf6;
 }
 QPushButton#PrimaryBtn:disabled {
-    background-color: #e7e5e4;
-    color: #a8a29e;
+    background-color: #1f1f2c;
+    color: #71717a;
 }
 
 QPushButton#SuccessBtn {
-    background-color: #059669;
+    background-color: #10b981;
     border: none;
     color: #ffffff;
     font-weight: 700;
@@ -262,30 +262,33 @@ QPushButton#SuccessBtn {
     border-radius: 18px;
     padding: 9px 18px;
 }
+QPushButton#SuccessBtn:hover {
+    background-color: #059669;
+}
 
 QPushButton#TagChip {
-    background-color: #ffffff;
-    border: 1px solid #e2e0d8;
+    background-color: #161622;
+    border: 1px solid #272736;
     border-radius: 12px;
     padding: 4px 10px;
     font-size: 11px;
-    color: #57534e;
+    color: #a1a1aa;
 }
 QPushButton#TagChip:hover {
-    background-color: #0c0a09;
+    background-color: #232334;
     color: #ffffff;
-    border-color: #0c0a09;
+    border-color: #3f3f52;
 }
 QPushButton#TagChip[active="true"] {
-    background-color: #0c0a09;
+    background-color: #7c3aed;
     color: #ffffff;
-    border-color: #0c0a09;
+    border-color: #8b5cf6;
     font-weight: bold;
 }
 
 QScrollArea {
     border: none;
-    background-color: #f7f6f2;
+    background-color: #09090e;
 }
 
 QScrollBar:vertical {
@@ -294,12 +297,12 @@ QScrollBar:vertical {
     width: 6px;
 }
 QScrollBar::handle:vertical {
-    background: #d4d4d8;
+    background: #2e2e40;
     border-radius: 3px;
     min-height: 24px;
 }
 QScrollBar::handle:vertical:hover {
-    background: #a1a1aa;
+    background: #4c4c66;
 }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     height: 0px;
@@ -312,58 +315,58 @@ QScrollBar:horizontal {
 }
 
 QProgressBar {
-    background-color: #e7e5e4;
-    border: none;
+    background-color: #161622;
+    border: 1px solid #272736;
     border-radius: 6px;
     text-align: center;
-    color: #0c0a09;
+    color: #f4f4f5;
     font-weight: bold;
     height: 12px;
     font-size: 10px;
 }
 QProgressBar::chunk {
-    background-color: #0c0a09;
+    background-color: #7c3aed;
     border-radius: 6px;
 }
 
 QPushButton#PlayerBtn {
-    background-color: #ffffff;
-    border: 1px solid #e2e0d8;
+    background-color: #161622;
+    border: 1px solid #272736;
     border-radius: 8px;
-    color: #1c1917;
+    color: #e4e4e7;
     font-weight: 600;
     padding: 4px 8px;
     font-size: 11px;
 }
 QPushButton#PlayerBtn:hover {
-    background-color: #0c0a09;
-    border-color: #0c0a09;
+    background-color: #7c3aed;
+    border-color: #8b5cf6;
     color: #ffffff;
 }
 QPushButton#PlayerBtn[active="true"] {
-    background-color: #0c0a09;
-    border-color: #0c0a09;
+    background-color: #7c3aed;
+    border-color: #8b5cf6;
     color: #ffffff;
 }
 
 QSlider::groove:horizontal {
-    background-color: #e2e0d8;
+    background-color: #272736;
     height: 5px;
     border-radius: 2px;
 }
 QSlider::sub-page:horizontal {
-    background-color: #0c0a09;
+    background-color: #7c3aed;
     height: 5px;
     border-radius: 2px;
 }
 QSlider::handle:horizontal {
-    background-color: #0c0a09;
+    background-color: #a78bfa;
     width: 12px;
     height: 12px;
     margin-top: -4px;
     margin-bottom: -4px;
     border-radius: 6px;
-    border: 2px solid #ffffff;
+    border: 2px solid #09090e;
 }
 """
 
@@ -427,7 +430,7 @@ class FramelessTitleBar(QtWidgets.QFrame):
         self.logo_widget.setFixedSize(16, 16)
         self.logo_widget.setAlignment(QtCore.Qt.AlignCenter)
         self.logo_widget.setStyleSheet("""
-            background-color: #0c0a09;
+            background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #8b5cf6, stop:1 #ec4899);
             color: #ffffff;
             font-weight: 900;
             font-size: 9px;
@@ -438,11 +441,11 @@ class FramelessTitleBar(QtWidgets.QFrame):
         title_box = QtWidgets.QHBoxLayout()
         title_box.setSpacing(5)
         self.title_lbl = QtWidgets.QLabel(title)
-        self.title_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #0c0a09; background: transparent;")
+        self.title_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #f4f4f5; background: transparent;")
         title_box.addWidget(self.title_lbl)
 
         self.studio_badge = QtWidgets.QLabel("MAYA")
-        self.studio_badge.setStyleSheet("background-color: #eceae3; color: #57534e; font-size: 8px; font-weight: 800; padding: 1px 5px; border-radius: 6px;")
+        self.studio_badge.setStyleSheet("background-color: rgba(6, 182, 212, 0.18); color: #67e8f9; border: 1px solid rgba(6, 182, 212, 0.35); font-size: 8px; font-weight: 800; padding: 1px 6px; border-radius: 6px;")
         title_box.addWidget(self.studio_badge)
         layout.addLayout(title_box)
 
@@ -498,7 +501,7 @@ class FramelessTitleBar(QtWidgets.QFrame):
         flags = win.windowFlags()
         if is_on_top:
             flags |= QtCore.Qt.WindowStaysOnTopHint
-            self.pin_btn.setStyleSheet("background-color: #0c0a09; color: #ffffff; border: 1px solid #0c0a09;")
+            self.pin_btn.setStyleSheet("background-color: #7c3aed; color: #ffffff; border: 1px solid #8b5cf6;")
         else:
             flags &= ~QtCore.Qt.WindowStaysOnTopHint
             self.pin_btn.setStyleSheet("")
@@ -695,24 +698,24 @@ class SidebarNavPanel(QtWidgets.QFrame):
         self.toggle_collapse_btn.setStyleSheet("""
             QPushButton {
                 background-color: transparent;
-                border: 1px solid #e7e5e4;
+                border: 1px solid #272736;
                 border-radius: 6px;
-                color: #57534e;
+                color: #a1a1aa;
                 font-size: 9px;
                 font-weight: 700;
                 padding: 0px;
             }
             QPushButton:hover {
-                background-color: #0c0a09;
+                background-color: #7c3aed;
                 color: #ffffff;
-                border-color: #0c0a09;
+                border-color: #8b5cf6;
             }
         """)
         self.toggle_collapse_btn.clicked.connect(self.toggle_collapse)
         self.lib_hdr.addWidget(self.toggle_collapse_btn)
 
         self.lib_lbl = QtWidgets.QLabel("LIBRARY")
-        self.lib_lbl.setStyleSheet("color: #a8a29e; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; background: transparent;")
+        self.lib_lbl.setStyleSheet("color: #71717a; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; background: transparent;")
         self.lib_hdr.addWidget(self.lib_lbl)
         self.lib_hdr.addStretch()
 
@@ -725,14 +728,14 @@ class SidebarNavPanel(QtWidgets.QFrame):
                 background-color: transparent;
                 border: none;
                 border-radius: 10px;
-                color: #44403c;
+                color: #a1a1aa;
                 font-size: 13px;
                 font-weight: 600;
                 padding: 0px;
             }
             QPushButton:hover {
-                background-color: #eceae3;
-                color: #0c0a09;
+                background-color: #161622;
+                color: #f4f4f5;
             }
         """)
         self.plus_btn.clicked.connect(lambda: webbrowser.open("https://animationreference.org/moodboard"))
@@ -757,7 +760,7 @@ class SidebarNavPanel(QtWidgets.QFrame):
         boards_hdr = QtWidgets.QHBoxLayout(self.boards_hdr_widget)
         boards_hdr.setContentsMargins(2, 10, 2, 2)
         self.boards_lbl = QtWidgets.QLabel("BOARDS")
-        self.boards_lbl.setStyleSheet("color: #a8a29e; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; background: transparent;")
+        self.boards_lbl.setStyleSheet("color: #71717a; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; background: transparent;")
         boards_hdr.addWidget(self.boards_lbl)
         boards_hdr.addStretch()
 
@@ -768,13 +771,13 @@ class SidebarNavPanel(QtWidgets.QFrame):
             QPushButton {
                 background: transparent;
                 border: none;
-                color: #57534e;
+                color: #a1a1aa;
                 font-size: 10px;
                 font-weight: 600;
                 padding: 1px 2px;
             }
             QPushButton:hover {
-                color: #0c0a09;
+                color: #f4f4f5;
                 text-decoration: underline;
             }
         """)
@@ -800,7 +803,7 @@ class SidebarNavPanel(QtWidgets.QFrame):
         # 5. Divider & Playblast Compare
         sep = QtWidgets.QFrame()
         sep.setFixedHeight(1)
-        sep.setStyleSheet("background-color: #e7e5e4; border: none;")
+        sep.setStyleSheet("background-color: #232334; border: none;")
         self.sidebar_layout.addWidget(sep)
 
         self.nav_buttons = []
@@ -817,12 +820,12 @@ class SidebarNavPanel(QtWidgets.QFrame):
         self.account_card.setCursor(QtCore.Qt.PointingHandCursor)
         self.account_card.setStyleSheet("""
             QFrame#AccountCard {
-                background-color: #ffffff;
-                border: 1px solid #e5e5e0;
+                background-color: #111119;
+                border: 1px solid #272736;
                 border-radius: 10px;
             }
             QFrame#AccountCard:hover {
-                border: 1px solid #0c0a09;
+                border: 1px solid #8b5cf6;
             }
         """)
         acc_layout = QtWidgets.QHBoxLayout(self.account_card)
@@ -833,7 +836,7 @@ class SidebarNavPanel(QtWidgets.QFrame):
         self.avatar_lbl.setFixedSize(24, 24)
         self.avatar_lbl.setAlignment(QtCore.Qt.AlignCenter)
         self.avatar_lbl.setStyleSheet("""
-            background-color: #0c0a09;
+            background-color: #7c3aed;
             color: #ffffff;
             font-weight: 800;
             font-size: 9px;
@@ -847,9 +850,9 @@ class SidebarNavPanel(QtWidgets.QFrame):
         acc_text_layout.setContentsMargins(0, 0, 0, 0)
         acc_text_layout.setSpacing(1)
         self.user_name_lbl = QtWidgets.QLabel("Sign In")
-        self.user_name_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #0c0a09; background: transparent;")
+        self.user_name_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #f4f4f5; background: transparent;")
         self.user_badge_lbl = QtWidgets.QLabel("Sync Boards")
-        self.user_badge_lbl.setStyleSheet("font-size: 9px; color: #78716c; background: transparent;")
+        self.user_badge_lbl.setStyleSheet("font-size: 9px; color: #a1a1aa; background: transparent;")
         acc_text_layout.addWidget(self.user_name_lbl)
         acc_text_layout.addWidget(self.user_badge_lbl)
         acc_layout.addWidget(self.acc_text_widget, stretch=1)
@@ -954,7 +957,7 @@ class SidebarNavPanel(QtWidgets.QFrame):
             btn.setStyleSheet("""
                 QPushButton {{
                     text-align: {align};
-                    background-color: #0c0a09;
+                    background-color: #7c3aed;
                     color: #ffffff;
                     border: none;
                     border-radius: 9px;
@@ -968,7 +971,7 @@ class SidebarNavPanel(QtWidgets.QFrame):
                 QPushButton {{
                     text-align: {align};
                     background-color: transparent;
-                    color: #1c1917;
+                    color: #f4f4f5;
                     border: none;
                     border-radius: 9px;
                     padding: {pad};
@@ -976,8 +979,8 @@ class SidebarNavPanel(QtWidgets.QFrame):
                     font-weight: 500;
                 }}
                 QPushButton:hover {{
-                    background-color: #eceae3;
-                    color: #0c0a09;
+                    background-color: #161622;
+                    color: #f4f4f5;
                 }}
             """.format(align=align, pad=pad))
 
@@ -1013,7 +1016,7 @@ class SidebarNavPanel(QtWidgets.QFrame):
                 return """
                     QPushButton {{
                         text-align: {align};
-                        background-color: #0c0a09;
+                        background-color: #7c3aed;
                         color: #ffffff;
                         border: none;
                         border-radius: 9px;
@@ -1026,7 +1029,7 @@ class SidebarNavPanel(QtWidgets.QFrame):
                 QPushButton {{
                     text-align: {align};
                     background-color: transparent;
-                    color: #1c1917;
+                    color: #f4f4f5;
                     border: none;
                     border-radius: 9px;
                     padding: {pad};
@@ -1034,8 +1037,8 @@ class SidebarNavPanel(QtWidgets.QFrame):
                     font-weight: 500;
                 }}
                 QPushButton:hover {{
-                    background-color: #eceae3;
-                    color: #0c0a09;
+                    background-color: #161622;
+                    color: #f4f4f5;
                 }}
             """.format(align=align, pad=pad)
 
@@ -1112,11 +1115,11 @@ def create_fallback_pixmap(width, height, title, duration_str="", radius=14):
     painter.setClipPath(path)
 
     grad = QtGui.QLinearGradient(0, 0, width, height)
-    grad.setColorAt(0, QtGui.QColor("#e7e5e0"))
-    grad.setColorAt(1, QtGui.QColor("#dcd8cf"))
+    grad.setColorAt(0, QtGui.QColor("#161622"))
+    grad.setColorAt(1, QtGui.QColor("#111119"))
     painter.fillRect(QtCore.QRect(0, 0, width, height), grad)
 
-    painter.setPen(QtGui.QPen(QtGui.QColor("#57534e")))
+    painter.setPen(QtGui.QPen(QtGui.QColor("#71717a")))
     font = painter.font()
     font.setPointSize(9)
     font.setBold(True)
@@ -2376,7 +2379,7 @@ class PinterestClipCardWidget(QtWidgets.QFrame):
             view_3d_btn.setStyleSheet("""
                 QPushButton {
                     background-color: rgba(255, 255, 255, 235);
-                    color: #0c0a09;
+                    color: #f4f4f5;
                     border: none;
                     border-radius: 9px;
                     padding: 2px 6px;
@@ -2384,7 +2387,7 @@ class PinterestClipCardWidget(QtWidgets.QFrame):
                     font-weight: 700;
                 }
                 QPushButton:hover {
-                    background-color: #ffffff;
+                    background-color: #111119;
                 }
             """)
             view_3d_btn.clicked.connect(lambda checked=False, u=source_url: webbrowser.open(u))
@@ -2399,7 +2402,7 @@ class PinterestClipCardWidget(QtWidgets.QFrame):
         self.menu_btn.setStyleSheet("""
             QPushButton {
                 background-color: rgba(255, 255, 255, 220);
-                color: #0c0a09;
+                color: #f4f4f5;
                 border: none;
                 border-radius: 11px;
                 width: 22px;
@@ -2409,7 +2412,7 @@ class PinterestClipCardWidget(QtWidgets.QFrame):
                 padding: 0px;
             }
             QPushButton:hover {
-                background-color: #ffffff;
+                background-color: #111119;
                 color: #000000;
             }
         """)
@@ -2421,7 +2424,7 @@ class PinterestClipCardWidget(QtWidgets.QFrame):
         self.quick_import_btn.setToolTip("Import reference directly into Maya Viewport")
         self.quick_import_btn.setStyleSheet("""
             QPushButton {
-                background-color: #0c0a09;
+                background-color: #7c3aed;
                 color: #ffffff;
                 border: 1px solid rgba(255, 255, 255, 60);
                 border-radius: 11px;
@@ -2430,8 +2433,8 @@ class PinterestClipCardWidget(QtWidgets.QFrame):
                 font-weight: 700;
             }
             QPushButton:hover {
-                background-color: #ffffff;
-                color: #0c0a09;
+                background-color: #111119;
+                color: #f4f4f5;
             }
         """)
         self.quick_import_btn.clicked.connect(self._on_quick_import_clicked)
@@ -2507,8 +2510,8 @@ class PinterestClipCardWidget(QtWidgets.QFrame):
         menu = QtWidgets.QMenu(self)
         menu.setStyleSheet("""
             QMenu {
-                background-color: #1c1917;
-                border: 1px solid #332f2c;
+                background-color: #161622;
+                border: 1px solid #272736;
                 border-radius: 10px;
                 padding: 6px;
                 color: #f5f5f4;
@@ -2520,12 +2523,12 @@ class PinterestClipCardWidget(QtWidgets.QFrame):
                 border-radius: 6px;
             }
             QMenu::item:selected {
-                background-color: #292524;
+                background-color: #8b5cf6;
                 color: #ffffff;
             }
             QMenu::separator {
                 height: 1px;
-                background-color: #332f2c;
+                background-color: #232334;
                 margin: 4px 2px;
             }
         """)
@@ -2632,12 +2635,12 @@ class PinterestBoardFolderCard(QtWidgets.QFrame):
         self.setFixedSize(self.card_w, self.card_h)
         self.setStyleSheet("""
             QFrame#PinterestBoardCard {
-                background-color: #ffffff;
-                border: 1px solid #e7e5e4;
+                background-color: #111119;
+                border: 1px solid #272736;
                 border-radius: 12px;
             }
             QFrame#PinterestBoardCard:hover {
-                border: 1px solid #0c0a09;
+                border: 1px solid #8b5cf6;
             }
         """)
 
@@ -2652,7 +2655,7 @@ class PinterestBoardFolderCard(QtWidgets.QFrame):
         self.cover_frame = QtWidgets.QFrame()
         cover_h = max(50, int(self.card_w * 0.52))
         self.cover_frame.setFixedHeight(cover_h)
-        self.cover_frame.setStyleSheet("background-color: #e8e3d9; border-radius: 8px; border: none;")
+        self.cover_frame.setStyleSheet("background-color: #161622; border-radius: 8px; border: none;")
         cover_layout = QtWidgets.QHBoxLayout(self.cover_frame)
         cover_layout.setContentsMargins(2, 2, 2, 2)
         cover_layout.setSpacing(2)
@@ -2660,7 +2663,7 @@ class PinterestBoardFolderCard(QtWidgets.QFrame):
         self.preview_labels = []
         main_lbl = QtWidgets.QLabel()
         main_lbl.setScaledContents(True)
-        main_lbl.setStyleSheet("border-radius: 6px; background-color: #dedad2;")
+        main_lbl.setStyleSheet("border-radius: 6px; background-color: #161622;")
         cover_layout.addWidget(main_lbl, stretch=2)
         self.preview_labels.append(main_lbl)
 
@@ -2670,7 +2673,7 @@ class PinterestBoardFolderCard(QtWidgets.QFrame):
         for _ in range(2):
             sub_lbl = QtWidgets.QLabel()
             sub_lbl.setScaledContents(True)
-            sub_lbl.setStyleSheet("border-radius: 4px; background-color: #d6d2c9;")
+            sub_lbl.setStyleSheet("border-radius: 4px; background-color: #161622;")
             right_col.addWidget(sub_lbl, stretch=1)
             self.preview_labels.append(sub_lbl)
         cover_layout.addLayout(right_col, stretch=1)
@@ -2684,11 +2687,11 @@ class PinterestBoardFolderCard(QtWidgets.QFrame):
         title_col.setSpacing(0)
         board_title = board_data.get("name") or "Untitled board"
         name_lbl = QtWidgets.QLabel(board_title)
-        name_lbl.setStyleSheet("font-weight: 700; color: #0c0a09; font-size: 11px; background: transparent;")
+        name_lbl.setStyleSheet("font-weight: 700; color: #f4f4f5; font-size: 11px; background: transparent;")
         title_col.addWidget(name_lbl)
 
         sub_lbl = QtWidgets.QLabel("{} refs".format(item_count))
-        sub_lbl.setStyleSheet("color: #78716c; font-size: 9px; background: transparent;")
+        sub_lbl.setStyleSheet("color: #a1a1aa; font-size: 9px; background: transparent;")
         title_col.addWidget(sub_lbl)
         footer_row.addLayout(title_col, stretch=1)
 
@@ -2696,7 +2699,7 @@ class PinterestBoardFolderCard(QtWidgets.QFrame):
         open_pill.setCursor(QtCore.Qt.PointingHandCursor)
         open_pill.setStyleSheet("""
             QPushButton {
-                background-color: #0c0a09;
+                background-color: #7c3aed;
                 color: #ffffff;
                 border: none;
                 border-radius: 9px;
@@ -2705,7 +2708,7 @@ class PinterestBoardFolderCard(QtWidgets.QFrame):
                 font-weight: 700;
             }
             QPushButton:hover {
-                background-color: #292524;
+                background-color: #8b5cf6;
             }
         """)
         open_pill.clicked.connect(lambda: self.open_board_requested.emit(self.board_data))
@@ -2850,8 +2853,8 @@ class DualCompareWidget(QtWidgets.QFrame):
         super(DualCompareWidget, self).__init__(parent)
         self.setStyleSheet("""
             DualCompareWidget {
-                background-color: #ffffff;
-                border: 1px solid #e7e5e4;
+                background-color: #111119;
+                border: 1px solid #272736;
                 border-radius: 14px;
             }
         """)
@@ -2879,12 +2882,12 @@ class DualCompareWidget(QtWidgets.QFrame):
         hdr_text_box.setSpacing(1)
         self.dc_hdr_lbl = QtWidgets.QLabel("Synchronized Compare")
         self.dc_hdr_lbl.setWordWrap(True)
-        self.dc_hdr_lbl.setStyleSheet("font-size: 13px; font-weight: 800; color: #0c0a09; border: none;")
+        self.dc_hdr_lbl.setStyleSheet("font-size: 13px; font-weight: 800; color: #f4f4f5; border: none;")
         hdr_text_box.addWidget(self.dc_hdr_lbl)
 
         self.dc_hdr_sub = QtWidgets.QLabel("Compare Maya animation timing against reference")
         self.dc_hdr_sub.setWordWrap(True)
-        self.dc_hdr_sub.setStyleSheet("font-size: 11px; color: #78716c; font-weight: 500; border: none;")
+        self.dc_hdr_sub.setStyleSheet("font-size: 11px; color: #a1a1aa; font-weight: 500; border: none;")
         hdr_text_box.addWidget(self.dc_hdr_sub)
         self.dc_header_layout.addLayout(hdr_text_box, stretch=1)
 
@@ -2894,8 +2897,8 @@ class DualCompareWidget(QtWidgets.QFrame):
         self.load_ref_file_btn.setToolTip("Select any local reference MP4/MOV file to compare")
         self.load_ref_file_btn.setCursor(QtCore.Qt.PointingHandCursor)
         self.load_ref_file_btn.setStyleSheet(
-            "QPushButton { background-color: #f5f5f4; color: #1c1917; border: 1px solid #d6d3d1; border-radius: 12px; padding: 5px 10px; font-size: 11px; font-weight: 700; }"
-            "QPushButton:hover { background-color: #e7e5e4; border-color: #a8a29e; }"
+            "QPushButton { background-color: #161622; color: #f4f4f5; border: 1px solid #272736; border-radius: 12px; padding: 5px 10px; font-size: 11px; font-weight: 700; }"
+            "QPushButton:hover { background-color: #232334; border-color: #4c4c66; }"
         )
         self.load_ref_file_btn.clicked.connect(self.browse_reference_file)
         hdr_btns.addWidget(self.load_ref_file_btn)
@@ -2904,8 +2907,8 @@ class DualCompareWidget(QtWidgets.QFrame):
         self.load_pb_file_btn.setToolTip("Select any recorded Maya playblast MP4/MOV file on disk to compare")
         self.load_pb_file_btn.setCursor(QtCore.Qt.PointingHandCursor)
         self.load_pb_file_btn.setStyleSheet(
-            "QPushButton { background-color: #f5f5f4; color: #1c1917; border: 1px solid #d6d3d1; border-radius: 12px; padding: 5px 10px; font-size: 11px; font-weight: 700; }"
-            "QPushButton:hover { background-color: #e7e5e4; border-color: #a8a29e; }"
+            "QPushButton { background-color: #161622; color: #f4f4f5; border: 1px solid #272736; border-radius: 12px; padding: 5px 10px; font-size: 11px; font-weight: 700; }"
+            "QPushButton:hover { background-color: #232334; border-color: #4c4c66; }"
         )
         self.load_pb_file_btn.clicked.connect(self.browse_playblast_file)
         hdr_btns.addWidget(self.load_pb_file_btn)
@@ -2925,18 +2928,18 @@ class DualCompareWidget(QtWidgets.QFrame):
         left_box.setSpacing(6)
         ref_hdr = QtWidgets.QHBoxLayout()
         self.ref_title_lbl = QtWidgets.QLabel("Reference Clip")
-        self.ref_title_lbl.setStyleSheet("color: #1c1917; font-size: 12px; font-weight: 800; border: none;")
+        self.ref_title_lbl.setStyleSheet("color: #f4f4f5; font-size: 12px; font-weight: 800; border: none;")
         ref_hdr.addWidget(self.ref_title_lbl)
         ref_hdr.addStretch()
         left_box.addLayout(ref_hdr)
 
         self.ref_stack = QtWidgets.QStackedWidget()
         self.ref_stack.setMinimumHeight(140)
-        self.ref_stack.setStyleSheet("background-color: #0c0a09; border: 1px solid #e7e5e4; border-radius: 10px;")
+        self.ref_stack.setStyleSheet("background-color: #050508; border: 1px solid #272736; border-radius: 10px;")
         self.ref_placeholder = QtWidgets.QLabel("Select a reference clip in Explore/Boards or click 'Load Ref...'")
         self.ref_placeholder.setWordWrap(True)
         self.ref_placeholder.setAlignment(QtCore.Qt.AlignCenter)
-        self.ref_placeholder.setStyleSheet("color: #a8a29e; font-size: 11px; font-weight: 600; background-color: #1c1917; border-radius: 10px; padding: 12px;")
+        self.ref_placeholder.setStyleSheet("color: #71717a; font-size: 11px; font-weight: 600; background-color: #161622; border-radius: 10px; padding: 12px;")
         self.ref_stack.addWidget(self.ref_placeholder)
 
         if QT_MULTIMEDIA_AVAILABLE > 0 and QVideoWidget is not None:
@@ -2982,11 +2985,11 @@ class DualCompareWidget(QtWidgets.QFrame):
 
         self.pb_stack = QtWidgets.QStackedWidget()
         self.pb_stack.setMinimumHeight(140)
-        self.pb_stack.setStyleSheet("background-color: #0c0a09; border: 1px solid #e7e5e4; border-radius: 10px;")
+        self.pb_stack.setStyleSheet("background-color: #050508; border: 1px solid #272736; border-radius: 10px;")
         self.pb_placeholder = QtWidgets.QLabel("Record a playblast above or click 'Load MP4...'")
         self.pb_placeholder.setWordWrap(True)
         self.pb_placeholder.setAlignment(QtCore.Qt.AlignCenter)
-        self.pb_placeholder.setStyleSheet("color: #a8a29e; font-size: 11px; font-weight: 600; background-color: #1c1917; border-radius: 10px; padding: 12px;")
+        self.pb_placeholder.setStyleSheet("color: #71717a; font-size: 11px; font-weight: 600; background-color: #161622; border-radius: 10px; padding: 12px;")
         self.pb_stack.addWidget(self.pb_placeholder)
 
         if QT_MULTIMEDIA_AVAILABLE > 0 and QVideoWidget is not None:
@@ -3026,15 +3029,15 @@ class DualCompareWidget(QtWidgets.QFrame):
         self.scrub_slider.setStyleSheet("""
             QSlider::groove:horizontal {
                 height: 6px;
-                background: #e7e5e4;
+                background: #272736;
                 border-radius: 3px;
             }
             QSlider::sub-page:horizontal {
-                background: #2563EB;
+                background: #7c3aed;
                 border-radius: 3px;
             }
             QSlider::handle:horizontal {
-                background: #0c0a09;
+                background: #7c3aed;
                 border: 2px solid #ffffff;
                 width: 16px;
                 height: 16px;
@@ -3042,7 +3045,7 @@ class DualCompareWidget(QtWidgets.QFrame):
                 border-radius: 8px;
             }
             QSlider::handle:horizontal:hover {
-                background: #2563EB;
+                background: #7c3aed;
             }
         """)
         self.scrub_slider.sliderPressed.connect(lambda: setattr(self, "_is_scrubbing", True))
@@ -3057,8 +3060,8 @@ class DualCompareWidget(QtWidgets.QFrame):
         transport_row.setSpacing(6)
 
         light_btn_css = (
-            "QPushButton { background-color: #f5f5f4; color: #1c1917; border: 1px solid #d6d3d1; border-radius: 8px; padding: 5px 9px; font-size: 11px; font-weight: 700; }"
-            "QPushButton:hover { background-color: #e7e5e4; border-color: #a8a29e; }"
+            "QPushButton { background-color: #161622; color: #f4f4f5; border: 1px solid #272736; border-radius: 8px; padding: 5px 9px; font-size: 11px; font-weight: 700; }"
+            "QPushButton:hover { background-color: #232334; border-color: #4c4c66; }"
         )
 
         self.step_back_btn = QtWidgets.QPushButton("⏮ -1F")
@@ -3070,8 +3073,8 @@ class DualCompareWidget(QtWidgets.QFrame):
         self.play_both_btn = QtWidgets.QPushButton("▶ Play Both")
         self.play_both_btn.setCursor(QtCore.Qt.PointingHandCursor)
         self.play_both_btn.setStyleSheet(
-            "QPushButton { background-color: #2563EB; color: #ffffff; border: none; border-radius: 8px; padding: 5px 12px; font-size: 11px; font-weight: 800; }"
-            "QPushButton:hover { background-color: #1d4ed8; }"
+            "QPushButton { background-color: #7c3aed; color: #ffffff; border: none; border-radius: 8px; padding: 5px 12px; font-size: 11px; font-weight: 800; }"
+            "QPushButton:hover { background-color: #8b5cf6; }"
         )
         self.play_both_btn.clicked.connect(self.toggle_play_both)
         transport_row.addWidget(self.play_both_btn, stretch=1)
@@ -3083,7 +3086,7 @@ class DualCompareWidget(QtWidgets.QFrame):
         transport_row.addWidget(self.step_fwd_btn)
 
         self.frame_readout_lbl = QtWidgets.QLabel("Frame: 1f")
-        self.frame_readout_lbl.setStyleSheet("color: #2563EB; font-weight: 800; font-size: 11px; margin-left: 4px; border: none;")
+        self.frame_readout_lbl.setStyleSheet("color: #7c3aed; font-weight: 800; font-size: 11px; margin-left: 4px; border: none;")
         transport_row.addWidget(self.frame_readout_lbl)
 
         self.ctrl_outer_layout.addLayout(transport_row, stretch=1)
@@ -3092,7 +3095,7 @@ class DualCompareWidget(QtWidgets.QFrame):
         timing_row.setSpacing(6)
 
         self.slip_lbl = QtWidgets.QLabel("Slip:")
-        self.slip_lbl.setStyleSheet("color: #44403c; font-size: 11px; font-weight: 700; border: none;")
+        self.slip_lbl.setStyleSheet("color: #a1a1aa; font-size: 11px; font-weight: 700; border: none;")
         timing_row.addWidget(self.slip_lbl)
         self.pb_offset_spin = QtWidgets.QSpinBox()
         self.pb_offset_spin.setRange(-500, 500)
@@ -3100,20 +3103,20 @@ class DualCompareWidget(QtWidgets.QFrame):
         self.pb_offset_spin.setSuffix("f")
         self.pb_offset_spin.setMinimumWidth(56)
         self.pb_offset_spin.setStyleSheet(
-            "QSpinBox { background-color: #ffffff; color: #1c1917; border: 1px solid #d6d3d1; border-radius: 8px; padding: 4px 6px; font-weight: 700; font-size: 11px; }"
+            "QSpinBox { background-color: #111119; color: #f4f4f5; border: 1px solid #272736; border-radius: 8px; padding: 4px 6px; font-weight: 700; font-size: 11px; }"
         )
         self.pb_offset_spin.setToolTip("Offset the playblast timing relative to the reference clip")
         self.pb_offset_spin.valueChanged.connect(self._on_offset_changed)
         timing_row.addWidget(self.pb_offset_spin)
 
         self.speed_lbl = QtWidgets.QLabel("Speed:")
-        self.speed_lbl.setStyleSheet("color: #44403c; font-size: 11px; font-weight: 700; border: none;")
+        self.speed_lbl.setStyleSheet("color: #a1a1aa; font-size: 11px; font-weight: 700; border: none;")
         timing_row.addWidget(self.speed_lbl)
         self.speed_combo = QtWidgets.QComboBox()
         self.speed_combo.addItems(["1.0x", "0.5x", "0.25x"])
         self.speed_combo.setMinimumWidth(58)
         self.speed_combo.setStyleSheet(
-            "QComboBox { background-color: #ffffff; color: #1c1917; border: 1px solid #d6d3d1; border-radius: 8px; padding: 4px 6px; font-weight: 700; font-size: 11px; }"
+            "QComboBox { background-color: #111119; color: #f4f4f5; border: 1px solid #272736; border-radius: 8px; padding: 4px 6px; font-weight: 700; font-size: 11px; }"
         )
         self.speed_combo.currentTextChanged.connect(self._on_speed_changed)
         timing_row.addWidget(self.speed_combo)
@@ -3551,8 +3554,8 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.workspace_header = WorkspaceHeaderFrame(parent=self)
         self.workspace_header.setStyleSheet("""
             WorkspaceHeaderFrame {
-                background-color: #f7f6f2;
-                border-bottom: 1px solid #e7e5e4;
+                background-color: #09090e;
+                border-bottom: 1px solid #272736;
             }
         """)
         wh_layout = QtWidgets.QHBoxLayout(self.workspace_header)
@@ -3562,11 +3565,11 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         title_stack = QtWidgets.QVBoxLayout()
         title_stack.setSpacing(1)
         self.workspace_eyebrow_lbl = QtWidgets.QLabel("REFERENCE WORKSPACE")
-        self.workspace_eyebrow_lbl.setStyleSheet("color: #78716c; font-size: 8px; font-weight: 700; letter-spacing: 1.5px; border: none;")
+        self.workspace_eyebrow_lbl.setStyleSheet("color: #a1a1aa; font-size: 8px; font-weight: 700; letter-spacing: 1.5px; border: none;")
         title_stack.addWidget(self.workspace_eyebrow_lbl)
 
         self.boards_header_lbl = QtWidgets.QLabel("Boards")
-        self.boards_header_lbl.setStyleSheet("color: #0c0a09; font-size: 16px; font-weight: 800; letter-spacing: -0.5px; border: none;")
+        self.boards_header_lbl.setStyleSheet("color: #f4f4f5; font-size: 16px; font-weight: 800; letter-spacing: -0.5px; border: none;")
         title_stack.addWidget(self.boards_header_lbl)
         wh_layout.addLayout(title_stack)
 
@@ -3580,15 +3583,15 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.board_search_input.setFixedHeight(26)
         self.board_search_input.setStyleSheet("""
             QLineEdit {
-                background-color: #ffffff;
-                border: 1px solid #e5e5e0;
+                background-color: #111119;
+                border: 1px solid #272736;
                 border-radius: 13px;
                 padding: 0px 10px;
-                color: #0c0a09;
+                color: #f4f4f5;
                 font-size: 11px;
             }
             QLineEdit:focus {
-                border: 1px solid #0c0a09;
+                border: 1px solid #8b5cf6;
             }
         """)
         self.board_search_input.textChanged.connect(self.on_board_search_changed)
@@ -3601,17 +3604,17 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.preview_mode_btn.setToolTip("Preview options: Open video player, open on web, or dock window to Maya")
         self.preview_mode_btn.setStyleSheet("""
             QPushButton {
-                background-color: #ffffff;
-                color: #1c1917;
-                border: 1px solid #e5e5e0;
+                background-color: #111119;
+                color: #f4f4f5;
+                border: 1px solid #272736;
                 border-radius: 13px;
                 padding: 0px 9px;
                 font-size: 10px;
                 font-weight: 700;
             }
             QPushButton:hover {
-                background-color: #f0eee8;
-                border-color: #0c0a09;
+                background-color: #161622;
+                border-color: #8b5cf6;
             }
         """)
         self.preview_mode_btn.clicked.connect(self._show_header_preview_menu)
@@ -3624,16 +3627,16 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.sync_boards_btn.setToolTip("Sync your latest saved references and Moodboards from AnimationReference.org")
         self.sync_boards_btn.setStyleSheet("""
             QPushButton {
-                background-color: #ffffff;
-                color: #1c1917;
-                border: 1px solid #e5e5e0;
+                background-color: #111119;
+                color: #f4f4f5;
+                border: 1px solid #272736;
                 border-radius: 13px;
                 font-size: 11px;
                 font-weight: 700;
             }
             QPushButton:hover {
-                background-color: #f0eee8;
-                border-color: #0c0a09;
+                background-color: #161622;
+                border-color: #8b5cf6;
             }
         """)
         self.sync_boards_btn.clicked.connect(self.force_sync_boards_and_saves)
@@ -3646,17 +3649,17 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.toggle_studio_btn.setToolTip("Show/Hide the Maya Video Player & Viewport Setup Drawer")
         self.toggle_studio_btn.setStyleSheet("""
             QPushButton {
-                background-color: #ffffff;
-                color: #1c1917;
-                border: 1px solid #e5e5e0;
+                background-color: #111119;
+                color: #f4f4f5;
+                border: 1px solid #272736;
                 border-radius: 13px;
                 padding: 0px 9px;
                 font-size: 10px;
                 font-weight: 700;
             }
             QPushButton:hover {
-                background-color: #f0eee8;
-                border-color: #0c0a09;
+                background-color: #161622;
+                border-color: #8b5cf6;
             }
         """)
         self.toggle_studio_btn.clicked.connect(self.toggle_inspector_drawer)
@@ -3669,7 +3672,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.open_web_boards_btn.setToolTip("Create or save boards on AnimationReference.org/moodboard")
         self.open_web_boards_btn.setStyleSheet("""
             QPushButton {
-                background-color: #0c0a09;
+                background-color: #7c3aed;
                 color: #ffffff;
                 border: none;
                 border-radius: 13px;
@@ -3678,7 +3681,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
                 font-weight: 700;
             }
             QPushButton:hover {
-                background-color: #292524;
+                background-color: #8b5cf6;
             }
         """)
         self.open_web_boards_btn.clicked.connect(lambda: webbrowser.open("https://animationreference.org/moodboard"))
@@ -3703,7 +3706,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
 
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
         self.splitter.setChildrenCollapsible(True)
-        self.splitter.setStyleSheet("QSplitter::handle { background-color: #e7e5e4; width: 1px; }")
+        self.splitter.setStyleSheet("QSplitter::handle { background-color: #232334; width: 1px; }")
 
         self.view_stack = QtWidgets.QStackedWidget()
 
@@ -3745,8 +3748,8 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         menu = QtWidgets.QMenu(self)
         menu.setStyleSheet("""
             QMenu {
-                background-color: #1c1917;
-                border: 1px solid #332f2c;
+                background-color: #161622;
+                border: 1px solid #272736;
                 border-radius: 10px;
                 padding: 6px;
                 color: #f5f5f4;
@@ -3758,12 +3761,12 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
                 border-radius: 6px;
             }
             QMenu::item:selected {
-                background-color: #292524;
+                background-color: #8b5cf6;
                 color: #ffffff;
             }
             QMenu::separator {
                 height: 1px;
-                background-color: #332f2c;
+                background-color: #232334;
                 margin: 4px 2px;
             }
         """)
@@ -4004,8 +4007,8 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.explore_search_btn.setFixedHeight(34)
         self.explore_search_btn.setCursor(QtCore.Qt.PointingHandCursor)
         self.explore_search_btn.setStyleSheet(
-            "QPushButton { background-color: #2563EB; color: #FFFFFF; border: none; border-radius: 17px; padding: 0 16px; font-weight: 700; }"
-            "QPushButton:hover { background-color: #1D4ED8; }"
+            "QPushButton { background-color: #7c3aed; color: #FFFFFF; border: none; border-radius: 17px; padding: 0 16px; font-weight: 700; }"
+            "QPushButton:hover { background-color: #8b5cf6; }"
         )
         self.explore_search_btn.clicked.connect(lambda: self.perform_search(reset=True))
         search_row.addWidget(self.explore_search_btn)
@@ -4017,7 +4020,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         search_row.addWidget(self.sort_combo)
 
         self.stats_label = QtWidgets.QLabel("", self.search_container)
-        self.stats_label.setStyleSheet("color: #767676; font-size: 11px; font-weight: 600;")
+        self.stats_label.setStyleSheet("color: #a1a1aa; font-size: 11px; font-weight: 600;")
         search_row.addWidget(self.stats_label)
         layout.addWidget(self.search_container)
 
@@ -4056,8 +4059,8 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.explore_load_more_btn.setCursor(QtCore.Qt.PointingHandCursor)
         self.explore_load_more_btn.setVisible(False)
         self.explore_load_more_btn.setStyleSheet(
-            "QPushButton { background-color: #EFEFEF; color: #111111; border: none; border-radius: 17px; font-weight: 700; }"
-            "QPushButton:hover { background-color: #E2E2E2; }"
+            "QPushButton { background-color: #161622; color: #f4f4f5; border: none; border-radius: 17px; font-weight: 700; }"
+            "QPushButton:hover { background-color: #232334; }"
         )
         self.explore_load_more_btn.clicked.connect(self._load_more_explore)
         grid_wrap_layout.addWidget(self.explore_load_more_btn)
@@ -4075,8 +4078,8 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.inspector_panel.setMinimumWidth(180)
         self.inspector_panel.setStyleSheet("""
             QFrame#InspectorDrawer {
-                background-color: #ffffff;
-                border-left: 1px solid #e7e5e4;
+                background-color: #111119;
+                border-left: 1px solid #272736;
             }
         """)
         self.inspector_panel.setObjectName("InspectorDrawer")
@@ -4086,7 +4089,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
 
         # Studio Screen Top Header with Back Button
         drawer_hdr_frame = QtWidgets.QFrame()
-        drawer_hdr_frame.setStyleSheet("background-color: #ffffff; border-bottom: 1px solid #f0eee8;")
+        drawer_hdr_frame.setStyleSheet("background-color: #111119; border-bottom: 1px solid #272736;")
         drawer_hdr = QtWidgets.QHBoxLayout(drawer_hdr_frame)
         drawer_hdr.setContentsMargins(12, 8, 12, 8)
         drawer_hdr.setSpacing(8)
@@ -4095,16 +4098,16 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         close_drawer_btn.setCursor(QtCore.Qt.PointingHandCursor)
         close_drawer_btn.setStyleSheet("""
             QPushButton {
-                background-color: #f5f5f0;
-                color: #1c1917;
-                border: 1px solid #e5e5e0;
+                background-color: #161622;
+                color: #f4f4f5;
+                border: 1px solid #272736;
                 border-radius: 10px;
                 padding: 4px 12px;
                 font-size: 11px;
                 font-weight: 700;
             }
             QPushButton:hover {
-                background-color: #0c0a09;
+                background-color: #7c3aed;
                 color: #ffffff;
             }
         """)
@@ -4112,7 +4115,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         drawer_hdr.addWidget(close_drawer_btn)
 
         drawer_lbl = QtWidgets.QLabel("STUDIO PLAYER")
-        drawer_lbl.setStyleSheet("color: #78716c; font-size: 10px; font-weight: 800; letter-spacing: 1.5px; background: transparent;")
+        drawer_lbl.setStyleSheet("color: #a1a1aa; font-size: 10px; font-weight: 800; letter-spacing: 1.5px; background: transparent;")
         drawer_hdr.addWidget(drawer_lbl)
         drawer_hdr.addStretch()
         panel_layout.addWidget(drawer_hdr_frame)
@@ -4121,10 +4124,10 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         drawer_scroll = QtWidgets.QScrollArea(self.inspector_panel)
         drawer_scroll.setWidgetResizable(True)
         drawer_scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
-        drawer_scroll.setStyleSheet("QScrollArea { background-color: #ffffff; border: none; }")
+        drawer_scroll.setStyleSheet("QScrollArea { background-color: #111119; border: none; }")
 
         drawer_content = QtWidgets.QWidget()
-        drawer_content.setStyleSheet("background-color: #ffffff;")
+        drawer_content.setStyleSheet("background-color: #111119;")
         self.detail_layout = QtWidgets.QVBoxLayout(drawer_content)
         self.detail_layout.setContentsMargins(14, 10, 14, 14)
         self.detail_layout.setSpacing(8)
@@ -4133,7 +4136,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.detail_layout.addWidget(self.player_widget, stretch=1)
 
         self.detail_title = QtWidgets.QLabel("Select a reference card")
-        self.detail_title.setStyleSheet("font-weight: 700; font-size: 14px; color: #0c0a09; background: transparent;")
+        self.detail_title.setStyleSheet("font-weight: 700; font-size: 14px; color: #f4f4f5; background: transparent;")
         self.detail_title.setWordWrap(True)
         self.detail_layout.addWidget(self.detail_title)
 
@@ -4142,7 +4145,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         meta_row = QtWidgets.QHBoxLayout(self.meta_container)
         meta_row.setContentsMargins(0, 0, 0, 0)
         self.detail_meta = QtWidgets.QLabel("")
-        self.detail_meta.setStyleSheet("color: #78716c; font-size: 11px; background: transparent;")
+        self.detail_meta.setStyleSheet("color: #a1a1aa; font-size: 11px; background: transparent;")
         self.detail_meta.setWordWrap(True)
         meta_row.addWidget(self.detail_meta, stretch=1)
 
@@ -4161,10 +4164,10 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.opts_box = QtWidgets.QGroupBox("Maya Viewport Placement")
         self.opts_box.setStyleSheet("""
             QGroupBox {
-                background-color: #f7f6f2;
+                background-color: #09090e;
                 font-weight: 700;
-                color: #0c0a09;
-                border: 1px solid #e7e5e4;
+                color: #f4f4f5;
+                border: 1px solid #272736;
                 border-radius: 10px;
                 margin-top: 6px;
                 padding-top: 8px;
@@ -4239,10 +4242,10 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.scene_mgr_box = QtWidgets.QGroupBox("Scene Reference Manager")
         self.scene_mgr_box.setStyleSheet("""
             QGroupBox {
-                background-color: #f7f6f2;
+                background-color: #09090e;
                 font-weight: 700;
-                color: #0c0a09;
-                border: 1px solid #e7e5e4;
+                color: #f4f4f5;
+                border: 1px solid #272736;
                 border-radius: 10px;
                 margin-top: 4px;
                 padding-top: 8px;
@@ -4558,10 +4561,10 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.pb_scroll.setWidgetResizable(True)
         self.pb_scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.pb_scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
-        self.pb_scroll.setStyleSheet("QScrollArea { background-color: #faf9f6; border: none; }")
+        self.pb_scroll.setStyleSheet("QScrollArea { background-color: #09090e; border: none; }")
 
         content = QtWidgets.QWidget()
-        content.setStyleSheet("background-color: #faf9f6;")
+        content.setStyleSheet("background-color: #09090e;")
         self.pb_main_layout = QtWidgets.QVBoxLayout(content)
         self.pb_main_layout.setContentsMargins(12, 12, 12, 14)
         self.pb_main_layout.setSpacing(12)
@@ -4574,19 +4577,19 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
 
         self.pb_title_lbl = QtWidgets.QLabel("Playblast & Export")
         self.pb_title_lbl.setWordWrap(True)
-        self.pb_title_lbl.setStyleSheet("font-size: 17px; font-weight: 800; color: #0c0a09; border: none;")
+        self.pb_title_lbl.setStyleSheet("font-size: 17px; font-weight: 800; color: #f4f4f5; border: none;")
         hdr_left.addWidget(self.pb_title_lbl)
 
         self.pb_subtitle_lbl = QtWidgets.QLabel("Record your active Maya scene to MP4 or AVI and upload directly to AnimationReference.org")
         self.pb_subtitle_lbl.setWordWrap(True)
-        self.pb_subtitle_lbl.setStyleSheet("font-size: 11px; color: #78716c; font-weight: 500; border: none;")
+        self.pb_subtitle_lbl.setStyleSheet("font-size: 11px; color: #a1a1aa; font-weight: 500; border: none;")
         hdr_left.addWidget(self.pb_subtitle_lbl)
         self.pb_hdr_layout.addLayout(hdr_left, stretch=1)
 
         self.pb_info_lbl = QtWidgets.QLabel("Camera: persp  |  Timeline: 1 - 120 (24 fps)")
         self.pb_info_lbl.setWordWrap(True)
         self.pb_info_lbl.setStyleSheet(
-            "background-color: #ffffff; color: #1c1917; font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 10px; border: 1px solid #e7e5e4;"
+            "background-color: #111119; color: #f4f4f5; font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 10px; border: 1px solid #272736;"
         )
         self.pb_hdr_layout.addWidget(self.pb_info_lbl)
         self.pb_main_layout.addLayout(self.pb_hdr_layout)
@@ -4596,9 +4599,9 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         card.setObjectName("PlayblastSettingsCard")
         card.setStyleSheet("""
             QFrame#PlayblastSettingsCard {
-                background-color: #ffffff;
+                background-color: #111119;
                 border-radius: 14px;
-                border: 1px solid #e7e5e4;
+                border: 1px solid #272736;
             }
         """)
         card_layout = QtWidgets.QVBoxLayout(card)
@@ -4606,7 +4609,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         card_layout.setSpacing(10)
 
         ctrl_style = (
-            "background-color: #fafaf9; color: #1c1917; border: 1px solid #d6d3d1; "
+            "background-color: #111119; color: #f4f4f5; border: 1px solid #272736; "
             "border-radius: 8px; padding: 4px 8px; font-weight: 600; font-size: 11px;"
         )
 
@@ -4617,7 +4620,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         cam_box = QtWidgets.QHBoxLayout()
         cam_box.setSpacing(6)
         cam_lbl = QtWidgets.QLabel("Cam:")
-        cam_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #1c1917; border: none;")
+        cam_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #f4f4f5; border: none;")
         cam_box.addWidget(cam_lbl)
         self.pb_cam_combo = QtWidgets.QComboBox()
         self.pb_cam_combo.addItem("Active Viewport", "")
@@ -4630,7 +4633,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         res_box = QtWidgets.QHBoxLayout()
         res_box.setSpacing(6)
         res_lbl = QtWidgets.QLabel("Res:")
-        res_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #1c1917; border: none;")
+        res_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #f4f4f5; border: none;")
         res_box.addWidget(res_lbl)
         self.pb_res_combo = QtWidgets.QComboBox()
         self.pb_res_combo.addItems(["1280x720 (HD)", "1920x1080 (Full HD)", "960x540 (Preview)"])
@@ -4643,7 +4646,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         fmt_box = QtWidgets.QHBoxLayout()
         fmt_box.setSpacing(6)
         fmt_lbl = QtWidgets.QLabel("Format:")
-        fmt_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #1c1917; border: none;")
+        fmt_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #f4f4f5; border: none;")
         fmt_box.addWidget(fmt_lbl)
         self.pb_format_combo = QtWidgets.QComboBox()
         self.pb_format_combo.addItems(["MP4 (H.264)", "AVI"])
@@ -4661,7 +4664,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         frames_box = QtWidgets.QHBoxLayout()
         frames_box.setSpacing(5)
         range_lbl = QtWidgets.QLabel("Frames:")
-        range_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #1c1917; border: none;")
+        range_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #f4f4f5; border: none;")
         frames_box.addWidget(range_lbl)
         self.pb_start_spin = QtWidgets.QSpinBox()
         self.pb_start_spin.setRange(-10000, 100000)
@@ -4671,7 +4674,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         frames_box.addWidget(self.pb_start_spin, stretch=1)
 
         dash_lbl = QtWidgets.QLabel("–")
-        dash_lbl.setStyleSheet("color: #78716c; font-weight: bold; border: none;")
+        dash_lbl.setStyleSheet("color: #a1a1aa; font-weight: bold; border: none;")
         frames_box.addWidget(dash_lbl)
 
         self.pb_end_spin = QtWidgets.QSpinBox()
@@ -4688,15 +4691,15 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.pb_sync_range_btn.setToolTip("Auto-detect active camera and frame range from Maya timeline")
         self.pb_sync_range_btn.setCursor(QtCore.Qt.PointingHandCursor)
         self.pb_sync_range_btn.setStyleSheet(
-            "QPushButton { background-color: #f5f5f4; color: #1c1917; border: 1px solid #d6d3d1; "
+            "QPushButton { background-color: #161622; color: #f4f4f5; border: 1px solid #272736; "
             "border-radius: 8px; padding: 4px 10px; font-weight: 700; font-size: 11px; }"
-            "QPushButton:hover { background-color: #e7e5e4; border-color: #a8a29e; }"
+            "QPushButton:hover { background-color: #232334; border-color: #4c4c66; }"
         )
         self.pb_sync_range_btn.clicked.connect(self.refresh_playblast_timeline_info)
         sync_hud_box.addWidget(self.pb_sync_range_btn)
 
         self.pb_ornaments_check = QtWidgets.QCheckBox("Show HUD")
-        self.pb_ornaments_check.setStyleSheet("color: #44403c; font-size: 11px; font-weight: 600; border: none;")
+        self.pb_ornaments_check.setStyleSheet("color: #a1a1aa; font-size: 11px; font-weight: 600; border: none;")
         self.pb_ornaments_check.setChecked(False)
         sync_hud_box.addWidget(self.pb_ornaments_check)
         sync_hud_box.addStretch()
@@ -4711,9 +4714,9 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.record_pb_btn.setMinimumHeight(36)
         self.record_pb_btn.setCursor(QtCore.Qt.PointingHandCursor)
         self.record_pb_btn.setStyleSheet(
-            "QPushButton { background-color: #2563EB; color: #FFFFFF; border: none; border-radius: 18px; "
+            "QPushButton { background-color: #7c3aed; color: #FFFFFF; border: none; border-radius: 18px; "
             "padding: 0 14px; font-weight: 800; font-size: 12px; }"
-            "QPushButton:hover { background-color: #1D4ED8; }"
+            "QPushButton:hover { background-color: #8b5cf6; }"
             "QPushButton:disabled { background-color: #93C5FD; color: #FFFFFF; }"
         )
         self.record_pb_btn.clicked.connect(self.run_playblast_capture)
@@ -4724,7 +4727,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.export_mp4_btn.setCursor(QtCore.Qt.PointingHandCursor)
         self.export_mp4_btn.setToolTip("Save your playblast to Desktop or any custom folder as MP4 or AVI")
         self.export_mp4_btn.setStyleSheet(
-            "QPushButton { background-color: #0c0a09; color: #FFFFFF; border: none; border-radius: 18px; "
+            "QPushButton { background-color: #7c3aed; color: #FFFFFF; border: none; border-radius: 18px; "
             "padding: 0 14px; font-weight: 800; font-size: 12px; }"
             "QPushButton:hover { background-color: #27272a; }"
             "QPushButton:disabled { background-color: #a1a1aa; color: #FFFFFF; }"
@@ -4737,9 +4740,9 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.open_pb_folder_btn.setCursor(QtCore.Qt.PointingHandCursor)
         self.open_pb_folder_btn.setToolTip("Open playblast output folder in Explorer")
         self.open_pb_folder_btn.setStyleSheet(
-            "QPushButton { background-color: #f5f5f4; color: #1c1917; border: 1px solid #d6d3d1; "
+            "QPushButton { background-color: #161622; color: #f4f4f5; border: 1px solid #272736; "
             "border-radius: 18px; padding: 0 12px; font-weight: 700; font-size: 11px; }"
-            "QPushButton:hover { background-color: #e7e5e4; border-color: #a8a29e; }"
+            "QPushButton:hover { background-color: #232334; border-color: #4c4c66; }"
         )
         self.open_pb_folder_btn.clicked.connect(self.open_playblast_folder)
         self.pb_btn_layout.addWidget(self.open_pb_folder_btn)
@@ -4751,7 +4754,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
 
         self.pb_status_lbl = QtWidgets.QLabel("Ready — choose MP4 or AVI and click 'Record Playblast' or 'Export As...'.")
         self.pb_status_lbl.setStyleSheet(
-            "background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; "
+            "background-color: #111119; border: 1px solid #272736; border-radius: 10px; "
             "padding: 8px 10px; color: #334155; font-size: 11px; font-weight: 600;"
         )
         self.pb_status_lbl.setWordWrap(True)
@@ -4764,9 +4767,9 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         upload_card.setObjectName("PlayblastUploadCard")
         upload_card.setStyleSheet("""
             QFrame#PlayblastUploadCard {
-                background-color: #ffffff;
+                background-color: #111119;
                 border-radius: 14px;
-                border: 1px solid #e7e5e4;
+                border: 1px solid #272736;
             }
         """)
         uc_layout = QtWidgets.QVBoxLayout(upload_card)
@@ -4775,12 +4778,12 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
 
         uc_title = QtWidgets.QLabel("Import to AnimationReference.org")
         uc_title.setWordWrap(True)
-        uc_title.setStyleSheet("font-size: 14px; font-weight: 800; color: #0c0a09; border: none;")
+        uc_title.setStyleSheet("font-size: 14px; font-weight: 800; color: #f4f4f5; border: none;")
         uc_layout.addWidget(uc_title)
 
         uc_sub = QtWidgets.QLabel("Publish your Maya playblast directly to AnimationReference.org and optionally save it to a board.")
         uc_sub.setWordWrap(True)
-        uc_sub.setStyleSheet("font-size: 11px; color: #78716c; font-weight: 500; border: none;")
+        uc_sub.setStyleSheet("font-size: 11px; color: #a1a1aa; font-weight: 500; border: none;")
         uc_layout.addWidget(uc_sub)
 
         self.pb_upload_row_layout = QtWidgets.QBoxLayout(QtWidgets.QBoxLayout.LeftToRight)
@@ -4789,7 +4792,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         title_box = QtWidgets.QHBoxLayout()
         title_box.setSpacing(6)
         t_lbl = QtWidgets.QLabel("Title:")
-        t_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #1c1917; border: none;")
+        t_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #f4f4f5; border: none;")
         title_box.addWidget(t_lbl)
         self.pb_upload_title = QtWidgets.QLineEdit()
         self.pb_upload_title.setPlaceholderText("Maya Playblast")
@@ -4800,7 +4803,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         board_box = QtWidgets.QHBoxLayout()
         board_box.setSpacing(6)
         b_lbl = QtWidgets.QLabel("Board:")
-        b_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #1c1917; border: none;")
+        b_lbl.setStyleSheet("font-weight: 700; font-size: 11px; color: #f4f4f5; border: none;")
         board_box.addWidget(b_lbl)
         self.pb_upload_board_combo = QtWidgets.QComboBox()
         self.pb_upload_board_combo.addItem("Library Only (No Board)", "")
@@ -4812,7 +4815,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         uc_layout.addLayout(self.pb_upload_row_layout)
 
         self.pb_auto_upload_check = QtWidgets.QCheckBox("Auto-post to AnimationReference.org Portfolio & Feed right after recording")
-        self.pb_auto_upload_check.setStyleSheet("color: #1c1917; font-size: 11px; font-weight: 600; border: none;")
+        self.pb_auto_upload_check.setStyleSheet("color: #f4f4f5; font-size: 11px; font-weight: 600; border: none;")
         self.pb_auto_upload_check.setChecked(False)
         uc_layout.addWidget(self.pb_auto_upload_check)
 
@@ -4822,8 +4825,8 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.upload_pb_btn.setStyleSheet(
             "QPushButton { background-color: #059669; color: #FFFFFF; border: none; border-radius: 19px; "
             "padding: 0 16px; font-weight: 800; font-size: 12px; }"
-            "QPushButton:hover { background-color: #047857; }"
-            "QPushButton:disabled { background-color: #a7f3d0; color: #065f46; }"
+            "QPushButton:hover { background-color: #34d399; }"
+            "QPushButton:disabled { background-color: #a7f3d0; color: #6ee7b7; }"
         )
         self.upload_pb_btn.clicked.connect(self.run_playblast_upload)
         uc_layout.addWidget(self.upload_pb_btn)
@@ -4833,8 +4836,8 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.pb_upload_link_lbl.setWordWrap(True)
         self.pb_upload_link_lbl.setOpenExternalLinks(True)
         self.pb_upload_link_lbl.setStyleSheet(
-            "background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; "
-            "padding: 8px 10px; color: #065f46; font-size: 11px; font-weight: 700;"
+            "background-color: rgba(16, 185, 129, 0.14); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 10px; "
+            "padding: 8px 10px; color: #6ee7b7; font-size: 11px; font-weight: 700;"
         )
         uc_layout.addWidget(self.pb_upload_link_lbl)
 
@@ -4891,11 +4894,11 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
 
         title = QtWidgets.QLabel("AnimationReference.org Account")
         title.setWordWrap(True)
-        title.setStyleSheet("font-size: 17px; font-weight: 800; color: #0c0a09;")
+        title.setStyleSheet("font-size: 17px; font-weight: 800; color: #f4f4f5;")
         layout.addWidget(title)
 
         self.login_box = QtWidgets.QFrame()
-        self.login_box.setStyleSheet("background-color: #ffffff; border-radius: 14px; border: 1px solid #e4e4e7; padding: 14px;")
+        self.login_box.setStyleSheet("background-color: #111119; border-radius: 14px; border: 1px solid #272736; padding: 14px;")
         l_layout = QtWidgets.QVBoxLayout(self.login_box)
         l_layout.setSpacing(10)
 
@@ -4912,7 +4915,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.browser_login_btn.setToolTip("Opens animationreference.org in your browser and signs you in automatically!")
         self.browser_login_btn.setStyleSheet("""
             QPushButton#PrimaryBtn {
-                background-color: #0c0a09;
+                background-color: #7c3aed;
                 color: #ffffff;
                 font-size: 13px;
                 font-weight: 700;
@@ -4920,7 +4923,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
                 padding: 10px 24px;
             }
             QPushButton#PrimaryBtn:hover {
-                background-color: #292524;
+                background-color: #8b5cf6;
             }
         """)
         self.browser_login_btn.clicked.connect(self.launch_browser_sign_in)
@@ -4933,7 +4936,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
 
         sep_lbl = QtWidgets.QLabel("— OR SIGN IN WITH EMAIL & PASSWORD —")
         sep_lbl.setAlignment(QtCore.Qt.AlignCenter)
-        sep_lbl.setStyleSheet("color: #a8a29e; font-size: 10px; font-weight: 700; margin-top: 6px;")
+        sep_lbl.setStyleSheet("color: #71717a; font-size: 10px; font-weight: 700; margin-top: 6px;")
         l_layout.addWidget(sep_lbl)
 
         self.email_input = QtWidgets.QLineEdit()
@@ -4967,20 +4970,20 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         layout.addWidget(self.login_box)
 
         self.profile_box = QtWidgets.QFrame()
-        self.profile_box.setStyleSheet("background-color: #ffffff; border-radius: 16px; border: 1px solid #e7e5e4; padding: 24px;")
+        self.profile_box.setStyleSheet("background-color: #111119; border-radius: 16px; border: 1px solid #272736; padding: 24px;")
         p_layout = QtWidgets.QVBoxLayout(self.profile_box)
         p_layout.setSpacing(10)
 
         self.profile_name_lbl = QtWidgets.QLabel("Signed in as:")
-        self.profile_name_lbl.setStyleSheet("font-size: 16px; font-weight: 700; color: #0c0a09;")
+        self.profile_name_lbl.setStyleSheet("font-size: 16px; font-weight: 700; color: #f4f4f5;")
         p_layout.addWidget(self.profile_name_lbl)
 
         self.profile_email_lbl = QtWidgets.QLabel("")
-        self.profile_email_lbl.setStyleSheet("color: #78716c;")
+        self.profile_email_lbl.setStyleSheet("color: #a1a1aa;")
         p_layout.addWidget(self.profile_email_lbl)
 
         self.pro_badge = QtWidgets.QLabel("PRO MEMBER")
-        self.pro_badge.setStyleSheet("background-color: #0c0a09; color: #ffffff; font-weight: 800; padding: 4px 10px; border-radius: 8px;")
+        self.pro_badge.setStyleSheet("background-color: #7c3aed; color: #ffffff; font-weight: 800; padding: 4px 10px; border-radius: 8px;")
         self.pro_badge.setFixedWidth(110)
         p_layout.addWidget(self.pro_badge)
 
@@ -4991,13 +4994,13 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         layout.addWidget(self.profile_box)
 
         self.cache_box = QtWidgets.QFrame()
-        self.cache_box.setStyleSheet("background-color: #ffffff; border: 1px solid #e4e4e7; border-radius: 14px;")
+        self.cache_box.setStyleSheet("background-color: #111119; border: 1px solid #272736; border-radius: 14px;")
         c_layout = QtWidgets.QVBoxLayout(self.cache_box)
         c_layout.setContentsMargins(14, 12, 14, 12)
         c_layout.setSpacing(8)
 
         c_title = QtWidgets.QLabel("Storage & Media Cache")
-        c_title.setStyleSheet("font-size: 13px; font-weight: 800; color: #09090b; border: none;")
+        c_title.setStyleSheet("font-size: 13px; font-weight: 800; color: #f4f4f5; border: none;")
         c_layout.addWidget(c_title)
 
         self.cache_stats_lbl = QtWidgets.QLabel("Calculating cache size...")
@@ -5012,8 +5015,8 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
 
         self.clear_cache_btn = QtWidgets.QPushButton("Clear Video Cache")
         self.clear_cache_btn.setStyleSheet(
-            "QPushButton { background-color: #f4f4f5; color: #18181b; border: 1px solid #e4e4e7; border-radius: 8px; padding: 6px 12px; font-weight: 600; }"
-            "QPushButton:hover { background-color: #e4e4e7; }"
+            "QPushButton { background-color: #161622; color: #f4f4f5; border: 1px solid #272736; border-radius: 8px; padding: 6px 12px; font-weight: 600; }"
+            "QPushButton:hover { background-color: #232334; }"
         )
         self.clear_cache_btn.clicked.connect(self.handle_clear_cache)
         c_btn_row.addWidget(self.clear_cache_btn)
@@ -5388,7 +5391,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
 
             if not items:
                 empty_lbl = QtWidgets.QLabel("Nothing in this board yet. Save references on AnimationReference.org/moodboard and click ↻ Sync!")
-                empty_lbl.setStyleSheet("color: #78716c; padding: 30px; font-size: 13px;")
+                empty_lbl.setStyleSheet("color: #a1a1aa; padding: 30px; font-size: 13px;")
                 self.detail_grid.addWidget(empty_lbl, 0, 0)
                 return
 
@@ -5795,8 +5798,8 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
                 )
             else:
                 btn.setStyleSheet(
-                    "QPushButton { background-color: #EFEFEF; color: #333333; border: none; border-radius: 14px; padding: 0 12px; font-size: 11px; font-weight: 600; }"
-                    "QPushButton:hover { background-color: #E2E2E2; }"
+                    "QPushButton { background-color: #161622; color: #f4f4f5; border: none; border-radius: 14px; padding: 0 12px; font-size: 11px; font-weight: 600; }"
+                    "QPushButton:hover { background-color: #232334; }"
                 )
             btn.clicked.connect(lambda checked=False, t=tag_name: self.set_active_tag(None if t == "All" else t))
             self.tags_layout.addWidget(btn)
@@ -5813,8 +5816,8 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
                 )
             else:
                 btn.setStyleSheet(
-                    "QPushButton { background-color: #EFEFEF; color: #333333; border: none; border-radius: 14px; padding: 0 12px; font-size: 11px; font-weight: 600; }"
-                    "QPushButton:hover { background-color: #E2E2E2; }"
+                    "QPushButton { background-color: #161622; color: #f4f4f5; border: none; border-radius: 14px; padding: 0 12px; font-size: 11px; font-weight: 600; }"
+                    "QPushButton:hover { background-color: #232334; }"
                 )
         self.perform_search(reset=True)
 
@@ -5893,7 +5896,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
             if not videos:
                 empty_lbl = QtWidgets.QLabel("No matching references found. Try another search or clear tag filters.")
                 empty_lbl.setAlignment(QtCore.Qt.AlignCenter)
-                empty_lbl.setStyleSheet("color: #767676; font-size: 13px; padding: 36px;")
+                empty_lbl.setStyleSheet("color: #a1a1aa; font-size: 13px; padding: 36px;")
                 self.grid_layout.addWidget(empty_lbl, 0, 0)
                 return
 

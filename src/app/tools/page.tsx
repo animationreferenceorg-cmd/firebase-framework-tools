@@ -118,6 +118,14 @@ export default function ToolsPage() {
               </span>
             </div>
 
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#09090e] aspect-video shadow-lg">
+              <img
+                src="/images/plugins/maya-studio-preview.jpg"
+                alt="AnimRef Studio for Maya Screenshot"
+                className="h-full w-full object-cover"
+              />
+            </div>
+
             <p className="text-sm text-zinc-300 leading-relaxed">
               Native PySide dark obsidian Studio Window docked or floating in Maya. Imports clean 60fps VP2 image sequences
               centered at origin <code className="text-xs text-cyan-200">(0, 0, 0)</code>, with an automatic{' '}
@@ -175,6 +183,14 @@ export default function ToolsPage() {
               <span className="rounded-full bg-emerald-500/15 border border-emerald-400/30 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300">
                 Free
               </span>
+            </div>
+
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#09090e] aspect-video shadow-lg">
+              <img
+                src="/images/plugins/blender-studio-preview.jpg"
+                alt="AnimRef Studio for Blender Screenshot"
+                className="h-full w-full object-cover"
+              />
             </div>
 
             <p className="text-sm text-zinc-300 leading-relaxed">

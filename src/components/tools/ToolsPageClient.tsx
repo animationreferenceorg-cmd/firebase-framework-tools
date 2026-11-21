@@ -52,7 +52,7 @@ const HOST_DATA: Record<
       'Native dark obsidian PySide Studio Window docked or floating in Maya. Imports 60fps VP2 image sequences centered at (0, 0, 0) with an automatic Scene Planes controller.',
     steps: [
       'Download and unzip animref_maya_plugin.zip.',
-      'Drag & drop drag_and_drop_install.mel into your Maya viewport.',
+      'Drag & drop drag_and_drop_install.py (or drag_and_drop_install.mel) into your Maya viewport.',
       'Sign in once via browser — your Moodboards, Uploaded clips & auto-updates sync automatically.',
     ],
     highlights: [

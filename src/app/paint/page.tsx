@@ -32,7 +32,7 @@ import {
 import type { Layer, ToolType, BrushSettings, BlendMode, CustomBrushTexture, Selection, SymmetryMode, Frame } from '@/lib/paint/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Clapperboard, Pin, PinOff, Film, Eye, Split, X, Camera, Radio, FlipHorizontal2 } from 'lucide-react';
+import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Clapperboard, Pin, PinOff, Film, Eye, Split, X, Camera, Radio, FlipHorizontal2, Play, Pause, ChevronLeft, ChevronRight } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -234,7 +234,7 @@ export default function PaintPage() {
     });
   };
   const [isPlaying, setIsPlaying] = useState(false);
-  const [fps, setFps] = useState(6);
+  const [fps, setFps] = useState(24);
   const fpsRef = useRef(fps);
   fpsRef.current = fps;
   const panContainerRef = useRef<HTMLDivElement>(null);
@@ -1064,8 +1064,49 @@ export default function PaintPage() {
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
   const [activeReferenceVideo, setActiveReferenceVideo] = useState<ReferenceVideoItem | null>(null);
   const [isPinnedToCanvas, setIsPinnedToCanvas] = useState(false);
-  const [tracingOpacity, setTracingOpacity] = useState(0.4);
+  const [tracingOpacity, setTracingOpacity] = useState(0.45);
+  const [refVideoDuration, setRefVideoDuration] = useState(0);
+  const [isScrubbingRefVideo, setIsScrubbingRefVideo] = useState(false);
+  const [hoverRefFrame, setHoverRefFrame] = useState<number | null>(null);
   const canvasBgVideoRef = useRef<HTMLVideoElement>(null);
+  const refScrubTrackRef = useRef<HTMLDivElement>(null);
+  const pendingRefSeekTimeRef = useRef<number | null>(null);
+  const refScrubRafRef = useRef<number | null>(null);
+
+  // Decode-safe, non-blocking smooth seek queue (prevents browser decoder backlog during fast Toon Boom scrubbing)
+  const seekPinnedVideoSmooth = useCallback((targetTime: number) => {
+    const video = canvasBgVideoRef.current;
+    if (!video) return;
+    const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+    const clamped = duration > 0 ? Math.max(0, Math.min(duration - 0.001, targetTime)) : Math.max(0, targetTime);
+
+    if (video.seeking) {
+      pendingRefSeekTimeRef.current = clamped;
+      return;
+    }
+    pendingRefSeekTimeRef.current = null;
+    if (Math.abs(video.currentTime - clamped) > 0.004) {
+      try {
+        video.currentTime = clamped;
+      } catch {
+        // Ignore seek before metadata ready
+      }
+    }
+  }, []);
+
+  const handlePinnedVideoSeeked = useCallback(() => {
+    const queued = pendingRefSeekTimeRef.current;
+    if (queued === null) return;
+    pendingRefSeekTimeRef.current = null;
+    const video = canvasBgVideoRef.current;
+    if (video && Math.abs(video.currentTime - queued) > 0.004) {
+      try {
+        video.currentTime = queued;
+      } catch {
+        // Ignore
+      }
+    }
+  }, []);
 
   // Initialize a fresh clean transparent animation project
   const handleCreateNewProject = (settings: { name: string; canvasSize: { width: number; height: number }; fps: number }) => {
@@ -1245,23 +1286,87 @@ export default function PaintPage() {
     };
   }, [isPlaying, fps, frames.length]);
 
-  // 100% Frame-Locked Background Reference Video Sync to Timeline Playhead & Loop Range
+  // Cumulative timeline exposure tick for the active cel (respects Callipeg holdFrames)
+  const activeExposureTick = useMemo(() => {
+    let tick = 0;
+    for (let i = 0; i < activeFrameIndex && i < frames.length; i++) {
+      tick += Math.max(1, frames[i]?.holdFrames ?? 1);
+    }
+    return tick;
+  }, [frames, activeFrameIndex]);
+
+  const totalPinnedRefFrames = useMemo(() => {
+    const fromDuration = refVideoDuration > 0 ? Math.max(2, Math.round(refVideoDuration * Math.max(1, fps))) : 0;
+    return Math.max(frames.length, fromDuration, 24);
+  }, [refVideoDuration, fps, frames.length]);
+
+  // 100% Frame-Locked Background Reference Video Sync to Timeline Playhead (decode-safe smooth seek)
   useEffect(() => {
     const video = canvasBgVideoRef.current;
     if (!isPinnedToCanvas || !video) return;
 
-    // Pause native video playback engine to enforce frame-accurate sync with timeline
     try {
-      video.pause();
+      if (!video.paused) video.pause();
     } catch {
       // Fallback
     }
 
-    const targetTime = activeFrameIndex / Math.max(1, fps);
-    if (Math.abs(video.currentTime - targetTime) > 0.02) {
-      video.currentTime = Math.min(video.duration || 0, targetTime);
-    }
-  }, [isPinnedToCanvas, activeFrameIndex, fps]);
+    const targetTime = activeExposureTick / Math.max(1, fps);
+    seekPinnedVideoSmooth(targetTime);
+  }, [isPinnedToCanvas, activeExposureTick, fps, seekPinnedVideoSmooth]);
+
+  // Silky-smooth 60fps Toon Boom scrubber pointer drag for pinned reference video
+  const scrubPinnedRefFromClientX = useCallback(
+    (clientX: number) => {
+      const track = refScrubTrackRef.current;
+      if (!track) return;
+      const rect = track.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(1, (clientX - rect.left) / Math.max(1, rect.width)));
+      const targetFrame = Math.max(0, Math.min(totalPinnedRefFrames - 1, Math.round(pct * (totalPinnedRefFrames - 1))));
+      setHoverRefFrame(targetFrame);
+
+      if (refScrubRafRef.current) cancelAnimationFrame(refScrubRafRef.current);
+      refScrubRafRef.current = requestAnimationFrame(() => {
+        const targetTime = targetFrame / Math.max(1, fpsRef.current);
+        seekPinnedVideoSmooth(targetTime);
+        if (targetFrame !== activeFrameIndexRef.current) {
+          handleSwitchFrame(targetFrame);
+        }
+      });
+    },
+    [totalPinnedRefFrames, seekPinnedVideoSmooth]
+  );
+
+  const handlePinnedRefScrubPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    if (isPlaying) setIsPlaying(false);
+    setIsScrubbingRefVideo(true);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+    scrubPinnedRefFromClientX(e.clientX);
+  };
+
+  useEffect(() => {
+    if (!isScrubbingRefVideo) return;
+    const onMove = (ev: PointerEvent) => {
+      scrubPinnedRefFromClientX(ev.clientX);
+    };
+    const onUp = () => {
+      setIsScrubbingRefVideo(false);
+      setHoverRefFrame(null);
+      if (refScrubRafRef.current) cancelAnimationFrame(refScrubRafRef.current);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      if (refScrubRafRef.current) cancelAnimationFrame(refScrubRafRef.current);
+    };
+  }, [isScrubbingRefVideo, scrubPinnedRefFromClientX]);
 
   // Callipeg-style Multi-Frame Color-Tinted Onion Skin Ghosts:
   // Previous 2 frames tinted Rose-Red (#f43f5e: -1 @ 100%, -2 @ 42%)
@@ -1544,20 +1649,122 @@ export default function PaintPage() {
           </div>
         )}
 
-        {/* ──────────────── TOP-LEFT CANVAS REFERENCE CONTROLS BAR ──────────────── */}
+        {/* ──────────────── TOON BOOM PINNED REFERENCE SCRUBBER & CONTROLS BAR ──────────────── */}
         {isPinnedToCanvas && activeReferenceVideo && (
-          <div className="absolute top-4 left-24 z-40 flex items-center gap-3 bg-[#161622]/95 backdrop-blur-3xl border border-purple-500/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] px-4 py-2 text-xs font-bold text-white animate-in slide-in-from-left-2 duration-200">
-            
+          <div
+            data-ui-panel="true"
+            onPointerDown={(e) => e.stopPropagation()}
+            className="absolute top-3 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2.5 bg-[#12111d]/95 backdrop-blur-3xl border border-purple-500/45 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] px-3.5 py-2 text-xs font-bold text-white max-w-[92vw]"
+          >
             {/* Video Title */}
-            <div className="flex items-center gap-2 max-w-[200px]">
-              <Pin className="h-4 w-4 text-purple-400 fill-purple-400 shrink-0" />
-              <span className="truncate text-white text-xs">{activeReferenceVideo.title}</span>
+            <div className="flex items-center gap-1.5 max-w-[140px] shrink-0">
+              <Pin className="h-3.5 w-3.5 text-purple-400 fill-purple-400 shrink-0" />
+              <span className="truncate text-white text-[11px]" title={activeReferenceVideo.title}>
+                {activeReferenceVideo.title}
+              </span>
             </div>
 
-            <div className="w-px h-4 bg-white/15" />
+            <div className="w-px h-4 bg-white/15 shrink-0" />
+
+            {/* Play / Pause & -1f / +1f Frame Steppers */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsPlaying((p) => !p)}
+                className={cn(
+                  "h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer",
+                  isPlaying
+                    ? "bg-amber-500 text-black hover:bg-amber-400"
+                    : "bg-purple-600 text-white hover:bg-purple-500"
+                )}
+                title={isPlaying ? "Pause (Space)" : "Play Synced Reference & Drawover (Space)"}
+              >
+                {isPlaying ? <Pause className="h-3.5 w-3.5 fill-current" /> : <Play className="h-3.5 w-3.5 fill-current ml-0.5" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (isPlaying) setIsPlaying(false);
+                  handleSwitchFrame(Math.max(0, activeFrameIndex - 1));
+                }}
+                className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/15 border border-white/10 text-zinc-200 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                title="Previous Frame (←)"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (isPlaying) setIsPlaying(false);
+                  handleSwitchFrame(Math.min(totalPinnedRefFrames - 1, activeFrameIndex + 1));
+                }}
+                className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/15 border border-white/10 text-zinc-200 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                title="Next Frame (→)"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* Silky-Smooth Toon Boom Scrub Rail */}
+            <div className="flex items-center gap-2 min-w-[180px] sm:min-w-[260px]">
+              <div
+                ref={refScrubTrackRef}
+                onPointerDown={handlePinnedRefScrubPointerDown}
+                onPointerMove={(e) => {
+                  if (isScrubbingRefVideo) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / Math.max(1, rect.width)));
+                  setHoverRefFrame(Math.round(pct * (totalPinnedRefFrames - 1)));
+                }}
+                onPointerLeave={() => {
+                  if (!isScrubbingRefVideo) setHoverRefFrame(null);
+                }}
+                className="relative flex-1 h-6 flex items-center cursor-ew-resize touch-none select-none group"
+                title="Drag to scrub pinned reference video & drawover frames smoothly"
+              >
+                {/* Track Background */}
+                <div className="w-full h-2 rounded-full bg-white/10 border border-white/10 overflow-hidden relative">
+                  <div
+                    className="h-full bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 rounded-full"
+                    style={{
+                      width: `${Math.min(100, Math.max(0, (activeExposureTick / Math.max(1, totalPinnedRefFrames - 1)) * 100))}%`,
+                    }}
+                  />
+                </div>
+
+                {/* Playhead Thumb */}
+                <div
+                  className={cn(
+                    "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white border-2 border-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.9)] pointer-events-none transition-transform",
+                    isScrubbingRefVideo ? "scale-125" : "group-hover:scale-110"
+                  )}
+                  style={{
+                    left: `${Math.min(100, Math.max(0, (activeExposureTick / Math.max(1, totalPinnedRefFrames - 1)) * 100))}%`,
+                  }}
+                />
+
+                {/* Hover / Scrub Frame Pill */}
+                {hoverRefFrame !== null && (
+                  <div
+                    className="absolute -bottom-6 -translate-x-1/2 px-1.5 py-0.5 rounded bg-black/90 border border-purple-400/50 text-[9px] font-mono font-black text-purple-200 pointer-events-none whitespace-nowrap shadow-lg"
+                    style={{
+                      left: `${Math.min(100, Math.max(0, (hoverRefFrame / Math.max(1, totalPinnedRefFrames - 1)) * 100))}%`,
+                    }}
+                  >
+                    F{String(hoverRefFrame + 1).padStart(3, '0')}
+                  </div>
+                )}
+              </div>
+
+              <span className="text-[10px] font-mono font-black text-purple-200 bg-purple-500/15 border border-purple-400/30 rounded-lg px-2 py-1 whitespace-nowrap shrink-0">
+                F{String(activeExposureTick + 1).padStart(3, '0')} / {String(totalPinnedRefFrames).padStart(3, '0')}
+              </span>
+            </div>
+
+            <div className="w-px h-4 bg-white/15 shrink-0" />
 
             {/* Tracing Opacity Slider */}
-            <div className="flex items-center gap-1.5 text-[11px] font-mono">
+            <div className="flex items-center gap-1.5 text-[11px] font-mono shrink-0" title="Reference Video Opacity">
               <Eye className="h-3.5 w-3.5 text-purple-400 shrink-0" />
               <input
                 type="range"
@@ -1566,46 +1773,43 @@ export default function PaintPage() {
                 step={0.05}
                 value={tracingOpacity}
                 onChange={(e) => setTracingOpacity(parseFloat(e.target.value))}
-                className="w-20 h-1 accent-purple-500 cursor-pointer"
+                className="w-16 h-1 accent-purple-500 cursor-pointer"
               />
-              <span className="text-purple-300 font-bold min-w-[32px]">{Math.round(tracingOpacity * 100)}%</span>
+              <span className="text-purple-300 font-bold min-w-[28px]">{Math.round(tracingOpacity * 100)}%</span>
             </div>
 
-            <div className="w-px h-4 bg-white/15" />
+            <div className="w-px h-4 bg-white/15 shrink-0" />
 
-            {/* Change / Update Reference Video Button */}
-            <button
-              onClick={() => setShowReferenceModal(true)}
-              className="px-2.5 py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600 border border-purple-400/40 text-purple-200 hover:text-white transition-all cursor-pointer text-xs font-bold flex items-center gap-1.5 shadow"
-              title="Change or update reference video"
-            >
-              <Film className="h-3.5 w-3.5" />
-              <span>Change</span>
-            </button>
-
-            {/* Unpin Button */}
-            <button
-              onClick={() => setIsPinnedToCanvas(false)}
-              className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-zinc-300 hover:text-white transition-all cursor-pointer text-xs font-bold flex items-center gap-1.5"
-              title="Unpin reference video from canvas background"
-            >
-              <PinOff className="h-3.5 w-3.5" />
-              <span>Unpin</span>
-            </button>
-
-            {/* Remove / Clear Reference Video Button */}
-            <button
-              onClick={() => {
-                setActiveReferenceVideo(null);
-                setIsPinnedToCanvas(false);
-              }}
-              className="px-2.5 py-1.5 rounded-xl bg-red-600/20 hover:bg-red-600 border border-red-500/30 text-red-300 hover:text-white transition-all cursor-pointer text-xs font-bold flex items-center gap-1 shadow"
-              title="Remove reference video from project"
-            >
-              <X className="h-3.5 w-3.5" />
-              <span>Remove</span>
-            </button>
-
+            {/* Change / Unpin / Remove */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => setShowReferenceModal(true)}
+                className="h-7 px-2 rounded-lg bg-purple-600/25 hover:bg-purple-600 border border-purple-400/40 text-purple-200 hover:text-white transition-all cursor-pointer text-[11px] font-bold flex items-center gap-1"
+                title="Change reference video"
+              >
+                <Film className="h-3.5 w-3.5" />
+                <span className="hidden lg:inline">Change</span>
+              </button>
+              <button
+                onClick={() => setIsPinnedToCanvas(false)}
+                className="h-7 px-2 rounded-lg bg-white/5 hover:bg-white/15 border border-white/10 text-zinc-300 hover:text-white transition-all cursor-pointer text-[11px] font-bold flex items-center gap-1"
+                title="Unpin reference video back to floating window"
+              >
+                <PinOff className="h-3.5 w-3.5" />
+                <span className="hidden lg:inline">Unpin</span>
+              </button>
+              <button
+                onClick={() => {
+                  setActiveReferenceVideo(null);
+                  setIsPinnedToCanvas(false);
+                  setRefVideoDuration(0);
+                }}
+                className="h-7 w-7 rounded-lg bg-red-600/20 hover:bg-red-600 border border-red-500/30 text-red-300 hover:text-white transition-all cursor-pointer flex items-center justify-center"
+                title="Remove reference video from project"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         )}
 
@@ -1765,11 +1969,12 @@ export default function PaintPage() {
                         src={activeReferenceVideo.videoUrl}
                         muted
                         playsInline
-                        autoPlay
-                        loop
+                        preload="auto"
+                        onSeeked={handlePinnedVideoSeeked}
                         onLoadedMetadata={(e) => {
                           const vid = e.currentTarget;
                           if (vid && vid.duration && vid.duration > 0) {
+                            setRefVideoDuration(vid.duration);
                             const totalFrames = Math.max(24, Math.round(vid.duration * fps));
                             setFrames((prev) => {
                               if (prev.length >= totalFrames) return prev;
@@ -1785,9 +1990,10 @@ export default function PaintPage() {
                               }
                               return updated;
                             });
+                            seekPinnedVideoSmooth(activeExposureTick / Math.max(1, fps));
                           }
                         }}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                     </div>
                   )}
@@ -2124,7 +2330,10 @@ export default function PaintPage() {
             setIsPinnedToCanvas(false);
           }}
           onOpenLibraryModal={() => setShowReferenceModal(true)}
-          onPinToCanvas={() => setIsPinnedToCanvas(true)}
+          onPinToCanvas={() => {
+            setIsPinnedToCanvas(true);
+            setIsTimelineOpen(true);
+          }}
           isPinned={isPinnedToCanvas}
         />
       )}

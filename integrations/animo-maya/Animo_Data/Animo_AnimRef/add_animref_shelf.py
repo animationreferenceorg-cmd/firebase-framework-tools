@@ -126,7 +126,7 @@ def ensure_animref_shelf(select=True, notify=False):
             (
                 "Frame",
                 "Frame",
-                "viewFrame.png",
+                "zoom.png",
                 _plane_action_cmd("cmds.select(node, replace=True); cmds.viewFit(node)"),
                 "Frame / focus the reference plane in the active viewport",
             ),

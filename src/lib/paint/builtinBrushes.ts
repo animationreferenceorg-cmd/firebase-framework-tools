@@ -771,7 +771,86 @@ interface BuiltinBrushDef {
   generate: (seed: number) => HTMLCanvasElement;
 }
 
+function generateStudioRake(seed: number): HTMLCanvasElement {
+  const { canvas, ctx } = blankMask();
+  const rand = mulberry32(seed);
+  paintAsWhiteMask(ctx, (c) => {
+    c.fillStyle = '#000';
+    // Distinct multi-tine flat oil rake bristles oriented vertically so angleFollow sweeps them
+    const tines = 11;
+    for (let i = 0; i < tines; i++) {
+      const y = 32 + (i / (tines - 1)) * (SIZE - 64) + (rand() - 0.5) * 6;
+      const w = 18 + rand() * 14;
+      const h = 4 + rand() * 5;
+      c.globalAlpha = 0.65 + rand() * 0.35;
+      c.beginPath();
+      c.ellipse(SIZE / 2 + (rand() - 0.5) * 14, y, w, h, 0, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.globalAlpha = 1;
+  });
+  return canvas;
+}
+
+function generateGouacheFlat(seed: number): HTMLCanvasElement {
+  const { canvas, ctx } = blankMask();
+  const rand = mulberry32(seed);
+  paintAsWhiteMask(ctx, (c) => {
+    c.fillStyle = '#000';
+    // Rounded rectangular flat gouache block with organic bristle tooth along edges
+    c.beginPath();
+    c.roundRect(SIZE * 0.28, SIZE * 0.14, SIZE * 0.44, SIZE * 0.72, 16);
+    c.fill();
+    c.globalCompositeOperation = 'destination-out';
+    for (let i = 0; i < 240; i++) {
+      const x = SIZE * 0.26 + rand() * SIZE * 0.48;
+      const y = SIZE * 0.12 + rand() * SIZE * 0.76;
+      c.globalAlpha = rand() * 0.45;
+      c.fillRect(x, y, 2 + rand() * 6, 2 + rand() * 3);
+    }
+    c.globalAlpha = 1;
+    c.globalCompositeOperation = 'source-over';
+  });
+  return canvas;
+}
+
+function generateChiselNib(_seed: number): HTMLCanvasElement {
+  const { canvas, ctx } = blankMask();
+  paintAsWhiteMask(ctx, (c) => {
+    c.fillStyle = '#000';
+    c.beginPath();
+    c.roundRect(SIZE * 0.36, SIZE * 0.12, SIZE * 0.28, SIZE * 0.76, 12);
+    c.fill();
+  });
+  return canvas;
+}
+
+function generateDrySumi(seed: number): HTMLCanvasElement {
+  const { canvas, ctx } = blankMask();
+  const rand = mulberry32(seed);
+  paintAsWhiteMask(ctx, (c) => {
+    c.fillStyle = '#000';
+    // Expressive dry-ink bamboo brush cluster
+    for (let i = 0; i < 24; i++) {
+      const y = 38 + rand() * (SIZE - 76);
+      const x = SIZE / 2 + (rand() - 0.5) * 44;
+      const rx = 18 + rand() * 28;
+      const ry = 3 + rand() * 7;
+      c.globalAlpha = 0.55 + rand() * 0.45;
+      c.beginPath();
+      c.ellipse(x, y, rx, ry, (rand() - 0.5) * 0.25, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.globalAlpha = 1;
+  });
+  return canvas;
+}
+
 const BUILTIN_DEFS: BuiltinBrushDef[] = [
+  { id: 'builtin-studio-rake', name: 'Studio Oil Rake', seed: 25, generate: generateStudioRake },
+  { id: 'builtin-gouache-flat', name: 'Gouache Flat', seed: 26, generate: generateGouacheFlat },
+  { id: 'builtin-chisel-nib', name: 'Chisel Copic Nib', seed: 27, generate: generateChiselNib },
+  { id: 'builtin-dry-sumi', name: 'Dry Sumi Ink', seed: 28, generate: generateDrySumi },
   { id: 'builtin-splatter', name: 'Splatter', seed: 1, generate: generateSplatter },
   { id: 'builtin-spray', name: 'Spray', seed: 2, generate: generateSpray },
   { id: 'builtin-grunge', name: 'Grunge', seed: 3, generate: generateGrunge },

@@ -20,14 +20,29 @@ function getTextureScratch(): HTMLCanvasElement {
  * Hardness controls how quickly the radial gradient falls off to transparent.
  * Size/opacity respond to the point's pressure per the brush's settings.
  */
-export function stampBrush(ctx: CanvasRenderingContext2D, point: Point, brush: BrushSettings, texture?: HTMLCanvasElement) {
+export function stampBrush(
+  ctx: CanvasRenderingContext2D,
+  point: Point,
+  brush: BrushSettings,
+  texture?: HTMLCanvasElement,
+  strokeAngleRad: number = 0
+) {
   const pressure = point.pressure ?? 1;
-  const sizeFactor = brush.pressureSize ? pressureFactor(pressure, brush.minPressureFactor) : 1;
+  const sizeJitterMult = brush.sizeJitter ? 1 - brush.sizeJitter * Math.random() : 1;
+  const sizeFactor = (brush.pressureSize ? pressureFactor(pressure, brush.minPressureFactor) : 1) * sizeJitterMult;
   const opacityFactor = brush.pressureOpacity ? pressureFactor(pressure, brush.minPressureFactor) : 1;
 
   const radius = Math.max(0.5, (brush.size * sizeFactor) / 2);
   const effectiveOpacity = Math.max(0, Math.min(1, brush.opacity * opacityFactor));
-  const { x, y } = point;
+  const scatterOffset = brush.scatter ? (Math.random() - 0.5) * 2 * radius * brush.scatter : 0;
+  const perpAngle = strokeAngleRad + Math.PI / 2;
+  const x = point.x + Math.cos(perpAngle) * scatterOffset;
+  const y = point.y + Math.sin(perpAngle) * scatterOffset;
+
+  const baseAngle = (brush.angleFollow ? strokeAngleRad : 0) + ((brush.angleOffset ?? 0) * Math.PI) / 180;
+  const jitterAngle = brush.angleJitter ? (Math.random() - 0.5) * Math.PI * 2 * brush.angleJitter : 0;
+  const totalAngle = baseAngle + jitterAngle;
+  const roundness = Math.max(0.15, Math.min(1, brush.roundness ?? 1));
 
   if (texture) {
     const size = Math.max(1, Math.round(radius * 2));
@@ -43,28 +58,34 @@ export function stampBrush(ctx: CanvasRenderingContext2D, point: Point, brush: B
 
     ctx.save();
     ctx.globalAlpha = effectiveOpacity;
-    ctx.drawImage(scratch, x - size / 2, y - size / 2);
+    ctx.translate(x, y);
+    if (totalAngle !== 0) ctx.rotate(totalAngle);
+    if (roundness < 0.99) ctx.scale(1, roundness);
+    ctx.drawImage(scratch, -size / 2, -size / 2);
     ctx.restore();
     return;
   }
 
   ctx.save();
   ctx.globalAlpha = effectiveOpacity;
+  ctx.translate(x, y);
+  if (totalAngle !== 0) ctx.rotate(totalAngle);
+  if (roundness < 0.99) ctx.scale(1, roundness);
 
   if (brush.hardness >= 0.98) {
     // Hard-edge brush: plain filled circle, cheaper and crisper.
     ctx.fillStyle = brush.color;
     ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
     ctx.fill();
   } else {
     const innerStop = Math.max(0, Math.min(0.99, brush.hardness));
-    const gradient = ctx.createRadialGradient(x, y, radius * innerStop, x, y, radius);
+    const gradient = ctx.createRadialGradient(0, 0, radius * innerStop, 0, 0, radius);
     gradient.addColorStop(0, brush.color);
     gradient.addColorStop(1, hexToRgba(brush.color, 0));
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -72,18 +93,76 @@ export function stampBrush(ctx: CanvasRenderingContext2D, point: Point, brush: B
 }
 
 /**
- * Draws a smooth stroke segment between two points by stamping brush dabs
- * at a fixed spacing along the path. Prevents gappy strokes on fast drags.
- * Pressure is interpolated between the two endpoints along the segment.
+ * Toon Boom Harmony / Clip Studio style crisp variable-width tapered vector ribbon.
+ * Renders a razor-sharp anti-aliased capsule/trapezoid between two pressure points
+ * with zero stamp stepping at any speed or zoom level.
+ */
+function drawVectorRibbonSegment(ctx: CanvasRenderingContext2D, from: Point, to: Point, brush: BrushSettings) {
+  const p0 = from.pressure ?? 1;
+  const p1 = to.pressure ?? 1;
+  const r0 = Math.max(0.4, (brush.size * (brush.pressureSize ? pressureFactor(p0, brush.minPressureFactor) : 1)) / 2);
+  const r1 = Math.max(0.4, (brush.size * (brush.pressureSize ? pressureFactor(p1, brush.minPressureFactor) : 1)) / 2);
+  const avgP = (p0 + p1) * 0.5;
+  const op = Math.max(0, Math.min(1, brush.opacity * (brush.pressureOpacity ? pressureFactor(avgP, brush.minPressureFactor) : 1)));
+
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const len = Math.hypot(dx, dy);
+
+  ctx.save();
+  ctx.globalAlpha = op;
+  ctx.fillStyle = brush.color;
+
+  if (len < 0.25) {
+    ctx.beginPath();
+    ctx.arc(to.x, to.y, r1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    return;
+  }
+
+  const nx = -dy / len;
+  const ny = dx / len;
+  const roundness = Math.max(0.2, Math.min(1, brush.roundness ?? 1));
+  const w0 = r0 * roundness;
+  const w1 = r1 * roundness;
+
+  ctx.beginPath();
+  ctx.moveTo(from.x + nx * w0, from.y + ny * w0);
+  ctx.lineTo(to.x + nx * w1, to.y + ny * w1);
+  ctx.lineTo(to.x - nx * w1, to.y - ny * w1);
+  ctx.lineTo(from.x - nx * w0, from.y - ny * w0);
+  ctx.closePath();
+  ctx.fill();
+
+  // Smooth round end-cap so corners and joints stay 100% seamless
+  ctx.beginPath();
+  ctx.arc(to.x, to.y, w1, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+/**
+ * Draws a smooth stroke segment between two points — either as a crisp Toon Boom
+ * vector ribbon (when brush.vectorSmooth is enabled) or by stamping brush dabs
+ * along the path with stroke-angle following and per-brush spacing.
  */
 export function strokeSegment(ctx: CanvasRenderingContext2D, from: Point, to: Point, brush: BrushSettings, texture?: HTMLCanvasElement) {
+  if (brush.vectorSmooth && !texture) {
+    drawVectorRibbonSegment(ctx, from, to, brush);
+    return;
+  }
+
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
-  const spacing = Math.max(1, brush.size * 0.06);
+  const spacingRatio = Math.max(0.03, Math.min(0.6, brush.spacing ?? 0.06));
+  const spacing = Math.max(1, brush.size * spacingRatio);
   const steps = Math.max(1, Math.floor(distance / spacing));
   const fromPressure = from.pressure ?? 1;
   const toPressure = to.pressure ?? 1;
+  const strokeAngle = Math.atan2(dy, dx);
 
   for (let i = 1; i <= steps; i++) {
     const t = i / steps;
@@ -91,7 +170,7 @@ export function strokeSegment(ctx: CanvasRenderingContext2D, from: Point, to: Po
       x: from.x + dx * t,
       y: from.y + dy * t,
       pressure: fromPressure + (toPressure - fromPressure) * t,
-    }, brush, texture);
+    }, brush, texture, strokeAngle);
   }
 }
 

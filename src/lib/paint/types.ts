@@ -94,6 +94,22 @@ export interface BrushSettings {
   minPressureFactor: number; // 0-1, how thin/faint the stroke gets at zero pressure
   smoothing: number; // 0-1, how much input jitter is filtered out
   textureId?: string; // uploaded custom brush tip, falls back to the round brush if unset
+  /** Stamp spacing as a fraction of brush size (e.g. 0.05 smooth ink, 0.25 rake/chalk). */
+  spacing?: number;
+  /** Rotate brush tip along the stroke direction (Oil Rake, Flat Gouache, Sumi, Chisel). */
+  angleFollow?: boolean;
+  /** Fixed nib rotation offset in degrees (e.g. 35 for Calligraphy / Chisel Marker). */
+  angleOffset?: number;
+  /** Random rotation jitter per dab, 0-1 (Charcoal, Chalk, Splatter, Foliage). */
+  angleJitter?: number;
+  /** Perpendicular positional scatter multiplier, 0-2 (Dry Grain, Spray, FX). */
+  scatter?: number;
+  /** Organic per-dab size jitter, 0-0.6. */
+  sizeJitter?: number;
+  /** Elliptical nib squeeze, 0.15-1.0 (1 = round, 0.35 = flat chisel/pencil). */
+  roundness?: number;
+  /** Toon Boom Harmony / Clip Studio style crisp variable-width vector ribbon rendering. */
+  vectorSmooth?: boolean;
   /** Magic-wand / fill colour distance threshold, 0-255. */
   tolerance: number;
   /** How much pigment the smudge tool drags along the stroke, 0-1. */
@@ -132,32 +148,221 @@ export interface CustomBrushTexture {
   builtin?: boolean;
 }
 
-export type BrushCategory = 'Sketch' | 'Inking' | 'Painting' | 'Texture' | 'FX';
+export type BrushCategory = 'Vector' | 'Sketch' | 'Inking' | 'Painting' | 'Texture' | 'FX';
 
 export interface BrushPreset {
   id: string;
   name: string;
   category: BrushCategory;
-  settings: Pick<BrushSettings, 'hardness' | 'pressureSize' | 'pressureOpacity' | 'minPressureFactor' | 'smoothing' | 'textureId'>;
+  badge?: string;
+  settings: Partial<
+    Pick<
+      BrushSettings,
+      | 'hardness'
+      | 'pressureSize'
+      | 'pressureOpacity'
+      | 'minPressureFactor'
+      | 'smoothing'
+      | 'textureId'
+      | 'spacing'
+      | 'angleFollow'
+      | 'angleOffset'
+      | 'angleJitter'
+      | 'scatter'
+      | 'sizeJitter'
+      | 'roundness'
+      | 'vectorSmooth'
+    >
+  >;
 }
 
 export const BRUSH_PRESETS: BrushPreset[] = [
-  // Sketch
-  { id: 'pencil', name: 'Pencil', category: 'Sketch', settings: { hardness: 1, pressureSize: true, pressureOpacity: true, minPressureFactor: 0.4, smoothing: 0.1 } },
-  { id: 'charcoal', name: 'Charcoal Block', category: 'Sketch', settings: { textureId: 'builtin-charcoal', hardness: 1.0, pressureSize: true, pressureOpacity: true, minPressureFactor: 0.5, smoothing: 0.1 } },
-  { id: 'graphite', name: 'Graphite Pencil', category: 'Sketch', settings: { textureId: 'builtin-graphite', hardness: 0.7, pressureSize: true, pressureOpacity: true, minPressureFactor: 0.3, smoothing: 0.2 } },
-  
-  // Inking
-  { id: 'ink', name: 'Ink Pen', category: 'Inking', settings: { hardness: 1, pressureSize: false, pressureOpacity: false, minPressureFactor: 1, smoothing: 0.15 } },
-  { id: 'fineliner', name: 'Fine Liner', category: 'Inking', settings: { textureId: 'builtin-fineliner', hardness: 1.0, pressureSize: true, pressureOpacity: false, minPressureFactor: 0.1, smoothing: 0.4 } },
-  { id: 'calligraphy', name: 'Calligraphy Pen', category: 'Inking', settings: { textureId: 'builtin-calligraphy', hardness: 1.0, pressureSize: true, pressureOpacity: false, minPressureFactor: 0.1, smoothing: 0.5 } },
-  { id: 'marker', name: 'Marker', category: 'Inking', settings: { hardness: 0.6, pressureSize: false, pressureOpacity: true, minPressureFactor: 0.5, smoothing: 0.2 } },
-  
-  // Painting
-  { id: 'round', name: 'Round Brush', category: 'Painting', settings: { hardness: 0.85, pressureSize: true, pressureOpacity: false, minPressureFactor: 0.35, smoothing: 0.3 } },
-  { id: 'soft', name: 'Soft Airbrush', category: 'Painting', settings: { hardness: 0.15, pressureSize: true, pressureOpacity: true, minPressureFactor: 0.15, smoothing: 0.35 } },
-  { id: 'oil', name: 'Oil Bristles', category: 'Painting', settings: { textureId: 'builtin-oil', hardness: 0.9, pressureSize: true, pressureOpacity: true, minPressureFactor: 0.6, smoothing: 0.4 } },
-  { id: 'wet-watercolor', name: 'Wet Watercolor', category: 'Painting', settings: { textureId: 'builtin-wet-watercolor', hardness: 0.0, pressureSize: true, pressureOpacity: true, minPressureFactor: 0.2, smoothing: 0.6 } },
+  // Vector (Toon Boom Harmony / Clip Studio / Flash style crisp tapered ribbons)
+  {
+    id: 'vector-gpen',
+    name: 'Vector G-Pen',
+    category: 'Vector',
+    badge: 'TOON BOOM',
+    settings: {
+      textureId: undefined,
+      vectorSmooth: true,
+      hardness: 1,
+      pressureSize: true,
+      pressureOpacity: false,
+      minPressureFactor: 0.12,
+      smoothing: 0.55,
+      roundness: 1,
+    },
+  },
+  {
+    id: 'vector-cleanup',
+    name: 'Vector Clean-Up Mono',
+    category: 'Vector',
+    badge: 'VECTOR',
+    settings: {
+      textureId: undefined,
+      vectorSmooth: true,
+      hardness: 1,
+      pressureSize: false,
+      pressureOpacity: false,
+      minPressureFactor: 1,
+      smoothing: 0.65,
+      roundness: 1,
+    },
+  },
+  {
+    id: 'vector-rough-pencil',
+    name: 'Vector Rough Animator',
+    category: 'Vector',
+    badge: 'VECTOR',
+    settings: {
+      textureId: undefined,
+      vectorSmooth: true,
+      hardness: 1,
+      pressureSize: true,
+      pressureOpacity: true,
+      minPressureFactor: 0.28,
+      smoothing: 0.35,
+      roundness: 1,
+    },
+  },
+  {
+    id: 'vector-chisel',
+    name: 'Vector Chisel Smear',
+    category: 'Vector',
+    badge: 'VECTOR',
+    settings: {
+      textureId: undefined,
+      vectorSmooth: true,
+      hardness: 1,
+      pressureSize: true,
+      pressureOpacity: false,
+      minPressureFactor: 0.35,
+      smoothing: 0.45,
+      roundness: 0.4,
+      angleOffset: 35,
+    },
+  },
+
+  // Sketch (Photoshop / Procreate / TVPaint)
+  {
+    id: '6b-anim-pencil',
+    name: '6B Animation Pencil',
+    category: 'Sketch',
+    badge: 'PROCREATE',
+    settings: {
+      textureId: 'builtin-graphite',
+      vectorSmooth: false,
+      hardness: 0.75,
+      pressureSize: true,
+      pressureOpacity: true,
+      minPressureFactor: 0.32,
+      smoothing: 0.18,
+      spacing: 0.12,
+      angleJitter: 0.45,
+      roundness: 0.55,
+    },
+  },
+  { id: 'pencil', name: 'Pencil', category: 'Sketch', settings: { textureId: undefined, vectorSmooth: false, hardness: 1, pressureSize: true, pressureOpacity: true, minPressureFactor: 0.4, smoothing: 0.1 } },
+  { id: 'charcoal', name: 'Charcoal Block', category: 'Sketch', settings: { textureId: 'builtin-charcoal', vectorSmooth: false, hardness: 1.0, pressureSize: true, pressureOpacity: true, minPressureFactor: 0.5, smoothing: 0.1, spacing: 0.15, angleJitter: 0.35 } },
+  { id: 'graphite', name: 'Graphite Pencil', category: 'Sketch', settings: { textureId: 'builtin-graphite', vectorSmooth: false, hardness: 0.7, pressureSize: true, pressureOpacity: true, minPressureFactor: 0.3, smoothing: 0.2, spacing: 0.1, angleJitter: 0.25 } },
+
+  // Inking (Photoshop / Manga / Sakuga)
+  {
+    id: 'dry-sumi',
+    name: 'Dry Sumi Ink',
+    category: 'Inking',
+    badge: 'SAKUGA',
+    settings: {
+      textureId: 'builtin-dry-sumi',
+      vectorSmooth: false,
+      hardness: 1.0,
+      pressureSize: true,
+      pressureOpacity: false,
+      minPressureFactor: 0.15,
+      smoothing: 0.35,
+      spacing: 0.08,
+      angleFollow: true,
+    },
+  },
+  {
+    id: 'chisel-copic',
+    name: 'Chisel Copic Marker',
+    category: 'Inking',
+    badge: 'PHOTOSHOP',
+    settings: {
+      textureId: 'builtin-chisel-nib',
+      vectorSmooth: false,
+      hardness: 0.9,
+      pressureSize: false,
+      pressureOpacity: true,
+      minPressureFactor: 0.55,
+      smoothing: 0.3,
+      spacing: 0.05,
+      angleOffset: 40,
+    },
+  },
+  { id: 'ink', name: 'Ink Pen', category: 'Inking', settings: { textureId: undefined, vectorSmooth: false, hardness: 1, pressureSize: false, pressureOpacity: false, minPressureFactor: 1, smoothing: 0.15 } },
+  { id: 'fineliner', name: 'Fine Liner', category: 'Inking', settings: { textureId: 'builtin-fineliner', vectorSmooth: false, hardness: 1.0, pressureSize: true, pressureOpacity: false, minPressureFactor: 0.1, smoothing: 0.4 } },
+  { id: 'calligraphy', name: 'Calligraphy Pen', category: 'Inking', settings: { textureId: 'builtin-calligraphy', vectorSmooth: false, hardness: 1.0, pressureSize: true, pressureOpacity: false, minPressureFactor: 0.1, smoothing: 0.5, angleOffset: 35 } },
+  { id: 'marker', name: 'Marker', category: 'Inking', settings: { textureId: undefined, vectorSmooth: false, hardness: 0.6, pressureSize: false, pressureOpacity: true, minPressureFactor: 0.5, smoothing: 0.2 } },
+
+  // Painting (Photoshop Kyle-style / Concept Art)
+  {
+    id: 'studio-rake',
+    name: 'Studio Oil Rake',
+    category: 'Painting',
+    badge: 'PHOTOSHOP',
+    settings: {
+      textureId: 'builtin-studio-rake',
+      vectorSmooth: false,
+      hardness: 0.9,
+      pressureSize: true,
+      pressureOpacity: true,
+      minPressureFactor: 0.45,
+      smoothing: 0.38,
+      spacing: 0.09,
+      angleFollow: true,
+    },
+  },
+  {
+    id: 'gouache-flat',
+    name: 'Gouache Flat',
+    category: 'Painting',
+    badge: 'PROCREATE',
+    settings: {
+      textureId: 'builtin-gouache-flat',
+      vectorSmooth: false,
+      hardness: 0.85,
+      pressureSize: true,
+      pressureOpacity: true,
+      minPressureFactor: 0.5,
+      smoothing: 0.32,
+      spacing: 0.11,
+      angleFollow: true,
+      sizeJitter: 0.08,
+    },
+  },
+  {
+    id: 'concept-round',
+    name: 'Concept Painter Round',
+    category: 'Painting',
+    badge: 'PHOTOSHOP',
+    settings: {
+      textureId: undefined,
+      vectorSmooth: false,
+      hardness: 0.72,
+      pressureSize: true,
+      pressureOpacity: true,
+      minPressureFactor: 0.25,
+      smoothing: 0.28,
+      roundness: 0.82,
+    },
+  },
+  { id: 'round', name: 'Round Brush', category: 'Painting', settings: { textureId: undefined, vectorSmooth: false, hardness: 0.85, pressureSize: true, pressureOpacity: false, minPressureFactor: 0.35, smoothing: 0.3 } },
+  { id: 'soft', name: 'Soft Airbrush', category: 'Painting', settings: { textureId: undefined, vectorSmooth: false, hardness: 0.15, pressureSize: true, pressureOpacity: true, minPressureFactor: 0.15, smoothing: 0.35 } },
+  { id: 'oil', name: 'Oil Bristles', category: 'Painting', settings: { textureId: 'builtin-oil', vectorSmooth: false, hardness: 0.9, pressureSize: true, pressureOpacity: true, minPressureFactor: 0.6, smoothing: 0.4, angleFollow: true } },
+  { id: 'wet-watercolor', name: 'Wet Watercolor', category: 'Painting', settings: { textureId: 'builtin-wet-watercolor', vectorSmooth: false, hardness: 0.0, pressureSize: true, pressureOpacity: true, minPressureFactor: 0.2, smoothing: 0.6, angleJitter: 0.5 } },
   
   // Texture
   { id: 'sponge', name: 'Dry Sponge', category: 'Texture', settings: { textureId: 'builtin-sponge', hardness: 0.8, pressureSize: false, pressureOpacity: true, minPressureFactor: 0.8, smoothing: 0.1 } },

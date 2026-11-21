@@ -1242,11 +1242,11 @@ class VideoPlayerWidget(QtWidgets.QFrame):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(8)
 
-        # Video Display Surface - clean rounded cinema viewport
+        # Video Display Surface - clean rounded cinema viewport (matches Blender Studio)
         self.display_container = QtWidgets.QStackedWidget()
-        self.display_container.setMinimumHeight(200)
+        self.display_container.setMinimumHeight(280)
         self.display_container.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        self.display_container.setStyleSheet("background-color: #050508; border-radius: 10px;")
+        self.display_container.setStyleSheet("background-color: #040407; border-radius: 10px;")
         self.display_container.setCursor(QtCore.Qt.PointingHandCursor)
         self.display_container.mousePressEvent = self._on_display_clicked
 
@@ -1336,24 +1336,40 @@ class VideoPlayerWidget(QtWidgets.QFrame):
         self.next_frame_btn.clicked.connect(lambda: self.step_frame(1))
         ctrl_bar.addWidget(self.next_frame_btn)
 
-        # Mute / Volume
+        # Mute / Volume & time label kept as hidden widgets for backward compatibility
         self.mute_btn = QtWidgets.QPushButton("🔊")
         self.mute_btn.setProperty("class", "YTBtn")
         self.mute_btn.setFixedSize(28, 26)
         self.mute_btn.setToolTip("Mute / Unmute (M)")
         self.mute_btn.clicked.connect(self.toggle_mute)
-        ctrl_bar.addWidget(self.mute_btn)
+        self.mute_btn.setVisible(False)
 
-        # Clean time & frame readout
         self.time_label = QtWidgets.QLabel("00:00 / 00:00")
         self.time_label.setStyleSheet("color: #a1a1aa; font-size: 10px; font-weight: 600; margin-left: 2px; background: transparent;")
-        ctrl_bar.addWidget(self.time_label)
+        self.time_label.setVisible(False)
 
-        self.frame_label = QtWidgets.QLabel("0f")
-        self.frame_label.setStyleSheet("color: #c4b5fd; background-color: rgba(124, 58, 237, 0.18); border-radius: 6px; padding: 2px 6px; font-size: 10px; font-weight: 700;")
+        # Clean frame pill readout (matches Blender Studio Player)
+        self.frame_label = QtWidgets.QLabel("0f · 24fps")
+        self.frame_label.setStyleSheet("color: #c4b5fd; background-color: rgba(124, 58, 237, 0.22); border-radius: 7px; padding: 3px 8px; font-size: 10px; font-weight: 700;")
         ctrl_bar.addWidget(self.frame_label)
 
         ctrl_bar.addStretch()
+
+        # Speed
+        self.speed_btn = QtWidgets.QPushButton("1.0x")
+        self.speed_btn.setProperty("class", "YTBtn")
+        self.speed_btn.setToolTip("Playback Speed (Click to cycle)")
+        self.speed_btn.clicked.connect(self.cycle_speed)
+        ctrl_bar.addWidget(self.speed_btn)
+
+        # Loop
+        self.loop_btn = QtWidgets.QPushButton("↻")
+        self.loop_btn.setProperty("class", "YTBtn")
+        self.loop_btn.setFixedSize(28, 26)
+        self.loop_btn.setProperty("active", "true" if self.is_looping else "false")
+        self.loop_btn.setToolTip("Toggle seamless loop (L)")
+        self.loop_btn.clicked.connect(self.toggle_loop)
+        ctrl_bar.addWidget(self.loop_btn)
 
         # Sync Maya timeline
         self.sync_btn = QtWidgets.QPushButton("Sync")
@@ -1365,30 +1381,6 @@ class VideoPlayerWidget(QtWidgets.QFrame):
         self.sync_btn.clicked.connect(self.toggle_timeline_sync)
         ctrl_bar.addWidget(self.sync_btn)
 
-        # Loop
-        self.loop_btn = QtWidgets.QPushButton("↻")
-        self.loop_btn.setProperty("class", "YTBtn")
-        self.loop_btn.setFixedSize(28, 26)
-        self.loop_btn.setProperty("active", "true" if self.is_looping else "false")
-        self.loop_btn.setToolTip("Toggle seamless loop (L)")
-        self.loop_btn.clicked.connect(self.toggle_loop)
-        ctrl_bar.addWidget(self.loop_btn)
-
-        # Speed
-        self.speed_btn = QtWidgets.QPushButton("1.0x")
-        self.speed_btn.setProperty("class", "YTBtn")
-        self.speed_btn.setToolTip("Playback Speed (Click to cycle)")
-        self.speed_btn.clicked.connect(self.cycle_speed)
-        ctrl_bar.addWidget(self.speed_btn)
-
-        # Collapsible Animator Tools toggle (keeps player sleek & uncluttered!)
-        self.tools_toggle_btn = QtWidgets.QPushButton("Tools")
-        self.tools_toggle_btn.setProperty("class", "YTBtn")
-        self.tools_toggle_btn.setCheckable(True)
-        self.tools_toggle_btn.setChecked(False)
-        self.tools_toggle_btn.setToolTip("Show/Hide A-B Loop, Magic Align & Pose Bookmarks")
-        ctrl_bar.addWidget(self.tools_toggle_btn)
-
         # Settings Gear
         self.settings_btn = QtWidgets.QPushButton("⚙")
         self.settings_btn.setProperty("class", "YTBtn")
@@ -1396,6 +1388,13 @@ class VideoPlayerWidget(QtWidgets.QFrame):
         self.settings_btn.setToolTip("Settings (Speed, FPS, Loop, Offset)")
         self.settings_btn.clicked.connect(self.show_settings_menu)
         ctrl_bar.addWidget(self.settings_btn)
+
+        # Collapsible Animator Tools toggle (kept hidden from primary bar for simplicity)
+        self.tools_toggle_btn = QtWidgets.QPushButton("Tools")
+        self.tools_toggle_btn.setProperty("class", "YTBtn")
+        self.tools_toggle_btn.setCheckable(True)
+        self.tools_toggle_btn.setChecked(False)
+        self.tools_toggle_btn.setVisible(False)
 
         # Hidden legacy attributes
         self.theater_btn = QtWidgets.QPushButton("⛶")
@@ -4087,12 +4086,12 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         panel_layout.setContentsMargins(0, 0, 0, 0)
         panel_layout.setSpacing(0)
 
-        # Studio Screen Top Header with Back Button
+        # Studio Screen Top Header (matches Blender's clean single-row player header)
         drawer_hdr_frame = QtWidgets.QFrame()
-        drawer_hdr_frame.setStyleSheet("background-color: #111119; border-bottom: 1px solid #272736;")
+        drawer_hdr_frame.setStyleSheet("background-color: #09090e; border-bottom: 1px solid #232332;")
         drawer_hdr = QtWidgets.QHBoxLayout(drawer_hdr_frame)
-        drawer_hdr.setContentsMargins(12, 8, 12, 8)
-        drawer_hdr.setSpacing(8)
+        drawer_hdr.setContentsMargins(14, 10, 14, 10)
+        drawer_hdr.setSpacing(10)
 
         close_drawer_btn = QtWidgets.QPushButton("← Back")
         close_drawer_btn.setCursor(QtCore.Qt.PointingHandCursor)
@@ -4102,87 +4101,117 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
                 color: #f4f4f5;
                 border: 1px solid #272736;
                 border-radius: 10px;
-                padding: 4px 12px;
+                padding: 5px 12px;
                 font-size: 11px;
                 font-weight: 700;
             }
             QPushButton:hover {
-                background-color: #7c3aed;
+                background-color: #232334;
+                border-color: #3f3f52;
                 color: #ffffff;
             }
         """)
         close_drawer_btn.clicked.connect(self.close_studio_screen)
         drawer_hdr.addWidget(close_drawer_btn)
 
-        drawer_lbl = QtWidgets.QLabel("STUDIO PLAYER")
-        drawer_lbl.setStyleSheet("color: #a1a1aa; font-size: 10px; font-weight: 800; letter-spacing: 1.5px; background: transparent;")
-        drawer_hdr.addWidget(drawer_lbl)
-        drawer_hdr.addStretch()
+        self.detail_title = QtWidgets.QLabel("Select a reference card")
+        self.detail_title.setStyleSheet("font-weight: 800; font-size: 14px; color: #ffffff; background: transparent;")
+        self.detail_title.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        drawer_hdr.addWidget(self.detail_title, stretch=1)
+
+        self.save_btn = QtWidgets.QPushButton("+ Save")
+        self.save_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        self.save_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #161622;
+                color: #e4e4e7;
+                border: 1px solid #272736;
+                border-radius: 10px;
+                padding: 5px 11px;
+                font-size: 11px;
+                font-weight: 700;
+            }
+            QPushButton:hover {
+                background-color: #232334;
+                color: #ffffff;
+            }
+        """)
+        self.save_btn.clicked.connect(self.toggle_save_selected_video)
+        drawer_hdr.addWidget(self.save_btn)
+
+        self.import_btn = QtWidgets.QPushButton("+ Import to Maya")
+        self.import_btn.setObjectName("PrimaryBtn")
+        self.import_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        self.import_btn.setEnabled(False)
+        self.import_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #7c3aed;
+                color: #ffffff;
+                border: none;
+                border-radius: 10px;
+                padding: 6px 14px;
+                font-size: 11px;
+                font-weight: 800;
+            }
+            QPushButton:hover { background-color: #8b5cf6; }
+            QPushButton:disabled { background-color: #1f1f2c; color: #71717a; }
+        """)
+        self.import_btn.clicked.connect(self.on_import_clicked)
+        drawer_hdr.addWidget(self.import_btn)
         panel_layout.addWidget(drawer_hdr_frame)
 
-        # Scrollable content for the rest of the inspector
+        # Clean Full-Panel Studio Body (Video Hero + Single Placement Bar + Collapsible More)
         drawer_scroll = QtWidgets.QScrollArea(self.inspector_panel)
         drawer_scroll.setWidgetResizable(True)
         drawer_scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
-        drawer_scroll.setStyleSheet("QScrollArea { background-color: #111119; border: none; }")
+        drawer_scroll.setStyleSheet("QScrollArea { background-color: #09090e; border: none; }")
 
         drawer_content = QtWidgets.QWidget()
-        drawer_content.setStyleSheet("background-color: #111119;")
+        drawer_content.setStyleSheet("background-color: #09090e;")
         self.detail_layout = QtWidgets.QVBoxLayout(drawer_content)
-        self.detail_layout.setContentsMargins(14, 10, 14, 14)
-        self.detail_layout.setSpacing(8)
+        self.detail_layout.setContentsMargins(14, 12, 14, 14)
+        self.detail_layout.setSpacing(10)
 
         self.player_widget = VideoPlayerWidget(drawer_content)
         self.detail_layout.addWidget(self.player_widget, stretch=1)
 
-        self.detail_title = QtWidgets.QLabel("Select a reference card")
-        self.detail_title.setStyleSheet("font-weight: 700; font-size: 14px; color: #f4f4f5; background: transparent;")
-        self.detail_title.setWordWrap(True)
-        self.detail_layout.addWidget(self.detail_title)
+        self.progress_bar = QtWidgets.QProgressBar()
+        self.progress_bar.setVisible(False)
+        self.detail_layout.addWidget(self.progress_bar)
 
-        self.meta_container = QtWidgets.QWidget()
-        self.meta_container.setStyleSheet("background: transparent;")
-        meta_row = QtWidgets.QHBoxLayout(self.meta_container)
-        meta_row.setContentsMargins(0, 0, 0, 0)
-        self.detail_meta = QtWidgets.QLabel("")
-        self.detail_meta.setStyleSheet("color: #a1a1aa; font-size: 11px; background: transparent;")
-        self.detail_meta.setWordWrap(True)
-        meta_row.addWidget(self.detail_meta, stretch=1)
-
-        self.save_btn = QtWidgets.QPushButton("+ Save")
-        self.save_btn.clicked.connect(self.toggle_save_selected_video)
-        meta_row.addWidget(self.save_btn)
-        self.detail_layout.addWidget(self.meta_container)
-
-        self.tags_container = QtWidgets.QWidget()
-        self.tags_container.setStyleSheet("background: transparent;")
-        self.tags_flow_layout = QtWidgets.QHBoxLayout(self.tags_container)
-        self.tags_flow_layout.setContentsMargins(0, 0, 0, 0)
-        self.tags_flow_layout.setSpacing(4)
-        self.detail_layout.addWidget(self.tags_container)
-
-        self.opts_box = QtWidgets.QGroupBox("Maya Viewport Placement")
+        # Single-Row Maya Placement Card (exact match to Blender's .placement-card)
+        self.opts_box = QtWidgets.QFrame()
         self.opts_box.setStyleSheet("""
-            QGroupBox {
-                background-color: #09090e;
-                font-weight: 700;
-                color: #f4f4f5;
+            QFrame {
+                background-color: #111119;
                 border: 1px solid #272736;
-                border-radius: 10px;
-                margin-top: 6px;
-                padding-top: 8px;
+                border-radius: 12px;
+            }
+            QLabel {
+                background: transparent;
+                border: none;
+                color: #a1a1aa;
+                font-size: 11px;
+                font-weight: 700;
+            }
+            QCheckBox {
+                background: transparent;
+                border: none;
+                color: #a1a1aa;
+                font-size: 11px;
+                font-weight: 600;
             }
         """)
-        opts_layout = QtWidgets.QVBoxLayout(self.opts_box)
-        opts_layout.setSpacing(6)
+        placement_row = QtWidgets.QHBoxLayout(self.opts_box)
+        placement_row.setContentsMargins(12, 9, 12, 9)
+        placement_row.setSpacing(8)
 
-        cam_layout = QtWidgets.QHBoxLayout()
-        cam_layout.addWidget(QtWidgets.QLabel("Mode:"))
+        placement_row.addWidget(QtWidgets.QLabel("Maya Placement:"))
+
         self.cam_combo = QtWidgets.QComboBox()
         self.refresh_cameras_dropdown()
-        cam_layout.addWidget(self.cam_combo, stretch=1)
+        placement_row.addWidget(self.cam_combo, stretch=1)
 
-        cam_layout.addWidget(QtWidgets.QLabel("PiP:"))
         self.pip_combo = QtWidgets.QComboBox()
         self.pip_combo.addItems([
             "Full Frame",
@@ -4193,56 +4222,108 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         ])
         self.pip_combo.setCurrentIndex(0)
         self.pip_combo.currentTextChanged.connect(self.on_live_pip_changed)
-        cam_layout.addWidget(self.pip_combo, stretch=1)
-        opts_layout.addLayout(cam_layout)
+        placement_row.addWidget(self.pip_combo)
 
-        mode_op_layout = QtWidgets.QHBoxLayout()
-        mode_op_layout.addWidget(QtWidgets.QLabel("Format:"))
-        self.mode_combo = QtWidgets.QComboBox()
-        self.mode_combo.addItems(["Image Sequence (Smooth VP2 60fps Scrub)", "Direct Movie"])
-        mode_op_layout.addWidget(self.mode_combo, stretch=1)
-
-        mode_op_layout.addWidget(QtWidgets.QLabel("Opacity:"))
+        placement_row.addWidget(QtWidgets.QLabel("Opacity"))
         self.opacity_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.opacity_slider.setRange(10, 100)
         self.opacity_slider.setValue(90)
-        self.opacity_slider.setFixedWidth(70)
+        self.opacity_slider.setFixedWidth(72)
         self.opacity_slider.valueChanged.connect(self.on_live_opacity_changed)
-        mode_op_layout.addWidget(self.opacity_slider)
+        placement_row.addWidget(self.opacity_slider)
         self.opacity_val_lbl = QtWidgets.QLabel("90%")
         self.opacity_val_lbl.setFixedWidth(30)
-        mode_op_layout.addWidget(self.opacity_val_lbl)
-        opts_layout.addLayout(mode_op_layout)
+        placement_row.addWidget(self.opacity_val_lbl)
+
+        self.fit_timeline_check = QtWidgets.QCheckBox("Fit Timeline")
+        self.fit_timeline_check.setChecked(True)
+        self.fit_timeline_check.setToolTip("Adjusts Maya's playback range to fit the imported reference length starting from 0.")
+        placement_row.addWidget(self.fit_timeline_check)
+
+        self.more_opts_btn = QtWidgets.QPushButton("▾ More")
+        self.more_opts_btn.setCheckable(True)
+        self.more_opts_btn.setChecked(False)
+        self.more_opts_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        self.more_opts_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #161622;
+                color: #a1a1aa;
+                border: 1px solid #272736;
+                border-radius: 8px;
+                padding: 4px 9px;
+                font-size: 11px;
+                font-weight: 700;
+            }
+            QPushButton:hover { color: #ffffff; border-color: #3f3f52; }
+            QPushButton:checked { background-color: rgba(124, 58, 237, 0.22); color: #c4b5fd; border-color: #7c3aed; }
+        """)
+        placement_row.addWidget(self.more_opts_btn)
+        self.detail_layout.addWidget(self.opts_box)
+
+        # Collapsible Advanced & Scene Tools Drawer (hidden by default so player stays sleek & simple!)
+        self.advanced_drawer = QtWidgets.QWidget()
+        self.advanced_drawer.setVisible(False)
+        self.advanced_drawer.setStyleSheet("background: transparent;")
+        self.more_opts_btn.toggled.connect(self.advanced_drawer.setVisible)
+        adv_layout = QtWidgets.QVBoxLayout(self.advanced_drawer)
+        adv_layout.setContentsMargins(0, 0, 0, 0)
+        adv_layout.setSpacing(8)
+
+        self.meta_container = QtWidgets.QWidget()
+        self.meta_container.setStyleSheet("background: transparent;")
+        meta_row = QtWidgets.QHBoxLayout(self.meta_container)
+        meta_row.setContentsMargins(2, 0, 2, 0)
+        self.detail_meta = QtWidgets.QLabel("")
+        self.detail_meta.setStyleSheet("color: #a1a1aa; font-size: 11px; background: transparent;")
+        self.detail_meta.setWordWrap(True)
+        meta_row.addWidget(self.detail_meta, stretch=1)
+        adv_layout.addWidget(self.meta_container)
+
+        self.tags_container = QtWidgets.QWidget()
+        self.tags_container.setStyleSheet("background: transparent;")
+        self.tags_flow_layout = QtWidgets.QHBoxLayout(self.tags_container)
+        self.tags_flow_layout.setContentsMargins(0, 0, 0, 0)
+        self.tags_flow_layout.setSpacing(4)
+        adv_layout.addWidget(self.tags_container)
+
+        extra_opts_card = QtWidgets.QFrame()
+        extra_opts_card.setStyleSheet("QFrame { background-color: #111119; border: 1px solid #272736; border-radius: 10px; }")
+        extra_opts_layout = QtWidgets.QVBoxLayout(extra_opts_card)
+        extra_opts_layout.setContentsMargins(10, 8, 10, 8)
+        extra_opts_layout.setSpacing(6)
+
+        fmt_row = QtWidgets.QHBoxLayout()
+        fmt_lbl = QtWidgets.QLabel("Format:")
+        fmt_lbl.setStyleSheet("color: #a1a1aa; font-size: 11px; font-weight: 700; border: none;")
+        fmt_row.addWidget(fmt_lbl)
+        self.mode_combo = QtWidgets.QComboBox()
+        self.mode_combo.addItems(["Image Sequence (Smooth VP2 60fps Scrub)", "Direct Movie"])
+        fmt_row.addWidget(self.mode_combo, stretch=1)
+        extra_opts_layout.addLayout(fmt_row)
 
         checks_grid = QtWidgets.QGridLayout()
-        checks_grid.setSpacing(4)
+        checks_grid.setSpacing(6)
         self.start_curr_check = QtWidgets.QCheckBox("Start at Current Frame")
         self.start_curr_check.setChecked(False)
         self.start_curr_check.setToolTip("Unchecked: Reference starts cleanly at frame 0. Checked: starts at Maya's current time slider frame.")
         checks_grid.addWidget(self.start_curr_check, 0, 0)
 
-        self.fit_timeline_check = QtWidgets.QCheckBox("Fit Timeline Range")
-        self.fit_timeline_check.setChecked(True)
-        self.fit_timeline_check.setToolTip("Adjusts Maya's playback range to fit the imported reference length starting from 0.")
-        checks_grid.addWidget(self.fit_timeline_check, 0, 1)
-
         self.mirror_check = QtWidgets.QCheckBox("Mirror Horizontally")
         self.mirror_check.setChecked(False)
         self.mirror_check.toggled.connect(self.on_live_mirror_toggled)
-        checks_grid.addWidget(self.mirror_check, 1, 0)
+        checks_grid.addWidget(self.mirror_check, 0, 1)
 
         self.face_cam_check = QtWidgets.QCheckBox("3D Card: Auto-Face Camera")
         self.face_cam_check.setChecked(False)
-        checks_grid.addWidget(self.face_cam_check, 1, 1)
-        opts_layout.addLayout(checks_grid)
+        checks_grid.addWidget(self.face_cam_check, 1, 0)
+        extra_opts_layout.addLayout(checks_grid)
+        adv_layout.addWidget(extra_opts_card)
 
-        self.detail_layout.addWidget(self.opts_box)
-
-        # Active Scene Reference Manager
+        # Active Scene Reference Manager (inside collapsible More drawer)
         self.scene_mgr_box = QtWidgets.QGroupBox("Scene Reference Manager")
         self.scene_mgr_box.setStyleSheet("""
             QGroupBox {
-                background-color: #09090e;
+                background-color: #111119;
                 font-weight: 700;
                 color: #f4f4f5;
                 border: 1px solid #272736;
@@ -4329,18 +4410,9 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         quick_row.addWidget(self.compare_btn)
         sm_layout.addLayout(quick_row)
 
-        self.detail_layout.addWidget(self.scene_mgr_box)
+        adv_layout.addWidget(self.scene_mgr_box)
+        self.detail_layout.addWidget(self.advanced_drawer)
         self.refresh_scene_planes()
-
-        self.progress_bar = QtWidgets.QProgressBar()
-        self.progress_bar.setVisible(False)
-        self.detail_layout.addWidget(self.progress_bar)
-
-        self.import_btn = QtWidgets.QPushButton("+ Put Reference in Maya Scene")
-        self.import_btn.setObjectName("PrimaryBtn")
-        self.import_btn.setEnabled(False)
-        self.import_btn.clicked.connect(self.on_import_clicked)
-        self.detail_layout.addWidget(self.import_btn)
 
         drawer_scroll.setWidget(drawer_content)
         panel_layout.addWidget(drawer_scroll, stretch=1)

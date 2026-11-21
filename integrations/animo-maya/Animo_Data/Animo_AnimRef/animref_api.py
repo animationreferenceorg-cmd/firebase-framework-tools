@@ -520,7 +520,7 @@ def download_video_file(video, progress_callback=None):
 
     # Call server download authorization API
     url = animref_auth.SITE_API_BASE + "/videos/" + urllib_parse.quote(str(video_id), safe="") + "/download"
-    request = urllib_request.Request(url, data=b"{}", headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"})
+    request = urllib_request.Request(url, data=b'{"client":"maya"}', headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"})
     try:
         with urllib_request.urlopen(request, timeout=30) as response:
             result = json.loads(response.read().decode("utf-8"))

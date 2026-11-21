@@ -11,7 +11,7 @@ function slugify(title: string) {
   return (title || 'reference').replace(/[^\w\s-]/g, '').trim().toLowerCase().replace(/\s+/g, '-') || 'reference';
 }
 
-const FREE_PLUGIN_DAILY_IMPORTS = 3;
+const FREE_PLUGIN_DAILY_IMPORTS = 5;
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -19,17 +19,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const profile = await getTrustedProfile(identity.uid);
     const body = await request.json().catch(() => ({}));
     const client = typeof body?.client === 'string' ? body.client.toLowerCase() : '';
-    const isPluginClient = client === 'blender' || client === 'maya';
+    const isFreeQuotaClient = client === 'blender' || client === 'maya' || client === 'moodboard';
     const isProOrAdmin = identity.admin === true || profileHasPro(profile);
 
     const db = getFirestore();
     const todayKey = new Date().toISOString().slice(0, 10);
 
     if (!isProOrAdmin) {
-      if (!isPluginClient) {
+      if (!isFreeQuotaClient) {
         throw new ApiError(402, 'PRO_REQUIRED', 'Downloading reference MP4s is a Pro feature.');
       }
-      // Allow free users 3 daily 3D plugin imports so they can experience the workflow before upgrading
+      // Allow free users 5 daily reference imports across 3D plugins and moodboards
       const userSnap = await db.collection('users').doc(identity.uid).get();
       const userData = userSnap.data() || {};
       const usedToday = userData.pluginImportsDate === todayKey ? Number(userData.pluginImportsToday || 0) : 0;
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         throw new ApiError(
           402,
           'PRO_REQUIRED',
-          `You've used all ${FREE_PLUGIN_DAILY_IMPORTS} free daily 3D plugin imports. Upgrade to Pro ($1 first month) for unlimited imports.`
+          `You've used all ${FREE_PLUGIN_DAILY_IMPORTS} free daily reference imports. Upgrade to Pro ($1 first month) for unlimited imports.`
         );
       }
       await db.collection('users').doc(identity.uid).set(

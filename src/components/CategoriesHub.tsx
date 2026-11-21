@@ -102,13 +102,13 @@ export function CategoriesHub() {
 
     return (
         <div className="min-h-screen bg-transparent text-white font-sans pb-24">
-            {/* 1. Full-Screen Cinema Hero (Matches Home Screen Vibe, Left-Aligned Netflix/ArtStation Readability) */}
-            <section className="relative -mx-4 -mt-2 min-h-[82svh] overflow-hidden bg-[#08060d] md:-mx-8 flex items-center">
+            {/* 1. Full-Screen Cinema Hero (Exact Spacing, Scrims & Theme Match with Home Screen) */}
+            <section className="relative -mx-4 -mt-2 min-h-[100svh] overflow-hidden bg-[#08060d] md:-mx-8 flex items-center">
                 {/* Full-bleed motion backdrop */}
                 <div className="pointer-events-none absolute inset-0">
                     {heroPoster && (
                         <div
-                            className="absolute inset-0 bg-cover bg-center opacity-75"
+                            className="absolute inset-0 bg-cover bg-center opacity-80"
                             style={{ backgroundImage: `url(${heroPoster})` }}
                         />
                     )}
@@ -123,38 +123,43 @@ export function CategoriesHub() {
                             className="absolute inset-0 h-full w-full object-cover"
                         />
                     )}
-                    {/* High-contrast Netflix/Cinema left-to-right + bottom scrims for effortless readability */}
-                    <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,6,14,0.97)_0%,rgba(8,6,14,0.85)_42%,rgba(8,6,14,0.35)_75%,rgba(8,6,14,0.55)_100%)]" />
-                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,6,14,0.6)_0%,transparent_28%,rgba(8,6,14,0.25)_65%,rgba(8,6,14,0.98)_100%)]" />
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_45%,rgba(124,58,237,0.22),transparent_45%)]" />
+                    {/* Exact Home Screen Cinema Gradient Scrims */}
+                    <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,5,12,0.96)_0%,rgba(7,5,12,0.78)_35%,rgba(7,5,12,0.2)_70%,rgba(7,5,12,0.45)_100%)]" />
+                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,5,12,0.62)_0%,transparent_30%,rgba(7,5,12,0.12)_55%,rgba(7,5,12,0.96)_100%)]" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_46%,rgba(124,58,237,0.2),transparent_42%)]" />
                 </div>
 
-                {/* Left-Aligned Editorial Content */}
-                <div className="relative z-10 flex w-full flex-col justify-center px-6 pb-20 pt-32 sm:px-10 md:px-14 lg:px-16">
-                    <div className="max-w-3xl space-y-6">
-                        <div className="inline-flex items-center gap-2 rounded-full border border-violet-400/30 bg-violet-500/15 px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-[0.16em] text-violet-200 backdrop-blur-md">
-                            <Sparkles className="h-3.5 w-3.5 text-violet-300" />
-                            <span>Motion Collections · 30 Curated Channels</span>
+                {/* Left-Aligned Editorial Content (Exact Home Hero Padding & Type Scale) */}
+                <div className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-[1640px] flex-col justify-center px-6 pb-32 pt-36 sm:px-10 md:px-14 lg:px-20">
+                    <div className="max-w-3xl">
+                        <div className="mb-5 flex flex-wrap items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-violet-200/80">
+                            <span className="flex items-center gap-2">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                                </span>
+                                Motion Collections • 30 Curated Channels
+                            </span>
                         </div>
 
-                        <h1 className="font-display text-5xl font-black leading-[0.94] tracking-[-0.045em] text-white sm:text-6xl md:text-7xl">
+                        <h1 className="max-w-3xl font-display text-5xl font-black leading-[0.9] tracking-[-0.055em] text-white sm:text-6xl md:text-7xl lg:text-[5.2rem]">
                             Explore by
-                            <span className="block bg-gradient-to-r from-violet-300 via-fuchsia-200 to-cyan-200 bg-clip-text text-transparent">
+                            <span className="block bg-gradient-to-r from-violet-300 via-fuchsia-200 to-amber-200 bg-clip-text text-transparent">
                                 Animation Discipline.
                             </span>
                         </h1>
 
-                        <p className="max-w-xl text-base font-medium leading-relaxed text-zinc-200/85 sm:text-lg">
+                        <p className="mt-6 max-w-xl text-base font-medium leading-relaxed text-white/70 sm:text-lg">
                             Cleanly organized reference collections for body mechanics, combat, acting, creatures, 2D sakuga, and 3D character turnarounds — ready for frame-by-frame study.
                         </p>
 
-                        {/* Search Bar */}
-                        <div className="max-w-2xl relative group">
-                            <div className="relative flex items-center rounded-2xl border border-white/15 bg-black/55 backdrop-blur-2xl shadow-2xl focus-within:border-violet-400/60 focus-within:bg-black/75 transition-all">
-                                <Search className="pointer-events-none ml-4 h-5 w-5 shrink-0 text-violet-300" />
+                        {/* Search Bar (Exact Home Screen Styling) */}
+                        <div className="mt-8 max-w-2xl relative z-40">
+                            <div className="relative overflow-hidden rounded-2xl bg-black/45 shadow-[0_24px_80px_-28px_rgba(0,0,0,0.9)] backdrop-blur-2xl focus-within:bg-black/60 border border-white/10 focus-within:border-violet-500/50 transition-all flex items-center">
+                                <Search className="pointer-events-none ml-5 h-5 w-5 shrink-0 text-violet-200" />
                                 <Input
                                     placeholder="Search categories or movements (e.g. walk, sword, acting, quadruped)…"
-                                    className="h-14 border-0 bg-transparent px-3 pr-12 text-sm sm:text-base font-medium text-white placeholder:text-zinc-400 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                    className="h-16 border-0 bg-transparent px-4 pr-12 text-base font-medium text-white placeholder:text-white/40 focus-visible:ring-0 focus-visible:ring-offset-0"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     onKeyDown={(e) => {
@@ -166,7 +171,7 @@ export function CategoriesHub() {
                                         type="button"
                                         onClick={() => setSearchQuery('')}
                                         aria-label="Clear search"
-                                        className="mr-3 rounded-full p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white transition cursor-pointer"
+                                        className="mr-4 rounded-full bg-white/10 p-1.5 text-zinc-300 hover:bg-white/20 hover:text-white transition cursor-pointer"
                                     >
                                         <X className="h-4 w-4" />
                                     </button>
@@ -175,13 +180,13 @@ export function CategoriesHub() {
                         </div>
 
                         {/* Quick-Jump Popular Category Pills */}
-                        <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 mr-1">Popular:</span>
+                        <div className="mt-4 flex flex-wrap items-center gap-1.5">
+                            <span className="text-[11px] font-bold text-zinc-400 mr-1">Popular:</span>
                             {POPULAR_SHORTCUTS.map((item) => (
                                 <Link
                                     key={item.href}
                                     href={item.href}
-                                    className="rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 text-xs font-bold text-zinc-100 backdrop-blur-md hover:border-violet-400/60 hover:bg-violet-600/35 hover:text-white transition-all"
+                                    className="rounded-full bg-white/5 border border-white/10 px-3 py-1 text-[11px] font-semibold text-zinc-300 hover:bg-violet-600/30 hover:border-violet-500/50 hover:text-white transition-all"
                                 >
                                     {item.label}
                                 </Link>
@@ -189,14 +194,14 @@ export function CategoriesHub() {
                         </div>
 
                         {/* Primary Hero Action */}
-                        <div className="flex flex-wrap items-center gap-3 pt-1">
+                        <div className="mt-6 flex flex-wrap items-center gap-3">
                             <button
                                 type="button"
                                 onClick={scrollToDirectory}
-                                className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 text-sm font-black text-[#0b0911] shadow-xl transition-transform hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
+                                className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-5 text-sm font-black text-[#0b0911] transition-transform hover:scale-[1.03] cursor-pointer"
                             >
                                 <Play className="h-4 w-4 fill-current" />
-                                <span>Browse All Categories</span>
+                                <span>Browse all categories</span>
                                 <ArrowDown className="h-4 w-4" />
                             </button>
                         </div>

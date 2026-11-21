@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Download, LayoutGrid, Paintbrush, Play, Plug, Search, Sparkles, Upload, UserPlus, Users } from 'lucide-react';
 import type { Video } from '@/lib/types';
 import { useElementActivity } from '@/hooks/use-element-activity';
@@ -45,15 +45,27 @@ type HeroSpotlightSlide = {
 
 const HERO_ANNOUNCEMENT_SLIDES: HeroSpotlightSlide[] = [
   {
-    id: 'plugins',
-    tag: 'NEW · FREE PLUGINS',
+    id: 'maya',
+    tag: 'NEW · FREE MAYA PLUGIN',
     tagTone: 'border-cyan-400/40 bg-cyan-500/20 text-cyan-200',
-    title: 'Maya & Blender Studio Plugins',
-    desc: 'Drop 60fps reference planes straight to (0,0,0) with live Scene Plane controls & auto-updates.',
+    title: 'AnimRef Studio for Maya',
+    desc: 'Auto-docks on the right side of Maya, opens Saved References first, and drops 60fps planes to (0,0,0).',
     image: '/images/plugins/maya-studio-preview.jpg',
-    ctaLabel: 'Download Plugins',
-    href: '/tools',
-    secondaryLabel: 'Blender Preview',
+    ctaLabel: 'Download for Maya',
+    href: '/maya-animation-reference-plugin',
+    secondaryLabel: 'All Plugins',
+    secondaryHref: '/tools',
+  },
+  {
+    id: 'blender',
+    tag: 'NEW · FREE BLENDER ADD-ON',
+    tagTone: 'border-orange-400/40 bg-orange-500/20 text-orange-200',
+    title: 'AnimRef Studio for Blender',
+    desc: 'Frameless dark Companion Studio + live View3D N-panel controller for 3D planes & Camera PiP.',
+    image: '/images/plugins/blender-studio-preview.jpg',
+    ctaLabel: 'Download for Blender',
+    href: '/blender-animation-reference-addon',
+    secondaryLabel: 'All Plugins',
     secondaryHref: '/tools',
   },
   {
@@ -62,7 +74,7 @@ const HERO_ANNOUNCEMENT_SLIDES: HeroSpotlightSlide[] = [
     tagTone: 'border-violet-400/40 bg-violet-500/20 text-violet-200',
     title: 'Featured Animator Portfolios',
     desc: 'Upload your playblasts, share shot breakdowns, and get discovered by studios & peers.',
-    image: '/images/plugins/blender-studio-preview.jpg',
+    image: '/images/plugins/maya-studio-preview.jpg',
     ctaLabel: 'Explore Portfolios',
     href: '/feed',
     secondaryLabel: 'Share Your Shot',
@@ -74,7 +86,7 @@ const HERO_ANNOUNCEMENT_SLIDES: HeroSpotlightSlide[] = [
     tagTone: 'border-amber-400/40 bg-amber-500/20 text-amber-200',
     title: 'Unlimited Moodboards & 3D Sync',
     desc: 'Unlock unlimited Maya & Blender Moodboard imports, 24 FPS MP4s, and Contact Sheets.',
-    image: '/images/plugins/maya-studio-preview.jpg',
+    image: '/images/plugins/blender-studio-preview.jpg',
     ctaLabel: 'Unlock Pro — $1',
     href: '/pricing',
   },
@@ -148,25 +160,6 @@ export function ImmersiveHomeHeader({
   const [selectedArtwork, setSelectedArtwork] = React.useState<any | null>(null);
   const featured = videos[activeVideoIndex] || videos[0];
 
-  // Interactive 3D tilt spring values for the right-side Announcement & Community Deck
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-10, 10]), { stiffness: 180, damping: 22 });
-  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [8, -8]), { stiffness: 180, damping: 22 });
-
-  const handleCardPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (reduceMotion) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-    mouseX.set((e.clientX - rect.left) / rect.width - 0.5);
-    mouseY.set((e.clientY - rect.top) / rect.height - 0.5);
-  };
-
-  const handleCardPointerLeave = () => {
-    mouseX.set(0);
-    mouseY.set(0);
-  };
-
   // Auto-rotate announcement slides gently when active
   React.useEffect(() => {
     if (!isActive || reduceMotion) return;
@@ -176,7 +169,7 @@ export function ImmersiveHomeHeader({
     return () => window.clearInterval(t);
   }, [isActive, reduceMotion]);
 
-  // Live community shots for the interactive 3D card when on the Community slide
+  // Live community shots for the Community slide
   const communityAvatars = React.useMemo(() => {
     return allVideos
       .filter((v) => (v.isPortfolio || v.uploader || v.author_name) && (v.thumbnailUrl || v.posterUrl))
@@ -381,18 +374,11 @@ export function ImmersiveHomeHeader({
           )}
         </motion.div>
 
-        {/* Right Column: Interactive 3D Perspective Community & Announcements Deck */}
-        <div
-          className="lg:col-span-5 hidden lg:block [perspective:1200px]"
-          onPointerMove={handleCardPointerMove}
-          onPointerLeave={handleCardPointerLeave}
-        >
-          <motion.div
-            style={reduceMotion ? undefined : { rotateX, rotateY, transformStyle: 'preserve-3d' }}
-            className="relative rounded-3xl border border-white/15 bg-[#120e22]/85 p-5 shadow-[0_32px_90px_-24px_rgba(124,58,237,0.55)] backdrop-blur-2xl"
-          >
-            {/* Floating ambient violet depth ring */}
-            <div className="pointer-events-none absolute -inset-px rounded-3xl bg-gradient-to-br from-violet-400/25 via-transparent to-cyan-400/20 opacity-70" />
+        {/* Right Column: Clean Studio Announcements & Community Card */}
+        <div className="lg:col-span-5 hidden lg:block">
+          <div className="relative rounded-3xl border border-white/15 bg-[#120e22]/85 p-5 shadow-[0_28px_80px_-24px_rgba(124,58,237,0.45)] backdrop-blur-2xl">
+            {/* Subtle top border rim */}
+            <div className="pointer-events-none absolute -inset-px rounded-3xl bg-gradient-to-br from-violet-400/20 via-transparent to-cyan-400/15 opacity-70" />
 
             {/* Deck Header: Live Community Pulse + Slide Switcher */}
             <div className="relative z-10 flex items-center justify-between gap-2 pb-3.5">
@@ -467,7 +453,7 @@ export function ImmersiveHomeHeader({
                       href={activeSlide.href}
                       className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 text-xs font-extrabold text-white shadow-lg shadow-violet-950/50 hover:from-violet-500 hover:to-indigo-500 transition"
                     >
-                      {activeSlide.id === 'plugins' ? <Download className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 fill-current" />}
+                      {(activeSlide.id === 'maya' || activeSlide.id === 'blender') ? <Download className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 fill-current" />}
                       <span>{activeSlide.ctaLabel}</span>
                     </Link>
                   )}
@@ -507,7 +493,7 @@ export function ImmersiveHomeHeader({
                 </Link>
               </div>
             )}
-          </motion.div>
+          </div>
         </div>
         </div>
       </div>

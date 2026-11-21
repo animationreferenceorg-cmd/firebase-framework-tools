@@ -5253,7 +5253,7 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         cols = max(2, min(4, max(1, (self.width() - 220) // 180)))
         for idx, vid in enumerate(items):
             card = PinterestReferenceCard(vid, parent=self.uploaded_grid_container)
-            card.clicked.connect(self.on_video_selected)
+            card.clicked.connect(self.select_video_and_show)
             card.import_requested.connect(self.on_quick_import_clicked)
             self.uploaded_grid_layout.addWidget(card, idx // cols, idx % cols)
 

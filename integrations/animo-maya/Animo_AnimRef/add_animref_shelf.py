@@ -272,6 +272,19 @@ def ensure_animref_shelf(select=True, notify=False):
         return False
 
 
+def remove_animref_shelf():
+    """Remove the dedicated top 'AnimRef' Maya shelf if present."""
+    if not cmds or not hasattr(cmds, "shelfLayout"):
+        return False
+    try:
+        if cmds.shelfLayout(SHELF_NAME, query=True, exists=True):
+            cmds.deleteUI(SHELF_NAME, layout=True)
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def add_to_shelf(shelf_name=None):
     """Creates/updates the dedicated AnimRef top shelf with live plane controls."""
     return ensure_animref_shelf(select=True, notify=True)

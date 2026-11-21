@@ -1102,19 +1102,6 @@ def import_animref_to_maya(video_dict, local_video_path, mode="sequence", target
         pass
 
     try:
-        from . import add_animref_shelf
-    except (ImportError, ValueError):
-        try:
-            import add_animref_shelf
-        except ImportError:
-            add_animref_shelf = None
-    if add_animref_shelf is not None:
-        try:
-            add_animref_shelf.ensure_animref_shelf(select=True, notify=False)
-        except Exception:
-            pass
-
-    try:
         print("[AnimRef] ✓ Reference added to Maya Viewport: '{}' ({})".format(title, plane_transform))
     except Exception:
         pass

@@ -809,6 +809,13 @@ class SidebarNavPanel(QtWidgets.QFrame):
         self.sidebar_layout.addWidget(sep)
 
         self.nav_buttons = []
+        self.scene_planes_nav_btn = QtWidgets.QPushButton("🎞  Scene Planes")
+        self.scene_planes_nav_btn.setObjectName("NavBtn")
+        self.scene_planes_nav_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        self.scene_planes_nav_btn.setToolTip("Live controls for reference planes in your Maya scene")
+        self.scene_planes_nav_btn.clicked.connect(lambda: self.set_active_index(6))
+        self.sidebar_layout.addWidget(self.scene_planes_nav_btn)
+
         self.playblast_nav_btn = QtWidgets.QPushButton("🎬  Playblast")
         self.playblast_nav_btn.setObjectName("NavBtn")
         self.playblast_nav_btn.setCursor(QtCore.Qt.PointingHandCursor)
@@ -891,9 +898,11 @@ class SidebarNavPanel(QtWidgets.QFrame):
             self.sidebar_layout.setContentsMargins(4, 8, 4, 8)
             self.all_saves_btn.setToolTip("All saves ({} references)".format(self._all_saves_count))
             self.explore_nav_btn.setToolTip("Explore Library (8,000+ references)")
+            self.scene_planes_nav_btn.setText("🎞")
             self.playblast_nav_btn.setText("🎬")
         else:
             self.sidebar_layout.setContentsMargins(10, 10, 10, 10)
+            self.scene_planes_nav_btn.setText("🎞  Scene Planes")
             self.playblast_nav_btn.setText("🎬  Playblast")
 
         self._update_button_states()
@@ -1055,6 +1064,11 @@ class SidebarNavPanel(QtWidgets.QFrame):
             clean_name = b_name[:11] + ".." if len(b_name) > 12 else b_name
             btn.setText("📁" if self.is_collapsed else "📁  {}  {}".format(clean_name, cnt))
             self._apply_board_btn_style(btn, self.current_index == 0 and bid == str(self.active_board_id))
+
+        is_sp = (self.current_index == 6)
+        self.scene_planes_nav_btn.setProperty("active", "true" if is_sp else "false")
+        self.scene_planes_nav_btn.style().unpolish(self.scene_planes_nav_btn)
+        self.scene_planes_nav_btn.style().polish(self.scene_planes_nav_btn)
 
         is_pb = (self.current_index == 2)
         self.playblast_nav_btn.setProperty("active", "true" if is_pb else "false")
@@ -3741,6 +3755,13 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
         self.inspector_panel = self.create_inspector_panel()
         self.view_stack.addWidget(self.inspector_panel)
 
+        # Page 6: Live Scene Plane Controls (auto-syncs when selecting a plane in Maya viewport)
+        self.scene_planes_tab = QtWidgets.QWidget()
+        self.build_scene_planes_tab(self.scene_planes_tab)
+        self.view_stack.addWidget(self.scene_planes_tab)
+        self._selection_job_id = None
+        self._install_maya_selection_listener()
+
         self.splitter.addWidget(self.view_stack)
         body_layout.addWidget(self.splitter, stretch=1)
         main_layout.addWidget(self.body_container, stretch=1)
@@ -3886,10 +3907,13 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
             2: "Playblast Compare",
             3: "Account & Cache",
             4: "Explore Library",
+            6: "Scene Plane Controls",
         }
         if hasattr(self, "boards_header_lbl") and idx in header_titles:
             self.boards_header_lbl.setText(header_titles[idx])
-        if idx == 0:
+        if idx == 6:
+            self.refresh_scene_planes_panel()
+        elif idx == 0:
             self.load_boards_data()
         elif idx == 1:
             self.load_saved_data()
@@ -4969,6 +4993,368 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
             self.pb_upload_row_layout.setDirection(QtWidgets.QBoxLayout.TopToBottom if is_narrow else QtWidgets.QBoxLayout.LeftToRight)
         if hasattr(self, "pb_subtitle_lbl"):
             self.pb_subtitle_lbl.setVisible(not is_very_narrow)
+
+    # ==================== SCENE PLANE CONTROLS TAB ====================
+    def build_scene_planes_tab(self, parent):
+        outer = QtWidgets.QVBoxLayout(parent)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
+        scroll.setStyleSheet("QScrollArea { background-color: #09090e; border: none; }")
+
+        content = QtWidgets.QWidget()
+        content.setStyleSheet("background-color: #09090e;")
+        layout = QtWidgets.QVBoxLayout(content)
+        layout.setContentsMargins(18, 16, 18, 18)
+        layout.setSpacing(12)
+
+        hdr = QtWidgets.QHBoxLayout()
+        title_col = QtWidgets.QVBoxLayout()
+        title_col.setSpacing(2)
+        sp_title = QtWidgets.QLabel("Scene Plane Controls")
+        sp_title.setStyleSheet("font-size: 16px; font-weight: 800; color: #ffffff; background: transparent;")
+        title_col.addWidget(sp_title)
+        sp_sub = QtWidgets.QLabel("Click any reference plane in Maya or pick one below to adjust it live.")
+        sp_sub.setStyleSheet("font-size: 11px; color: #a1a1aa; background: transparent;")
+        title_col.addWidget(sp_sub)
+        hdr.addLayout(title_col, stretch=1)
+
+        refresh_btn = QtWidgets.QPushButton("↻ Refresh")
+        refresh_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        refresh_btn.clicked.connect(self.refresh_scene_planes_panel)
+        hdr.addWidget(refresh_btn)
+        layout.addLayout(hdr)
+
+        # Active Plane Selector Card
+        sel_card = QtWidgets.QFrame()
+        sel_card.setStyleSheet("QFrame { background-color: #111119; border: 1px solid #272736; border-radius: 12px; }")
+        sel_layout = QtWidgets.QVBoxLayout(sel_card)
+        sel_layout.setContentsMargins(12, 10, 12, 10)
+        sel_layout.setSpacing(8)
+
+        sel_row = QtWidgets.QHBoxLayout()
+        sel_lbl = QtWidgets.QLabel("Active Plane:")
+        sel_lbl.setStyleSheet("color: #a1a1aa; font-size: 11px; font-weight: 700; border: none;")
+        sel_row.addWidget(sel_lbl)
+        self.sp_plane_combo = QtWidgets.QComboBox()
+        self.sp_plane_combo.setPlaceholderText("No AnimRef planes in scene")
+        self.sp_plane_combo.currentIndexChanged.connect(self._on_sp_plane_selected)
+        sel_row.addWidget(self.sp_plane_combo, stretch=1)
+        sel_layout.addLayout(sel_row)
+
+        self.sp_empty_lbl = QtWidgets.QLabel("No reference planes in your Maya scene yet. Import any reference from Explore or Boards to control it here.")
+        self.sp_empty_lbl.setWordWrap(True)
+        self.sp_empty_lbl.setStyleSheet("color: #71717a; font-size: 11px; border: none;")
+        sel_layout.addWidget(self.sp_empty_lbl)
+        layout.addWidget(sel_card)
+
+        # Live Transform & Display Card
+        self.sp_controls_card = QtWidgets.QFrame()
+        self.sp_controls_card.setStyleSheet("QFrame { background-color: #111119; border: 1px solid #272736; border-radius: 12px; }")
+        ctrl_layout = QtWidgets.QVBoxLayout(self.sp_controls_card)
+        ctrl_layout.setContentsMargins(14, 12, 14, 12)
+        ctrl_layout.setSpacing(10)
+
+        disp_hdr = QtWidgets.QLabel("Transform & Display")
+        disp_hdr.setStyleSheet("font-size: 12px; font-weight: 800; color: #f4f4f5; border: none;")
+        ctrl_layout.addWidget(disp_hdr)
+
+        # Size / Scale slider
+        scale_row = QtWidgets.QHBoxLayout()
+        sc_lbl = QtWidgets.QLabel("Size:")
+        sc_lbl.setFixedWidth(56)
+        sc_lbl.setStyleSheet("color: #a1a1aa; font-size: 11px; font-weight: 700; border: none;")
+        scale_row.addWidget(sc_lbl)
+        self.sp_scale_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        self.sp_scale_slider.setRange(20, 400)
+        self.sp_scale_slider.setValue(100)
+        self.sp_scale_slider.valueChanged.connect(self._on_sp_scale_changed)
+        scale_row.addWidget(self.sp_scale_slider, stretch=1)
+        self.sp_scale_val = QtWidgets.QLabel("1.0x")
+        self.sp_scale_val.setFixedWidth(38)
+        self.sp_scale_val.setStyleSheet("color: #c4b5fd; font-size: 11px; font-weight: 700; border: none;")
+        scale_row.addWidget(self.sp_scale_val)
+        ctrl_layout.addLayout(scale_row)
+
+        # Opacity slider
+        op_row = QtWidgets.QHBoxLayout()
+        op_lbl = QtWidgets.QLabel("Opacity:")
+        op_lbl.setFixedWidth(56)
+        op_lbl.setStyleSheet("color: #a1a1aa; font-size: 11px; font-weight: 700; border: none;")
+        op_row.addWidget(op_lbl)
+        self.sp_opacity_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        self.sp_opacity_slider.setRange(10, 100)
+        self.sp_opacity_slider.setValue(100)
+        self.sp_opacity_slider.valueChanged.connect(self._on_sp_opacity_changed)
+        op_row.addWidget(self.sp_opacity_slider, stretch=1)
+        self.sp_opacity_val = QtWidgets.QLabel("100%")
+        self.sp_opacity_val.setFixedWidth(38)
+        self.sp_opacity_val.setStyleSheet("color: #c4b5fd; font-size: 11px; font-weight: 700; border: none;")
+        op_row.addWidget(self.sp_opacity_val)
+        ctrl_layout.addLayout(op_row)
+
+        # Quick action buttons row 1
+        act1 = QtWidgets.QHBoxLayout()
+        act1.setSpacing(6)
+        center_btn = QtWidgets.QPushButton("⌖ Center (0,0,0)")
+        center_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        center_btn.clicked.connect(self._on_sp_center_origin)
+        act1.addWidget(center_btn)
+
+        frame_btn = QtWidgets.QPushButton("🎯 Frame")
+        frame_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        frame_btn.clicked.connect(self._on_sp_focus)
+        act1.addWidget(frame_btn)
+
+        flip_btn = QtWidgets.QPushButton("⇄ Flip X")
+        flip_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        flip_btn.clicked.connect(self._on_sp_flip)
+        act1.addWidget(flip_btn)
+        ctrl_layout.addLayout(act1)
+
+        # Quick action buttons row 2
+        act2 = QtWidgets.QHBoxLayout()
+        act2.setSpacing(6)
+        lock_btn = QtWidgets.QPushButton("🔒 Lock / Unlock")
+        lock_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        lock_btn.clicked.connect(self._on_sp_lock)
+        act2.addWidget(lock_btn)
+
+        vis_btn = QtWidgets.QPushButton("👁 Show / Hide")
+        vis_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        vis_btn.clicked.connect(self._on_sp_toggle_vis)
+        act2.addWidget(vis_btn)
+
+        del_btn = QtWidgets.QPushButton("🗑 Delete")
+        del_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        del_btn.setStyleSheet(
+            "QPushButton { background-color: rgba(239, 68, 68, 0.16); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 10px; padding: 6px 12px; font-weight: 700; }"
+            "QPushButton:hover { background-color: #ef4444; color: #ffffff; }"
+        )
+        del_btn.clicked.connect(self._on_sp_delete)
+        act2.addWidget(del_btn)
+        ctrl_layout.addLayout(act2)
+        layout.addWidget(self.sp_controls_card)
+
+        # Timeline Sync Card
+        self.sp_timeline_card = QtWidgets.QFrame()
+        self.sp_timeline_card.setStyleSheet("QFrame { background-color: #111119; border: 1px solid #272736; border-radius: 12px; }")
+        tl_layout = QtWidgets.QVBoxLayout(self.sp_timeline_card)
+        tl_layout.setContentsMargins(14, 12, 14, 12)
+        tl_layout.setSpacing(10)
+
+        tl_hdr_row = QtWidgets.QHBoxLayout()
+        tl_hdr = QtWidgets.QLabel("Timeline Sync")
+        tl_hdr.setStyleSheet("font-size: 12px; font-weight: 800; color: #f4f4f5; border: none;")
+        tl_hdr_row.addWidget(tl_hdr)
+        tl_hdr_row.addStretch()
+        self.sp_offset_lbl = QtWidgets.QLabel("Offset: 0f")
+        self.sp_offset_lbl.setStyleSheet("color: #c4b5fd; background-color: rgba(124, 58, 237, 0.22); border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; border: none;")
+        tl_hdr_row.addWidget(self.sp_offset_lbl)
+        tl_layout.addLayout(tl_hdr_row)
+
+        align_btn = QtWidgets.QPushButton("⚡ Magic Align to Current Maya Frame")
+        align_btn.setObjectName("PrimaryBtn")
+        align_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        align_btn.clicked.connect(self._on_sp_magic_align)
+        tl_layout.addWidget(align_btn)
+
+        nudge_row = QtWidgets.QHBoxLayout()
+        nudge_row.setSpacing(6)
+        for delta, txt in [(-5, "-5f"), (-1, "-1f"), (1, "+1f"), (5, "+5f")]:
+            nb = QtWidgets.QPushButton(txt)
+            nb.setCursor(QtCore.Qt.PointingHandCursor)
+            nb.clicked.connect(lambda checked=False, d=delta: self._on_sp_nudge(d))
+            nudge_row.addWidget(nb)
+        reset_f_btn = QtWidgets.QPushButton("⏮ 0f")
+        reset_f_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        reset_f_btn.clicked.connect(self._on_sp_reset_zero)
+        nudge_row.addWidget(reset_f_btn)
+        tl_layout.addLayout(nudge_row)
+        layout.addWidget(self.sp_timeline_card)
+
+        layout.addStretch()
+        scroll.setWidget(content)
+        outer.addWidget(scroll)
+
+        self.refresh_scene_planes_panel()
+
+    def _get_sp_node(self):
+        if hasattr(self, "sp_plane_combo") and self.sp_plane_combo.count() > 0:
+            node = self.sp_plane_combo.currentData()
+            if node:
+                return node
+        return animref_importer.get_active_or_latest_plane() if hasattr(animref_importer, "get_active_or_latest_plane") else None
+
+    def refresh_scene_planes_panel(self, preferred_node=None):
+        if not hasattr(self, "sp_plane_combo"):
+            return
+        planes = []
+        if hasattr(animref_importer, "list_scene_animref_planes"):
+            try:
+                planes = animref_importer.list_scene_animref_planes()
+            except Exception:
+                planes = []
+        cur_node = preferred_node or self.sp_plane_combo.currentData()
+        self.sp_plane_combo.blockSignals(True)
+        self.sp_plane_combo.clear()
+        sel_idx = 0
+        for idx, p in enumerate(planes):
+            label = "{} ({})".format(p.get("title") or p["node"], p["node"])
+            self.sp_plane_combo.addItem(label, p["node"])
+            if p["node"] == cur_node:
+                sel_idx = idx
+        has_planes = len(planes) > 0
+        if has_planes:
+            self.sp_plane_combo.setCurrentIndex(sel_idx)
+        self.sp_plane_combo.blockSignals(False)
+
+        self.sp_empty_lbl.setVisible(not has_planes)
+        self.sp_controls_card.setVisible(has_planes)
+        self.sp_timeline_card.setVisible(has_planes)
+        if has_planes:
+            self._sync_sp_sliders_from_node(planes[sel_idx])
+
+    def _sync_sp_sliders_from_node(self, plane_info):
+        node = plane_info.get("node")
+        off = int(plane_info.get("frame_offset", 0))
+        if hasattr(self, "sp_offset_lbl"):
+            self.sp_offset_lbl.setText("Offset: {:+d}f".format(off))
+        if cmds and node:
+            try:
+                sx = abs(float(cmds.getAttr(node + ".scaleX") or 1.0))
+                val = max(20, min(400, int(round(sx * 100))))
+                self.sp_scale_slider.blockSignals(True)
+                self.sp_scale_slider.setValue(val)
+                self.sp_scale_slider.blockSignals(False)
+                self.sp_scale_val.setText("{:.2f}x".format(val / 100.0))
+            except Exception:
+                pass
+            try:
+                _, shape = animref_importer._resolve_plane_pair(node)
+                alpha = float(cmds.getAttr(shape + ".alphaGain") or 1.0) if shape else 1.0
+                oval = max(10, min(100, int(round(alpha * 100))))
+                self.sp_opacity_slider.blockSignals(True)
+                self.sp_opacity_slider.setValue(oval)
+                self.sp_opacity_slider.blockSignals(False)
+                self.sp_opacity_val.setText("{}%".format(oval))
+            except Exception:
+                pass
+
+    def _on_sp_plane_selected(self, idx):
+        node = self._get_sp_node()
+        if not node:
+            return
+        planes = animref_importer.list_scene_animref_planes() if hasattr(animref_importer, "list_scene_animref_planes") else []
+        for p in planes:
+            if p["node"] == node:
+                self._sync_sp_sliders_from_node(p)
+                break
+
+    def _on_sp_scale_changed(self, val):
+        self.sp_scale_val.setText("{:.2f}x".format(val / 100.0))
+        node = self._get_sp_node()
+        if cmds and node:
+            try:
+                cur_sx = float(cmds.getAttr(node + ".scaleX") or 1.0)
+                sign = -1.0 if cur_sx < 0 else 1.0
+                s = val / 100.0
+                cmds.setAttr(node + ".scaleX", sign * s)
+                cmds.setAttr(node + ".scaleY", s)
+                cmds.setAttr(node + ".scaleZ", s)
+            except Exception:
+                pass
+
+    def _on_sp_opacity_changed(self, val):
+        self.sp_opacity_val.setText("{}%".format(val))
+        node = self._get_sp_node()
+        if node and hasattr(animref_importer, "set_plane_opacity"):
+            animref_importer.set_plane_opacity(node, val / 100.0)
+
+    def _on_sp_center_origin(self):
+        node = self._get_sp_node()
+        if node and hasattr(animref_importer, "center_plane_origin"):
+            animref_importer.center_plane_origin(node)
+
+    def _on_sp_focus(self):
+        node = self._get_sp_node()
+        if cmds and node:
+            try:
+                cmds.select(node, replace=True)
+                cmds.viewFit(node)
+            except Exception:
+                pass
+
+    def _on_sp_flip(self):
+        node = self._get_sp_node()
+        if node and hasattr(animref_importer, "toggle_plane_mirror"):
+            animref_importer.toggle_plane_mirror(node)
+
+    def _on_sp_lock(self):
+        node = self._get_sp_node()
+        if node and hasattr(animref_importer, "toggle_plane_lock_hud"):
+            animref_importer.toggle_plane_lock_hud(node)
+
+    def _on_sp_toggle_vis(self):
+        node = self._get_sp_node()
+        if node and hasattr(animref_importer, "toggle_plane_visibility"):
+            animref_importer.toggle_plane_visibility(node)
+
+    def _on_sp_delete(self):
+        node = self._get_sp_node()
+        if cmds and node:
+            try:
+                cmds.delete(node)
+            except Exception:
+                pass
+            self.refresh_scene_planes_panel()
+            self.refresh_scene_planes()
+
+    def _on_sp_magic_align(self):
+        node = self._get_sp_node()
+        if node and hasattr(animref_importer, "sync_plane_to_current_frame"):
+            off = animref_importer.sync_plane_to_current_frame(node, ref_frame=1)
+            self.sp_offset_lbl.setText("Offset: {:+d}f".format(int(off)))
+
+    def _on_sp_nudge(self, delta):
+        node = self._get_sp_node()
+        if node and hasattr(animref_importer, "nudge_plane_offset"):
+            off = animref_importer.nudge_plane_offset(node, delta)
+            self.sp_offset_lbl.setText("Offset: {:+d}f".format(int(off)))
+
+    def _on_sp_reset_zero(self):
+        node = self._get_sp_node()
+        if node and hasattr(animref_importer, "reset_plane_to_zero"):
+            animref_importer.reset_plane_to_zero(node)
+            self.sp_offset_lbl.setText("Offset: +1f")
+
+    def _install_maya_selection_listener(self):
+        if not cmds or not hasattr(cmds, "scriptJob"):
+            return
+        try:
+            if getattr(self, "_selection_job_id", None) and cmds.scriptJob(exists=self._selection_job_id):
+                cmds.scriptJob(kill=self._selection_job_id, force=True)
+            self._selection_job_id = cmds.scriptJob(event=["SelectionChanged", self._on_maya_selection_changed], protected=True)
+        except Exception:
+            self._selection_job_id = None
+
+    def _on_maya_selection_changed(self):
+        if not cmds:
+            return
+        try:
+            sel = cmds.ls(selection=True, long=False) or []
+            for s in sel:
+                t, sh = animref_importer._resolve_plane_pair(s)
+                if t and sh and (t.startswith("animref_") or (cmds.attributeQuery("animref_id", node=t, exists=True))):
+                    self.refresh_scene_planes_panel(preferred_node=t)
+                    if self.view_stack.currentIndex() != 6:
+                        self.sidebar.set_active_index(6)
+                    break
+        except Exception:
+            pass
 
     # ==================== ACCOUNT TAB ====================
     def build_account_tab(self, parent):
@@ -6470,6 +6856,13 @@ class AnimRefBrowserWindow(QtWidgets.QWidget):
             self.progress_bar.setVisible(False)
 
     def closeEvent(self, event):
+        if getattr(self, "_selection_job_id", None) and cmds and hasattr(cmds, "scriptJob"):
+            try:
+                if cmds.scriptJob(exists=self._selection_job_id):
+                    cmds.scriptJob(kill=self._selection_job_id, force=True)
+            except Exception:
+                pass
+            self._selection_job_id = None
         if hasattr(self, "player_widget") and self.player_widget:
             self.player_widget.stop()
         super(AnimRefBrowserWindow, self).closeEvent(event)

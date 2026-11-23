@@ -13,10 +13,12 @@ import {
   Play,
   Send,
   Loader2,
+  FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Frame, CanvasSize } from '@/lib/paint/types';
-import { createLayerCanvas } from '@/lib/paint/engine';
+import { createLayerCanvas, compositeLayersToContext } from '@/lib/paint/engine';
+import { interpolateCamera } from './CameraOverlay';
 import { serializeProject, downloadProject } from '@/lib/paint/persistence';
 import { Layers } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -50,7 +52,8 @@ export function ExportModal({
   // Export the drawing over the reference footage (requested by users), on by default when one is pinned.
   const [includeReference, setIncludeReference] = useState<boolean>(true);
   const withReference = Boolean(referenceVideo && includeReference);
-  const [exportType, setExportType] = useState<'mp4' | 'webm' | 'spritesheet' | 'png' | 'project'>('mp4');
+  const [exportType, setExportType] = useState<'mp4' | 'webm' | 'spritesheet' | 'png' | 'pdf' | 'project'>('mp4');
+  const [burnTimecode, setBurnTimecode] = useState<boolean>(true);
   const [columns, setColumns] = useState<number>(4);
   const [includeBackground, setIncludeBackground] = useState<boolean>(true);
   const [backgroundColor, setBackgroundColor] = useState<string>('#ffffff');
@@ -266,33 +269,157 @@ export function ExportModal({
       return;
     }
 
-    // Render frames sequentially into video recorder
+    // Render frames sequentially honoring Callipeg holdFrames, 2D Camera pan/zoom moves,
+    // Clipping Masks, and optional Storyboard Pro timecode burn-in!
+    const totalExposureTicks = frames.reduce((acc, f) => acc + Math.max(1, f.holdFrames ?? 1), 0);
+    let renderedTick = 0;
+
     for (let i = 0; i < frames.length; i++) {
-      setExportProgress(Math.round(((i + 1) / frames.length) * 80) + 10);
-      ctx.clearRect(0, 0, recCanvas.width, recCanvas.height);
-
-      if (includeBackground) {
-        ctx.fillStyle = backgroundColor;
-        ctx.fillRect(0, 0, recCanvas.width, recCanvas.height);
-      }
-
       const frame = frames[i];
+      const hold = Math.max(1, frame.holdFrames ?? 1);
+
+      // Pre-composite this cel once (with Clipping Masks & Layer Masks)
+      const celCanvas = createLayerCanvas(canvasSize.width, canvasSize.height);
+      const celCtx = celCanvas.getContext('2d')!;
+      if (includeBackground) {
+        celCtx.fillStyle = backgroundColor;
+        celCtx.fillRect(0, 0, celCanvas.width, celCanvas.height);
+      }
       if (frame.layers) {
-        frame.layers.forEach((layer) => {
-          if (layer.visible && layer.canvas) {
-            ctx.save();
-            ctx.globalAlpha = layer.opacity;
-            ctx.globalCompositeOperation = layer.blendMode as GlobalCompositeOperation;
-            ctx.drawImage(layer.canvas, 0, 0);
-            ctx.restore();
-          }
-        });
+        compositeLayersToContext(celCtx, frame.layers, celCanvas.width, celCanvas.height);
       }
 
-      await new Promise((res) => setTimeout(res, 1000 / fps));
+      for (let h = 0; h < hold; h++) {
+        renderedTick += 1;
+        setExportProgress(Math.round((renderedTick / Math.max(1, totalExposureTicks)) * 85) + 10);
+        ctx.clearRect(0, 0, recCanvas.width, recCanvas.height);
+
+        if (frame.cameraMove?.enabled) {
+          const t = hold > 1 ? h / (hold - 1) : 0;
+          const kf = interpolateCamera(frame.cameraMove, t);
+          const cropW = canvasSize.width / Math.max(1, kf.zoom);
+          const cropH = canvasSize.height / Math.max(1, kf.zoom);
+          const sx = kf.x * canvasSize.width - cropW / 2;
+          const sy = kf.y * canvasSize.height - cropH / 2;
+          ctx.drawImage(celCanvas, sx, sy, cropW, cropH, 0, 0, recCanvas.width, recCanvas.height);
+        } else {
+          ctx.drawImage(celCanvas, 0, 0);
+        }
+
+        if (burnTimecode) {
+          const shotNum = Math.floor(i / 3) + 1;
+          const label = `SH${String(shotNum).padStart(2, '0')}_P${String(i + 1).padStart(2, '0')}  ·  F${String(renderedTick).padStart(3, '0')} / ${String(totalExposureTicks).padStart(3, '0')}  ·  ${fps} FPS`;
+          ctx.save();
+          ctx.fillStyle = 'rgba(0,0,0,0.65)';
+          ctx.fillRect(20, recCanvas.height - 46, 320, 30);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 14px monospace';
+          ctx.fillText(label, 32, recCanvas.height - 26);
+          ctx.restore();
+        }
+
+        await new Promise((res) => setTimeout(res, 1000 / Math.max(1, fps)));
+      }
     }
 
     recorder.stop();
+  };
+
+  // Handle Studio 3-Up Storyboard PDF Export (Print-Ready Sheet with Dialogue, Action, Camera & Duration)
+  const handleExportStoryboardPDF = () => {
+    setIsExporting(true);
+    const panelCards = frames.map((frame, i) => {
+      const thumbCanvas = createLayerCanvas(640, Math.round((640 * canvasSize.height) / canvasSize.width));
+      const tCtx = thumbCanvas.getContext('2d')!;
+      tCtx.fillStyle = includeBackground ? backgroundColor : '#ffffff';
+      tCtx.fillRect(0, 0, thumbCanvas.width, thumbCanvas.height);
+
+      const fullCel = createLayerCanvas(canvasSize.width, canvasSize.height);
+      if (frame.layers) {
+        compositeLayersToContext(fullCel.getContext('2d')!, frame.layers, canvasSize.width, canvasSize.height);
+      }
+      tCtx.drawImage(fullCel, 0, 0, thumbCanvas.width, thumbCanvas.height);
+      const dataUrl = thumbCanvas.toDataURL('image/jpeg', 0.88);
+      const shotNum = Math.floor(i / 3) + 1;
+      const hold = Math.max(1, frame.holdFrames ?? 1);
+      const dur = frame.storyboardScript?.duration ?? Number((hold / Math.max(1, fps)).toFixed(2));
+      const camLabel = frame.cameraMove?.enabled
+        ? `2D Cam: ${Math.round(frame.cameraMove.start.zoom * 100)}% -> ${Math.round(frame.cameraMove.end.zoom * 100)}% (${frame.cameraMove.easing})`
+        : frame.storyboardScript?.camera || 'Static';
+      const dialogue = (frame.storyboardScript?.dialogue || '').replace(/</g, '&lt;');
+      const action = (frame.storyboardScript?.action || '').replace(/</g, '&lt;');
+
+      return `
+        <div class="panel-row">
+          <div class="thumb-wrap">
+            <img src="${dataUrl}" alt="Panel ${i + 1}" />
+            <div class="badge">SH${String(shotNum).padStart(2, '0')} · P${String(i + 1).padStart(2, '0')}</div>
+          </div>
+          <div class="meta">
+            <div class="meta-top">
+              <strong>Shot ${shotNum} / Panel ${i + 1}</strong>
+              <span>${hold}f · ${dur}s · ${camLabel}</span>
+            </div>
+            <div class="field"><label>ACTION:</label> ${action || '<span class="muted">—</span>'}</div>
+            <div class="field"><label>DIALOGUE:</label> ${dialogue || '<span class="muted">—</span>'}</div>
+          </div>
+        </div>
+      `;
+    });
+
+    const pages: string[] = [];
+    for (let p = 0; p < panelCards.length; p += 3) {
+      pages.push(`
+        <section class="sheet-page">
+          <header class="sheet-head">
+            <div><strong>${(portfolioTitle.trim() || 'AnimationReference.org Storyboard').replace(/</g, '&lt;')}</strong></div>
+            <div>Page ${Math.floor(p / 3) + 1} / ${Math.ceil(panelCards.length / 3)} · ${frames.length} Panels · ${fps} FPS</div>
+          </header>
+          ${panelCards.slice(p, p + 3).join('')}
+        </section>
+      `);
+    }
+
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Storyboard Sheet PDF — AnimationReference.org</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: #18181b; color: #111827; }
+    .sheet-page { width: 8.5in; min-height: 11in; margin: 16px auto; background: #fff; padding: 0.45in; display: flex; flex-direction: column; gap: 16px; page-break-after: always; }
+    .sheet-head { display: flex; justify-content: space-between; font-size: 12px; border-bottom: 2px solid #111827; padding-bottom: 8px; }
+    .panel-row { display: grid; grid-template-columns: 3.6in 1fr; gap: 14px; border: 1.5px solid #d4d4d8; border-radius: 8px; padding: 10px; }
+    .thumb-wrap { position: relative; border: 1px solid #a1a1aa; border-radius: 4px; overflow: hidden; background: #000; }
+    .thumb-wrap img { width: 100%; display: block; aspect-ratio: 16/9; object-fit: contain; }
+    .badge { position: absolute; top: 6px; left: 6px; background: rgba(0,0,0,0.78); color: #fff; font: 700 10px monospace; padding: 3px 6px; border-radius: 4px; }
+    .meta { display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+    .meta-top { display: flex; justify-content: space-between; font-size: 11px; color: #3f3f46; border-bottom: 1px solid #e4e4e7; padding-bottom: 4px; }
+    .field label { font-weight: 800; font-size: 10px; color: #6d28d9; margin-right: 4px; }
+    .muted { color: #a1a1aa; }
+    @media print { body { background: #fff; } .sheet-page { margin: 0; box-shadow: none; } }
+  </style>
+</head>
+<body>
+  ${pages.join('')}
+  <script>window.onload = () => setTimeout(() => window.print(), 250);</script>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+    } else {
+      toast({
+        title: 'Pop-up blocked',
+        description: 'Allow pop-ups for this site to open the print-ready Storyboard PDF sheet.',
+        variant: 'destructive',
+      });
+    }
+    setIsExporting(false);
   };
 
   // Handle Export Single Frame PNG
@@ -377,7 +504,7 @@ export function ExportModal({
             {/* Format Selector Tabs */}
             <div>
               <label className="block text-xs font-mono font-bold text-zinc-400 mb-2">EXPORT FORMAT</label>
-              <div className="grid grid-cols-5 gap-1 p-1 bg-white/5 border border-white/10 rounded-2xl">
+              <div className="grid grid-cols-6 gap-1 p-1 bg-white/5 border border-white/10 rounded-2xl">
                 <button
                   onClick={() => setExportType('mp4')}
                   className={cn(
@@ -431,6 +558,20 @@ export function ExportModal({
                 </button>
 
                 <button
+                  onClick={() => setExportType('pdf')}
+                  className={cn(
+                    "py-2 px-1 rounded-xl text-[10px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer",
+                    exportType === 'pdf'
+                      ? "bg-emerald-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.5)] border border-emerald-400"
+                      : "text-zinc-400 hover:text-white hover:bg-white/5"
+                  )}
+                  title="Print-Ready 3-Up Studio Storyboard PDF"
+                >
+                  <FileText className="h-3.5 w-3.5 text-emerald-300" />
+                  <span>PDF</span>
+                </button>
+
+                <button
                   onClick={() => setExportType('project')}
                   className={cn(
                     "py-2 px-1 rounded-xl text-[10px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer",
@@ -477,6 +618,22 @@ export function ExportModal({
                   type="checkbox"
                   checked={includeReference}
                   onChange={(e) => setIncludeReference(e.target.checked)}
+                  className="h-4 w-4 accent-purple-500 rounded cursor-pointer"
+                />
+              </label>
+            )}
+
+            {/* Timecode & Shot Burn-in toggle (video exports) */}
+            {(exportType === 'mp4' || exportType === 'webm') && (
+              <label className="bg-white/5 border border-white/10 rounded-2xl p-3.5 flex items-center justify-between gap-3 cursor-pointer">
+                <span>
+                  <span className="block text-xs font-bold text-zinc-200">Studio Timecode & Shot Burn-In</span>
+                  <span className="block text-[11px] text-zinc-400">Overlays SH01_P01 · F024 · {fps} FPS and renders 2D Camera pan/zoom & exposure holds.</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={burnTimecode}
+                  onChange={(e) => setBurnTimecode(e.target.checked)}
                   className="h-4 w-4 accent-purple-500 rounded cursor-pointer"
                 />
               </label>
@@ -537,6 +694,7 @@ export function ExportModal({
             <button
               onClick={() => {
                 if (exportType === 'project') handleExportProjectFile();
+                else if (exportType === 'pdf') handleExportStoryboardPDF();
                 else if (exportType === 'mp4') handleExportVideo('mp4');
                 else if (exportType === 'webm') handleExportVideo('webm');
                 else if (exportType === 'spritesheet') handleExportSpritesheet();
@@ -550,7 +708,13 @@ export function ExportModal({
               ) : (
                 <>
                   <Download className="h-4 w-4" />
-                  <span>Download {exportType === 'project' ? '.animref Project File' : `${exportType.toUpperCase()} File`}</span>
+                  <span>
+                    {exportType === 'project'
+                      ? 'Download .animref Project File'
+                      : exportType === 'pdf'
+                      ? 'Open 3-Up Storyboard PDF Sheet'
+                      : `Download ${exportType.toUpperCase()} File`}
+                  </span>
                 </>
               )}
             </button>

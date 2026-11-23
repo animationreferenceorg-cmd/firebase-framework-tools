@@ -110,6 +110,7 @@ export function FramesPanel({
 }: FramesPanelProps) {
   const rulerTrackRef = useRef<HTMLDivElement>(null);
   const stageContainerRef = useRef<HTMLDivElement>(null);
+  const waveformCanvasRef = useRef<HTMLCanvasElement>(null);
   const [isScrubbing, setIsScrubbing] = useState(false);
 
   // Custom Horizontal Timeline Scroll Slider States
@@ -372,6 +373,52 @@ export function FramesPanel({
 
   const maxTimelineTicks = Math.max(24, totalExposureFrames + 12);
   const rulerTicks = Array.from({ length: maxTimelineTicks }, (_, idx) => idx);
+  const waveformTrackWidth = Math.max(200, maxTimelineTicks * unitStride - 4);
+
+  // Render real PCM audio waveform onto the timeline Audio Track canvas
+  useEffect(() => {
+    const cvs = waveformCanvasRef.current;
+    if (!cvs || !audioBuffer) return;
+    const width = waveformTrackWidth;
+    const height = 32;
+    cvs.width = width;
+    cvs.height = height;
+    const ctx = cvs.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, width, height);
+    const channelData = audioBuffer.getChannelData(0);
+    const totalTimelineSec = maxTimelineTicks / Math.max(1, fps);
+    const audioPxWidth = Math.min(width, Math.round((audioBuffer.duration / Math.max(0.1, totalTimelineSec)) * width));
+    const barStep = 3;
+    const numBars = Math.max(1, Math.floor(audioPxWidth / barStep));
+    const samplesPerBar = Math.max(1, Math.floor(channelData.length / numBars));
+
+    // Subtle waveform backdrop for active audio span
+    ctx.fillStyle = 'rgba(59, 130, 246, 0.14)';
+    ctx.fillRect(0, 0, audioPxWidth, height);
+
+    // Draw crisp mirrored amplitude bars
+    for (let b = 0; b < numBars; b++) {
+      let peak = 0;
+      const start = b * samplesPerBar;
+      const end = Math.min(channelData.length, start + samplesPerBar);
+      for (let s = start; s < end; s += Math.max(1, Math.floor(samplesPerBar / 32))) {
+        const v = Math.abs(channelData[s]);
+        if (v > peak) peak = v;
+      }
+      const barH = Math.max(2, Math.round(peak * (height - 4)));
+      const x = b * barStep;
+      const y = Math.round((height - barH) / 2);
+      ctx.fillStyle = peak > 0.72 ? '#38bdf8' : '#60a5fa';
+      ctx.fillRect(x, y, 2, barH);
+    }
+
+    // Draw live red playhead line across waveform
+    const playheadX = activeSpan.startTick * unitStride + Math.round(cellWidth / 2);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(playheadX - 1, 0, 2, height);
+  }, [audioBuffer, waveformTrackWidth, maxTimelineTicks, fps, activeSpan.startTick, unitStride, cellWidth]);
 
   return (
     <div 
@@ -911,29 +958,41 @@ export function FramesPanel({
             </label>
           </div>
 
-          <div className="flex items-center gap-1">
-            {rulerTicks.map((tick) => {
-              const isActive = tick === activeFrameIndex;
-              const isAvailable = tick < frames.length;
-              return (
-                <div
-                  key={`audio-tick-${tick}`}
-                  onClick={() => isAvailable && onSelectFrame(tick)}
-                  style={{ width: `${cellWidth}px` }}
-                  className={cn(
-                    "h-8 shrink-0 rounded-lg border transition-all flex items-center justify-center cursor-pointer relative overflow-hidden",
-                    isActive 
-                      ? "bg-blue-600/90 border-red-500 ring-2 ring-red-500/50" 
-                      : isAvailable 
-                      ? "bg-blue-950/40 border-blue-500/30 text-blue-300" 
-                      : "bg-white/[0.02] border-white/5"
-                  )}
-                >
-                  <Music className="h-3 w-3 opacity-60 text-blue-400" />
-                </div>
-              );
-            })}
-          </div>
+          {audioBuffer ? (
+            <div
+              onPointerDown={handleRulerPointerDown}
+              style={{ width: `${waveformTrackWidth}px` }}
+              className="h-8 shrink-0 rounded-lg border border-blue-500/35 bg-blue-950/30 relative overflow-hidden cursor-ew-resize"
+              title="Real Audio Waveform — drag to scrub lip-sync & timing"
+            >
+              <canvas ref={waveformCanvasRef} className="w-full h-full block" />
+            </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              {rulerTicks.map((tick) => {
+                const celIdx = tickToCelIndex[tick];
+                const isActive = tick >= activeSpan.startTick && tick <= activeSpan.endTick;
+                const isAvailable = celIdx !== undefined;
+                return (
+                  <div
+                    key={`audio-tick-${tick}`}
+                    onClick={() => isAvailable && onSelectFrame(celIdx)}
+                    style={{ width: `${cellWidth}px` }}
+                    className={cn(
+                      "h-8 shrink-0 rounded-lg border transition-all flex items-center justify-center cursor-pointer relative overflow-hidden",
+                      isActive 
+                        ? "bg-blue-600/70 border-red-500/70" 
+                        : isAvailable 
+                        ? "bg-blue-950/30 border-blue-500/20 text-blue-300/60" 
+                        : "bg-white/[0.02] border-white/5"
+                    )}
+                  >
+                    <Music className="h-3 w-3 opacity-35 text-blue-400" />
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
         {tracks.map((tr) => {
           const isTrackActive = activeTrackId === tr.id;

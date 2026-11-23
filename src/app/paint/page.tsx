@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { PaintCanvas } from '@/components/paint/PaintCanvas';
 import { FreeTransformOverlay, type FreeTransformSession, type FreeTransformResult } from '@/components/paint/FreeTransformOverlay';
+import { CameraOverlay, DEFAULT_CAMERA_MOVE } from '@/components/paint/CameraOverlay';
 import { LayersPanel } from '@/components/paint/LayersPanel';
 import { FramesPanel } from '@/components/paint/FramesPanel';
 import { ProcreateHeader, type PaintWorkspaceMode } from '@/components/paint/ProcreateHeader';
@@ -30,10 +31,10 @@ import {
   autosaveProject,
   loadAutosavedProject,
 } from '@/lib/paint/persistence';
-import type { Layer, ToolType, BrushSettings, BlendMode, CustomBrushTexture, Selection, SymmetryMode, Frame } from '@/lib/paint/types';
+import type { Layer, ToolType, BrushSettings, BlendMode, CustomBrushTexture, Selection, SymmetryMode, Frame, CameraMove } from '@/lib/paint/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Clapperboard, Pin, PinOff, Film, Eye, Split, X, Camera, Radio, FlipHorizontal2, Play, Pause, ChevronLeft, ChevronRight, RotateCcw, RotateCw, Move } from 'lucide-react';
+import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Clapperboard, Pin, PinOff, Film, Eye, Split, X, Camera, Radio, FlipHorizontal2, Play, Pause, ChevronLeft, ChevronRight, RotateCcw, RotateCw, Move, Video } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -1004,6 +1005,34 @@ export default function PaintPage() {
   const [canvasRotation, setCanvasRotation] = useState(0);
   const [transformSession, setTransformSession] = useState<FreeTransformSession | null>(null);
   const [canvasRedrawToken, setCanvasRedrawToken] = useState(0);
+  const [showCameraOverlay, setShowCameraOverlay] = useState(false);
+  const audioPlaybackCtxRef = useRef<AudioContext | null>(null);
+  const audioPlaybackSourceRef = useRef<AudioBufferSourceNode | null>(null);
+
+  // Update 2D Storyboard Pro Camera Move on active frame
+  const handleUpdateCameraMove = useCallback((nextMove: CameraMove) => {
+    setFrames((prev) => {
+      const idx = activeFrameIndexRef.current;
+      if (!prev[idx]) return prev;
+      const next = prev.map((f, i) => (i === idx ? { ...f, cameraMove: nextMove } : f));
+      framesRef.current = next;
+      return next;
+    });
+    scheduleAutosave();
+  }, []);
+
+  const handleToggleCameraOverlay = useCallback(() => {
+    setShowCameraOverlay((prev) => {
+      const nextOpen = !prev;
+      if (nextOpen) {
+        const idx = activeFrameIndexRef.current;
+        if (!framesRef.current[idx]?.cameraMove) {
+          handleUpdateCameraMove({ ...DEFAULT_CAMERA_MOVE });
+        }
+      }
+      return nextOpen;
+    });
+  }, [handleUpdateCameraMove]);
 
   // Start Free Transform (Ctrl+T / Alt+T / Transform button) on active selection or active layer
   const startFreeTransform = useCallback(() => {
@@ -1429,6 +1458,48 @@ export default function PaintPage() {
     const targetTime = activeExposureTick / Math.max(1, fps);
     seekPinnedVideoSmooth(targetTime);
   }, [isPinnedToCanvas, activeExposureTick, fps, seekPinnedVideoSmooth]);
+
+  // Real Synced Web Audio Playback (plays uploaded dialogue/music track in lockstep with timeline playhead)
+  useEffect(() => {
+    const stopAudio = () => {
+      if (audioPlaybackSourceRef.current) {
+        try {
+          audioPlaybackSourceRef.current.stop();
+        } catch {}
+        audioPlaybackSourceRef.current.disconnect();
+        audioPlaybackSourceRef.current = null;
+      }
+    };
+
+    if (!isPlaying || !audioBuffer) {
+      stopAudio();
+      return;
+    }
+
+    try {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!audioPlaybackCtxRef.current) {
+        audioPlaybackCtxRef.current = new AudioCtx();
+      }
+      const ctx = audioPlaybackCtxRef.current;
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+      stopAudio();
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(ctx.destination);
+      const startOffset = Math.max(0, Math.min(audioBuffer.duration - 0.01, activeExposureTick / Math.max(1, fps)));
+      source.start(0, startOffset);
+      audioPlaybackSourceRef.current = source;
+    } catch {
+      // Ignore audio autoplay blocks
+    }
+
+    return stopAudio;
+    // Intentionally start/stop on playback state or new audio buffer (avoid restarting on every frame tick)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, audioBuffer, fps]);
 
   // Silky-smooth 60fps Toon Boom scrubber pointer drag for pinned reference video
   const scrubPinnedRefFromClientX = useCallback(
@@ -2156,6 +2227,17 @@ export default function PaintPage() {
                       onCancel={cancelFreeTransform}
                     />
                   )}
+
+                  {showCameraOverlay && !transformSession && (
+                    <CameraOverlay
+                      cameraMove={frames[activeFrameIndex]?.cameraMove || DEFAULT_CAMERA_MOVE}
+                      canvasWidth={canvasSize.width}
+                      canvasHeight={canvasSize.height}
+                      stageZoom={zoom}
+                      onChange={handleUpdateCameraMove}
+                      onClose={() => setShowCameraOverlay(false)}
+                    />
+                  )}
                 </div>
 
                 {workspaceMode === 'storyboard' && (
@@ -2251,6 +2333,24 @@ export default function PaintPage() {
             >
               <Move className="h-3.5 w-3.5 shrink-0" />
               <span className="text-[10px] font-mono hidden sm:inline">Transform</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleToggleCameraOverlay}
+              className={cn(
+                "h-8 px-2.5 rounded-xl text-xs font-bold gap-1.5 flex items-center transition-colors w-auto",
+                showCameraOverlay
+                  ? "bg-emerald-500/30 text-emerald-200 border border-emerald-400/50 hover:bg-emerald-500/40"
+                  : frames[activeFrameIndex]?.cameraMove?.enabled
+                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-400/30 hover:bg-emerald-500/25"
+                  : "text-zinc-300 hover:text-white hover:bg-white/10"
+              )}
+              title="2D Storyboard Camera Pan / Zoom Keyframes (Green Start -> Red End)"
+            >
+              <Video className="h-3.5 w-3.5 shrink-0" />
+              <span className="text-[10px] font-mono hidden sm:inline">2D Cam</span>
             </Button>
 
             <div className="w-px h-5 bg-white/10" />

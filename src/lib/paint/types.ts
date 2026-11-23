@@ -409,6 +409,22 @@ export type SymmetryMode = 'none' | 'vertical' | 'horizontal' | 'both';
 
 /** One flipbook frame — its own independent layer stack, for onion-skinning
  * and simple frame-by-frame animation reference. */
+export interface CameraKeyframe {
+  /** Normalized center X (0..1, where 0.5 is canvas center). */
+  x: number;
+  /** Normalized center Y (0..1, where 0.5 is canvas center). */
+  y: number;
+  /** Zoom factor (>= 1 = truck in, 1 = full frame). */
+  zoom: number;
+}
+
+export interface CameraMove {
+  enabled: boolean;
+  start: CameraKeyframe;
+  end: CameraKeyframe;
+  easing: 'linear' | 'ease-in-out';
+}
+
 export interface Frame {
   id: string;
   name: string;
@@ -417,6 +433,8 @@ export interface Frame {
   poseType?: 'key' | 'extreme' | 'breakdown' | 'inbetween';
   /** Callipeg/Toon Boom exposure duration in timeline frames (1 = on 1s, 2 = on 2s, 3 = on 3s). Defaults to 1. */
   holdFrames?: number;
+  /** Storyboard Pro 2D Camera pan/truck/zoom keyframe move for this panel. */
+  cameraMove?: CameraMove;
   /** Flattened preview of the frame, used by the storyboard timeline panels. */
   thumbnail?: string;
   storyboardScript?: {

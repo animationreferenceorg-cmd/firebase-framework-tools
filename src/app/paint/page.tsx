@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMe
 import { PaintCanvas } from '@/components/paint/PaintCanvas';
 import { FreeTransformOverlay, type FreeTransformSession, type FreeTransformResult } from '@/components/paint/FreeTransformOverlay';
 import { CameraOverlay, DEFAULT_CAMERA_MOVE } from '@/components/paint/CameraOverlay';
+import { CanvasGuidesOverlay, GUIDE_MODE_LABELS } from '@/components/paint/CanvasGuidesOverlay';
 import { LayersPanel } from '@/components/paint/LayersPanel';
 import { FramesPanel } from '@/components/paint/FramesPanel';
 import { ProcreateHeader, type PaintWorkspaceMode } from '@/components/paint/ProcreateHeader';
@@ -31,10 +32,10 @@ import {
   autosaveProject,
   loadAutosavedProject,
 } from '@/lib/paint/persistence';
-import type { Layer, ToolType, BrushSettings, BlendMode, CustomBrushTexture, Selection, SymmetryMode, Frame, CameraMove } from '@/lib/paint/types';
+import type { Layer, ToolType, BrushSettings, BlendMode, CustomBrushTexture, Selection, SymmetryMode, Frame, CameraMove, OnionShift, CanvasGuideMode } from '@/lib/paint/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Clapperboard, Pin, PinOff, Film, Eye, Split, X, Camera, Radio, FlipHorizontal2, Play, Pause, ChevronLeft, ChevronRight, RotateCcw, RotateCw, Move, Video } from 'lucide-react';
+import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Clapperboard, Pin, PinOff, Film, Eye, Split, X, Camera, Radio, FlipHorizontal2, Play, Pause, ChevronLeft, ChevronRight, RotateCcw, RotateCw, Move, Video, Grid3x3 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -571,7 +572,7 @@ export default function PaintPage() {
     // Photoshop letter assignments. Shift+key cycles to the second tool in a
     // group, the way Photoshop's own tool groups do.
     const shortcuts: Record<string, ToolType> = {
-      b: 'brush', e: 'eraser', g: 'fill', i: 'eyedropper',
+      b: 'brush', e: 'eraser', g: 'fill', f: 'lassoFill', i: 'eyedropper',
       r: 'smudge', o: 'dodge', m: 'select', l: 'lasso', w: 'magicWand',
       s: 'cloneStamp', u: 'rectangle', t: 'text', v: 'move',
     };
@@ -1006,6 +1007,8 @@ export default function PaintPage() {
   const [transformSession, setTransformSession] = useState<FreeTransformSession | null>(null);
   const [canvasRedrawToken, setCanvasRedrawToken] = useState(0);
   const [showCameraOverlay, setShowCameraOverlay] = useState(false);
+  const [guideMode, setGuideMode] = useState<CanvasGuideMode>('none');
+  const [onionShift, setOnionShift] = useState<OnionShift>({ dx: 0, dy: 0, rotDeg: 0 });
   const audioPlaybackCtxRef = useRef<AudioContext | null>(null);
   const audioPlaybackSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
@@ -2224,11 +2227,18 @@ export default function PaintPage() {
                     onionSkinPrev={onionSkinPrevCanvas}
                     onionSkinNext={onionSkinNextCanvas}
                     onionSkinOpacity={onionSkinOpacity}
+                    onionShift={onionShift}
                     hasBackgroundVideo={(isPinnedToCanvas && !!activeReferenceVideo) || Boolean(viewportStream)}
                     flipped={canvasFlipped}
                     rotationDeg={canvasRotation}
                     stageZoom={zoom}
                     redrawToken={canvasRedrawToken}
+                  />
+
+                  <CanvasGuidesOverlay
+                    mode={guideMode}
+                    width={canvasSize.width}
+                    height={canvasSize.height}
                   />
 
                   {transformSession && (
@@ -2333,8 +2343,32 @@ export default function PaintPage() {
             )}
           </div>
 
-          {/* Floating Viewport-Only HUD (Flip, Rotate, Zoom & Fit) */}
+          {/* Floating Viewport-Only HUD (Guides, Flip, Rotate, Zoom & Fit) */}
           <div className="absolute bottom-6 right-6 flex items-center gap-1.5 bg-[#161620]/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.8)] px-2 py-1.5 z-40">
+            {/* Animation Field & Perspective Guides Cycler */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                const order: CanvasGuideMode[] = ['none', 'thirds', 'safe', 'field12', 'persp1', 'persp2'];
+                setGuideMode((cur) => order[(order.indexOf(cur) + 1) % order.length]);
+              }}
+              className={cn(
+                "h-8 px-2 rounded-xl text-xs font-bold gap-1 flex items-center transition-colors",
+                guideMode !== 'none'
+                  ? "bg-sky-500/25 text-sky-200 border border-sky-400/45 hover:bg-sky-500/35 w-auto"
+                  : "text-zinc-300 hover:text-white hover:bg-white/10 w-8"
+              )}
+              title={`Cycle Guides: Rule of Thirds · Action/Title Safe · 12-Field · 1-Pt / 2-Pt Perspective (Current: ${GUIDE_MODE_LABELS[guideMode]})`}
+            >
+              <Grid3x3 className="h-3.5 w-3.5 shrink-0" />
+              {guideMode !== 'none' && (
+                <span className="text-[10px] font-mono whitespace-nowrap">{GUIDE_MODE_LABELS[guideMode]}</span>
+              )}
+            </Button>
+
+            <div className="w-px h-5 bg-white/10" />
+
             {/* Canvas Rotation Controls (-15° / Angle Reset / +15°) */}
             <Button
               variant="ghost"
@@ -2491,6 +2525,8 @@ export default function PaintPage() {
           onToggleOnionSkinNext={() => setOnionSkinEnabled(!onionSkinEnabled)}
           onionSkinOpacity={onionSkinOpacity}
           onOnionSkinOpacityChange={setOnionSkinOpacity}
+          onionShift={onionShift}
+          onOnionShiftChange={setOnionShift}
           isPlaying={isPlaying}
           onTogglePlay={() => setIsPlaying(!isPlaying)}
           fps={fps}

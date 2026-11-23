@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import type { Frame, CanvasSize } from '@/lib/paint/types';
+import type { Frame, CanvasSize, OnionShift } from '@/lib/paint/types';
 import {
   Play,
   Pause,
@@ -68,6 +68,8 @@ interface FramesPanelProps {
   onRemoveAudio?: () => void;
   onionSkinOpacity?: number;
   onOnionSkinOpacityChange?: (opacity: number) => void;
+  onionShift?: OnionShift;
+  onOnionShiftChange?: (shift: OnionShift) => void;
 }
 
 const TRACK_HEADER_WIDTH = 148; // px — sticky left track label column
@@ -102,6 +104,8 @@ export function FramesPanel({
   onRemoveAudio,
   onionSkinOpacity = 0.3,
   onOnionSkinOpacityChange,
+  onionShift = { dx: 0, dy: 0, rotDeg: 0 },
+  onOnionShiftChange,
 }: FramesPanelProps) {
   const stageContainerRef = useRef<HTMLDivElement>(null);
   const waveformCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -522,6 +526,62 @@ export function FramesPanel({
                 className="w-12 h-1 accent-violet-500 cursor-pointer"
                 title={`Onion Opacity ${Math.round(onionSkinOpacity * 100)}%`}
               />
+            )}
+            {/* Toon Boom Harmony / Callipeg Shift & Trace Light-Table Peg Controls */}
+            {onionSkinPrev && onOnionShiftChange && (
+              <div className="flex items-center gap-0.5 pl-1 border-l border-white/10 text-[9px] font-mono">
+                <button
+                  onClick={() => onOnionShiftChange({ ...onionShift, dx: onionShift.dx - 16 })}
+                  className="h-5 w-4 rounded hover:bg-white/10 text-zinc-300 hover:text-white cursor-pointer"
+                  title="Shift & Trace: Nudge Ghost Left (-16px)"
+                >
+                  ←
+                </button>
+                <button
+                  onClick={() => onOnionShiftChange({ ...onionShift, dx: onionShift.dx + 16 })}
+                  className="h-5 w-4 rounded hover:bg-white/10 text-zinc-300 hover:text-white cursor-pointer"
+                  title="Shift & Trace: Nudge Ghost Right (+16px)"
+                >
+                  →
+                </button>
+                <button
+                  onClick={() => onOnionShiftChange({ ...onionShift, dy: onionShift.dy - 16 })}
+                  className="h-5 w-4 rounded hover:bg-white/10 text-zinc-300 hover:text-white cursor-pointer"
+                  title="Shift & Trace: Nudge Ghost Up (-16px)"
+                >
+                  ↑
+                </button>
+                <button
+                  onClick={() => onOnionShiftChange({ ...onionShift, dy: onionShift.dy + 16 })}
+                  className="h-5 w-4 rounded hover:bg-white/10 text-zinc-300 hover:text-white cursor-pointer"
+                  title="Shift & Trace: Nudge Ghost Down (+16px)"
+                >
+                  ↓
+                </button>
+                <button
+                  onClick={() => onOnionShiftChange({ ...onionShift, rotDeg: onionShift.rotDeg - 5 })}
+                  className="h-5 px-1 rounded hover:bg-white/10 text-zinc-300 hover:text-white cursor-pointer"
+                  title="Shift & Trace: Rotate Ghost -5°"
+                >
+                  ↺
+                </button>
+                <button
+                  onClick={() => onOnionShiftChange({ ...onionShift, rotDeg: onionShift.rotDeg + 5 })}
+                  className="h-5 px-1 rounded hover:bg-white/10 text-zinc-300 hover:text-white cursor-pointer"
+                  title="Shift & Trace: Rotate Ghost +5°"
+                >
+                  ↻
+                </button>
+                {(onionShift.dx !== 0 || onionShift.dy !== 0 || onionShift.rotDeg !== 0) && (
+                  <button
+                    onClick={() => onOnionShiftChange({ dx: 0, dy: 0, rotDeg: 0 })}
+                    className="h-5 px-1.5 rounded bg-rose-500/30 hover:bg-rose-500/50 text-rose-200 font-bold cursor-pointer"
+                    title="Snap Onion Skin Ghost back to Peg (0, 0, 0°)"
+                  >
+                    Snap
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>

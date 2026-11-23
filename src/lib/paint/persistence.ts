@@ -1,4 +1,4 @@
-import type { Layer, BlendMode, CanvasSize, Frame } from './types';
+import type { Layer, BlendMode, CanvasSize, Frame, CameraMove } from './types';
 import { createLayerCanvas } from './engine';
 import { nanoid } from 'nanoid';
 
@@ -10,6 +10,8 @@ interface SerializedLayer {
   blendMode: BlendMode;
   alphaLocked?: boolean;
   maskEnabled?: boolean;
+  clippedToBelow?: boolean;
+  isReference?: boolean;
   dataUrl: string;
   maskDataUrl?: string;
 }
@@ -26,6 +28,8 @@ interface SerializedFrame {
     duration: number;
   };
   poseType?: 'key' | 'extreme' | 'breakdown' | 'inbetween';
+  holdFrames?: number;
+  cameraMove?: CameraMove;
 }
 
 // v1 was a single layer stack with no frames — kept here only so
@@ -81,6 +85,8 @@ function serializeLayer(l: Layer, reuse = false): SerializedLayer {
     blendMode: l.blendMode,
     alphaLocked: l.alphaLocked,
     maskEnabled: l.maskEnabled,
+    clippedToBelow: l.clippedToBelow,
+    isReference: l.isReference,
     dataUrl: encodeCanvas(l.canvas, reuse),
     maskDataUrl: l.mask ? encodeCanvas(l.mask, reuse) : undefined,
   };
@@ -106,6 +112,8 @@ async function deserializeLayer(s: SerializedLayer, canvasSize: CanvasSize): Pro
     blendMode: s.blendMode,
     alphaLocked: s.alphaLocked,
     maskEnabled: s.maskEnabled,
+    clippedToBelow: s.clippedToBelow,
+    isReference: s.isReference,
     canvas,
     mask,
   };
@@ -130,6 +138,8 @@ export function serializeProject(frames: Frame[], canvasSize: CanvasSize, active
       layers: f.layers.map((l) => serializeLayer(l, Boolean(options.reuseInactiveFrames) && index !== activeFrameIndex)),
       storyboardScript: f.storyboardScript,
       poseType: f.poseType,
+      holdFrames: f.holdFrames,
+      cameraMove: f.cameraMove,
     })),
   };
 }
@@ -152,6 +162,8 @@ export async function deserializeProject(project: AnySerializedProject): Promise
       activeLayerId: layers.find((l) => l.id === sf.activeLayerId) ? sf.activeLayerId : layers[layers.length - 1]?.id ?? '',
       storyboardScript: sf.storyboardScript,
       poseType: sf.poseType,
+      holdFrames: sf.holdFrames,
+      cameraMove: sf.cameraMove,
     };
     return frame;
   }));

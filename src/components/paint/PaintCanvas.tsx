@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import type { Layer, ToolType, BrushSettings, CanvasSize, Point, CustomBrushTexture, Selection, SymmetryMode } from '@/lib/paint/types';
+import type { Layer, ToolType, BrushSettings, CanvasSize, Point, CustomBrushTexture, Selection, SymmetryMode, OnionShift } from '@/lib/paint/types';
 import { normalizedPressure, STROKE_TOOLS } from '@/lib/paint/types';
 import {
   strokeSegment,
@@ -46,6 +46,8 @@ interface PaintCanvasProps {
   onionSkinPrev?: HTMLCanvasElement | null;
   onionSkinNext?: HTMLCanvasElement | null;
   onionSkinOpacity?: number;
+  /** Toon Boom Harmony / Callipeg Shift & Trace light-table peg offset for onion-skin ghosts. */
+  onionShift?: OnionShift;
   hasBackgroundVideo?: boolean;
   /** Non-destructive horizontal canvas mirror (Callipeg/Procreate 'H' flip). */
   flipped?: boolean;
@@ -79,6 +81,7 @@ export function PaintCanvas({
   onionSkinPrev,
   onionSkinNext,
   onionSkinOpacity = 0.35,
+  onionShift,
   hasBackgroundVideo = false,
   flipped = false,
   rotationDeg = 0,
@@ -194,24 +197,28 @@ export function PaintCanvas({
       ctx.fillRect(0, 0, display.width, display.height);
     }
 
-    // Render pre-tinted Callipeg-style Multi-Frame Onion Skin Ghosts (Rose-Red = Prev, Cyan = Next)
-    if (onionSkinPrev) {
+    // Render pre-tinted Callipeg-style Multi-Frame Onion Skin Ghosts (with optional Harmony Shift & Trace peg offset)
+    const drawGhost = (ghost: HTMLCanvasElement) => {
       ctx.save();
       ctx.globalAlpha = onionSkinOpacity;
-      ctx.drawImage(onionSkinPrev, 0, 0);
+      if (onionShift && (onionShift.dx !== 0 || onionShift.dy !== 0 || onionShift.rotDeg !== 0)) {
+        const cx = display.width / 2;
+        const cy = display.height / 2;
+        ctx.translate(cx + onionShift.dx, cy + onionShift.dy);
+        if (onionShift.rotDeg !== 0) ctx.rotate((onionShift.rotDeg * Math.PI) / 180);
+        ctx.drawImage(ghost, -cx, -cy);
+      } else {
+        ctx.drawImage(ghost, 0, 0);
+      }
       ctx.restore();
-    }
+    };
 
-    if (onionSkinNext) {
-      ctx.save();
-      ctx.globalAlpha = onionSkinOpacity;
-      ctx.drawImage(onionSkinNext, 0, 0);
-      ctx.restore();
-    }
+    if (onionSkinPrev) drawGhost(onionSkinPrev);
+    if (onionSkinNext) drawGhost(onionSkinNext);
 
     // Render Drawing Layers (honoring Layer Masks AND Photoshop/Procreate Clipping Masks)
     compositeLayersToContext(ctx, layers, display.width, display.height);
-  }, [layers, onionSkinPrev, onionSkinNext, onionSkinOpacity, hasBackgroundVideo, redrawToken]);
+  }, [layers, onionSkinPrev, onionSkinNext, onionSkinOpacity, onionShift, hasBackgroundVideo, redrawToken]);
 
   useEffect(() => {
     redrawCombinedCanvas();
@@ -400,7 +407,7 @@ export function PaintCanvas({
       return;
     }
 
-    if (tool === 'lasso') {
+    if (tool === 'lasso' || tool === 'lassoFill') {
       lassoPointsRef.current = [pt];
       return;
     }
@@ -518,7 +525,7 @@ export function PaintCanvas({
     const paintingMask = !!maskTargetLayerId && maskTargetLayerId === activeLayerRef.current?.id;
     const alphaLocked = !paintingMask && !!activeLayerRef.current?.alphaLocked;
 
-    if (tool === 'lasso') {
+    if (tool === 'lasso' || tool === 'lassoFill') {
       lassoPointsRef.current.push(pt);
     } else if (STROKE_TOOLS.includes(tool)) {
       // Read high-frequency coalesced stylus/mouse sub-samples for ultra-silky curved strokes
@@ -616,17 +623,29 @@ export function PaintCanvas({
           const h = Math.abs(constrainedPt.y - shapeStartRef.current.y);
           oCtx.strokeRect(x, y, w, h);
           oCtx.restore();
-        } else if (tool === 'lasso' && lassoPointsRef.current.length > 1) {
+        } else if ((tool === 'lasso' || tool === 'lassoFill') && lassoPointsRef.current.length > 1) {
           oCtx.save();
-          oCtx.strokeStyle = '#3b82f6';
-          oCtx.lineWidth = 2;
-          oCtx.setLineDash([4, 4]);
           oCtx.beginPath();
           oCtx.moveTo(lassoPointsRef.current[0].x, lassoPointsRef.current[0].y);
           for (let i = 1; i < lassoPointsRef.current.length; i++) {
             oCtx.lineTo(lassoPointsRef.current[i].x, lassoPointsRef.current[i].y);
           }
-          oCtx.stroke();
+          if (tool === 'lassoFill') {
+            oCtx.closePath();
+            oCtx.fillStyle = brush.color;
+            oCtx.globalAlpha = Math.max(0.25, brush.opacity * 0.55);
+            oCtx.fill();
+            oCtx.globalAlpha = 0.9;
+            oCtx.strokeStyle = '#ffffff';
+            oCtx.lineWidth = 1.5;
+            oCtx.setLineDash([4, 4]);
+            oCtx.stroke();
+          } else {
+            oCtx.strokeStyle = '#3b82f6';
+            oCtx.lineWidth = 2;
+            oCtx.setLineDash([4, 4]);
+            oCtx.stroke();
+          }
           oCtx.restore();
         }
       }
@@ -694,6 +713,23 @@ export function PaintCanvas({
       } else if (tool === 'lasso' && lassoPointsRef.current.length > 2) {
         const mask = polygonSelectionMask(targetCanvas.width, targetCanvas.height, lassoPointsRef.current);
         applySelectionMask(mask, e);
+      } else if (tool === 'lassoFill' && lassoPointsRef.current.length > 2) {
+        // Instant Lasso Fill (flat shading / value blocking; hold Alt to erase lasso shape!)
+        const pts = lassoPointsRef.current;
+        const paintingMask = !!maskTargetLayerId && maskTargetLayerId === activeLayerRef.current?.id;
+        const alphaLocked = !paintingMask && !!activeLayerRef.current?.alphaLocked;
+        withSelectionClip(targetCanvas, selection?.mask ?? null, alphaLocked, (ctx) => {
+          ctx.save();
+          ctx.globalCompositeOperation = e.altKey ? 'destination-out' : 'source-over';
+          ctx.globalAlpha = brush.opacity;
+          ctx.fillStyle = brush.color;
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        });
       }
     }
 
@@ -782,7 +818,7 @@ export function PaintCanvas({
             ? 'none'
             : tool === 'eyedropper'
             ? 'crosshair'
-            : tool === 'lasso' || tool === 'polyLasso' || tool === 'magicWand' || tool === 'select' || tool === 'gradient'
+            : tool === 'lasso' || tool === 'lassoFill' || tool === 'polyLasso' || tool === 'magicWand' || tool === 'select' || tool === 'gradient'
             ? 'crosshair'
             : 'default',
         }}

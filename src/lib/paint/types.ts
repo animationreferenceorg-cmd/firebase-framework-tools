@@ -35,6 +35,7 @@ export type ToolType =
   | 'brush'
   | 'eraser'
   | 'fill'
+  | 'lassoFill'
   | 'eyedropper'
   | 'line'
   | 'rectangle'
@@ -409,6 +410,14 @@ export type SymmetryMode = 'none' | 'vertical' | 'horizontal' | 'both';
 
 /** One flipbook frame — its own independent layer stack, for onion-skinning
  * and simple frame-by-frame animation reference. */
+export interface OnionShift {
+  dx: number;
+  dy: number;
+  rotDeg: number;
+}
+
+export type CanvasGuideMode = 'none' | 'thirds' | 'safe' | 'field12' | 'persp1' | 'persp2';
+
 export interface CameraKeyframe {
   /** Normalized center X (0..1, where 0.5 is canvas center). */
   x: number;

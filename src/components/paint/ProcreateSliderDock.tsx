@@ -96,6 +96,7 @@ const TOOL_GROUPS: ToolGroupSlot[] = [
     defaultTool: 'fill',
     items: [
       { type: 'fill', icon: PaintBucket, label: 'Paint Bucket Fill (Honors Ref Layer)', shortcut: 'G' },
+      { type: 'lassoFill', icon: Lasso, label: 'Lasso Fill (Instant Flat Shading)', shortcut: 'F' },
       { type: 'gradient', icon: Blend, label: 'Gradient Fill', shortcut: 'Shift+G' },
     ],
   },

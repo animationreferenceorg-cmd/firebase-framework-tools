@@ -373,7 +373,29 @@ export function cloneCanvas(source: HTMLCanvasElement): HTMLCanvasElement {
   return clone;
 }
 
-/** Composites a layer stack onto `ctx`, honoring layer masks AND Photoshop/Procreate Clipping Masks. */
+// Reusable offscreen scratch canvases to eliminate 8MB/frame GC stalls during live compositing
+let _clipScratchA: HTMLCanvasElement | null = null;
+let _clipScratchB: HTMLCanvasElement | null = null;
+
+function getScratchCanvas(slot: 'a' | 'b', width: number, height: number): HTMLCanvasElement {
+  let cvs = slot === 'a' ? _clipScratchA : _clipScratchB;
+  if (!cvs) {
+    cvs = createLayerCanvas(width, height);
+    if (slot === 'a') _clipScratchA = cvs;
+    else _clipScratchB = cvs;
+  } else if (cvs.width !== width || cvs.height !== height) {
+    cvs.width = width;
+    cvs.height = height;
+  }
+  const ctx = cvs.getContext('2d')!;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.clearRect(0, 0, width, height);
+  return cvs;
+}
+
+/** Composites a layer stack onto `ctx`, honoring layer masks AND Photoshop/Procreate Clipping Masks
+ * with zero per-frame canvas allocations. */
 export function compositeLayersToContext(ctx: CanvasRenderingContext2D, layers: Layer[], width: number, height: number) {
   let activeClipBase: HTMLCanvasElement | null = null;
   let activeClipBaseVisible = true;
@@ -387,10 +409,12 @@ export function compositeLayersToContext(ctx: CanvasRenderingContext2D, layers: 
         continue;
       }
       if (layer.mask && layer.maskEnabled !== false) {
-        const masked = cloneCanvas(layer.canvas);
+        const masked = getScratchCanvas('a', width, height);
         const mCtx = masked.getContext('2d')!;
+        mCtx.drawImage(layer.canvas, 0, 0);
         mCtx.globalCompositeOperation = 'destination-in';
         mCtx.drawImage(layer.mask, 0, 0);
+        mCtx.globalCompositeOperation = 'source-over';
         activeClipBase = masked;
         ctx.save();
         ctx.globalAlpha = layer.opacity;
@@ -407,8 +431,8 @@ export function compositeLayersToContext(ctx: CanvasRenderingContext2D, layers: 
       }
     } else {
       if (!layer.visible || !activeClipBaseVisible || !activeClipBase) continue;
-      // Clip this layer's pixels cleanly to the alpha of its base layer below
-      const clipped = createLayerCanvas(width, height);
+      // Clip this layer's pixels cleanly to the alpha of its base layer below using reusable scratch buffer
+      const clipped = getScratchCanvas('b', width, height);
       const cCtx = clipped.getContext('2d')!;
       cCtx.drawImage(layer.canvas, 0, 0);
       if (layer.mask && layer.maskEnabled !== false) {
@@ -417,6 +441,7 @@ export function compositeLayersToContext(ctx: CanvasRenderingContext2D, layers: 
       }
       cCtx.globalCompositeOperation = 'destination-in';
       cCtx.drawImage(activeClipBase, 0, 0);
+      cCtx.globalCompositeOperation = 'source-over';
 
       ctx.save();
       ctx.globalAlpha = layer.opacity;

@@ -218,38 +218,53 @@ export function PaintCanvas({
   }, [redrawCombinedCanvas]);
 
   const cachedRectRef = useRef<DOMRect | null>(null);
+  const redrawRafRef = useRef<number | null>(null);
 
-  // Invalidate bounding rect cache on zoom, resize, or window scroll
+  // Coalesce display canvas redraws to exact monitor refresh rate (60/120Hz) instead of 240Hz pointermove floods
+  const scheduleRedraw = useCallback(() => {
+    if (redrawRafRef.current !== null) return;
+    redrawRafRef.current = requestAnimationFrame(() => {
+      redrawRafRef.current = null;
+      redrawCombinedCanvas();
+    });
+  }, [redrawCombinedCanvas]);
+
+  useEffect(() => {
+    return () => {
+      if (redrawRafRef.current !== null) cancelAnimationFrame(redrawRafRef.current);
+    };
+  }, []);
+
+  // Invalidate bounding rect cache on zoom, rotation, flip, or canvas resize
   useEffect(() => {
     cachedRectRef.current = null;
-  }, [zoom, canvasSize]);
+  }, [zoom, stageZoom, rotationDeg, flipped, canvasSize]);
 
-  // Pointer position helper with exact inverse-rotation & flip math at any zoom/angle
-  const getCanvasPoint = useCallback(
-    (e: React.PointerEvent<HTMLCanvasElement>): Point => {
+  // Convert raw client coordinates into canvas space using cached DOMRect (zero layout reflow during strokes!)
+  const clientToCanvasPoint = useCallback(
+    (clientX: number, clientY: number, rawPressure?: number, pointerType?: string): Point => {
       const cvs = displayRef.current;
       if (!cvs) return { x: 0, y: 0, pressure: 0.5 };
 
-      const rect = cvs.getBoundingClientRect();
-      const p = normalizedPressure(e.nativeEvent.pressure, e.nativeEvent.pointerType);
+      const rect = (isDrawingRef.current && cachedRectRef.current) ? cachedRectRef.current : cvs.getBoundingClientRect();
+      const p = normalizedPressure(rawPressure, pointerType);
 
       if (rotationDeg === 0) {
         const scaleX = cvs.width / rect.width;
         const scaleY = cvs.height / rect.height;
-        const rawX = (e.clientX - rect.left) * scaleX;
+        const rawX = (clientX - rect.left) * scaleX;
         return {
           x: flipped ? cvs.width - rawX : rawX,
-          y: (e.clientY - rect.top) * scaleY,
+          y: (clientY - rect.top) * scaleY,
           pressure: p,
         };
       }
 
-      // Rotated stage: map screen offset from rotated bounding box center back into canvas-local space
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
       const effectiveZoom = Math.max(0.01, stageZoom * zoom);
-      const dx = (e.clientX - cx) / effectiveZoom;
-      const dy = (e.clientY - cy) / effectiveZoom;
+      const dx = (clientX - cx) / effectiveZoom;
+      const dy = (clientY - cy) / effectiveZoom;
       const rad = (-rotationDeg * Math.PI) / 180;
       const cos = Math.cos(rad);
       const sin = Math.sin(rad);
@@ -264,6 +279,13 @@ export function PaintCanvas({
       };
     },
     [flipped, rotationDeg, stageZoom, zoom]
+  );
+
+  // Pointer position helper with exact inverse-rotation & flip math at any zoom/angle
+  const getCanvasPoint = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>): Point =>
+      clientToCanvasPoint(e.clientX, e.clientY, e.nativeEvent.pressure, e.nativeEvent.pointerType),
+    [clientToCanvasPoint]
   );
 
   const activeTargetCanvas = useCallback((): HTMLCanvasElement | null => {
@@ -448,13 +470,13 @@ export function PaintCanvas({
     const pt = getCanvasPoint(e);
 
     if (cursorDotRef.current && displayRef.current) {
-      cursorDotRef.current.style.left = `${pt.x}px`;
-      cursorDotRef.current.style.top = `${pt.y}px`;
-      // The cursor dot is rendered inside the unscaled PaintCanvas (1920x1080)
-      // Because the parent paper sheet is scaled via CSS transform, the dot will automatically
-      // scale visually with the page zoom! We just need to set the width to brush.size.
-      cursorDotRef.current.style.width = `${Math.max(4, brush.size)}px`;
-      cursorDotRef.current.style.height = `${Math.max(4, brush.size)}px`;
+      // GPU-composited cursor movement (zero CSS layout reflow!)
+      cursorDotRef.current.style.transform = `translate3d(${pt.x}px, ${pt.y}px, 0) translate(-50%, -50%)`;
+      const d = Math.max(4, brush.size);
+      if (cursorDotRef.current.style.width !== `${d}px`) {
+        cursorDotRef.current.style.width = `${d}px`;
+        cursorDotRef.current.style.height = `${d}px`;
+      }
     }
 
     // The polygonal lasso rubber-bands from the last committed point to the
@@ -482,14 +504,10 @@ export function PaintCanvas({
         ctx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
         ctx.drawImage(temp, dx, dy);
         path.push(pt);
-        redrawCombinedCanvas();
+        scheduleRedraw();
       }
       return;
     }
-
-    const constrainedPt = e.shiftKey ? constrainShapeEndpoint(tool, path[0], pt) : pt;
-    const smoothedPt = smoothPoint(prevPt, constrainedPt, brush.smoothing);
-    path.push(smoothedPt);
 
     const activeTexture = brush.textureId
       ? customTextures.find((t) => t.id === brush.textureId)?.canvas
@@ -503,48 +521,73 @@ export function PaintCanvas({
     if (tool === 'lasso') {
       lassoPointsRef.current.push(pt);
     } else if (STROKE_TOOLS.includes(tool)) {
+      // Read high-frequency coalesced stylus/mouse sub-samples for ultra-silky curved strokes
+      const coalesced =
+        typeof e.nativeEvent.getCoalescedEvents === 'function'
+          ? e.nativeEvent.getCoalescedEvents()
+          : [];
+      const samplePoints: Point[] =
+        coalesced.length > 1
+          ? coalesced.map((ce) => clientToCanvasPoint(ce.clientX, ce.clientY, ce.pressure, ce.pointerType))
+          : [pt];
+
       withSelectionClip(targetCanvas, selection?.mask ?? null, alphaLocked, (ctx) => {
         ctx.save();
         ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
+        const w = targetCanvas.width;
+        const h = targetCanvas.height;
 
-        if (tool === 'brush' || tool === 'eraser') {
-          const w = targetCanvas.width;
-          const h = targetCanvas.height;
-          strokeSegment(ctx, prevPt, smoothedPt, brush, activeTexture);
+        for (const rawSample of samplePoints) {
+          const last = path[path.length - 1] || rawSample;
+          const constrained = e.shiftKey ? constrainShapeEndpoint(tool, path[0], rawSample) : rawSample;
+          const smoothed = smoothPoint(last, constrained, brush.smoothing);
+          path.push(smoothed);
 
-          if (symmetry === 'vertical' || symmetry === 'both') {
-            strokeSegment(ctx, { ...prevPt, x: w - prevPt.x }, { ...smoothedPt, x: w - smoothedPt.x }, brush, activeTexture);
+          if (tool === 'brush' || tool === 'eraser') {
+            strokeSegment(ctx, last, smoothed, brush, activeTexture);
+
+            if (symmetry === 'vertical' || symmetry === 'both') {
+              strokeSegment(ctx, { ...last, x: w - last.x }, { ...smoothed, x: w - smoothed.x }, brush, activeTexture);
+            }
+            if (symmetry === 'horizontal' || symmetry === 'both') {
+              strokeSegment(ctx, { ...last, y: h - last.y }, { ...smoothed, y: h - smoothed.y }, brush, activeTexture);
+            }
+            if (symmetry === 'both') {
+              strokeSegment(
+                ctx,
+                { x: w - last.x, y: h - last.y, pressure: last.pressure },
+                { x: w - smoothed.x, y: h - smoothed.y, pressure: smoothed.pressure },
+                brush,
+                activeTexture
+              );
+            }
+          } else if (tool === 'smudge') {
+            smudgeSegment(ctx, last, smoothed, brush.size, brush.smudgeStrength);
+          } else if (tool === 'cloneStamp') {
+            const offset = cloneOffsetRef.current;
+            if (offset) {
+              cloneStampSegment(ctx, cloneSampleRef.current ?? ctx.canvas, last, smoothed, offset, brush);
+            }
+          } else if (tool === 'blur') {
+            blurSegment(ctx, last, smoothed, brush.size, brush.opacity);
+          } else if (tool === 'sharpen') {
+            sharpenSegment(ctx, last, smoothed, brush.size, brush.opacity);
+          } else if (tool === 'dodge' || tool === 'burn') {
+            dodgeBurnSegment(ctx, last, smoothed, brush.size, brush.exposure, tool);
           }
-          if (symmetry === 'horizontal' || symmetry === 'both') {
-            strokeSegment(ctx, { ...prevPt, y: h - prevPt.y }, { ...smoothedPt, y: h - smoothedPt.y }, brush, activeTexture);
-          }
-          if (symmetry === 'both') {
-            strokeSegment(
-              ctx,
-              { x: w - prevPt.x, y: h - prevPt.y, pressure: prevPt.pressure },
-              { x: w - smoothedPt.x, y: h - smoothedPt.y, pressure: smoothedPt.pressure },
-              brush,
-              activeTexture
-            );
-          }
-        } else if (tool === 'smudge') {
-          smudgeSegment(ctx, prevPt, smoothedPt, brush.size, brush.smudgeStrength);
-        } else if (tool === 'cloneStamp') {
-          const offset = cloneOffsetRef.current;
-          if (offset) {
-            cloneStampSegment(ctx, cloneSampleRef.current ?? ctx.canvas, prevPt, smoothedPt, offset, brush);
-          }
-        } else if (tool === 'blur') {
-          blurSegment(ctx, prevPt, smoothedPt, brush.size, brush.opacity);
-        } else if (tool === 'sharpen') {
-          sharpenSegment(ctx, prevPt, smoothedPt, brush.size, brush.opacity);
-        } else if (tool === 'dodge' || tool === 'burn') {
-          dodgeBurnSegment(ctx, prevPt, smoothedPt, brush.size, brush.exposure, tool);
         }
 
         ctx.restore();
       });
+
+      // Fast path: brush/eraser/retouch never need the overlay canvas cleared!
+      scheduleRedraw();
+      return;
     }
+
+    const constrainedPt = e.shiftKey ? constrainShapeEndpoint(tool, path[0], pt) : pt;
+    const smoothedPt = smoothPoint(prevPt, constrainedPt, brush.smoothing);
+    path.push(smoothedPt);
 
     const overlay = overlayRef.current;
     if (overlay) {
@@ -589,7 +632,7 @@ export function PaintCanvas({
       }
     }
 
-    redrawCombinedCanvas();
+    scheduleRedraw();
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -773,9 +816,9 @@ export function PaintCanvas({
       {showBrushCursor && (
         <div
           ref={cursorDotRef}
-          className="absolute rounded-full pointer-events-none opacity-0"
+          className="absolute left-0 top-0 rounded-full pointer-events-none opacity-0 will-change-transform"
           style={{
-            transform: 'translate(-50%, -50%)',
+            transform: 'translate3d(-100px, -100px, 0) translate(-50%, -50%)',
             border: '1.5px solid white',
             mixBlendMode: 'difference',
           }}

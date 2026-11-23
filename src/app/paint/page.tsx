@@ -1385,6 +1385,15 @@ export default function PaintPage() {
       return;
     }
 
+    // Commit any live strokes on the current frame ONCE before playback begins —
+    // never clone `frames` or call `setFrames` inside the 24/60fps playback tick!
+    const initialIdx = activeFrameIndexRef.current;
+    const committed = framesRef.current.map((f, i) =>
+      i === initialIdx ? { ...f, layers: layersRef.current, activeLayerId: activeLayerIdRef.current } : f
+    );
+    framesRef.current = committed;
+    setFrames(committed);
+
     const frameInterval = 1000 / Math.max(1, fps);
     lastFrameTimeRef.current = performance.now();
 
@@ -1409,17 +1418,11 @@ export default function PaintPage() {
               nextIdx = start;
             }
 
-            const updated = framesRef.current.map((f, i) =>
-              i === curIdx ? { ...f, layers: layersRef.current, activeLayerId: activeLayerIdRef.current } : f
-            );
-            const target = updated[nextIdx] || updated[0];
-
-            framesRef.current = updated;
+            const target = framesRef.current[nextIdx] || framesRef.current[0];
             layersRef.current = target.layers;
             activeLayerIdRef.current = target.activeLayerId;
             activeFrameIndexRef.current = nextIdx;
 
-            setFrames(updated);
             setLayers(target.layers);
             setActiveLayerId(target.activeLayerId);
             setActiveFrameIndex(nextIdx);
@@ -1561,11 +1564,10 @@ export default function PaintPage() {
   }, [isScrubbingRefVideo, scrubPinnedRefFromClientX]);
 
   // Callipeg-style Multi-Frame Color-Tinted Onion Skin Ghosts:
-  // Previous 2 frames tinted Rose-Red (#f43f5e: -1 @ 100%, -2 @ 42%)
-  // Next 2 frames tinted Cyan (#06b6d4: +1 @ 100%, +2 @ 42%)
+  // Auto-paused during playback (zero 1920x1080 GC churn at 24fps, crisp motion like Toon Boom/Callipeg!)
   const onionSkinPrevCanvas = useMemo(() => {
     if (typeof window === 'undefined') return null;
-    if (!onionSkinEnabled || activeFrameIndex <= 0) return null;
+    if (!onionSkinEnabled || isPlaying || activeFrameIndex <= 0) return null;
     const cvs = createLayerCanvas(canvasSize.width, canvasSize.height);
     const ctx = cvs.getContext('2d')!;
     let hasContent = false;
@@ -1585,11 +1587,11 @@ export default function PaintPage() {
       hasContent = true;
     }
     return hasContent ? cvs : null;
-  }, [onionSkinEnabled, activeFrameIndex, frames, canvasSize]);
+  }, [onionSkinEnabled, isPlaying, activeFrameIndex, frames, canvasSize]);
 
   const onionSkinNextCanvas = useMemo(() => {
     if (typeof window === 'undefined') return null;
-    if (!onionSkinEnabled || activeFrameIndex >= frames.length - 1) return null;
+    if (!onionSkinEnabled || isPlaying || activeFrameIndex >= frames.length - 1) return null;
     const cvs = createLayerCanvas(canvasSize.width, canvasSize.height);
     const ctx = cvs.getContext('2d')!;
     let hasContent = false;
@@ -1609,7 +1611,7 @@ export default function PaintPage() {
       hasContent = true;
     }
     return hasContent ? cvs : null;
-  }, [onionSkinEnabled, activeFrameIndex, frames, canvasSize]);
+  }, [onionSkinEnabled, isPlaying, activeFrameIndex, frames, canvasSize]);
 
   const handleLoadProjectFile = async (file: File) => {
     try {

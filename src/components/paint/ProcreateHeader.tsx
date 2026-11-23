@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   Paintbrush,
@@ -16,6 +16,8 @@ import {
   Radio,
   Clapperboard,
   Crosshair,
+  HelpCircle,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ToolType, BrushSettings } from '@/lib/paint/types';
@@ -62,14 +64,14 @@ const WORKSPACES: {
     label: 'Drawing',
     icon: Paintbrush,
     activeClass: 'bg-violet-600 text-white shadow-md shadow-violet-600/40',
-    hint: 'Clean Photoshop / Procreate illustration canvas',
+    hint: 'Clean illustration, sketching & drawover canvas',
   },
   {
     id: 'storyboard',
     label: 'Storyboard',
     icon: Clapperboard,
     activeClass: 'bg-amber-500 text-[#141414] shadow-md shadow-amber-500/35',
-    hint: 'Toon Boom Storyboard Pro panels & script dock',
+    hint: 'Storyboard panels, 2D camera moves & script dock',
   },
   {
     id: 'animation',
@@ -110,6 +112,8 @@ export function ProcreateHeader({
   onNextBoard,
   currentBoardLabel = 'Panel 1 / 1',
 }: ProcreateHeaderProps) {
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
   return (
     <div
       data-ui-panel="true"
@@ -200,7 +204,7 @@ export function ProcreateHeader({
               ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow'
               : 'bg-white/10 hover:bg-white/15 text-zinc-100'
           )}
-          title="Open Vector, Photoshop & Procreate Brush Library"
+          title="Open AnimRef Brush Studio"
         >
           <Paintbrush className="h-3.5 w-3.5" />
           <span>Brushes</span>
@@ -325,6 +329,63 @@ export function ProcreateHeader({
             <span className="hidden sm:inline">Publish</span>
           </button>
         )}
+
+        {/* Quick Shortcuts Guide Toggle */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowShortcuts((s) => !s)}
+            className={cn(
+              'h-9 w-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer',
+              showShortcuts
+                ? 'bg-violet-600 text-white border-violet-400'
+                : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border-white/10'
+            )}
+            title="Keyboard Shortcuts & Quick Tips"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
+
+          {showShortcuts && (
+            <div className="absolute right-0 top-11 z-50 w-72 rounded-2xl bg-[#141322]/98 border border-white/15 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.9)] backdrop-blur-2xl text-xs animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/10">
+                <span className="font-black text-white tracking-wide">AnimRef Studio Shortcuts</span>
+                <button
+                  type="button"
+                  onClick={() => setShowShortcuts(false)}
+                  className="h-6 w-6 rounded-lg hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white cursor-pointer"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div className="space-y-1.5 text-[11px]">
+                {[
+                  ['B / E', 'Brush / Eraser'],
+                  ['G / F', 'Paint Bucket / Lasso Fill'],
+                  ['L / M / W', 'Lasso / Marquee / Magic Wand'],
+                  ['Alt + T', 'Free Transform (Move / Scale / Rotate)'],
+                  ['H / X', 'Flip Canvas / Swap Colors'],
+                  ['[ / ]', 'Brush Size (- / +)'],
+                  ['Space', 'Hold to Pan · Tap in Timeline to Play'],
+                  ['F6 / F5', 'New Keyframe / Extend Hold (+1f)'],
+                  ['← / →', 'Step Previous / Next Cel'],
+                  ['C', 'Toggle 2D Camera Keyframes'],
+                  ['Ctrl + 0', 'Fit & Center Canvas'],
+                ].map(([key, desc]) => (
+                  <div key={key} className="flex items-center justify-between gap-2">
+                    <span className="text-zinc-300">{desc}</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-black/50 border border-white/15 font-mono text-[10px] font-bold text-violet-300 shrink-0">
+                      {key}
+                    </kbd>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 pt-2 border-t border-white/10 text-[10px] text-zinc-400">
+                Tip: Click an active tool icon again (or right-click it) to reveal sub-tools.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

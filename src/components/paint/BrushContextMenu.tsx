@@ -80,7 +80,7 @@ export function BrushContextMenu({
           </div>
           <div>
             <h3 className="font-extrabold text-white text-xs tracking-wide">Color & Brush Studio</h3>
-            <p className="text-[10px] text-zinc-400">Procreate Palette & Brush Dynamics</p>
+            <p className="text-[10px] text-zinc-400">AnimRef Palette & Brush Dynamics</p>
           </div>
         </div>
 

@@ -58,9 +58,9 @@ export function ProcreateBrushStudio({ brush, onBrushChange, onClose, customText
       {/* Header */}
       <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-white/10">
         <div className="flex items-center gap-2.5">
-          <h3 className="text-base font-black text-white tracking-wide">Studio Brush Library</h3>
+          <h3 className="text-base font-black text-white tracking-wide">AnimRef Brush Studio</h3>
           <span className="rounded-full border border-violet-400/35 bg-violet-500/15 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-violet-200">
-            Vector · Photoshop · Procreate
+            Vector · Ink · Painter · FX
           </span>
         </div>
         <button

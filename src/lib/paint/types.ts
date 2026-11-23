@@ -187,7 +187,7 @@ export const BRUSH_PRESETS: BrushPreset[] = [
     id: 'vector-gpen',
     name: 'Vector G-Pen',
     category: 'Vector',
-    badge: 'TOON BOOM',
+    badge: 'VECTOR',
     settings: {
       textureId: undefined,
       vectorSmooth: true,
@@ -254,7 +254,7 @@ export const BRUSH_PRESETS: BrushPreset[] = [
     id: '6b-anim-pencil',
     name: '6B Animation Pencil',
     category: 'Sketch',
-    badge: 'PROCREATE',
+    badge: 'STUDIO',
     settings: {
       textureId: 'builtin-graphite',
       vectorSmooth: false,
@@ -294,7 +294,7 @@ export const BRUSH_PRESETS: BrushPreset[] = [
     id: 'chisel-copic',
     name: 'Chisel Copic Marker',
     category: 'Inking',
-    badge: 'PHOTOSHOP',
+    badge: 'PAINTER',
     settings: {
       textureId: 'builtin-chisel-nib',
       vectorSmooth: false,
@@ -317,7 +317,7 @@ export const BRUSH_PRESETS: BrushPreset[] = [
     id: 'studio-rake',
     name: 'Studio Oil Rake',
     category: 'Painting',
-    badge: 'PHOTOSHOP',
+    badge: 'PAINTER',
     settings: {
       textureId: 'builtin-studio-rake',
       vectorSmooth: false,
@@ -334,7 +334,7 @@ export const BRUSH_PRESETS: BrushPreset[] = [
     id: 'gouache-flat',
     name: 'Gouache Flat',
     category: 'Painting',
-    badge: 'PROCREATE',
+    badge: 'STUDIO',
     settings: {
       textureId: 'builtin-gouache-flat',
       vectorSmooth: false,
@@ -352,7 +352,7 @@ export const BRUSH_PRESETS: BrushPreset[] = [
     id: 'concept-round',
     name: 'Concept Painter Round',
     category: 'Painting',
-    badge: 'PHOTOSHOP',
+    badge: 'PAINTER',
     settings: {
       textureId: undefined,
       vectorSmooth: false,

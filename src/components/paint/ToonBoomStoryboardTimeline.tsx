@@ -125,7 +125,7 @@ export function ToonBoomStoryboardTimeline({
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-purple-400 font-black text-xs">
             <Film className="h-4 w-4 text-purple-400" />
-            <span>Toon Boom Storyboard Pro Reel</span>
+            <span>Storyboard Animatic Reel</span>
           </div>
 
           <div className="h-4 w-px bg-white/10" />

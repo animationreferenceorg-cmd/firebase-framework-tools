@@ -1686,8 +1686,8 @@ export default function PaintPage() {
 
   if (layers.length === 0 || !activeLayerId) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-[#0d0d12] text-zinc-500 text-sm font-semibold">
-        Loading Procreate Dreams Studio…
+      <div className="fixed inset-0 flex items-center justify-center bg-[#0d0d12] text-zinc-400 text-sm font-semibold">
+        Loading AnimRef Studio…
       </div>
     );
   }

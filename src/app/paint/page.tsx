@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { PaintCanvas } from '@/components/paint/PaintCanvas';
+import { FreeTransformOverlay, type FreeTransformSession, type FreeTransformResult } from '@/components/paint/FreeTransformOverlay';
 import { LayersPanel } from '@/components/paint/LayersPanel';
 import { FramesPanel } from '@/components/paint/FramesPanel';
 import { ProcreateHeader, type PaintWorkspaceMode } from '@/components/paint/ProcreateHeader';
@@ -15,7 +16,7 @@ import { ReferenceComparisonModal } from '@/components/paint/ReferenceComparison
 import { ReferenceOverlay } from '@/components/paint/ReferenceOverlay';
 import { NewProjectModal } from '@/components/paint/NewProjectModal';
 import { HistoryManager, type LayerSnapshot } from '@/lib/paint/history';
-import { createLayerCanvas, processBrushTextureImage, applyBrightnessContrast, applyHueSaturation, cloneCanvas, flattenLayers, renderThumbnail, tintSilhouette, invertMask, maskToSelection } from '@/lib/paint/engine';
+import { createLayerCanvas, processBrushTextureImage, applyBrightnessContrast, applyHueSaturation, cloneCanvas, flattenLayers, renderThumbnail, tintSilhouette, invertMask, maskToSelection, maskBounds } from '@/lib/paint/engine';
 import { createBuiltinBrushLibrary } from '@/lib/paint/builtinBrushes';
 import { ExportModal } from '@/components/paint/ExportModal';
 import { AdjustmentsDialog } from '@/components/paint/AdjustmentsDialog';
@@ -32,7 +33,7 @@ import {
 import type { Layer, ToolType, BrushSettings, BlendMode, CustomBrushTexture, Selection, SymmetryMode, Frame } from '@/lib/paint/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Clapperboard, Pin, PinOff, Film, Eye, Split, X, Camera, Radio, FlipHorizontal2, Play, Pause, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Clapperboard, Pin, PinOff, Film, Eye, Split, X, Camera, Radio, FlipHorizontal2, Play, Pause, ChevronLeft, ChevronRight, RotateCcw, RotateCw, Move } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -781,6 +782,24 @@ export default function PaintPage() {
     setLayers((prev) => prev.map((l) => (l.id === id ? { ...l, alphaLocked: !l.alphaLocked } : l)));
   };
 
+  const handleToggleClipped = (id: string) => {
+    setLayers((prev) => {
+      if (prev[0]?.id === id) return prev; // bottom layer cannot clip to anything below
+      return prev.map((l) => (l.id === id ? { ...l, clippedToBelow: !l.clippedToBelow } : l));
+    });
+    scheduleAutosave();
+  };
+
+  const handleToggleReference = (id: string) => {
+    setLayers((prev) => {
+      const target = prev.find((l) => l.id === id);
+      const nextVal = !target?.isReference;
+      // Only one Reference Layer active at a time (Procreate / Toon Boom behavior)
+      return prev.map((l) => ({ ...l, isReference: l.id === id ? nextVal : false }));
+    });
+    scheduleAutosave();
+  };
+
   const handleAddMask = (id: string) => {
     handleBeforeStroke();
     setLayers((prev) => prev.map((l) => {
@@ -982,13 +1001,109 @@ export default function PaintPage() {
   };
 
   const [canvasFlipped, setCanvasFlipped] = useState(false);
+  const [canvasRotation, setCanvasRotation] = useState(0);
+  const [transformSession, setTransformSession] = useState<FreeTransformSession | null>(null);
+  const [canvasRedrawToken, setCanvasRedrawToken] = useState(0);
 
-  // Callipeg / Procreate / Photoshop horizontal mirror toggle ('H' key)
+  // Start Free Transform (Ctrl+T / Alt+T / Transform button) on active selection or active layer
+  const startFreeTransform = useCallback(() => {
+    if (transformSession) return;
+    const activeLayer = layersRef.current.find((l) => l.id === activeLayerIdRef.current);
+    if (!activeLayer || activeLayer.locked || !activeLayer.visible) {
+      toast({ title: 'Layer is locked or hidden', variant: 'destructive' });
+      return;
+    }
+
+    const backupLayerCanvas = cloneCanvas(activeLayer.canvas);
+    let bounds: { x: number; y: number; w: number; h: number };
+    let sourceCanvas: HTMLCanvasElement;
+
+    if (selection && selection.w > 0 && selection.h > 0) {
+      bounds = { x: selection.x, y: selection.y, w: selection.w, h: selection.h };
+      // Extract only the pixels inside the selection mask
+      const masked = cloneCanvas(activeLayer.canvas);
+      const mCtx = masked.getContext('2d')!;
+      mCtx.globalCompositeOperation = 'destination-in';
+      mCtx.drawImage(selection.mask, 0, 0);
+
+      sourceCanvas = createLayerCanvas(bounds.w, bounds.h);
+      sourceCanvas.getContext('2d')!.drawImage(masked, bounds.x, bounds.y, bounds.w, bounds.h, 0, 0, bounds.w, bounds.h);
+
+      // Clear selected pixels from active layer while floating
+      const lCtx = activeLayer.canvas.getContext('2d')!;
+      lCtx.save();
+      lCtx.globalCompositeOperation = 'destination-out';
+      lCtx.drawImage(selection.mask, 0, 0);
+      lCtx.restore();
+    } else {
+      bounds = maskBounds(activeLayer.canvas);
+      if (bounds.w <= 0 || bounds.h <= 0) {
+        toast({ title: 'Nothing to transform on this layer', description: 'Draw something first, then press Alt+T or click Transform.' });
+        return;
+      }
+      sourceCanvas = createLayerCanvas(bounds.w, bounds.h);
+      sourceCanvas.getContext('2d')!.drawImage(activeLayer.canvas, bounds.x, bounds.y, bounds.w, bounds.h, 0, 0, bounds.w, bounds.h);
+      activeLayer.canvas.getContext('2d')!.clearRect(0, 0, activeLayer.canvas.width, activeLayer.canvas.height);
+    }
+
+    handleBeforeStroke();
+    setTransformSession({
+      layerId: activeLayer.id,
+      sourceCanvas,
+      backupLayerCanvas,
+      ...bounds,
+    });
+    setCanvasRedrawToken((t) => t + 1);
+  }, [transformSession, selection, toast]);
+
+  const applyFreeTransform = useCallback((result: FreeTransformResult) => {
+    if (!transformSession) return;
+    const layer = layersRef.current.find((l) => l.id === transformSession.layerId);
+    if (layer) {
+      const ctx = layer.canvas.getContext('2d')!;
+      ctx.save();
+      ctx.translate(result.cx, result.cy);
+      ctx.rotate((result.rotationDeg * Math.PI) / 180);
+      ctx.scale(result.scaleX, result.scaleY);
+      ctx.drawImage(transformSession.sourceCanvas, -transformSession.w / 2, -transformSession.h / 2);
+      ctx.restore();
+    }
+    setTransformSession(null);
+    setSelection(null);
+    setCanvasRedrawToken((t) => t + 1);
+    handleAfterStroke();
+  }, [transformSession]);
+
+  const cancelFreeTransform = useCallback(() => {
+    if (!transformSession) return;
+    const layer = layersRef.current.find((l) => l.id === transformSession.layerId);
+    if (layer) {
+      const ctx = layer.canvas.getContext('2d')!;
+      ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+      ctx.drawImage(transformSession.backupLayerCanvas, 0, 0);
+    }
+    setTransformSession(null);
+    setCanvasRedrawToken((t) => t + 1);
+  }, [transformSession]);
+
+  // Callipeg / Procreate / Harmony shortcuts:
+  // 'H' = Flip Canvas Horizontal | 'Alt+R' = Reset Rotation | 'Ctrl/Alt+T' = Free Transform
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
       const activeEl = document.activeElement;
       if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) return;
+
+      if ((e.ctrlKey || e.metaKey || e.altKey) && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        startFreeTransform();
+        return;
+      }
+      if (e.altKey && e.key.toLowerCase() === 'r') {
+        e.preventDefault();
+        setCanvasRotation(0);
+        return;
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key === 'h' || e.key === 'H') {
         e.preventDefault();
         setCanvasFlipped((prev) => !prev);
@@ -996,7 +1111,7 @@ export default function PaintPage() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [startFreeTransform]);
 
   const displayFrames = useMemo(
     () => frames.map((f, i) => (i === activeFrameIndex ? { ...f, layers, activeLayerId } : f)),
@@ -1925,13 +2040,17 @@ export default function PaintPage() {
                   (isPinnedToCanvas && activeReferenceVideo) || viewportStream ? "bg-black" : "bg-white"
                 )}
               >
-                {/* Mirrorable Canvas + Video Stage (leaves Storyboard Script Dock un-mirrored) */}
+                {/* Mirrorable & Rotatable Canvas + Video Stage (leaves Storyboard Script Dock un-mirrored) */}
                 <div
                   className="relative"
                   style={{
                     width: canvasSize.width,
                     height: canvasSize.height,
-                    transform: canvasFlipped ? 'scaleX(-1)' : undefined,
+                    transform: [
+                      canvasRotation ? `rotate(${canvasRotation}deg)` : '',
+                      canvasFlipped ? 'scaleX(-1)' : '',
+                    ].filter(Boolean).join(' ') || undefined,
+                    transformOrigin: 'center center',
                   }}
                 >
                   {/* Live Maya / Blender 60fps Viewport Stream Overlay (rendered behind transparent drawing canvas) */}
@@ -2020,7 +2139,23 @@ export default function PaintPage() {
                     onionSkinOpacity={onionSkinOpacity}
                     hasBackgroundVideo={(isPinnedToCanvas && !!activeReferenceVideo) || Boolean(viewportStream)}
                     flipped={canvasFlipped}
+                    rotationDeg={canvasRotation}
+                    stageZoom={zoom}
+                    redrawToken={canvasRedrawToken}
                   />
+
+                  {transformSession && (
+                    <FreeTransformOverlay
+                      session={transformSession}
+                      canvasWidth={canvasSize.width}
+                      canvasHeight={canvasSize.height}
+                      stageZoom={zoom}
+                      stageRotationDeg={canvasRotation}
+                      stageFlipped={canvasFlipped}
+                      onApply={applyFreeTransform}
+                      onCancel={cancelFreeTransform}
+                    />
+                  )}
                 </div>
 
                 {workspaceMode === 'storyboard' && (
@@ -2100,14 +2235,61 @@ export default function PaintPage() {
             )}
           </div>
 
-          {/* Floating Canvas Zoom & Flip HUD */}
-          <div className="absolute bottom-6 right-6 flex items-center gap-2 bg-[#161620]/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.8)] px-2 py-1.5 z-40">
+          {/* Floating Canvas Transform, Rotate, Flip & Zoom HUD */}
+          <div className="absolute bottom-6 right-6 flex items-center gap-1.5 bg-[#161620]/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.8)] px-2 py-1.5 z-40">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={startFreeTransform}
+              className={cn(
+                "h-8 px-2.5 rounded-xl text-xs font-bold gap-1.5 flex items-center transition-colors w-auto",
+                transformSession
+                  ? "bg-cyan-500/30 text-cyan-200 border border-cyan-400/50 hover:bg-cyan-500/40"
+                  : "text-zinc-300 hover:text-white hover:bg-white/10"
+              )}
+              title="Free Transform Move / Scale / Rotate (Alt+T or Ctrl+T)"
+            >
+              <Move className="h-3.5 w-3.5 shrink-0" />
+              <span className="text-[10px] font-mono hidden sm:inline">Transform</span>
+            </Button>
+
+            <div className="w-px h-5 bg-white/10" />
+
+            {/* Canvas Rotation Controls (-15° / Angle Reset / +15°) */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCanvasRotation((r) => r - 15)}
+              className="h-8 w-7 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10"
+              title="Rotate Canvas -15°"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </Button>
+            {canvasRotation !== 0 && (
+              <button
+                onClick={() => setCanvasRotation(0)}
+                className="text-[10px] font-mono font-bold px-1.5 py-1 rounded-lg bg-violet-600/30 border border-violet-400/40 text-violet-200 hover:text-white cursor-pointer"
+                title="Reset Canvas Rotation to 0° (Alt+R)"
+              >
+                {canvasRotation}°
+              </button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCanvasRotation((r) => r + 15)}
+              className="h-8 w-7 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10"
+              title="Rotate Canvas +15°"
+            >
+              <RotateCw className="h-3.5 w-3.5" />
+            </Button>
+
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setCanvasFlipped((f) => !f)}
               className={cn(
-                "h-8 px-2.5 rounded-xl text-xs font-bold gap-1.5 flex items-center transition-colors",
+                "h-8 px-2 rounded-xl text-xs font-bold gap-1 flex items-center transition-colors",
                 canvasFlipped
                   ? "bg-violet-600/35 text-violet-200 border border-violet-400/50 hover:bg-violet-600/50 w-auto"
                   : "text-zinc-300 hover:text-white hover:bg-white/10 w-8"
@@ -2156,6 +2338,8 @@ export default function PaintPage() {
             onBlendModeChange={handleBlendModeChange}
             onReorder={handleReorder}
             onToggleAlphaLock={handleToggleAlphaLock}
+            onToggleClipped={handleToggleClipped}
+            onToggleReference={handleToggleReference}
             onAddMask={handleAddMask}
             onDeleteMask={handleDeleteMask}
             onToggleMaskEnabled={handleToggleMaskEnabled}

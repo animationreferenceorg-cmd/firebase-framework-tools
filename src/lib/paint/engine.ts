@@ -253,7 +253,8 @@ export function floodFill(
   startX: number,
   startY: number,
   fillColor: string,
-  tolerance: number = 32
+  tolerance: number = 32,
+  boundarySource?: HTMLCanvasElement | null
 ) {
   const canvas = target instanceof HTMLCanvasElement ? target : target.canvas;
   const ctx = target instanceof HTMLCanvasElement ? target.getContext('2d') : target;
@@ -262,18 +263,26 @@ export function floodFill(
   const h = canvas.height;
   if (startX < 0 || startY < 0 || startX >= w || startY >= h) return;
 
-  const imageData = ctx.getImageData(0, 0, w, h);
-  const data = imageData.data;
+  const targetImageData = ctx.getImageData(0, 0, w, h);
+  const outData = targetImageData.data;
+
+  // When a Toon Boom / Procreate Reference Layer is active, sample boundaries from the Reference Layer
+  // (e.g., clean Ink line-art) while writing flat colors cleanly into the active layer underneath!
+  const sampleData =
+    boundarySource && boundarySource !== canvas
+      ? boundarySource.getContext('2d')!.getImageData(0, 0, w, h).data
+      : outData;
 
   const startIdx = (startY * w + startX) * 4;
-  const targetR = data[startIdx];
-  const targetG = data[startIdx + 1];
-  const targetB = data[startIdx + 2];
-  const targetA = data[startIdx + 3];
+  const targetR = sampleData[startIdx];
+  const targetG = sampleData[startIdx + 1];
+  const targetB = sampleData[startIdx + 2];
+  const targetA = sampleData[startIdx + 3];
 
   const fill = hexToRgbaTuple(fillColor);
 
   if (
+    sampleData === outData &&
     Math.abs(targetR - fill.r) <= 2 &&
     Math.abs(targetG - fill.g) <= 2 &&
     Math.abs(targetB - fill.b) <= 2 &&
@@ -283,15 +292,16 @@ export function floodFill(
   }
 
   const matches = (idx: number) => {
-    const dr = data[idx] - targetR;
-    const dg = data[idx + 1] - targetG;
-    const db = data[idx + 2] - targetB;
-    const da = data[idx + 3] - targetA;
+    const dr = sampleData[idx] - targetR;
+    const dg = sampleData[idx + 1] - targetG;
+    const db = sampleData[idx + 2] - targetB;
+    const da = sampleData[idx + 3] - targetA;
     return Math.sqrt(dr * dr + dg * dg + db * db + da * da) <= tolerance;
   };
 
   const stack: [number, number][] = [[startX, startY]];
   const visited = new Uint8Array(w * h);
+  const filledMask = boundarySource && boundarySource !== canvas ? new Uint8Array(w * h) : null;
 
   while (stack.length) {
     const [x, y] = stack.pop()!;
@@ -302,15 +312,38 @@ export function floodFill(
     if (!matches(idx)) continue;
 
     visited[pos] = 1;
-    data[idx] = fill.r;
-    data[idx + 1] = fill.g;
-    data[idx + 2] = fill.b;
-    data[idx + 3] = fill.a;
+    if (filledMask) filledMask[pos] = 1;
+    outData[idx] = fill.r;
+    outData[idx + 1] = fill.g;
+    outData[idx + 2] = fill.b;
+    outData[idx + 3] = fill.a;
 
     stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
   }
 
-  ctx.putImageData(imageData, 0, 0);
+  // 1px under-ink expansion when using a Reference Layer so anti-aliased ink edges have zero white halo
+  if (filledMask) {
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const pos = y * w + x;
+        if (filledMask[pos]) continue;
+        if (
+          filledMask[pos - 1] ||
+          filledMask[pos + 1] ||
+          filledMask[pos - w] ||
+          filledMask[pos + w]
+        ) {
+          const idx = pos * 4;
+          outData[idx] = fill.r;
+          outData[idx + 1] = fill.g;
+          outData[idx + 2] = fill.b;
+          outData[idx + 3] = fill.a;
+        }
+      }
+    }
+  }
+
+  ctx.putImageData(targetImageData, 0, 0);
 }
 
 function hexToRgbaTuple(hex: string): { r: number; g: number; b: number; a: number } {
@@ -340,6 +373,60 @@ export function cloneCanvas(source: HTMLCanvasElement): HTMLCanvasElement {
   return clone;
 }
 
+/** Composites a layer stack onto `ctx`, honoring layer masks AND Photoshop/Procreate Clipping Masks. */
+export function compositeLayersToContext(ctx: CanvasRenderingContext2D, layers: Layer[], width: number, height: number) {
+  let activeClipBase: HTMLCanvasElement | null = null;
+  let activeClipBaseVisible = true;
+
+  for (const layer of layers) {
+    const isClipped = Boolean(layer.clippedToBelow);
+    if (!isClipped) {
+      activeClipBaseVisible = layer.visible;
+      if (!layer.visible) {
+        activeClipBase = null;
+        continue;
+      }
+      if (layer.mask && layer.maskEnabled !== false) {
+        const masked = cloneCanvas(layer.canvas);
+        const mCtx = masked.getContext('2d')!;
+        mCtx.globalCompositeOperation = 'destination-in';
+        mCtx.drawImage(layer.mask, 0, 0);
+        activeClipBase = masked;
+        ctx.save();
+        ctx.globalAlpha = layer.opacity;
+        ctx.globalCompositeOperation = layer.blendMode;
+        ctx.drawImage(masked, 0, 0);
+        ctx.restore();
+      } else {
+        activeClipBase = layer.canvas;
+        ctx.save();
+        ctx.globalAlpha = layer.opacity;
+        ctx.globalCompositeOperation = layer.blendMode;
+        ctx.drawImage(layer.canvas, 0, 0);
+        ctx.restore();
+      }
+    } else {
+      if (!layer.visible || !activeClipBaseVisible || !activeClipBase) continue;
+      // Clip this layer's pixels cleanly to the alpha of its base layer below
+      const clipped = createLayerCanvas(width, height);
+      const cCtx = clipped.getContext('2d')!;
+      cCtx.drawImage(layer.canvas, 0, 0);
+      if (layer.mask && layer.maskEnabled !== false) {
+        cCtx.globalCompositeOperation = 'destination-in';
+        cCtx.drawImage(layer.mask, 0, 0);
+      }
+      cCtx.globalCompositeOperation = 'destination-in';
+      cCtx.drawImage(activeClipBase, 0, 0);
+
+      ctx.save();
+      ctx.globalAlpha = layer.opacity;
+      ctx.globalCompositeOperation = layer.blendMode;
+      ctx.drawImage(clipped, 0, 0);
+      ctx.restore();
+    }
+  }
+}
+
 /** Flattens a layer stack into one canvas. `skipBottom` drops the
  * bottom-most layer — used for onion skinning, where that layer is by
  * convention the opaque background fill, and including it would turn the
@@ -349,14 +436,7 @@ export function flattenLayers(layers: Layer[], width: number, height: number, sk
   const composite = createLayerCanvas(width, height);
   const ctx = composite.getContext('2d')!;
   const toDraw = (skipBottom && layers.length > 1) ? layers.slice(1) : layers;
-  for (const layer of toDraw) {
-    if (!layer.visible) continue;
-    ctx.save();
-    ctx.globalAlpha = layer.opacity;
-    ctx.globalCompositeOperation = layer.blendMode;
-    ctx.drawImage(layer.canvas, 0, 0);
-    ctx.restore();
-  }
+  compositeLayersToContext(ctx, toDraw, width, height);
   return composite;
 }
 

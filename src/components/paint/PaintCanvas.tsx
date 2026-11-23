@@ -23,6 +23,7 @@ import {
   blurSegment,
   sharpenSegment,
   dodgeBurnSegment,
+  compositeLayersToContext,
 } from '@/lib/paint/engine';
 
 interface PaintCanvasProps {
@@ -48,6 +49,12 @@ interface PaintCanvasProps {
   hasBackgroundVideo?: boolean;
   /** Non-destructive horizontal canvas mirror (Callipeg/Procreate 'H' flip). */
   flipped?: boolean;
+  /** Non-destructive canvas rotation in degrees (Harmony/Storyboard Pro 'R' rotate). */
+  rotationDeg?: number;
+  /** Parent stage CSS scale zoom, used for exact inverse-rotated pointer math. */
+  stageZoom?: number;
+  /** Increment to force a display redraw after external layer pixel edits (e.g. Free Transform). */
+  redrawToken?: number;
   /** Increment to clear the clone-stamp source point from outside. */
   cloneSourceResetToken?: number;
 }
@@ -74,6 +81,9 @@ export function PaintCanvas({
   onionSkinOpacity = 0.35,
   hasBackgroundVideo = false,
   flipped = false,
+  rotationDeg = 0,
+  stageZoom = 1,
+  redrawToken = 0,
   cloneSourceResetToken = 0,
 }: PaintCanvasProps) {
   const displayRef = useRef<HTMLCanvasElement>(null);
@@ -199,30 +209,9 @@ export function PaintCanvas({
       ctx.restore();
     }
 
-    // Render Drawing Layers
-    for (const layer of layers) {
-      if (!layer.visible) continue;
-
-      if (layer.mask) {
-        const composite = cloneCanvas(layer.canvas);
-        const cCtx = composite.getContext('2d')!;
-        cCtx.globalCompositeOperation = 'destination-in';
-        cCtx.drawImage(layer.mask, 0, 0);
-
-        ctx.save();
-        ctx.globalAlpha = layer.opacity;
-        ctx.globalCompositeOperation = layer.blendMode as GlobalCompositeOperation;
-        ctx.drawImage(composite, 0, 0);
-        ctx.restore();
-      } else {
-        ctx.save();
-        ctx.globalAlpha = layer.opacity;
-        ctx.globalCompositeOperation = layer.blendMode as GlobalCompositeOperation;
-        ctx.drawImage(layer.canvas, 0, 0);
-        ctx.restore();
-      }
-    }
-  }, [layers, onionSkinPrev, onionSkinNext, onionSkinOpacity, hasBackgroundVideo]);
+    // Render Drawing Layers (honoring Layer Masks AND Photoshop/Procreate Clipping Masks)
+    compositeLayersToContext(ctx, layers, display.width, display.height);
+  }, [layers, onionSkinPrev, onionSkinNext, onionSkinOpacity, hasBackgroundVideo, redrawToken]);
 
   useEffect(() => {
     redrawCombinedCanvas();
@@ -235,26 +224,46 @@ export function PaintCanvas({
     cachedRectRef.current = null;
   }, [zoom, canvasSize]);
 
-  // Pointer position helper with dynamic rect recalculation for pixel-perfect accuracy at any zoom level
+  // Pointer position helper with exact inverse-rotation & flip math at any zoom/angle
   const getCanvasPoint = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>): Point => {
       const cvs = displayRef.current;
       if (!cvs) return { x: 0, y: 0, pressure: 0.5 };
-      
-      // Always fetch exact bounding rect if not cached or during active stroke
-      const rect = cvs.getBoundingClientRect();
-      const scaleX = cvs.width / rect.width;
-      const scaleY = cvs.height / rect.height;
 
+      const rect = cvs.getBoundingClientRect();
       const p = normalizedPressure(e.nativeEvent.pressure, e.nativeEvent.pointerType);
-      const rawX = (e.clientX - rect.left) * scaleX;
+
+      if (rotationDeg === 0) {
+        const scaleX = cvs.width / rect.width;
+        const scaleY = cvs.height / rect.height;
+        const rawX = (e.clientX - rect.left) * scaleX;
+        return {
+          x: flipped ? cvs.width - rawX : rawX,
+          y: (e.clientY - rect.top) * scaleY,
+          pressure: p,
+        };
+      }
+
+      // Rotated stage: map screen offset from rotated bounding box center back into canvas-local space
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const effectiveZoom = Math.max(0.01, stageZoom * zoom);
+      const dx = (e.clientX - cx) / effectiveZoom;
+      const dy = (e.clientY - cy) / effectiveZoom;
+      const rad = (-rotationDeg * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      let localX = dx * cos - dy * sin;
+      const localY = dx * sin + dy * cos;
+      if (flipped) localX = -localX;
+
       return {
-        x: flipped ? cvs.width - rawX : rawX,
-        y: (e.clientY - rect.top) * scaleY,
+        x: cvs.width / 2 + localX,
+        y: cvs.height / 2 + localY,
         pressure: p,
       };
     },
-    [flipped]
+    [flipped, rotationDeg, stageZoom, zoom]
   );
 
   const activeTargetCanvas = useCallback((): HTMLCanvasElement | null => {
@@ -335,12 +344,16 @@ export function PaintCanvas({
     strokePathRef.current = [pt];
 
     if (tool === 'fill') {
+      // If any visible layer is marked as a Toon Boom Reference Layer (e.g. Clean Ink),
+      // read boundaries from that layer while writing flat colors cleanly into the active layer!
+      const refLayer = layers.find((l) => l.visible && l.isReference && l.id !== activeLayerId);
       floodFill(
         targetCanvas,
         Math.round(pt.x),
         Math.round(pt.y),
         brush.color,
-        32
+        brush.tolerance ?? 32,
+        refLayer?.canvas ?? null
       );
       redrawCombinedCanvas();
       onAfterStroke();

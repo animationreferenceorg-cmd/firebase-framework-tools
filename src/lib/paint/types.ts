@@ -71,6 +71,10 @@ export interface Layer {
   locked?: boolean; // fully locked — no painting, no transform
   mask?: HTMLCanvasElement; // layer mask — alpha channel is visibility (255 = shown, 0 = hidden)
   maskEnabled?: boolean; // lets the mask be toggled off without deleting it
+  /** Clipping Mask (Photoshop/Procreate) — clips this layer's pixels to the alpha of the base layer below. */
+  clippedToBelow?: boolean;
+  /** Reference Layer (Toon Boom/Procreate) — Paint Bucket reads line-art boundaries from this layer when filling other layers. */
+  isReference?: boolean;
 }
 
 /** A pixel-accurate selection — bounding box for UI plus a full-canvas-size

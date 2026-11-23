@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { Plus, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Copy, Lock, Unlock, SquareDashedBottom } from 'lucide-react';
+import { Plus, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Copy, Lock, Unlock, SquareDashedBottom, CornerDownRight, Crosshair } from 'lucide-react';
 
 interface LayersPanelProps {
   layers: Layer[];
@@ -22,6 +22,8 @@ interface LayersPanelProps {
   onBlendModeChange: (id: string, mode: BlendMode) => void;
   onReorder: (id: string, direction: 'up' | 'down') => void;
   onToggleAlphaLock: (id: string) => void;
+  onToggleClipped?: (id: string) => void;
+  onToggleReference?: (id: string) => void;
   onAddMask: (id: string) => void;
   onDeleteMask: (id: string) => void;
   onToggleMaskEnabled: (id: string) => void;
@@ -42,6 +44,8 @@ export function LayersPanel({
   onBlendModeChange,
   onReorder,
   onToggleAlphaLock,
+  onToggleClipped,
+  onToggleReference,
   onAddMask,
   onDeleteMask,
   onToggleMaskEnabled,
@@ -82,18 +86,23 @@ export function LayersPanel({
       <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 scrollbar-none">
         {displayOrder.map((layer) => {
           const isActive = layer.id === activeLayerId;
+          const isBottomLayer = layers[0]?.id === layer.id;
           return (
             <div
               key={layer.id}
               onClick={() => onSelectLayer(layer.id)}
               className={cn(
                 'p-3 rounded-2xl border transition-all cursor-pointer space-y-2.5',
+                layer.clippedToBelow && 'ml-4 border-l-2 border-l-violet-400',
                 isActive
                   ? 'bg-gradient-to-r from-purple-700 to-indigo-700 border-purple-400 text-white shadow-xl shadow-purple-900/40'
                   : 'bg-white/[0.03] hover:bg-white/[0.08] border-white/5 text-zinc-300'
               )}
             >
               <div className="flex items-center gap-2.5">
+                {layer.clippedToBelow && (
+                  <CornerDownRight className="h-3.5 w-3.5 text-violet-300 shrink-0 -ml-1" />
+                )}
                 {/* Visibility Toggle */}
                 <button
                   onClick={(e) => { e.stopPropagation(); onToggleVisibility(layer.id); }}
@@ -146,6 +155,11 @@ export function LayersPanel({
                     title="Double-click to rename"
                   >
                     {layer.name}
+                    {layer.isReference && (
+                      <span className="ml-1.5 inline-flex items-center px-1.5 py-0.2 rounded bg-cyan-500/30 border border-cyan-300/50 text-[9px] font-mono font-black text-cyan-200 align-middle">
+                        REF
+                      </span>
+                    )}
                   </span>
                 )}
 
@@ -222,18 +236,46 @@ export function LayersPanel({
                     <span className="w-8 text-right text-[11px] font-mono font-bold text-white">{Math.round(layer.opacity * 100)}%</span>
                   </div>
 
-                  <div className="flex items-center gap-2 pt-0.5">
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                     <button
                       onClick={(e) => { e.stopPropagation(); onToggleAlphaLock(layer.id); }}
                       className={cn(
-                        'flex items-center gap-1 px-2.5 h-6 rounded-xl text-[10px] font-bold transition-all cursor-pointer',
+                        'flex items-center gap-1 px-2 h-6 rounded-xl text-[10px] font-bold transition-all cursor-pointer',
                         layer.alphaLocked ? 'bg-white text-purple-900 shadow-md font-extrabold' : 'bg-black/30 text-white/80 hover:text-white border border-white/20'
                       )}
-                      title="Alpha Lock"
+                      title="Alpha Lock — paint only inside existing pixels"
                     >
                       {layer.alphaLocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
                       Alpha Lock
                     </button>
+
+                    {onToggleClipped && !isBottomLayer && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onToggleClipped(layer.id); }}
+                        className={cn(
+                          'flex items-center gap-1 px-2 h-6 rounded-xl text-[10px] font-bold transition-all cursor-pointer',
+                          layer.clippedToBelow ? 'bg-violet-300 text-purple-950 shadow-md font-extrabold' : 'bg-black/30 text-white/80 hover:text-white border border-white/20'
+                        )}
+                        title="Clipping Mask — clip shadows/paint to the layer below"
+                      >
+                        <CornerDownRight className="h-3 w-3" />
+                        Clip
+                      </button>
+                    )}
+
+                    {onToggleReference && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onToggleReference(layer.id); }}
+                        className={cn(
+                          'flex items-center gap-1 px-2 h-6 rounded-xl text-[10px] font-bold transition-all cursor-pointer',
+                          layer.isReference ? 'bg-cyan-400 text-slate-950 shadow-md font-extrabold' : 'bg-black/30 text-white/80 hover:text-white border border-white/20'
+                        )}
+                        title="Reference Layer — Paint Bucket reads line-art from this layer when coloring layers underneath"
+                      >
+                        <Crosshair className="h-3 w-3" />
+                        Ref
+                      </button>
+                    )}
 
                     {layer.mask ? (
                       <>

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { ToolType, BrushSettings } from '@/lib/paint/types';
 import { cn } from '@/lib/utils';
 import {
@@ -21,12 +21,14 @@ import {
   Wand2,
   Blend,
   Stamp,
-  Film,
   Waypoints,
   Droplet,
   Triangle,
   Sun,
   Flame,
+  Video,
+  ArrowLeftRight,
+  Scan,
 } from 'lucide-react';
 
 interface ProcreateSliderDockProps {
@@ -41,121 +43,318 @@ interface ProcreateSliderDockProps {
   onOpenReferenceModal?: () => void;
   /** Opens the color picker anchored at the click position. */
   onOpenColorPicker?: (clientX: number, clientY: number) => void;
+  onStartTransform?: () => void;
+  isTransforming?: boolean;
+  showCameraOverlay?: boolean;
+  onToggleCameraOverlay?: () => void;
 }
 
-const DOCK_TOOLS: { type: ToolType; icon: React.ElementType; label: string }[] = [
-  { type: 'brush', icon: Paintbrush, label: 'Paintbrush (B)' },
-  { type: 'eraser', icon: Eraser, label: 'Eraser (E)' },
-  { type: 'smudge', icon: Fingerprint, label: 'Smudge (R) — drags pigment along the stroke' },
-  { type: 'blur', icon: Droplet, label: 'Blur (Shift+R) — softens under the brush' },
-  { type: 'sharpen', icon: Triangle, label: 'Sharpen — adds local contrast' },
-  { type: 'dodge', icon: Sun, label: 'Dodge (O) — lightens' },
-  { type: 'burn', icon: Flame, label: 'Burn (Shift+O) — darkens' },
-  { type: 'fill', icon: PaintBucket, label: 'Color Fill (G)' },
-  { type: 'gradient', icon: Blend, label: 'Gradient — drag to set direction, Shift+G for radial' },
-  { type: 'eyedropper', icon: Pipette, label: 'Eyedropper (I)' },
-  { type: 'select', icon: MousePointer2, label: 'Rectangle Select (M) — Shift adds, Alt subtracts' },
-  { type: 'lasso', icon: Lasso, label: 'Freehand Lasso (L)' },
-  { type: 'polyLasso', icon: Waypoints, label: 'Polygonal Lasso — click points, double-click or Enter to close' },
-  { type: 'magicWand', icon: Wand2, label: 'Magic Wand (W) — Shift adds, Alt subtracts' },
-  { type: 'move', icon: Move, label: 'Move (V)' },
-  { type: 'cloneStamp', icon: Stamp, label: 'Clone Stamp (S) — Alt+click to set source' },
-  { type: 'line', icon: Minus, label: 'Straight Line (U)' },
-  { type: 'rectangle', icon: Square, label: 'Rectangle Shape (U)' },
-  { type: 'ellipse', icon: Circle, label: 'Ellipse Shape (U)' },
-  { type: 'text', icon: Type, label: 'Text Tool (T)' },
+interface SubToolItem {
+  type: ToolType | 'transform';
+  icon: React.ElementType;
+  label: string;
+  shortcut?: string;
+}
+
+interface ToolGroupSlot {
+  id: string;
+  defaultTool: ToolType;
+  items: SubToolItem[];
+}
+
+const TOOL_GROUPS: ToolGroupSlot[] = [
+  {
+    id: 'move',
+    defaultTool: 'move',
+    items: [
+      { type: 'move', icon: Move, label: 'Pan / Move Canvas', shortcut: 'V' },
+      { type: 'transform', icon: Scan, label: 'Free Transform (Move / Scale / Rotate)', shortcut: 'Alt+T' },
+    ],
+  },
+  {
+    id: 'select',
+    defaultTool: 'lasso',
+    items: [
+      { type: 'lasso', icon: Lasso, label: 'Freehand Lasso', shortcut: 'L' },
+      { type: 'select', icon: MousePointer2, label: 'Rectangle Marquee', shortcut: 'M' },
+      { type: 'polyLasso', icon: Waypoints, label: 'Polygonal Lasso', shortcut: 'Shift+L' },
+      { type: 'magicWand', icon: Wand2, label: 'Magic Wand', shortcut: 'W' },
+    ],
+  },
+  {
+    id: 'brush',
+    defaultTool: 'brush',
+    items: [{ type: 'brush', icon: Paintbrush, label: 'Brush', shortcut: 'B' }],
+  },
+  {
+    id: 'eraser',
+    defaultTool: 'eraser',
+    items: [{ type: 'eraser', icon: Eraser, label: 'Eraser', shortcut: 'E' }],
+  },
+  {
+    id: 'fill',
+    defaultTool: 'fill',
+    items: [
+      { type: 'fill', icon: PaintBucket, label: 'Paint Bucket Fill (Honors Ref Layer)', shortcut: 'G' },
+      { type: 'gradient', icon: Blend, label: 'Gradient Fill', shortcut: 'Shift+G' },
+    ],
+  },
+  {
+    id: 'retouch',
+    defaultTool: 'smudge',
+    items: [
+      { type: 'smudge', icon: Fingerprint, label: 'Smudge / Blend', shortcut: 'R' },
+      { type: 'blur', icon: Droplet, label: 'Soften / Blur', shortcut: 'Shift+R' },
+      { type: 'sharpen', icon: Triangle, label: 'Sharpen' },
+      { type: 'dodge', icon: Sun, label: 'Dodge (Lighten)', shortcut: 'O' },
+      { type: 'burn', icon: Flame, label: 'Burn (Darken)', shortcut: 'Shift+O' },
+      { type: 'cloneStamp', icon: Stamp, label: 'Clone Stamp', shortcut: 'S' },
+    ],
+  },
+  {
+    id: 'shapes',
+    defaultTool: 'line',
+    items: [
+      { type: 'line', icon: Minus, label: 'Straight Line', shortcut: 'U' },
+      { type: 'rectangle', icon: Square, label: 'Rectangle Shape', shortcut: 'U' },
+      { type: 'ellipse', icon: Circle, label: 'Ellipse Shape', shortcut: 'Shift+U' },
+      { type: 'text', icon: Type, label: 'Text Tool', shortcut: 'T' },
+    ],
+  },
+  {
+    id: 'eyedropper',
+    defaultTool: 'eyedropper',
+    items: [{ type: 'eyedropper', icon: Pipette, label: 'Eyedropper', shortcut: 'I' }],
+  },
 ];
 
 export function ProcreateSliderDock({
   tool,
   onToolChange,
+  brush,
+  onBrushChange,
   onUndo,
   onRedo,
   canUndo,
   canRedo,
-  onOpenReferenceModal,
   onOpenColorPicker,
-  brush,
+  onStartTransform,
+  isTransforming = false,
+  showCameraOverlay = false,
+  onToggleCameraOverlay,
 }: ProcreateSliderDockProps) {
+  const [openGroupId, setOpenGroupId] = useState<string | null>(null);
+  const [lastUsedByGroup, setLastUsedByGroup] = useState<Record<string, ToolType>>({});
+  const dockRef = useRef<HTMLDivElement>(null);
+
+  // Close flyout on outside pointer down
+  useEffect(() => {
+    if (!openGroupId) return;
+    const onDown = (e: PointerEvent) => {
+      if (dockRef.current && !dockRef.current.contains(e.target as Node)) {
+        setOpenGroupId(null);
+      }
+    };
+    window.addEventListener('pointerdown', onDown);
+    return () => window.removeEventListener('pointerdown', onDown);
+  }, [openGroupId]);
+
+  const handleSelectItem = (groupId: string, item: SubToolItem) => {
+    setOpenGroupId(null);
+    if (item.type === 'transform') {
+      onStartTransform?.();
+      return;
+    }
+    setLastUsedByGroup((prev) => ({ ...prev, [groupId]: item.type as ToolType }));
+    onToolChange(item.type as ToolType);
+  };
+
+  const handleSwapColors = () => {
+    onBrushChange({
+      ...brush,
+      color: brush.secondaryColor,
+      secondaryColor: brush.color,
+    });
+  };
+
   return (
-    <div 
+    <div
+      ref={dockRef}
       data-ui-panel="true"
       onPointerDown={(e) => e.stopPropagation()}
-      className="absolute left-6 top-20 bottom-20 z-40 flex flex-col items-center gap-3 select-none"
+      className="absolute left-3.5 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-2 select-none"
     >
-      {/* ──────────────── MAIN EXPANDED VERTICAL TOOL DOCK (MAXIMUM TOOL VISIBILITY) ──────────────── */}
-      <div className="flex-1 flex flex-col justify-between items-center w-16 py-3 px-2 bg-[#161620]/90 backdrop-blur-3xl border border-white/10 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.8)] overflow-hidden touch-none space-y-2">
-        
-        {/* Current color, at the top of the tools where people look for it. The
-            double ring keeps black (the default) visible against the dark dock. */}
-        {onOpenColorPicker && (
-          <button
-            type="button"
-            onClick={(e) => onOpenColorPicker(e.clientX, e.clientY)}
-            title="Brush color"
-            aria-label={`Brush color ${brush.color}. Click to change.`}
-            className="w-11 h-11 shrink-0 rounded-full cursor-pointer transition-transform hover:scale-110 ring-2 ring-white ring-offset-2 ring-offset-zinc-700 shadow-lg"
-            style={{ backgroundColor: brush.color }}
-          />
-        )}
+      {/* ──────────────── PHOTOSHOP / TOON BOOM 9-SLOT PRIMARY TOOL RAIL (ZERO SCROLLING) ──────────────── */}
+      <div className="flex flex-col items-center w-14 py-2.5 px-1.5 bg-[#12111c]/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-[0_24px_60px_rgba(0,0,0,0.85)] gap-1">
+        {TOOL_GROUPS.map((group) => {
+          const hasFlyout = group.items.length > 1;
+          const activeInGroup =
+            (group.id === 'move' && isTransforming) ||
+            group.items.some((it) => it.type === tool);
 
-        {/* Scrollable Tool Palette with Larger Icons */}
-        <div className="flex flex-col items-center gap-2 w-full flex-1 overflow-y-auto scrollbar-none py-1">
-          {DOCK_TOOLS.map(({ type, icon: Icon, label }) => {
-            const isActive = tool === type;
-            return (
+          // Show active tool icon if active in this group, otherwise last used or default
+          const displayToolType =
+            group.id === 'move' && isTransforming
+              ? 'transform'
+              : group.items.find((it) => it.type === tool)?.type ??
+                lastUsedByGroup[group.id] ??
+                group.defaultTool;
+          const displayItem = group.items.find((it) => it.type === displayToolType) || group.items[0];
+          const DisplayIcon = displayItem.icon;
+          const isFlyoutOpen = openGroupId === group.id;
+
+          return (
+            <div key={group.id} className="relative">
               <button
-                key={type}
-                onClick={() => onToolChange(type)}
-                title={label}
+                type="button"
+                onClick={() => {
+                  if (hasFlyout && activeInGroup) {
+                    setOpenGroupId(isFlyoutOpen ? null : group.id);
+                  } else if (displayItem.type === 'transform') {
+                    onStartTransform?.();
+                  } else {
+                    setOpenGroupId(null);
+                    onToolChange(displayItem.type as ToolType);
+                  }
+                }}
+                onContextMenu={(e) => {
+                  if (!hasFlyout) return;
+                  e.preventDefault();
+                  setOpenGroupId(isFlyoutOpen ? null : group.id);
+                }}
+                title={`${displayItem.label}${displayItem.shortcut ? ` (${displayItem.shortcut})` : ''}${hasFlyout ? ' · Click again or right-click for more tools' : ''}`}
                 className={cn(
-                  'w-11 h-11 shrink-0 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-sm',
-                  isActive
-                    ? 'bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/40 scale-105 border border-purple-400/50'
+                  'relative w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer',
+                  activeInGroup
+                    ? 'bg-gradient-to-tr from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-600/40 border border-violet-400/50'
                     : 'text-zinc-400 hover:text-white hover:bg-white/10'
                 )}
               >
-                <Icon className="h-5 w-5" />
+                <DisplayIcon className="h-[18px] w-[18px]" />
+                {/* Photoshop-style corner flyout triangle */}
+                {hasFlyout && (
+                  <span
+                    className={cn(
+                      'absolute bottom-1 right-1 w-0 h-0 border-l-[4px] border-l-transparent border-b-[4px]',
+                      activeInGroup ? 'border-b-white/90' : 'border-b-zinc-500'
+                    )}
+                  />
+                )}
               </button>
-            );
-          })}
+
+              {/* Flyout Sub-Tools Popover */}
+              {hasFlyout && isFlyoutOpen && (
+                <div className="absolute left-full top-0 ml-2.5 z-50 min-w-[200px] p-1.5 rounded-2xl bg-[#161524]/98 border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.9)] backdrop-blur-2xl flex flex-col gap-0.5 animate-in fade-in slide-in-from-left-1 duration-100">
+                  {group.items.map((sub) => {
+                    const SubIcon = sub.icon;
+                    const isSubActive =
+                      (sub.type === 'transform' && isTransforming) || sub.type === tool;
+                    return (
+                      <button
+                        key={sub.type}
+                        type="button"
+                        onClick={() => handleSelectItem(group.id, sub)}
+                        className={cn(
+                          'flex items-center justify-between gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer text-left',
+                          isSubActive
+                            ? 'bg-violet-600/35 text-white border border-violet-400/40'
+                            : 'text-zinc-300 hover:text-white hover:bg-white/10'
+                        )}
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <SubIcon className="h-4 w-4 text-violet-300 shrink-0" />
+                          <span>{sub.label}</span>
+                        </span>
+                        {sub.shortcut && (
+                          <kbd className="text-[10px] font-mono text-zinc-400 bg-black/40 px-1.5 py-0.5 rounded border border-white/10">
+                            {sub.shortcut}
+                          </kbd>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Slot 9: Storyboard Pro 2D Camera Tool */}
+        {onToggleCameraOverlay && (
+          <button
+            type="button"
+            onClick={() => {
+              setOpenGroupId(null);
+              onToggleCameraOverlay();
+            }}
+            title="2D Storyboard Camera (Pan / Truck / Zoom Keyframes)"
+            className={cn(
+              'w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer',
+              showCameraOverlay
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/40 border border-emerald-400/50'
+                : 'text-zinc-400 hover:text-emerald-300 hover:bg-white/10'
+            )}
+          >
+            <Video className="h-[18px] w-[18px]" />
+          </button>
+        )}
+
+        <div className="w-8 h-px bg-white/10 my-1" />
+
+        {/* Photoshop-Style Overlapping Foreground / Background Color Swatches + Swap (X) */}
+        <div className="relative w-10 h-10 my-0.5">
+          {/* Secondary / Background Swatch */}
+          <button
+            type="button"
+            onClick={handleSwapColors}
+            title="Background Color — Click to Swap (X)"
+            className="absolute bottom-0.5 right-0.5 w-6 h-6 rounded-lg border-2 border-zinc-400/80 shadow cursor-pointer transition-transform hover:scale-105"
+            style={{ backgroundColor: brush.secondaryColor }}
+          />
+          {/* Primary / Foreground Swatch */}
+          <button
+            type="button"
+            onClick={(e) => onOpenColorPicker?.(e.clientX, e.clientY)}
+            title={`Foreground Color (${brush.color}) — Click for Color Wheel`}
+            aria-label={`Brush color ${brush.color}. Click to change.`}
+            className="absolute top-0.5 left-0.5 w-7 h-7 rounded-lg border-2 border-white shadow-lg cursor-pointer transition-transform hover:scale-105 z-10"
+            style={{ backgroundColor: brush.color }}
+          />
+          {/* Tiny Swap Arrows */}
+          <button
+            type="button"
+            onClick={handleSwapColors}
+            title="Swap Foreground / Background Color (X)"
+            className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#1e1d2b] border border-white/20 text-zinc-300 hover:text-white flex items-center justify-center cursor-pointer z-20"
+          >
+            <ArrowLeftRight className="h-2.5 w-2.5" />
+          </button>
         </div>
 
-        <div className="w-10 h-px bg-white/10 shrink-0" />
+        <div className="w-8 h-px bg-white/10 my-0.5" />
 
-        {/* Undo / Redo Actions */}
-        <div className="flex flex-col gap-1.5 w-full shrink-0">
+        {/* Compact Undo / Redo Pair */}
+        <div className="flex items-center gap-1 w-full justify-center">
           <button
+            type="button"
             onClick={onUndo}
             disabled={!canUndo}
-            title="Undo (↶)"
-            className="w-full h-9 rounded-2xl bg-white/5 hover:bg-white/15 disabled:opacity-20 text-zinc-300 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+            title="Undo (Ctrl+Z)"
+            className="w-5 h-7 rounded-lg hover:bg-white/10 disabled:opacity-20 text-zinc-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
           >
-            <Undo2 className="h-4.5 w-4.5" />
+            <Undo2 className="h-3.5 w-3.5" />
           </button>
           <button
+            type="button"
             onClick={onRedo}
             disabled={!canRedo}
-            title="Redo (↷)"
-            className="w-full h-9 rounded-2xl bg-white/5 hover:bg-white/15 disabled:opacity-20 text-zinc-300 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+            title="Redo (Ctrl+Shift+Z)"
+            className="w-5 h-7 rounded-lg hover:bg-white/10 disabled:opacity-20 text-zinc-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
           >
-            <Redo2 className="h-4.5 w-4.5" />
+            <Redo2 className="h-3.5 w-3.5" />
           </button>
         </div>
-
       </div>
-
-      {/* ──────────────── STANDALONE REFERENCE VIDEO ACTION BUTTON ──────────────── */}
-      {onOpenReferenceModal && (
-        <button
-          onClick={onOpenReferenceModal}
-          title="Import Animation Reference Video"
-          className="w-13 h-13 p-3 rounded-2xl bg-[#161620]/90 hover:bg-purple-600/90 backdrop-blur-3xl border border-white/10 hover:border-purple-400 text-white flex items-center justify-center shadow-[0_15px_40px_rgba(0,0,0,0.8)] hover:scale-110 transition-all cursor-pointer group shrink-0"
-        >
-          <Film className="h-5.5 w-5.5 text-purple-400 group-hover:text-white transition-colors" />
-        </button>
-      )}
-
     </div>
   );
 }

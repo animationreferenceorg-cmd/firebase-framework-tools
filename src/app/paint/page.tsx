@@ -1136,11 +1136,17 @@ export default function PaintPage() {
       if (e.key === 'h' || e.key === 'H') {
         e.preventDefault();
         setCanvasFlipped((prev) => !prev);
+      } else if (e.key === 'x' || e.key === 'X') {
+        e.preventDefault();
+        setBrush((b) => ({ ...b, color: b.secondaryColor, secondaryColor: b.color }));
+      } else if (e.key === 'c' || e.key === 'C') {
+        e.preventDefault();
+        handleToggleCameraOverlay();
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [startFreeTransform]);
+  }, [startFreeTransform, handleToggleCameraOverlay]);
 
   const displayFrames = useMemo(
     () => frames.map((f, i) => (i === activeFrameIndex ? { ...f, layers, activeLayerId } : f)),
@@ -1702,6 +1708,8 @@ export default function PaintPage() {
         onOpenProjectFile={handleLoadProjectFile}
         onOpenExport={() => setShowExportModal(true)}
         onPublishToPortfolio={() => setShowExportModal(true)}
+        onOpenReferenceModal={() => setShowReferenceModal(true)}
+        hasActiveReference={Boolean(activeReferenceVideo)}
         isViewportStreaming={Boolean(viewportStream)}
         onToggleViewportStream={handleToggleViewportStream}
         workspaceMode={workspaceMode}
@@ -1999,7 +2007,7 @@ export default function PaintPage() {
           </div>
         )}
 
-        {/* PROCREATE SIGNATURE FLOATING LEFT SLIDER & TOOL DOCK */}
+        {/* PHOTOSHOP / TOON BOOM 9-SLOT LEFT TOOL RAIL */}
         <ProcreateSliderDock
           tool={tool}
           onToolChange={setTool}
@@ -2011,6 +2019,10 @@ export default function PaintPage() {
           canRedo={canRedo}
           onOpenReferenceModal={() => setShowReferenceModal(true)}
           onOpenColorPicker={(x, y) => setContextMenuPos({ x, y })}
+          onStartTransform={startFreeTransform}
+          isTransforming={Boolean(transformSession)}
+          showCameraOverlay={showCameraOverlay}
+          onToggleCameraOverlay={handleToggleCameraOverlay}
         />
 
         <ToolOptionsBar
@@ -2021,6 +2033,8 @@ export default function PaintPage() {
           onDeselect={() => setSelection(null)}
           onInvertSelection={handleInvertSelection}
           onResetCloneSource={() => setCloneSourceResetToken((t) => t + 1)}
+          onStartTransform={startFreeTransform}
+          referenceLayerName={layers.find((l) => l.visible && l.isReference)?.name ?? null}
         />
 
         {/* FLOATING PROCREATE BRUSH STUDIO POP-OVER */}
@@ -2317,44 +2331,8 @@ export default function PaintPage() {
             )}
           </div>
 
-          {/* Floating Canvas Transform, Rotate, Flip & Zoom HUD */}
+          {/* Floating Viewport-Only HUD (Flip, Rotate, Zoom & Fit) */}
           <div className="absolute bottom-6 right-6 flex items-center gap-1.5 bg-[#161620]/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.8)] px-2 py-1.5 z-40">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={startFreeTransform}
-              className={cn(
-                "h-8 px-2.5 rounded-xl text-xs font-bold gap-1.5 flex items-center transition-colors w-auto",
-                transformSession
-                  ? "bg-cyan-500/30 text-cyan-200 border border-cyan-400/50 hover:bg-cyan-500/40"
-                  : "text-zinc-300 hover:text-white hover:bg-white/10"
-              )}
-              title="Free Transform Move / Scale / Rotate (Alt+T or Ctrl+T)"
-            >
-              <Move className="h-3.5 w-3.5 shrink-0" />
-              <span className="text-[10px] font-mono hidden sm:inline">Transform</span>
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleToggleCameraOverlay}
-              className={cn(
-                "h-8 px-2.5 rounded-xl text-xs font-bold gap-1.5 flex items-center transition-colors w-auto",
-                showCameraOverlay
-                  ? "bg-emerald-500/30 text-emerald-200 border border-emerald-400/50 hover:bg-emerald-500/40"
-                  : frames[activeFrameIndex]?.cameraMove?.enabled
-                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-400/30 hover:bg-emerald-500/25"
-                  : "text-zinc-300 hover:text-white hover:bg-white/10"
-              )}
-              title="2D Storyboard Camera Pan / Zoom Keyframes (Green Start -> Red End)"
-            >
-              <Video className="h-3.5 w-3.5 shrink-0" />
-              <span className="text-[10px] font-mono hidden sm:inline">2D Cam</span>
-            </Button>
-
-            <div className="w-px h-5 bg-white/10" />
-
             {/* Canvas Rotation Controls (-15° / Angle Reset / +15°) */}
             <Button
               variant="ghost"

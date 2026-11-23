@@ -4,7 +4,7 @@ import React from 'react';
 import type { ToolType, BrushSettings, Selection } from '@/lib/paint/types';
 import { FONT_FAMILIES } from '@/lib/paint/types';
 import { cn } from '@/lib/utils';
-import { Bold, Italic, AlignLeft, AlignCenter, AlignRight, Squircle, Circle, X, FlipHorizontal2 } from 'lucide-react';
+import { Bold, Italic, AlignLeft, AlignCenter, AlignRight, Squircle, Circle, X, FlipHorizontal2, Scan, Crosshair } from 'lucide-react';
 
 interface ToolOptionsBarProps {
   tool: ToolType;
@@ -14,6 +14,8 @@ interface ToolOptionsBarProps {
   onDeselect: () => void;
   onInvertSelection: () => void;
   onResetCloneSource: () => void;
+  onStartTransform?: () => void;
+  referenceLayerName?: string | null;
 }
 
 /** Photoshop-style contextual options bar. Only renders the controls the
@@ -26,6 +28,8 @@ export function ToolOptionsBar({
   onDeselect,
   onInvertSelection,
   onResetCloneSource,
+  onStartTransform,
+  referenceLayerName = null,
 }: ToolOptionsBarProps) {
   const set = <K extends keyof BrushSettings>(key: K, value: BrushSettings[K]) =>
     onBrushChange({ ...brush, [key]: value });
@@ -52,17 +56,25 @@ export function ToolOptionsBar({
       className="absolute left-1/2 -translate-x-1/2 top-20 z-40 flex items-center gap-4 px-4 py-2 rounded-2xl bg-[#161620]/90 backdrop-blur-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.7)] select-none max-w-[calc(100vw-14rem)] overflow-x-auto scrollbar-none"
     >
       {showsTolerance && (
-        <Field label="Tolerance" value={String(brush.tolerance)}>
-          <input
-            type="range"
-            min={0}
-            max={128}
-            step={1}
-            value={brush.tolerance}
-            onChange={(e) => set('tolerance', Number(e.target.value))}
-            className="w-28 h-1 accent-purple-500 cursor-pointer"
-          />
-        </Field>
+        <>
+          <Field label="Tolerance" value={String(brush.tolerance)}>
+            <input
+              type="range"
+              min={0}
+              max={128}
+              step={1}
+              value={brush.tolerance}
+              onChange={(e) => set('tolerance', Number(e.target.value))}
+              className="w-28 h-1 accent-purple-500 cursor-pointer"
+            />
+          </Field>
+          {tool === 'fill' && referenceLayerName && (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-cyan-500/15 border border-cyan-400/35 text-[10px] font-mono font-bold text-cyan-200 whitespace-nowrap">
+              <Crosshair className="h-3 w-3 text-cyan-300" />
+              Ref Layer: {referenceLayerName}
+            </span>
+          )}
+        </>
       )}
 
       {showsSmudge && (
@@ -216,6 +228,16 @@ export function ToolOptionsBar({
           <span className="text-[11px] text-zinc-400 whitespace-nowrap">
             Selection {selection!.w}×{selection!.h}
           </span>
+          {onStartTransform && (
+            <button
+              onClick={onStartTransform}
+              className="inline-flex items-center gap-1 h-6 px-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/35 border border-cyan-400/40 text-[11px] font-bold text-cyan-200 hover:text-white cursor-pointer"
+              title="Free Transform Selection (Alt+T)"
+            >
+              <Scan className="h-3 w-3" />
+              <span>Transform</span>
+            </button>
+          )}
           <button
             onClick={onInvertSelection}
             title="Invert selection (Ctrl+Shift+I)"

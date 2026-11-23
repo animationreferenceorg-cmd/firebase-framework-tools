@@ -39,6 +39,8 @@ interface ProcreateHeaderProps {
   onOpenProjectFile?: (file: File) => void;
   onOpenExport?: () => void;
   onPublishToPortfolio?: () => void;
+  onOpenReferenceModal?: () => void;
+  hasActiveReference?: boolean;
   isViewportStreaming?: boolean;
   onToggleViewportStream?: () => void;
   workspaceMode?: PaintWorkspaceMode;
@@ -98,6 +100,8 @@ export function ProcreateHeader({
   onNewProject,
   onOpenExport,
   onPublishToPortfolio,
+  onOpenReferenceModal,
+  hasActiveReference = false,
   isViewportStreaming = false,
   onToggleViewportStream,
   workspaceMode = 'drawing',
@@ -186,8 +190,8 @@ export function ProcreateHeader({
         )}
       </div>
 
-      {/* ──────────────── CENTER: BRUSHES + COMPACT SIZE & OPACITY ──────────────── */}
-      <div className="hidden lg:flex items-center gap-2 bg-white/[0.04] border border-white/10 px-2.5 py-1 rounded-2xl">
+      {/* ──────────────── CENTER: BRUSH STUDIO + SLEEK SIZE & OPACITY SLIDERS ──────────────── */}
+      <div className="hidden lg:flex items-center gap-3 bg-white/[0.04] border border-white/10 px-3 py-1 rounded-2xl">
         <button
           onClick={onToggleBrushStudio}
           className={cn(
@@ -204,47 +208,54 @@ export function ProcreateHeader({
 
         <div className="w-px h-4 bg-white/10" />
 
-        <div className="flex items-center gap-1 text-[11px] font-mono">
-          <button
-            onClick={() => onBrushChange({ ...brush, size: Math.max(1, brush.size - 2) })}
-            className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white cursor-pointer"
-            title="Decrease Size"
-          >
-            -
-          </button>
-          <span className="font-bold text-violet-300 min-w-[34px] text-center">{brush.size}px</span>
-          <button
-            onClick={() => onBrushChange({ ...brush, size: Math.min(200, brush.size + 2) })}
-            className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white cursor-pointer"
-            title="Increase Size"
-          >
-            +
-          </button>
+        <div className="flex items-center gap-1.5 text-[11px] font-mono" title="Brush Size ([ / ])">
+          <span className="text-[10px] text-zinc-400">Size</span>
+          <input
+            type="range"
+            min={1}
+            max={200}
+            value={brush.size}
+            onChange={(e) => onBrushChange({ ...brush, size: Number(e.target.value) })}
+            className="w-20 h-1 accent-violet-500 cursor-pointer"
+          />
+          <span className="font-bold text-violet-300 min-w-[32px] text-right">{brush.size}px</span>
         </div>
 
         <div className="w-px h-4 bg-white/10" />
 
-        <div className="flex items-center gap-1 text-[11px] font-mono">
-          <button
-            onClick={() => onBrushChange({ ...brush, opacity: Math.max(0.05, Math.round((brush.opacity - 0.05) * 100) / 100) })}
-            className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white cursor-pointer"
-            title="Decrease Opacity"
-          >
-            -
-          </button>
-          <span className="font-bold text-white min-w-[34px] text-center">{Math.round(brush.opacity * 100)}%</span>
-          <button
-            onClick={() => onBrushChange({ ...brush, opacity: Math.min(1, Math.round((brush.opacity + 0.05) * 100) / 100) })}
-            className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white cursor-pointer"
-            title="Increase Opacity"
-          >
-            +
-          </button>
+        <div className="flex items-center gap-1.5 text-[11px] font-mono" title="Brush Opacity (0-9 keys)">
+          <span className="text-[10px] text-zinc-400">Opac</span>
+          <input
+            type="range"
+            min={5}
+            max={100}
+            step={5}
+            value={Math.round(brush.opacity * 100)}
+            onChange={(e) => onBrushChange({ ...brush, opacity: Number(e.target.value) / 100 })}
+            className="w-16 h-1 accent-violet-500 cursor-pointer"
+          />
+          <span className="font-bold text-white min-w-[30px] text-right">{Math.round(brush.opacity * 100)}%</span>
         </div>
       </div>
 
-      {/* ──────────────── RIGHT: STREAM 3D + PANELS + EXPORT/PUBLISH + COLOR ──────────────── */}
+      {/* ──────────────── RIGHT: REF VIDEO + STREAM 3D + PANELS + EXPORT/PUBLISH ──────────────── */}
       <div className="flex items-center gap-1.5 sm:gap-2">
+        {onOpenReferenceModal && (
+          <button
+            onClick={onOpenReferenceModal}
+            className={cn(
+              'h-9 px-2.5 sm:px-3 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border',
+              hasActiveReference
+                ? 'bg-purple-600/30 text-purple-200 border-purple-400/50'
+                : 'bg-white/5 hover:bg-white/10 text-zinc-200 border-white/10'
+            )}
+            title="Import or Pin Animation Reference Video"
+          >
+            <Film className="h-3.5 w-3.5 text-purple-300" />
+            <span className="hidden xl:inline">Ref Video</span>
+          </button>
+        )}
+
         {onToggleViewportStream && (
           <button
             onClick={onToggleViewportStream}
@@ -314,16 +325,6 @@ export function ProcreateHeader({
             <span className="hidden sm:inline">Publish</span>
           </button>
         )}
-
-        {/* Active Color Swatch */}
-        <button
-          type="button"
-          onClick={(e) => onOpenColorPicker(e.clientX, e.clientY)}
-          className="w-8 h-8 rounded-full ring-2 ring-white/90 ring-offset-2 ring-offset-[#100e1a] shadow-lg cursor-pointer transition-transform hover:scale-110 ml-1 shrink-0"
-          style={{ backgroundColor: brush.color }}
-          title="Pick Brush Color"
-          aria-label="Pick brush color"
-        />
       </div>
     </div>
   );

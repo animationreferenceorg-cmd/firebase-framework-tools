@@ -29,11 +29,13 @@ import { InstagramCommunitySpotlight } from '@/components/InstagramFollowFunnel'
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from '@/lib/social-links';
 import { mixReferences } from '@/lib/reference-mix';
 import { DEFAULT_HERO_VIDEO, DEFAULT_LANDING_VIDEOS, DEFAULT_LANDING_CATEGORIES } from '@/lib/landing-data';
+import { useIntroOffer } from '@/hooks/use-intro-offer';
 
 export default function LandingPage() {
     const [allCategories, setAllCategories] = useState<Category[]>(DEFAULT_LANDING_CATEGORIES);
     const [allVideos, setAllVideos] = useState<Video[]>(DEFAULT_LANDING_VIDEOS);
     const [loading, setLoading] = useState(false);
+    const { intro, terms } = useIntroOffer();
 
     // Non-blocking background data hydration
     useEffect(() => {
@@ -204,6 +206,14 @@ export default function LandingPage() {
                             </Link>
                         </Button>
                     </div>
+
+                    {intro && (
+                        <Link href="/pricing" className="mt-6 inline-flex max-w-xl items-center gap-2.5 rounded-xl border border-amber-300/40 bg-zinc-950/90 px-4 py-3 text-left text-sm text-amber-50 hover:border-amber-300 hover:bg-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-300">
+                            <Sparkles aria-hidden="true" className="h-5 w-5 shrink-0 text-amber-300" />
+                            <span><strong className="text-amber-300">{intro.label} on Pro.</strong> {terms}</span>
+                            <ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0" />
+                        </Link>
+                    )}
 
                     {/* Quick Stats Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pt-16 max-w-3xl mx-auto w-full">

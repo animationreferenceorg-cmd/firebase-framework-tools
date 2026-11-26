@@ -26,6 +26,7 @@ import {
     type CheckoutPlanId,
 } from '@/lib/plans';
 import { CustomCheckoutModal } from '@/components/checkout/CustomCheckoutModal';
+import { IntroOfferAlert } from '@/components/pricing/IntroOfferAlert';
 import { useIntroOffer } from '@/hooks/use-intro-offer';
 
 export interface PricingDialogProps {
@@ -63,7 +64,7 @@ export function PricingDialog({ children, open: openProp, onOpenChange: onOpenCh
     const hasStripePlan = !isFree && (entitlements.access === 'pro' || entitlements.access === 'tier1' || entitlements.access === 'tier2');
 
     const selected = offers[billingCycle].available ? offers[billingCycle] : offers.pro_monthly;
-    const { intro, periodLabel, regularPeriodTotalCents } = useIntroOffer();
+    const { intro, periodLabel, regularPeriodTotalCents, terms } = useIntroOffer();
     const showIntro = Boolean(intro) && selected.interval === 'month';
     const monthlyEquivalent = selected.interval === 'year' ? Math.round(selected.amountCents / 12) : selected.amountCents;
     const annualSavingsPct = offers.pro_annual.available
@@ -145,6 +146,17 @@ export function PricingDialog({ children, open: openProp, onOpenChange: onOpenCh
                             Keep every reference for every shot: unlimited boards, unlimited saved references, and private workspaces.
                         </DialogDescription>
                     </DialogHeader>
+
+                    {intro && (
+                        <IntroOfferAlert
+                            label={intro.label}
+                            terms={terms}
+                            onSelectMonthly={selected.interval === 'year' || activeView === 'comparison' ? () => {
+                                setBillingCycle('pro_monthly');
+                                setActiveView('cards');
+                            } : undefined}
+                        />
+                    )}
 
                     {/* Controls row: Billing cycle & View switcher */}
                     <div className="flex flex-wrap items-center justify-center gap-3 pt-1">

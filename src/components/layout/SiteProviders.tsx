@@ -11,12 +11,14 @@ import { GoogleAnalytics } from '@/components/layout/GoogleAnalytics';
 import { HeyCatchInit } from '@/components/HeyCatchInit';
 import { ViewingQuotaProvider } from '@/hooks/use-viewing-quota';
 import { AmbientBackdrop } from '@/components/motion/AmbientBackdrop';
+import { IntroOfferAnnouncement } from '@/components/IntroOfferAnnouncement';
 
 export function SiteProviders({ children }: { children: ReactNode }) {
   return <>
     <HeyCatchInit /><GoogleAnalytics /><AmbientBackdrop />
     <FirebaseClientProvider><AuthProvider><UserProvider><ViewingQuotaProvider>
       <FirebaseErrorListener /><LayoutClient>{children}</LayoutClient>
+      <IntroOfferAnnouncement />
     </ViewingQuotaProvider></UserProvider></AuthProvider></FirebaseClientProvider>
     <Toaster />
   </>;

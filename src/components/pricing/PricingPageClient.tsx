@@ -6,6 +6,7 @@ import { ArrowRight, Check, Globe, Lock, Minus, RefreshCcw, Sparkles } from 'luc
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { CustomCheckoutModal } from '@/components/checkout/CustomCheckoutModal';
+import { IntroOfferAlert } from '@/components/pricing/IntroOfferAlert';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
@@ -139,7 +140,7 @@ export function PricingPageClient() {
   const annualSavingsPct = offers.pro_annual.available
     ? Math.round((1 - offers.pro_annual.amountCents / (offers.pro_monthly.amountCents * 12)) * 100)
     : 0;
-  const { intro, periodLabel, regularPeriodTotalCents } = useIntroOffer();
+  const { intro, periodLabel, regularPeriodTotalCents, terms } = useIntroOffer();
   // The intro offer applies to the monthly plan only.
   const showIntro = Boolean(intro) && selected.interval === 'month';
   const priceLine = selected.interval === 'year'
@@ -209,15 +210,22 @@ export function PricingPageClient() {
 
       <header className="relative space-y-3 text-center">
         <div className="mx-auto inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-500/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-300">
-          <Sparkles className="h-3 w-3" /> {intro ? `${intro.label} · Global Offer` : 'Pricing'}
+          <Sparkles className="h-3 w-3" /> Pricing
         </div>
         <h1 className="text-3xl font-black tracking-tight md:text-5xl">Start studying free. Unlock the whole library with Pro.</h1>
         <p className="mx-auto max-w-2xl text-sm text-zinc-400 md:text-base">
-          Study {ACCESS_LIMITS.free.maxUnlockedReferences} new references a day for free. Pro removes the limit and adds unlimited boards, MP4 downloads, playblast compare and clean exports{intro
-            ? ` — ${intro.label}: ${formatUsd(intro.amountCents)} total ${periodLabel}, then ${formatUsd(offers.pro_monthly.amountCents)}/month.`
-            : ` for ${formatUsd(offers.pro_monthly.amountCents)}/month.`}
+          Study {ACCESS_LIMITS.free.maxUnlockedReferences} new references a day for free. Pro removes the limit and adds unlimited boards, MP4 downloads, playblast compare and clean exports.
         </p>
       </header>
+
+      {intro && (
+        <IntroOfferAlert
+          className="mt-6"
+          label={intro.label}
+          terms={terms}
+          onSelectMonthly={selected.interval === 'year' ? () => setBillingCycle('pro_monthly') : undefined}
+        />
+      )}
 
       {offers.pro_annual.available && (
         <div className="relative mt-8 flex justify-center">

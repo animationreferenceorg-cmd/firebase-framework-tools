@@ -4,17 +4,12 @@ import { useUser } from './use-user';
 import { formatUsd, getIntroOffer, getProOffers, isIntroEligible } from '@/lib/plans';
 
 /**
- * The first-month intro offer as this visitor would actually be charged it.
- * Hidden for past subscribers (checkout won't apply the coupon for them), so
- * the price shown always matches the price charged.
+ * The monthly intro offer for guests and eligible accounts.
  */
 export function useIntroOffer() {
   const { userProfile, loading } = useUser();
   const offer = getIntroOffer();
-  // The intro offer applies to all visitors and free accounts by default,
-  // unless a signed-in profile has loaded and shows an existing/past paid subscription.
-  const hasExistingSub = Boolean(userProfile && !isIntroEligible(userProfile));
-  const intro = offer && !hasExistingSub ? offer : null;
+  const intro = !loading && isIntroEligible(userProfile) ? offer : null;
   const regularCents = getProOffers().pro_monthly.amountCents;
   const regular = formatUsd(regularCents);
   const months = intro?.months ?? 1;

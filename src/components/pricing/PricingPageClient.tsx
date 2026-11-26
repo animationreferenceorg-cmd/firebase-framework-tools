@@ -218,13 +218,43 @@ export function PricingPageClient() {
         </p>
       </header>
 
-      {intro && (
-        <IntroOfferAlert
-          className="mt-6"
-          label={intro.label}
-          terms={terms}
-          onSelectMonthly={selected.interval === 'year' ? () => setBillingCycle('pro_monthly') : undefined}
-        />
+      {/* High-Visibility Black Friday Deal Alert Banner on /pricing */}
+      {intro && !isPro && (
+        <div className="relative mt-6 overflow-hidden rounded-2xl border-2 border-amber-400/60 bg-gradient-to-r from-amber-500/15 via-purple-900/45 to-amber-500/15 p-4 sm:p-5 shadow-[0_15px_50px_rgba(245,158,11,0.2)]">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-start gap-3 text-left">
+              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400 text-zinc-950 shadow-md">
+                <Sparkles className="h-5 w-5 fill-zinc-950" />
+              </span>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-amber-400 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-zinc-950">
+                    {intro.label} · LIVE NOW
+                  </span>
+                  <span className="text-xs font-bold text-amber-200">
+                    Save {Math.round((1 - intro.amountCents / Math.max(1, regularPeriodTotalCents)) * 100)}% Worldwide
+                  </span>
+                </div>
+                <p className="mt-1 text-sm sm:text-base font-extrabold text-white">
+                  Get {intro.months} full months of Pro for{' '}
+                  <span className="text-amber-300">{formatUsd(intro.amountCents)} total</span>{' '}
+                  <span className="text-zinc-400 line-through font-normal text-xs">{formatUsd(regularPeriodTotalCents)}</span>
+                  <span className="text-zinc-300 font-medium text-xs sm:text-sm"> — then {formatUsd(offers.pro_monthly.amountCents)}/mo · Cancel anytime.</span>
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => {
+                setBillingCycle('pro_monthly');
+                handleProAction();
+              }}
+              className="h-10 shrink-0 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:from-amber-300 hover:to-yellow-200 px-5 text-xs sm:text-sm font-black text-zinc-950 shadow-lg cursor-pointer gap-1.5"
+            >
+              <span>Claim {formatUsd(intro.amountCents)} Deal</span>
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       )}
 
       {offers.pro_annual.available && (

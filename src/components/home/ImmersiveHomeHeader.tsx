@@ -24,10 +24,11 @@ type ImmersiveHomeHeaderProps = {
 };
 
 const announcements = [
+  { label: 'BLACK FRIDAY: 3 Months of Pro for $1 Total (then $5/mo)', href: '/pricing', icon: Sparkles },
   { label: 'Maya & Blender Studio Plugins are live', href: '/tools', icon: Plug },
   { label: 'Free portfolio submissions are open', href: '/profile?tab=portfolio', icon: UserPlus },
   { label: 'Visual Moodboards sync to 3D', href: '/moodboard', icon: LayoutGrid },
-  { label: 'Paint drawover workspace', href: '/paint', icon: Paintbrush },
+  { label: 'Paint & 2D Animation Studio', href: '/paint', icon: Paintbrush },
 ];
 
 type HeroSpotlightSlide = {
@@ -44,6 +45,18 @@ type HeroSpotlightSlide = {
 };
 
 const HERO_ANNOUNCEMENT_SLIDES: HeroSpotlightSlide[] = [
+  {
+    id: 'pro',
+    tag: 'BLACK FRIDAY · $1 FOR 3 MONTHS (93% OFF)',
+    tagTone: 'border-amber-400/60 bg-amber-500/25 text-amber-200',
+    title: '3 Months of Pro for $1 Total',
+    desc: 'Global Black Friday Deal — $1 for your first 3 months, then $5/mo. Unlimited Maya/Blender sync, 24 FPS MP4s & Contact Sheets.',
+    image: '/images/plugins/blender-studio-preview.jpg',
+    ctaLabel: 'Claim $1 Black Friday Deal',
+    href: '/pricing',
+    secondaryLabel: 'See All Perks',
+    secondaryHref: '/pricing',
+  },
   {
     id: 'maya',
     tag: 'NEW · FREE MAYA PLUGIN',
@@ -79,16 +92,6 @@ const HERO_ANNOUNCEMENT_SLIDES: HeroSpotlightSlide[] = [
     href: '/feed',
     secondaryLabel: 'Share Your Shot',
     secondaryHref: '/profile?tab=studio&upload=true',
-  },
-  {
-    id: 'pro',
-    tag: 'BLACK FRIDAY · $1 FOR 3 MONTHS',
-    tagTone: 'border-amber-400/50 bg-amber-500/25 text-amber-200',
-    title: '3 Months of Pro for $1 Total',
-    desc: 'Global Black Friday Deal — $1 for your first 3 months, then $5/mo. Unlimited Maya/Blender sync, 24 FPS MP4s & Contact Sheets.',
-    image: '/images/plugins/blender-studio-preview.jpg',
-    ctaLabel: 'Claim $1 Black Friday Deal',
-    href: '/pricing',
   },
 ];
 

@@ -147,6 +147,33 @@ export function PricingDialog({ children, open: openProp, onOpenChange: onOpenCh
                         </DialogDescription>
                     </DialogHeader>
 
+                    {/* High-Visibility Black Friday Alert inside Upgrade Dialog */}
+                    {intro && !isPro && (
+                        <div className="rounded-2xl border border-amber-400/50 bg-gradient-to-r from-amber-500/15 via-purple-900/45 to-amber-500/15 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5 text-left">
+                                <span className="shrink-0 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-zinc-950">
+                                    {intro.label}
+                                </span>
+                                <p className="text-xs font-bold text-white">
+                                    <span className="text-amber-300">{formatUsd(intro.amountCents)} {periodLabel}</span>{' '}
+                                    <span className="text-zinc-400 line-through">{formatUsd(regularPeriodTotalCents)}</span>{' '}
+                                    · then {formatUsd(offers.pro_monthly.amountCents)}/mo · Cancel anytime
+                                </p>
+                            </div>
+                            <Button
+                                size="sm"
+                                onClick={() => {
+                                    setBillingCycle('pro_monthly');
+                                    handleProAction();
+                                }}
+                                className="h-8 shrink-0 rounded-xl bg-amber-400 hover:bg-amber-300 text-zinc-950 font-black text-xs px-3.5 cursor-pointer gap-1"
+                            >
+                                <span>Claim {formatUsd(intro.amountCents)} Deal</span>
+                                <ArrowRight className="h-3.5 w-3.5" />
+                            </Button>
+                        </div>
+                    )}
+
                     {intro && (
                         <IntroOfferAlert
                             label={intro.label}

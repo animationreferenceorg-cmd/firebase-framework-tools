@@ -24,6 +24,7 @@ import { FeedbackModal } from '@/components/FeedbackModal';
 import { UpdatesModal } from '@/components/UpdatesModal';
 import { SidebarUpgradeCard } from '@/components/SidebarUpgradeCard';
 import { MemberIntroPromoBanner } from '@/components/MemberIntroPromoBanner';
+import { BlackFridayPopup } from '@/components/BlackFridayPopup';
 import { UserFeedbackPanel } from '@/components/UserFeedbackPanel';
 import { MobileInstallBanner } from '@/components/reference/MobileInstallBanner';
 import { InstagramHeaderPill, InstagramSmartFollowPrompt } from '@/components/InstagramFollowFunnel';
@@ -80,6 +81,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                     {children}
                     <UploadProgressManager />
                     <LocalUploadRecovery />
+                    {isPaintPage && <BlackFridayPopup />}
                 </UploadProvider>
             </WatchTrackerProvider>
         );
@@ -330,6 +332,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
                     <LocalUploadRecovery />
                     <MobileInstallAfterLogin />
                     <InstagramSmartFollowPrompt />
+                    <BlackFridayPopup />
                 </SidebarInset>
             </SidebarProvider>
             </UploadProvider>

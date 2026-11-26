@@ -17,14 +17,14 @@ export function SidebarUpgradeCard() {
       href="/pricing"
       className="group/upgrade block rounded-xl border border-purple-500/25 bg-gradient-to-br from-purple-950/60 to-zinc-950/60 p-3 transition-colors hover:border-purple-400/50 group-data-[collapsible=icon]:hidden"
     >
-      <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-purple-300">
-        <Sparkles className="h-3.5 w-3.5" /> Pro
+      <div className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-amber-300">
+        <Sparkles className="h-3.5 w-3.5" /> {intro ? 'Black Friday' : 'Pro'}
       </div>
       <p className="mt-1 text-xs leading-snug text-zinc-300">
-        The full library, unlimited boards &amp; MP4 downloads.
+        {intro ? '3 months of Pro for $1 total, then $5/mo.' : 'The full library, unlimited boards & MP4 downloads.'}
       </p>
       <p className="mt-2 flex items-center gap-1 text-xs font-bold text-white">
-        {intro ? 'Try Pro for $1 first month' : `Upgrade for ${shortPrice}`}
+        {intro ? `Claim ${shortPrice}` : `Upgrade for ${shortPrice}`}
         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/upgrade:translate-x-0.5" />
       </p>
     </Link>

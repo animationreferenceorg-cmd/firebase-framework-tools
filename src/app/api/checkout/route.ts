@@ -35,16 +35,20 @@ export async function POST(req: NextRequest) {
             await userRef.set({ stripeCustomerId: customerId }, { merge: true });
         }
 
-        // Intro offer (first month at a lower price) only for people who have
-        // never had a subscription on this customer, checked against Stripe so
+        // Intro / Black Friday deal ($1 for 3 months, then $5/mo) only for people who
+        // have never had a subscription on this customer, checked against Stripe so
         // cancel-and-resubscribe can't claim it again.
+        const activeIntro = getIntroOffer();
         const configuredCoupon = withDefault(process.env.STRIPE_PRO_INTRO_COUPON_ID, PUBLIC_CONFIG_DEFAULTS.STRIPE_PRO_INTRO_COUPON_ID);
-        // The coupon only applies while the displayed intro offer is on, so price shown = price charged.
-        const introCouponId = configuredCoupon !== 'none' && getIntroOffer() ? configuredCoupon : null;
+        const introCouponId = configuredCoupon !== 'none' && activeIntro && activeIntro.months === 1 ? configuredCoupon : null;
         let eligibleCoupon: string | null = null;
-        if (introCouponId && plan === 'pro_monthly') {
+        let eligibleIntroOffer = null;
+        if (activeIntro && plan === 'pro_monthly') {
             const previous = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 1 });
-            if (previous.data.length === 0) eligibleCoupon = introCouponId;
+            if (previous.data.length === 0) {
+                eligibleIntroOffer = activeIntro;
+                if (introCouponId) eligibleCoupon = introCouponId;
+            }
         }
 
         const session = await stripe.checkout.sessions.create(
@@ -55,6 +59,7 @@ export async function POST(req: NextRequest) {
                 origin: publicOrigin(req.headers),
                 embedded: Boolean(embedded),
                 introCouponId: eligibleCoupon,
+                introOffer: eligibleIntroOffer,
             })
         );
 

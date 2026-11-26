@@ -82,12 +82,12 @@ const HERO_ANNOUNCEMENT_SLIDES: HeroSpotlightSlide[] = [
   },
   {
     id: 'pro',
-    tag: 'PRO · $1 FIRST MONTH',
-    tagTone: 'border-amber-400/40 bg-amber-500/20 text-amber-200',
-    title: 'Unlimited Moodboards & 3D Sync',
-    desc: 'Unlock unlimited Maya & Blender Moodboard imports, 24 FPS MP4s, and Contact Sheets.',
+    tag: 'BLACK FRIDAY · $1 FOR 3 MONTHS',
+    tagTone: 'border-amber-400/50 bg-amber-500/25 text-amber-200',
+    title: '3 Months of Pro for $1 Total',
+    desc: 'Global Black Friday Deal — $1 for your first 3 months, then $5/mo. Unlimited Maya/Blender sync, 24 FPS MP4s & Contact Sheets.',
     image: '/images/plugins/blender-studio-preview.jpg',
-    ctaLabel: 'Unlock Pro — $1',
+    ctaLabel: 'Claim $1 Black Friday Deal',
     href: '/pricing',
   },
 ];

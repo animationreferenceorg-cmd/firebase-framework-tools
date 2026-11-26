@@ -10,13 +10,13 @@ import { getEntitlements } from '@/lib/plans';
 import { PricingDialog } from '@/components/PricingDialog';
 import { track } from '@/lib/analytics';
 
-const DISMISS_KEY = 'animref:member-deal-dismissed';
-const DISMISS_DURATION_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
+const DISMISS_KEY = 'animref:black-friday-2026-dismissed';
+const DISMISS_DURATION_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
 
 export function MemberIntroPromoBanner() {
   const { user } = useAuth();
   const { userProfile, loading } = useUser();
-  const { intro } = useIntroOffer();
+  const { intro, shortPrice } = useIntroOffer();
   const [dismissed, setDismissed] = useState(true);
   const [showPricing, setShowPricing] = useState(false);
 
@@ -62,19 +62,21 @@ export function MemberIntroPromoBanner() {
 
   return (
     <>
-      <div className="relative z-30 w-full bg-gradient-to-r from-purple-950 via-indigo-950 to-purple-950 border-b border-purple-500/30 px-3 py-2 sm:py-2.5 text-white transition-all shadow-lg shadow-purple-950/20">
+      <div className="relative z-30 w-full bg-gradient-to-r from-[#09080f] via-[#1a102b] to-[#09080f] border-b border-amber-400/35 px-3 py-2 sm:py-2.5 text-white transition-all shadow-lg shadow-black/40">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="shrink-0 p-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300">
-              <Sparkles className="w-3.5 h-3.5 fill-amber-300" />
+            <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400 text-zinc-950 font-black text-[10px] uppercase tracking-wider shadow-sm">
+              <Sparkles className="w-3 h-3 fill-zinc-950" />
+              <span>Black Friday</span>
             </span>
             <p className="truncate text-zinc-200">
-              <strong className="text-white font-extrabold mr-1">Animator Special:</strong>
               <span className="hidden sm:inline">
-                Unlock full Pro access for just <span className="text-emerald-400 font-bold">$1 for your first month</span> (normally $5/mo). Unlimited references, 24 FPS MP4 downloads, &amp; playblast compare.
+                Global Pro Deal: Get <span className="text-amber-300 font-black">{shortPrice}</span>{' '}
+                <span className="text-zinc-400 line-through mr-1">$15</span>
+                (then <strong className="text-white">$5/mo</strong> · cancel anytime). Unlimited references, 24 FPS MP4 downloads &amp; Maya/Blender sync.
               </span>
               <span className="sm:hidden">
-                Get Pro for <span className="text-emerald-400 font-bold">$1 first month</span> (normally $5/mo).
+                Pro: <span className="text-amber-300 font-black">{shortPrice}</span>, then $5/mo.
               </span>
             </p>
           </div>
@@ -83,9 +85,9 @@ export function MemberIntroPromoBanner() {
             <Button
               onClick={handleOpenDeal}
               size="sm"
-              className="h-7 px-3 text-[11px] font-black rounded-lg bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 text-zinc-950 hover:from-amber-300 hover:to-yellow-300 shadow-sm cursor-pointer gap-1 transition-transform hover:scale-105"
+              className="h-7 px-3 text-[11px] font-black rounded-lg bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-zinc-950 hover:from-amber-300 hover:to-yellow-200 shadow-sm cursor-pointer gap-1 transition-transform hover:scale-105"
             >
-              <span>Claim $1 Pass</span>
+              <span>Claim $1 Deal</span>
               <ArrowRight className="w-3 h-3" />
             </Button>
             <button

@@ -42,8 +42,12 @@ export const PRO_ANNUAL_CENTS = 4500;
 export interface PriceEnv {
   NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY?: string;
   NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL?: string;
-  /** First-month price of Pro monthly for new subscribers, in cents (e.g. "100"). Unset = no intro offer. */
+  /** Intro offer price of Pro monthly for new subscribers, in cents (e.g. "100"). Unset = no intro offer. */
   NEXT_PUBLIC_PRO_INTRO_FIRST_MONTH_CENTS?: string;
+  /** Intro offer duration in months (e.g. "3" for $1 for 3 months, then $5/mo). Defaults to 1 if unset. */
+  NEXT_PUBLIC_PRO_INTRO_DURATION_MONTHS?: string;
+  /** Campaign label for active intro offer (e.g. "Black Friday Deal"). */
+  NEXT_PUBLIC_PRO_INTRO_CAMPAIGN_LABEL?: string;
 }
 
 /**
@@ -56,19 +60,29 @@ export function readPriceEnv(): PriceEnv {
     NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY: withDefault(process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY, PUBLIC_CONFIG_DEFAULTS.STRIPE_PRICE_PRO_MONTHLY),
     NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL: withDefault(process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL, PUBLIC_CONFIG_DEFAULTS.STRIPE_PRICE_PRO_ANNUAL),
     NEXT_PUBLIC_PRO_INTRO_FIRST_MONTH_CENTS: withDefault(process.env.NEXT_PUBLIC_PRO_INTRO_FIRST_MONTH_CENTS, PUBLIC_CONFIG_DEFAULTS.PRO_INTRO_FIRST_MONTH_CENTS),
+    NEXT_PUBLIC_PRO_INTRO_DURATION_MONTHS: withDefault(process.env.NEXT_PUBLIC_PRO_INTRO_DURATION_MONTHS, PUBLIC_CONFIG_DEFAULTS.PRO_INTRO_DURATION_MONTHS),
+    NEXT_PUBLIC_PRO_INTRO_CAMPAIGN_LABEL: withDefault(process.env.NEXT_PUBLIC_PRO_INTRO_CAMPAIGN_LABEL, PUBLIC_CONFIG_DEFAULTS.PRO_INTRO_CAMPAIGN_LABEL),
   };
 }
 
+export interface IntroOffer {
+  amountCents: number;
+  months: number;
+  label: string;
+}
+
 /**
- * Intro offer: the first month of Pro monthly at a lower price, for people
- * who have never subscribed (August's $1 tier converted far better than $5).
- * Checkout applies a matching Stripe coupon; this only drives display.
+ * Global intro offer (e.g., Black Friday: $1 total for 3 months, then $5/month)
+ * for people who have never subscribed. Checkout enforces eligibility against Stripe.
  */
-export function getIntroOffer(env: PriceEnv = readPriceEnv()): { amountCents: number } | null {
+export function getIntroOffer(env: PriceEnv = readPriceEnv()): IntroOffer | null {
   const cents = Number(env.NEXT_PUBLIC_PRO_INTRO_FIRST_MONTH_CENTS);
   const regular = getProOffers(env).pro_monthly.amountCents;
   if (!Number.isFinite(cents) || cents <= 0 || cents >= regular) return null;
-  return { amountCents: Math.round(cents) };
+  const parsedMonths = Number(env.NEXT_PUBLIC_PRO_INTRO_DURATION_MONTHS);
+  const months = Number.isFinite(parsedMonths) && parsedMonths >= 1 ? Math.round(parsedMonths) : 1;
+  const label = (env.NEXT_PUBLIC_PRO_INTRO_CAMPAIGN_LABEL || '').trim() || 'Intro Offer';
+  return { amountCents: Math.round(cents), months, label };
 }
 
 /**

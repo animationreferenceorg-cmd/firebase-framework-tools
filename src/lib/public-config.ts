@@ -16,9 +16,13 @@ export const PUBLIC_CONFIG_DEFAULTS = {
   /** Pro annual, $45/year (live mode). */
   STRIPE_PRICE_PRO_ANNUAL: 'price_1UJd4X59QHehw05fqbQ2qZLs',
   STRIPE_PUBLISHABLE_KEY: 'pk_live_51SFfWk59QHehw05fAQmlkaJZ6ys02e7g5EwfG44sUIkSvC0F6fos5TyfIzMvCHAoMrI7piuOdUfwglN7jh2CFAuK00pBgZ4uI7',
-  /** First month of Pro monthly for new subscribers, in cents. "0" in env turns the offer off. */
+  /** Intro offer price for new Pro monthly subscribers, in cents. "0" in env turns the offer off. */
   PRO_INTRO_FIRST_MONTH_CENTS: '100',
-  /** Stripe coupon applied for the intro offer. "none" in env turns it off. */
+  /** Intro offer duration in months (3 = Black Friday $1 for 3 months, then $5/mo). */
+  PRO_INTRO_DURATION_MONTHS: '3',
+  /** Optional campaign badge label shown on banners & pricing cards. */
+  PRO_INTRO_CAMPAIGN_LABEL: 'Black Friday Deal',
+  /** Stripe coupon applied for 1-month intro offers (3-month deals use native Stripe trial + $1 upfront line item). "none" in env turns it off. */
   STRIPE_PRO_INTRO_COUPON_ID: 'PRO_FIRST_MONTH_1',
 } as const;
 

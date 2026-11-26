@@ -139,13 +139,13 @@ export function PricingPageClient() {
   const annualSavingsPct = offers.pro_annual.available
     ? Math.round((1 - offers.pro_annual.amountCents / (offers.pro_monthly.amountCents * 12)) * 100)
     : 0;
-  const { intro } = useIntroOffer();
+  const { intro, periodLabel, regularPeriodTotalCents } = useIntroOffer();
   // The intro offer applies to the monthly plan only.
   const showIntro = Boolean(intro) && selected.interval === 'month';
   const priceLine = selected.interval === 'year'
     ? `Billed ${formatUsd(selected.amountCents)} yearly`
     : showIntro
-      ? `First month ${formatUsd(intro!.amountCents)}, then ${formatUsd(selected.amountCents)}/month · cancel anytime`
+      ? `${formatUsd(intro!.amountCents)} total ${periodLabel}, then ${formatUsd(selected.amountCents)}/month · cancel anytime`
       : `Billed ${formatUsd(selected.amountCents)} monthly · cancel anytime`;
 
   const openPortal = async () => {
@@ -200,21 +200,21 @@ export function PricingPageClient() {
       : isPro
         ? 'Pro access active'
         : user
-          ? showIntro ? `Start Pro for ${formatUsd(intro!.amountCents)}` : `Upgrade for ${formatUsd(monthlyEquivalent)}/mo`
-          : showIntro ? `Sign in to start Pro for ${formatUsd(intro!.amountCents)}` : 'Sign in to upgrade';
+          ? showIntro ? `Claim ${formatUsd(intro!.amountCents)} ${periodLabel}` : `Upgrade for ${formatUsd(monthlyEquivalent)}/mo`
+          : showIntro ? `Sign in to claim ${formatUsd(intro!.amountCents)} ${periodLabel}` : 'Sign in to upgrade';
 
   return (
     <main className="relative mx-auto max-w-5xl px-4 pb-32 pt-12 text-white md:px-8">
       <div className="pointer-events-none absolute left-1/2 top-0 h-56 w-4/5 -translate-x-1/2 rounded-full bg-gradient-to-r from-purple-600/15 via-indigo-600/15 to-pink-600/10 blur-[100px]" />
 
       <header className="relative space-y-3 text-center">
-        <div className="mx-auto inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-purple-300">
-          <Sparkles className="h-3 w-3" /> Pricing
+        <div className="mx-auto inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-500/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-300">
+          <Sparkles className="h-3 w-3" /> {intro ? `${intro.label} · Global Offer` : 'Pricing'}
         </div>
         <h1 className="text-3xl font-black tracking-tight md:text-5xl">Start studying free. Unlock the whole library with Pro.</h1>
         <p className="mx-auto max-w-2xl text-sm text-zinc-400 md:text-base">
           Study {ACCESS_LIMITS.free.maxUnlockedReferences} new references a day for free. Pro removes the limit and adds unlimited boards, MP4 downloads, playblast compare and clean exports{intro
-            ? ` — try it for ${formatUsd(intro.amountCents)} your first month, then ${formatUsd(offers.pro_monthly.amountCents)}/month.`
+            ? ` — ${intro.label}: ${formatUsd(intro.amountCents)} total ${periodLabel}, then ${formatUsd(offers.pro_monthly.amountCents)}/month.`
             : ` for ${formatUsd(offers.pro_monthly.amountCents)}/month.`}
         </p>
       </header>
@@ -270,17 +270,17 @@ export function PricingPageClient() {
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-base font-bold">Pro</h2>
               {showIntro && (
-                <span className="rounded-full border border-pink-400/40 bg-pink-500/20 px-2.5 py-0.5 text-[10px] font-bold text-pink-300">
-                  First Month $1 · Then $5/mo
+                <span className="rounded-full border border-amber-400/45 bg-amber-500/20 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-300">
+                  {intro!.label} · {formatUsd(intro!.amountCents)} {periodLabel}
                 </span>
               )}
               {!isFree && <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400">{current.title} · {current.price}</span>}
             </div>
             <p className="flex flex-wrap items-baseline gap-1.5">
               <span className="text-4xl font-black">{formatUsd(showIntro ? intro!.amountCents : monthlyEquivalent)}</span>
-              <span className="text-sm text-zinc-400">{showIntro ? 'first month' : '/ month'}</span>
+              <span className="text-sm text-zinc-400">{showIntro ? periodLabel : '/ month'}</span>
               {showIntro && (
-                <span className="text-xs text-zinc-400 line-through ml-1">{formatUsd(selected.amountCents)}</span>
+                <span className="text-xs text-zinc-400 line-through ml-1">{formatUsd(regularPeriodTotalCents)}</span>
               )}
               {(() => {
                 const est = formatLocalCurrencyEstimate(showIntro ? intro!.amountCents : monthlyEquivalent, browserLocale);
